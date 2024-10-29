@@ -1,0 +1,16 @@
+services:
+  postgres_db:
+    image: postgres:latest
+    ports:
+      - "5435:5432"
+    restart: always
+    environment:
+      POSTGRES_DB: meetstudent
+      POSTGRES_USER: ibrahima
+      POSTGRES_PASSWORD: changeMeInProd!
+    volumes:
+      - pgMeetStudentData:/var/lib/postgresql/data
+
+volumes:
+  pgMeetStudentData:
+    driver: local
