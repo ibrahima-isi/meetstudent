@@ -1,25 +1,29 @@
 package com.bowe.meetstudent.entities;
 
+import com.bowe.meetstudent.utils.RateType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.Date;
-
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
-@Table(name = "schools")
-public class School {
-
+@Table(name = "rates")
+public class Rate {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue
     private Integer id;
 
-    private String name;
-    private String address;
-    @Column(name = "creation")
-    private Date yearOfCreation;
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
+
+    @Enumerated
+    private RateType rateType;
+
+
+
+
 }

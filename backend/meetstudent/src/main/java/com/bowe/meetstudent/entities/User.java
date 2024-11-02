@@ -1,16 +1,23 @@
 package com.bowe.meetstudent.entities;
 
+import com.bowe.meetstudent.utils.UserType;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@SuperBuilder
 @Entity
 @Table(name = "users")
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@DiscriminatorColumn(name = "user_role")
 public class User {
+
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Integer id;
@@ -24,5 +31,9 @@ public class User {
     @Column(unique = true)
     private String email;
 
+//    @JsonIgnore
     private String password;
+
+    @Enumerated
+    private UserType userType;
 }

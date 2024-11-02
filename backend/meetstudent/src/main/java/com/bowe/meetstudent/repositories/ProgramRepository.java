@@ -1,4 +1,9 @@
 package com.bowe.meetstudent.repositories;
 
-public interface ProgramRepository {
+import com.bowe.meetstudent.entities.Program;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface ProgramRepository extends JpaRepository<Program, Integer> {
 }
