@@ -36,8 +36,8 @@ public class UserService {
         this.userRepository.save(user);
     }
 
-    public boolean exists(int id){
-        return this.userRepository.existsById(id);
+    public boolean notExists(int id){
+        return !this.userRepository.existsById(id);
     }
 
     public void patchUser(User user) {

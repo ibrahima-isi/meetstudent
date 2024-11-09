@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.Date;
+import java.util.List;
 
 @Data
 @AllArgsConstructor
@@ -15,11 +16,16 @@ import java.util.Date;
 public class School {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
     private String name;
+
     private String address;
+
     @Column(name = "creation")
     private Date yearOfCreation;
+
+    @OneToMany(mappedBy = "school")
+    private List<Program> programs;
 }

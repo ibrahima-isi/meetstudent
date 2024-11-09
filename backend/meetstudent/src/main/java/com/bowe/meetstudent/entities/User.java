@@ -19,7 +19,7 @@ import lombok.experimental.SuperBuilder;
 public class User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
     @Column(length = 100)
@@ -34,6 +34,6 @@ public class User {
 //    @JsonIgnore
     private String password;
 
-    @Enumerated
+    @Enumerated(EnumType.STRING)
     private UserType userType;
 }

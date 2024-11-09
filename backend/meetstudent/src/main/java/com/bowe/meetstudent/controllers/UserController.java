@@ -4,7 +4,6 @@ import com.bowe.meetstudent.entities.User;
 import com.bowe.meetstudent.services.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,7 +20,7 @@ public class UserController {
     @PostMapping
     public ResponseEntity<User> saveUser(@RequestBody User user){
         this.userService.saveUser(user);
-        return ResponseEntity.ok(user);
+        return new ResponseEntity<>(user, HttpStatus.CREATED);
     }
 
     @GetMapping
@@ -48,7 +47,7 @@ public class UserController {
     @PutMapping(path = "/{id}")
     public ResponseEntity<User> updateUser(@PathVariable int id, @RequestBody User user){
 
-        if( !userService.exists(id) ){
+        if(userService.notExists(id)){
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
 
@@ -62,7 +61,7 @@ public ResponseEntity<User> patchUser(@PathVariable int id, @RequestBody User us
 
     Optional<User> existingUserOptional = userService.getUserById(id);
     if (existingUserOptional.isEmpty()) {
-        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
 
     User existingUser = existingUserOptional.get();
@@ -84,14 +83,14 @@ public ResponseEntity<User> patchUser(@PathVariable int id, @RequestBody User us
     }
 
     userService.updateUser(existingUser);
-    return ResponseEntity.ok(existingUser);
+    return new ResponseEntity<>(existingUser, HttpStatus.OK);
 }
 
 
     @DeleteMapping(path = "{id}")
     public ResponseEntity<?> deleteUser(@PathVariable int id){
 
-        if( !userService.exists(id) ){
+        if(userService.notExists(id)){
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
         this.userService.deleteUser(id);

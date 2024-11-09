@@ -20,7 +20,7 @@ public class Rate {
     @JoinColumn(name = "user_id")
     private User user;
 
-    @Enumerated
+    @Enumerated(EnumType.STRING)
     private RateType rateType;
 
 
