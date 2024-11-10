@@ -1,6 +1,6 @@
 package com.bowe.meetstudent.controllers;
 
-import com.bowe.meetstudent.entities.User;
+import com.bowe.meetstudent.entities.UserEntity;
 import com.bowe.meetstudent.services.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -11,79 +11,76 @@ import java.util.List;
 import java.util.Optional;
 
 @RestController
-@RequestMapping(path = "/api/users")
 @RequiredArgsConstructor
+@RequestMapping(path = "/api/users")
 public class UserController {
 
     private final UserService userService;
 
     @PostMapping
-    public ResponseEntity<User> saveUser(@RequestBody User user){
-        this.userService.saveUser(user);
-        return new ResponseEntity<>(user, HttpStatus.CREATED);
+    public ResponseEntity<UserEntity> saveUser(@RequestBody UserEntity userEntity){
+        this.userService.saveUser(userEntity);
+        return new ResponseEntity<>(userEntity, HttpStatus.CREATED);
     }
 
     @GetMapping
-    public List<User> getUsers(){
+    public List<UserEntity> getUsers(){
         return this.userService.getAllUsers();
     }
 
     @GetMapping(path = "/id/{id}")
-    public ResponseEntity<User> getUserById(@PathVariable int id){
-        Optional<User> user = this.userService.getUserById(id);
+    public ResponseEntity<UserEntity> getUserById(@PathVariable int id){
+        Optional<UserEntity> user = this.userService.getUserById(id);
 
         return user.map(foundUser -> new ResponseEntity<>(foundUser, HttpStatus.FOUND))
                 .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
 
     @GetMapping(path = "/email/{email}")
-    public ResponseEntity<User> getUserByEmail(@PathVariable String email){
-        Optional<User> user = this.userService.getUserByEmail(email);
+    public ResponseEntity<UserEntity> getUserByEmail(@PathVariable String email){
+        Optional<UserEntity> user = this.userService.getUserByEmail(email);
 
         return user.map(foundUser -> new ResponseEntity<>(foundUser, HttpStatus.FOUND))
                 .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
 
     @PutMapping(path = "/{id}")
-    public ResponseEntity<User> updateUser(@PathVariable int id, @RequestBody User user){
+    public ResponseEntity<UserEntity> updateUser(@PathVariable int id, @RequestBody UserEntity userEntity){
 
         if(userService.notExists(id)){
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
 
-        user.setId(id);
-        this.userService.updateUser(user);
-        return ResponseEntity.ok(user);
+        userEntity.setId(id);
+        this.userService.updateUser(userEntity);
+        return ResponseEntity.ok(userEntity);
     }
 
     @PatchMapping(path = "{id}")
-public ResponseEntity<User> patchUser(@PathVariable int id, @RequestBody User user) {
+public ResponseEntity<UserEntity> patchUser(@PathVariable int id, @RequestBody UserEntity userEntity) {
 
-    Optional<User> existingUserOptional = userService.getUserById(id);
+    Optional<UserEntity> existingUserOptional = userService.getUserById(id);
     if (existingUserOptional.isEmpty()) {
         return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
 
-    User existingUser = existingUserOptional.get();
+    UserEntity existingUserEntity = existingUserOptional.get();
 
-    if (user.getFirstname() != null) {
-        existingUser.setFirstname(user.getFirstname());
+    if (userEntity.getFirstname() != null) {
+        existingUserEntity.setFirstname(userEntity.getFirstname());
     }
-    if(user.getLastname()!= null){
-        existingUser.setLastname(user.getLastname());
+    if(userEntity.getLastname()!= null){
+        existingUserEntity.setLastname(userEntity.getLastname());
     }
-    if (user.getEmail() != null) {
-        existingUser.setEmail(user.getEmail());
+    if (userEntity.getEmail() != null) {
+        existingUserEntity.setEmail(userEntity.getEmail());
     }
-    if(user.getPassword() != null){
-        existingUser.setPassword(user.getPassword());
-    }
-    if(user.getUserType() != null){
-        existingUser.setUserType(user.getUserType());
+    if(userEntity.getPassword() != null){
+        existingUserEntity.setPassword(userEntity.getPassword());
     }
 
-    userService.updateUser(existingUser);
-    return new ResponseEntity<>(existingUser, HttpStatus.OK);
+    userService.updateUser(existingUserEntity);
+    return new ResponseEntity<>(existingUserEntity, HttpStatus.OK);
 }
 
 

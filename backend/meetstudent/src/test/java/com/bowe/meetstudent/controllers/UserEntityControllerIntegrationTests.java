@@ -1,7 +1,8 @@
 package com.bowe.meetstudent.controllers;
 
 import com.bowe.meetstudent.TestDataUtil;
-import com.bowe.meetstudent.entities.User;
+import com.bowe.meetstudent.entities.Role;
+import com.bowe.meetstudent.entities.UserEntity;
 import com.bowe.meetstudent.services.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -20,14 +21,14 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 @ExtendWith(SpringExtension.class)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @AutoConfigureMockMvc
-public class UserControllerIntegrationTests {
+public class UserEntityControllerIntegrationTests {
 
     private final MockMvc mockMvc;
     private final UserService userService;
     private final ObjectMapper objectMapper;
 
     @Autowired
-    public UserControllerIntegrationTests(MockMvc mockMvc, UserService userService, ObjectMapper objectMapper) {
+    public UserEntityControllerIntegrationTests(MockMvc mockMvc, UserService userService, ObjectMapper objectMapper) {
         this.mockMvc = mockMvc;
         this.userService = userService;
         this.objectMapper = objectMapper;
@@ -35,9 +36,9 @@ public class UserControllerIntegrationTests {
 
     @Test
     public void testThatCreateUserReturnStatusCode201Created() throws Exception {
-        User user = TestDataUtil.createUser();
+        UserEntity userEntity = TestDataUtil.createUser();
 
-        String json = objectMapper.writeValueAsString(user);
+        String json = objectMapper.writeValueAsString(userEntity);
         mockMvc.perform(
                 MockMvcRequestBuilders.post("/api/users")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -49,9 +50,9 @@ public class UserControllerIntegrationTests {
 
     @Test
     public void testThatUserCanBeCreatedSuccessfullyAndRecalled() throws Exception {
-        User user = TestDataUtil.createUser();
+        UserEntity userEntity = TestDataUtil.createUser();
 
-        String json = objectMapper.writeValueAsString(user);
+        String json = objectMapper.writeValueAsString(userEntity);
         mockMvc.perform(
                 MockMvcRequestBuilders.post("/api/users")
                         .contentType(MediaType.APPLICATION_JSON)

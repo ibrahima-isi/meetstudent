@@ -1,9 +1,7 @@
 package com.bowe.meetstudent.entities;
 
-import com.bowe.meetstudent.entities.rates.CourseRate;
 import jakarta.persistence.*;
 import lombok.*;
-import lombok.experimental.SuperBuilder;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.util.List;
@@ -14,15 +12,24 @@ import java.util.Objects;
 @ToString
 @AllArgsConstructor
 @NoArgsConstructor
-@SuperBuilder
 @Entity
-@Table(name = "courses")
-public class Course extends BaseEntity {
+@Table(name = "roles")
+public class Role {
 
-    private String code;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
 
-    @OneToMany(mappedBy = "course")
-    private List<CourseRate> courseRates;
+    private String name;
+
+    public Role(Integer id, String name) {
+        this.id = id;
+        this.name = name;
+    }
+
+    @OneToMany(mappedBy = "role")
+    @ToString.Exclude
+    private List<UserEntity> userEntities;
 
     @Override
     public final boolean equals(Object o) {
@@ -31,8 +38,8 @@ public class Course extends BaseEntity {
         Class<?> oEffectiveClass = o instanceof HibernateProxy ? ((HibernateProxy) o).getHibernateLazyInitializer().getPersistentClass() : o.getClass();
         Class<?> thisEffectiveClass = this instanceof HibernateProxy ? ((HibernateProxy) this).getHibernateLazyInitializer().getPersistentClass() : this.getClass();
         if (thisEffectiveClass != oEffectiveClass) return false;
-        Course course = (Course) o;
-        return getId() != null && Objects.equals(getId(), course.getId());
+        Role role = (Role) o;
+        return getId() != null && Objects.equals(getId(), role.getId());
     }
 
     @Override

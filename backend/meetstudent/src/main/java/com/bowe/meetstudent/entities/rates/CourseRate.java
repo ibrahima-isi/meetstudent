@@ -1,28 +1,29 @@
-package com.bowe.meetstudent.entities;
+package com.bowe.meetstudent.entities.rates;
 
-import com.bowe.meetstudent.entities.rates.CourseRate;
-import jakarta.persistence.*;
+import com.bowe.meetstudent.entities.Course;
+import com.bowe.meetstudent.entities.Rate;
+import jakarta.persistence.DiscriminatorValue;
+import jakarta.persistence.Entity;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.proxy.HibernateProxy;
 
-import java.util.List;
 import java.util.Objects;
 
 @Getter
 @Setter
 @ToString
-@AllArgsConstructor
-@NoArgsConstructor
+@RequiredArgsConstructor
 @SuperBuilder
+@AllArgsConstructor
 @Entity
-@Table(name = "courses")
-public class Course extends BaseEntity {
+@DiscriminatorValue(value = "COURSE")
+public class CourseRate extends Rate {
 
-    private String code;
-
-    @OneToMany(mappedBy = "course")
-    private List<CourseRate> courseRates;
+    @ManyToOne
+    private Course course;
 
     @Override
     public final boolean equals(Object o) {
@@ -31,8 +32,8 @@ public class Course extends BaseEntity {
         Class<?> oEffectiveClass = o instanceof HibernateProxy ? ((HibernateProxy) o).getHibernateLazyInitializer().getPersistentClass() : o.getClass();
         Class<?> thisEffectiveClass = this instanceof HibernateProxy ? ((HibernateProxy) this).getHibernateLazyInitializer().getPersistentClass() : this.getClass();
         if (thisEffectiveClass != oEffectiveClass) return false;
-        Course course = (Course) o;
-        return getId() != null && Objects.equals(getId(), course.getId());
+        CourseRate that = (CourseRate) o;
+        return getId() != null && Objects.equals(getId(), that.getId());
     }
 
     @Override

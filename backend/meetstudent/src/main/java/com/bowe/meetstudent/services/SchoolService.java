@@ -1,21 +1,18 @@
 package com.bowe.meetstudent.services;
 
-import aj.org.objectweb.asm.commons.Remapper;
 import com.bowe.meetstudent.entities.School;
 import com.bowe.meetstudent.repositories.SchoolRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
 
 @Service
+@RequiredArgsConstructor
 public class SchoolService {
 
     private final SchoolRepository schoolRepository;
-
-    public SchoolService(SchoolRepository schoolRepository) {
-        this.schoolRepository = schoolRepository;
-    }
 
 
     public School create(School school) {

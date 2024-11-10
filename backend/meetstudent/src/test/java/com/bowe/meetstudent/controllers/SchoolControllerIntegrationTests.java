@@ -29,8 +29,4 @@ public class SchoolControllerIntegrationTests {
         this.objectMapper = objectMapper;
     }
 
-    @Test
-    public void testThatCreateSchoolSuccessfullyReturnHttpStatus201Created(){
-
-    }
 }

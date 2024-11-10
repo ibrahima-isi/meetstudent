@@ -6,6 +6,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping(path = "/api/programs")
-public class ProgramController {
+@RequestMapping(path = "/api/roles")
+public class RoleController {
 }

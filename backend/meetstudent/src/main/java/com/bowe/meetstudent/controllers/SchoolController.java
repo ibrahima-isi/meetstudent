@@ -10,8 +10,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping(path = "/api/schools")
 @RequiredArgsConstructor
+@RequestMapping(path = "/api/schools")
 public class SchoolController {
 
     private final SchoolService schoolService;
@@ -67,8 +67,8 @@ public class SchoolController {
             if (newSchool.getName() != null) {
                 existingSchool.setName(newSchool.getName());
             }
-            if (newSchool.getYearOfCreation() != null) {
-                existingSchool.setYearOfCreation(newSchool.getYearOfCreation());
+            if (newSchool.getCreation() != null) {
+                existingSchool.setCreation(newSchool.getCreation());
             }
             School updatedSchool = this.schoolService.patch(existingSchool);
             return new ResponseEntity<>(updatedSchool, HttpStatus.OK);

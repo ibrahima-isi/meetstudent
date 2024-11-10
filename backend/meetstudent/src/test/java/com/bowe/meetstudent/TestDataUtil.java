@@ -1,17 +1,18 @@
 package com.bowe.meetstudent;
 
-import com.bowe.meetstudent.entities.User;
+import com.bowe.meetstudent.entities.Role;
+import com.bowe.meetstudent.entities.UserEntity;
 import com.bowe.meetstudent.utils.UserType;
 
 public class TestDataUtil {
 
-    public static User createUser(){
+    public static UserEntity createUser(){
 
 
-        return User.builder()
+        return UserEntity.builder()
                 .id(1)
                 .email("test@mail.com")
-                .userType(UserType.ADMIN)
+                .role(null)
                 .lastname("diallo")
                 .firstname("Ibrahima")
                 .password("passer")

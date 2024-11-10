@@ -1,7 +1,7 @@
 package com.bowe.meetstudent.utils;
 
-public enum RateType {
+public enum ERatedEntity {
+    COURSE,
     PROGRAM,
-    SCHOOL,
-    COURSE
+    SCHOOL
 }
