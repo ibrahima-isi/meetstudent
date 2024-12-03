@@ -18,18 +18,18 @@ public class UserController {
     private final UserService userService;
 
     @PostMapping
-    public ResponseEntity<UserEntity> saveUser(@RequestBody UserEntity userEntity){
+    public ResponseEntity<UserEntity> saveUser(@RequestBody UserEntity userEntity) {
         this.userService.saveUser(userEntity);
         return new ResponseEntity<>(userEntity, HttpStatus.CREATED);
     }
 
     @GetMapping
-    public List<UserEntity> getUsers(){
+    public List<UserEntity> getUsers() {
         return this.userService.getAllUsers();
     }
 
     @GetMapping(path = "/id/{id}")
-    public ResponseEntity<UserEntity> getUserById(@PathVariable int id){
+    public ResponseEntity<UserEntity> getUserById(@PathVariable int id) {
         Optional<UserEntity> user = this.userService.getUserById(id);
 
         return user.map(foundUser -> new ResponseEntity<>(foundUser, HttpStatus.FOUND))
@@ -37,7 +37,7 @@ public class UserController {
     }
 
     @GetMapping(path = "/email/{email}")
-    public ResponseEntity<UserEntity> getUserByEmail(@PathVariable String email){
+    public ResponseEntity<UserEntity> getUserByEmail(@PathVariable String email) {
         Optional<UserEntity> user = this.userService.getUserByEmail(email);
 
         return user.map(foundUser -> new ResponseEntity<>(foundUser, HttpStatus.FOUND))
@@ -45,9 +45,9 @@ public class UserController {
     }
 
     @PutMapping(path = "/{id}")
-    public ResponseEntity<UserEntity> updateUser(@PathVariable int id, @RequestBody UserEntity userEntity){
+    public ResponseEntity<UserEntity> updateUser(@PathVariable int id, @RequestBody UserEntity userEntity) {
 
-        if(userService.notExists(id)){
+        if (userService.notExists(id)) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
 
@@ -57,37 +57,37 @@ public class UserController {
     }
 
     @PatchMapping(path = "{id}")
-public ResponseEntity<UserEntity> patchUser(@PathVariable int id, @RequestBody UserEntity userEntity) {
+    public ResponseEntity<UserEntity> patchUser(@PathVariable int id, @RequestBody UserEntity userEntity) {
 
-    Optional<UserEntity> existingUserOptional = userService.getUserById(id);
-    if (existingUserOptional.isEmpty()) {
-        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-    }
+        Optional<UserEntity> existingUserOptional = userService.getUserById(id);
+        if (existingUserOptional.isEmpty()) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
 
-    UserEntity existingUserEntity = existingUserOptional.get();
+        UserEntity existingUserEntity = existingUserOptional.get();
 
-    if (userEntity.getFirstname() != null) {
-        existingUserEntity.setFirstname(userEntity.getFirstname());
-    }
-    if(userEntity.getLastname()!= null){
-        existingUserEntity.setLastname(userEntity.getLastname());
-    }
-    if (userEntity.getEmail() != null) {
-        existingUserEntity.setEmail(userEntity.getEmail());
-    }
-    if(userEntity.getPassword() != null){
-        existingUserEntity.setPassword(userEntity.getPassword());
-    }
+        if (userEntity.getFirstname() != null) {
+            existingUserEntity.setFirstname(userEntity.getFirstname());
+        }
+        if (userEntity.getLastname() != null) {
+            existingUserEntity.setLastname(userEntity.getLastname());
+        }
+        if (userEntity.getEmail() != null) {
+            existingUserEntity.setEmail(userEntity.getEmail());
+        }
+        if (userEntity.getPassword() != null) {
+            existingUserEntity.setPassword(userEntity.getPassword());
+        }
 
-    userService.updateUser(existingUserEntity);
-    return new ResponseEntity<>(existingUserEntity, HttpStatus.OK);
-}
+        userService.updateUser(existingUserEntity);
+        return new ResponseEntity<>(existingUserEntity, HttpStatus.OK);
+    }
 
 
     @DeleteMapping(path = "{id}")
-    public ResponseEntity<?> deleteUser(@PathVariable int id){
+    public ResponseEntity<?> deleteUser(@PathVariable int id) {
 
-        if(userService.notExists(id)){
+        if (userService.notExists(id)) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
         this.userService.deleteUser(id);

@@ -2,6 +2,7 @@ package com.bowe.meetstudent.services;
 
 import com.bowe.meetstudent.entities.UserEntity;
 import com.bowe.meetstudent.repositories.UserRepository;
+import com.bowe.meetstudent.utils.Role;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -27,7 +28,7 @@ public class UserService {
     }
 
     public Optional<UserEntity> getUserByEmail(String email) {
-        return this.userRepository.findByEmail(email);
+        return this.userRepository.findByEmailIgnoreCase(email);
     }
 
     public void updateUser(UserEntity userEntity) {
@@ -38,11 +39,11 @@ public class UserService {
         return !this.userRepository.existsById(id);
     }
 
-    public void patchUser(UserEntity userEntity) {
-        this.userRepository.save(userEntity);
-    }
-
     public void deleteUser(int id) {
         this.userRepository.deleteById(id);
+    }
+
+    public List<UserEntity> getUsersByRole(Role role){
+        return this.userRepository.findUserEntityByRoleContainsIgnoreCase(role);
     }
 }

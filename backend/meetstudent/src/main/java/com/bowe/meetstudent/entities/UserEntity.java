@@ -1,11 +1,13 @@
 package com.bowe.meetstudent.entities;
 
-import com.bowe.meetstudent.utils.UserType;
+import com.bowe.meetstudent.utils.Role;
+import com.bowe.meetstudent.utils.Utils;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.proxy.HibernateProxy;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
@@ -18,8 +20,7 @@ import java.util.Objects;
 @SuperBuilder
 @Entity
 @Table(name = "users")
-@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
-@DiscriminatorColumn(name = "user_role")
+
 public class UserEntity {
 
     @Id
@@ -39,12 +40,17 @@ public class UserEntity {
 
     private String password;
 
-    @ManyToOne
-    private Role role;
+    @ManyToMany
+    private List<Diploma> diploma;
 
-    @OneToMany(mappedBy = "userEntity")
-    @ToString.Exclude
-    private List<Rate> rates;
+    private String Speciality;
+
+    private LocalDateTime createdAt;
+
+    private LocalDateTime modifiedAt ;
+
+    @Enumerated(EnumType.STRING)
+    private Role role;
 
     @Override
     public boolean equals(Object o) {
@@ -60,5 +66,23 @@ public class UserEntity {
     @Override
     public int hashCode() {
         return this instanceof HibernateProxy ? ((HibernateProxy) this).getHibernateLazyInitializer().getPersistentClass().hashCode() : getClass().hashCode();
+    }
+
+    @PrePersist
+    protected void onCreate() {
+        setCreatedAt(
+                Utils.dakarTimeZone()
+        );
+        setModifiedAt(
+                Utils.dakarTimeZone()
+        );
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+
+        this.setModifiedAt(
+                Utils.dakarTimeZone()
+        );
     }
 }

@@ -1,7 +1,6 @@
 package com.bowe.meetstudent.controllers;
 
 import com.bowe.meetstudent.TestDataUtil;
-import com.bowe.meetstudent.entities.Role;
 import com.bowe.meetstudent.entities.UserEntity;
 import com.bowe.meetstudent.services.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;

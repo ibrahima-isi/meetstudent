@@ -1,8 +1,6 @@
 package com.bowe.meetstudent;
 
-import com.bowe.meetstudent.entities.Role;
 import com.bowe.meetstudent.entities.UserEntity;
-import com.bowe.meetstudent.utils.UserType;
 
 public class TestDataUtil {
 
