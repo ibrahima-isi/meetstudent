@@ -12,6 +12,10 @@ import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * This class represent a User of the platform which can be an Admin, a Student or an Expert who can evaluate the content
+ * @author ibrabowe97
+ */
 @Getter
 @Setter
 @ToString
@@ -40,17 +44,25 @@ public class UserEntity {
 
     private String password;
 
-    @ManyToMany
-    private List<Diploma> diploma;
-
-    private String Speciality;
-
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    private LocalDateTime modifiedAt ;
+    @Column(name = "modified_at", nullable = false)
+    private LocalDateTime modifiedAt;
 
     @Enumerated(EnumType.STRING)
     private Role role;
+
+    @Column(length = 100)
+    private String speciality;
+
+    /**
+     * relationship with the user's diploma
+     */
+    @ManyToMany(mappedBy = "users")
+    @ToString.Exclude
+    private List<Diploma> diplomas;
+
 
     @Override
     public boolean equals(Object o) {
@@ -68,6 +80,9 @@ public class UserEntity {
         return this instanceof HibernateProxy ? ((HibernateProxy) this).getHibernateLazyInitializer().getPersistentClass().hashCode() : getClass().hashCode();
     }
 
+    /**
+     * Run before each Creation of entity
+     */
     @PrePersist
     protected void onCreate() {
         setCreatedAt(
@@ -78,6 +93,9 @@ public class UserEntity {
         );
     }
 
+    /**
+     * Run before each Update of an entity orElse creation.
+     */
     @PreUpdate
     protected void onUpdate() {
 

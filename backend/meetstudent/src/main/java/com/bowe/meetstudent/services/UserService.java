@@ -9,6 +9,9 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * UserService handle the logical part of the UserEntity
+ */
 @Service
 @RequiredArgsConstructor
 public class UserService {
@@ -44,6 +47,6 @@ public class UserService {
     }
 
     public List<UserEntity> getUsersByRole(Role role){
-        return this.userRepository.findUserEntityByRoleContainsIgnoreCase(role);
+        return this.userRepository.findUserEntityByRole(role);
     }
 }

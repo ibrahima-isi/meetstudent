@@ -2,6 +2,7 @@ package com.bowe.meetstudent.controllers;
 
 import com.bowe.meetstudent.entities.UserEntity;
 import com.bowe.meetstudent.services.UserService;
+import com.bowe.meetstudent.utils.Role;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -42,6 +43,17 @@ public class UserController {
 
         return user.map(foundUser -> new ResponseEntity<>(foundUser, HttpStatus.FOUND))
                 .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
+    }
+
+    @GetMapping(path = "/role/{role}")
+    public ResponseEntity<List<UserEntity>> getUserByRole(@PathVariable String role) {
+        try {
+            Role convertedRole = Role.valueOf(role.toUpperCase());
+            List<UserEntity> users = this.userService.getUsersByRole(convertedRole);
+            return new ResponseEntity<>(users, HttpStatus.OK);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     @PutMapping(path = "/{id}")
