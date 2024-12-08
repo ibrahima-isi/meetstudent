@@ -34,10 +34,6 @@ public class UserService {
         return this.userRepository.findByEmailIgnoreCase(email);
     }
 
-    public void updateUser(UserEntity userEntity) {
-        this.userRepository.save(userEntity);
-    }
-
     public boolean notExists(int id){
         return !this.userRepository.existsById(id);
     }
