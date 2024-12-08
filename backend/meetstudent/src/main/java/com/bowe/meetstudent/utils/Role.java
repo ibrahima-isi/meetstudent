@@ -1,7 +1,7 @@
 package com.bowe.meetstudent.utils;
 
-public enum UserType {
-    STUDENT,
+public enum Role {
     ADMIN,
-    EXPERT
+    EXPERT,
+    STUDENT
 }

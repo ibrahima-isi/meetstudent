@@ -1,5 +1,6 @@
 package com.bowe.meetstudent.entities;
 
+import com.bowe.meetstudent.entities.embedded.Address;
 import com.bowe.meetstudent.entities.rates.SchoolRate;
 import jakarta.persistence.*;
 import lombok.*;
@@ -20,15 +21,17 @@ import java.util.Objects;
 @Table(name = "schools")
 public class School extends BaseEntity{
 
-    private String address;
-
     private Date creation;
+
+    @Embedded
+    private Address address;
 
     @OneToMany(mappedBy = "school")
     @ToString.Exclude
     private List<Program> programs;
 
     @OneToMany(mappedBy = "school")
+    @ToString.Exclude
     private List<SchoolRate> schoolRates;
 
     @Override

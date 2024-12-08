@@ -42,8 +42,4 @@ public class Rate extends BaseEntity{
         return getId() != null && Objects.equals(getId(), rate.getId());
     }
 
-    @Override
-    public int hashCode() {
-        return this instanceof HibernateProxy ? ((HibernateProxy) this).getHibernateLazyInitializer().getPersistentClass().hashCode() : getClass().hashCode();
-    }
 }
