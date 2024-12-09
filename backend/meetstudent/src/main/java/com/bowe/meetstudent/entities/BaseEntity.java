@@ -22,7 +22,7 @@ public class BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(length = 5)
+    @Column(length = 5, unique = true)
     private String code;
 
     @Column(length = 50)

@@ -3,6 +3,7 @@ package com.bowe.meetstudent.dto;
 
 import com.bowe.meetstudent.entities.embedded.Address;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.util.Date;
 
@@ -10,7 +11,7 @@ import java.util.Date;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Builder
+@SuperBuilder
 public class SchoolDTO extends BaseDTO{
 
     private Date creation;
