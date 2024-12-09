@@ -1,6 +1,8 @@
 package com.bowe.meetstudent.controllers;
 
+import com.bowe.meetstudent.dto.SchoolDTO;
 import com.bowe.meetstudent.entities.School;
+import com.bowe.meetstudent.mappers.implementations.SchoolMapper;
 import com.bowe.meetstudent.services.SchoolService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -15,23 +17,39 @@ import java.util.List;
 public class SchoolController {
 
     private final SchoolService schoolService;
+    private final SchoolMapper schoolMapper;
 
     @PostMapping
-    private ResponseEntity<School> create(@RequestBody School school) {
+    private ResponseEntity<SchoolDTO> create(@RequestBody SchoolDTO schoolDTO) {
 
+        School school = schoolMapper.toEntity(schoolDTO);
         var savedSchool = this.schoolService.create(school);
-        return new ResponseEntity<>(savedSchool, HttpStatus.CREATED);
+        SchoolDTO savedSchoolDto = schoolMapper.toDTO(savedSchool);
+
+        return new ResponseEntity<>(savedSchoolDto, HttpStatus.CREATED);
     }
 
     @GetMapping
-    public List<School> getSchools() {
+    public List<SchoolDTO> getSchools() {
 
-        return this.schoolService.getSchools();
+        return this.schoolService
+                .getSchools()
+                .stream()
+                .map(schoolMapper::toDTO)
+                .toList();
     }
-    @GetMapping(path = "/{id}")
-    public ResponseEntity<School> getSchoolById(@PathVariable int id) {
 
-        return this.schoolService.getSchoolById(id).map(school -> new ResponseEntity<>(school, HttpStatus.FOUND))
+
+    @GetMapping(path = "/{id}")
+    public ResponseEntity<SchoolDTO> getSchoolById(@PathVariable int id) {
+
+        return this.schoolService.getSchoolById(id)
+                .map(school -> {
+
+                    SchoolDTO schoolDTO = schoolMapper.toDTO(school);
+                    return new ResponseEntity<>(schoolDTO, HttpStatus.FOUND);
+
+                })
                 .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
 
