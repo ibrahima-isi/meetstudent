@@ -1,6 +1,7 @@
 package com.bowe.meetstudent.controllers;
 
 import com.bowe.meetstudent.TestDataUtil;
+import com.bowe.meetstudent.dto.UserDTO;
 import com.bowe.meetstudent.entities.UserEntity;
 import com.bowe.meetstudent.services.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -20,24 +21,22 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 @ExtendWith(SpringExtension.class)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @AutoConfigureMockMvc
-public class UserEntityControllerIntegrationTests {
+public class UserControllerIntegrationTests {
 
     private final MockMvc mockMvc;
-    private final UserService userService;
     private final ObjectMapper objectMapper;
 
     @Autowired
-    public UserEntityControllerIntegrationTests(MockMvc mockMvc, UserService userService, ObjectMapper objectMapper) {
+    public UserControllerIntegrationTests(MockMvc mockMvc, ObjectMapper objectMapper) {
         this.mockMvc = mockMvc;
-        this.userService = userService;
         this.objectMapper = objectMapper;
     }
 
     @Test
     public void testThatCreateUserReturnStatusCode201Created() throws Exception {
-        UserEntity userEntity = TestDataUtil.createUser();
+        UserDTO userDTO = TestDataUtil.createUserDto();
 
-        String json = objectMapper.writeValueAsString(userEntity);
+        String json = objectMapper.writeValueAsString(userDTO);
         mockMvc.perform(
                 MockMvcRequestBuilders.post("/api/users")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -49,9 +48,9 @@ public class UserEntityControllerIntegrationTests {
 
     @Test
     public void testThatUserCanBeCreatedSuccessfullyAndRecalled() throws Exception {
-        UserEntity userEntity = TestDataUtil.createUser();
+        UserDTO user = TestDataUtil.createUserDto();
 
-        String json = objectMapper.writeValueAsString(userEntity);
+        String json = objectMapper.writeValueAsString(user);
         mockMvc.perform(
                 MockMvcRequestBuilders.post("/api/users")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -61,11 +60,11 @@ public class UserEntityControllerIntegrationTests {
         ).andExpect(
                 MockMvcResultMatchers.jsonPath("$.firstname").isNotEmpty()
         ).andExpect(
+                MockMvcResultMatchers.jsonPath("$.lastname").isNotEmpty()
+        ).andExpect(
                 MockMvcResultMatchers.jsonPath("$.email").isNotEmpty()
         ).andExpect(
-                MockMvcResultMatchers.jsonPath("$.lastname").value("diallo")
-                ).andExpect(
-                MockMvcResultMatchers.jsonPath("$.password").exists()
+                MockMvcResultMatchers.jsonPath("$.password").doesNotExist()
         );
     }
 

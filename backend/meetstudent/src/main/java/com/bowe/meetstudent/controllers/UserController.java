@@ -28,7 +28,11 @@ public class UserController {
         UserEntity userEntity = this.userMapper.toEntity(userDTO);
         this.userService.saveUser(userEntity);
 
-        return new ResponseEntity<>(userDTO, HttpStatus.CREATED);
+        UserEntity savedUser = this.userService.saveUser(userEntity);
+
+        UserDTO savedUserDto = this.userMapper.toDTO(savedUser);
+
+        return new ResponseEntity<>(savedUserDto, HttpStatus.CREATED);
     }
 
     @GetMapping
@@ -119,6 +123,18 @@ public class UserController {
         return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
     }
 
+    @DeleteMapping(path = "{id}")
+    public ResponseEntity<UserDTO> deleteUser(@PathVariable int id) {
+
+        if (userService.notExists(id)) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+
+        UserEntity deletedUser =  this.userService.deleteUser(id);
+        UserDTO deletedUserDto = this.userMapper.toDTO(deletedUser);
+        return new ResponseEntity<>(deletedUserDto, HttpStatus.OK);
+    }
+
     /**
      * Get an existing from the Database orElse a new User
      * @param userDTO the user with the new values
@@ -152,14 +168,5 @@ public class UserController {
         return existingUser;
     }
 
-    @DeleteMapping(path = "{id}")
-    public ResponseEntity<?> deleteUser(@PathVariable int id) {
-
-        if (userService.notExists(id)) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-        this.userService.deleteUser(id);
-        return new ResponseEntity<>(HttpStatus.OK);
-    }
 
 }

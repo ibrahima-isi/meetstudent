@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * UserService handle the logical part of the UserEntity
+ * UserService handle the logic of the UserEntity
  */
 @Service
 @RequiredArgsConstructor
@@ -18,8 +18,8 @@ public class UserService {
 
     private final UserRepository userRepository;
 
-    public void saveUser(UserEntity userEntity) {
-        this.userRepository.save(userEntity);
+    public UserEntity saveUser(UserEntity userEntity) {
+        return this.userRepository.save(userEntity);
     }
 
     public List<UserEntity> getAllUsers() {
@@ -34,15 +34,20 @@ public class UserService {
         return this.userRepository.findByEmailIgnoreCase(email);
     }
 
+    public List<UserEntity> getUsersByRole(Role role){
+        return this.userRepository.findUserEntityByRole(role);
+    }
+
+    public UserEntity deleteUser(int id) {
+        UserEntity toDelete = this.userRepository.findById(id).orElse(null);
+        this.userRepository.deleteById(id);
+
+        return toDelete;
+    }
+
     public boolean notExists(int id){
         return !this.userRepository.existsById(id);
     }
 
-    public void deleteUser(int id) {
-        this.userRepository.deleteById(id);
-    }
 
-    public List<UserEntity> getUsersByRole(Role role){
-        return this.userRepository.findUserEntityByRole(role);
-    }
 }

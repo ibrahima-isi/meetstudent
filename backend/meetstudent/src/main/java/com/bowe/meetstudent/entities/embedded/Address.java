@@ -13,9 +13,10 @@ import lombok.*;
 @Setter
 @ToString
 @Embeddable
+@Builder
 public class Address {
 
     private String location;
     private String city;
-    private String Country;
+    private String country;
 }
