@@ -1,15 +1,21 @@
 package com.bowe.meetstudent.entities;
 
-import com.bowe.meetstudent.utils.UserType;
+import com.bowe.meetstudent.utils.Role;
+import com.bowe.meetstudent.utils.Utils;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.proxy.HibernateProxy;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * This class represent a User of the platform which can be an Admin, a Student or an Expert who can evaluate the content
+ * @author ibrabowe97
+ */
 @Getter
 @Setter
 @ToString
@@ -18,8 +24,7 @@ import java.util.Objects;
 @SuperBuilder
 @Entity
 @Table(name = "users")
-@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
-@DiscriminatorColumn(name = "user_role")
+
 public class UserEntity {
 
     @Id
@@ -39,12 +44,25 @@ public class UserEntity {
 
     private String password;
 
-    @ManyToOne
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "modified_at", nullable = false)
+    private LocalDateTime modifiedAt;
+
+    @Enumerated(EnumType.STRING)
     private Role role;
 
-    @OneToMany(mappedBy = "userEntity")
+    @Column(length = 100)
+    private String speciality;
+
+    /**
+     * relationship with the user's diploma
+     */
+    @ManyToMany(mappedBy = "users")
     @ToString.Exclude
-    private List<Rate> rates;
+    private List<Diploma> diplomas;
+
 
     @Override
     public boolean equals(Object o) {
@@ -60,5 +78,29 @@ public class UserEntity {
     @Override
     public int hashCode() {
         return this instanceof HibernateProxy ? ((HibernateProxy) this).getHibernateLazyInitializer().getPersistentClass().hashCode() : getClass().hashCode();
+    }
+
+    /**
+     * Run before each Creation of entity
+     */
+    @PrePersist
+    protected void onCreate() {
+        setCreatedAt(
+                Utils.dakarTimeZone()
+        );
+        setModifiedAt(
+                Utils.dakarTimeZone()
+        );
+    }
+
+    /**
+     * Run before each Update of an entity orElse creation.
+     */
+    @PreUpdate
+    protected void onUpdate() {
+
+        this.setModifiedAt(
+                Utils.dakarTimeZone()
+        );
     }
 }

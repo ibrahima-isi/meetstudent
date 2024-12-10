@@ -1,14 +1,12 @@
 package com.bowe.meetstudent.entities;
 
+import com.bowe.meetstudent.utils.Utils;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.proxy.HibernateProxy;
 
 import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.util.Date;
 import java.util.Objects;
 
 @Getter
@@ -24,7 +22,7 @@ public class BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(length = 5)
+    @Column(length = 5, unique = true)
     private String code;
 
     @Column(length = 50)
@@ -32,7 +30,7 @@ public class BaseEntity {
 
     private LocalDateTime createdAt;
 
-    private LocalDateTime modifiedAt = LocalDateTime.now();
+    private LocalDateTime modifiedAt ;
 
     private Integer createdBy;
 
@@ -40,14 +38,20 @@ public class BaseEntity {
 
     @PrePersist
     protected void onCreate() {
-        ZoneId dakarZoneId = ZoneId.of("Africa/Dakar");
-        modifiedAt = ZonedDateTime.now(dakarZoneId).toLocalDateTime();
+        setCreatedAt(
+                Utils.dakarTimeZone()
+        );
+        setModifiedAt(
+                Utils.dakarTimeZone()
+        );
     }
 
     @PreUpdate
     protected void onUpdate() {
-        ZoneId dakarZoneId = ZoneId.of("Africa/Dakar");
-        modifiedAt = ZonedDateTime.now(dakarZoneId).toLocalDateTime();
+
+        this.setModifiedAt(
+                Utils.dakarTimeZone()
+        );
     }
 
     @Override

@@ -15,13 +15,11 @@ public class SchoolService {
     private final SchoolRepository schoolRepository;
 
 
-    public School create(School school) {
-
+    public School save(School school) {
         return this.schoolRepository.save(school);
     }
 
     public List<School> getSchools() {
-
         return this.schoolRepository.findAll();
     }
 
@@ -29,22 +27,11 @@ public class SchoolService {
         return this.schoolRepository.findById(id);
     }
 
-    public School update(School school){
-        return this.schoolRepository.save(school);
-    }
-
-    public School patch(School school){
-
-        return this.schoolRepository.save(school);
-    }
-
     public void delete(int id){
-
         this.schoolRepository.deleteById(id);
     }
 
     public Boolean exists(int id){
-
         return this.schoolRepository.existsById(id);
     }
 
