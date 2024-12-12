@@ -5,6 +5,10 @@ import com.bowe.meetstudent.entities.School;
 import com.bowe.meetstudent.mappers.implementations.SchoolMapper;
 import com.bowe.meetstudent.services.SchoolService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -31,13 +35,10 @@ public class SchoolController {
     }
 
     @GetMapping
-    public List<SchoolDTO> getSchools() {
-
+    public Page<SchoolDTO> getSchools(Pageable pageable) {
         return this.schoolService
-                .getSchools()
-                .stream()
-                .map(schoolMapper::toDTO)
-                .toList();
+                .findAll(pageable)
+                .map(schoolMapper::toDTO);
     }
 
     @GetMapping(path = "/{id}")
@@ -54,13 +55,19 @@ public class SchoolController {
     }
 
     @GetMapping(path = "/name/{name}")
-    public List<SchoolDTO> getSchoolById(@PathVariable String name) {
+    public Page<SchoolDTO> getSchoolByName(@PathVariable String name, Pageable pageable) {
 
         return this.schoolService
-                .getSchoolByName(name)
-                .stream()
-                .map(schoolMapper::toDTO)
-                .toList();
+                .getSchoolByName(name, pageable)
+                .map(schoolMapper::toDTO);
+    }
+
+    @GetMapping(path = "/address/{city}")
+    public Page<SchoolDTO> getSchoolByCity(@PathVariable String city){
+
+        Pageable pageable = PageRequest.of(0, 10, Sort.by("name").descending()); // 10 schools per page, sorted by name ascending
+        return this.schoolService.findSchoolByCity(city, pageable)
+                .map(schoolMapper::toDTO);
     }
 
     @PutMapping(path = "/{id}")

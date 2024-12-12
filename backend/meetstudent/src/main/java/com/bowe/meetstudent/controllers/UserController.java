@@ -6,6 +6,10 @@ import com.bowe.meetstudent.mappers.Mapper;
 import com.bowe.meetstudent.services.UserService;
 import com.bowe.meetstudent.utils.Role;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -27,26 +31,22 @@ public class UserController {
 
         UserEntity userEntity = this.userMapper.toEntity(userDTO);
         this.userService.saveUser(userEntity);
-
         UserEntity savedUser = this.userService.saveUser(userEntity);
-
         UserDTO savedUserDto = this.userMapper.toDTO(savedUser);
 
         return new ResponseEntity<>(savedUserDto, HttpStatus.CREATED);
     }
 
     @GetMapping
-    public List<UserDTO> getUsers() {
+    public Page<UserDTO> findAll() {
 
-        return this.userService
-                .getAllUsers()
-                .stream()
-                .map(userMapper::toDTO)
-                .toList();
+        Pageable pageable = PageRequest.of(0, 10, Sort.by("firstname").descending()); // 10 schools per page, sorted by name ascending
+        Page<UserEntity> userEntities = this.userService.findAll(pageable);
+        return userEntities.map(userMapper::toDTO);
     }
 
     @GetMapping(path = "/id/{id}")
-    public ResponseEntity<UserDTO> getUserById(@PathVariable int id) {
+    public ResponseEntity<UserDTO> findById(@PathVariable int id) {
 
         Optional<UserEntity> user = this.userService.getUserById(id);
         return user.map( foundUser ->{
@@ -57,7 +57,7 @@ public class UserController {
     }
 
     @GetMapping(path = "/email/{email}")
-    public ResponseEntity<UserDTO> getUserByEmail(@PathVariable String email) {
+    public ResponseEntity<UserDTO> findByEmail(@PathVariable String email) {
         Optional<UserEntity> user = this.userService.getUserByEmail(email);
 
         return user.map( foundUser ->{
@@ -68,7 +68,7 @@ public class UserController {
     }
 
     @GetMapping(path = "/role/{role}")
-    public ResponseEntity<List<UserDTO>> getUserByRole(@PathVariable String role) {
+    public ResponseEntity<List<UserDTO>> findByRole(@PathVariable String role) {
 
         try {
             Role convertedRole = Role.valueOf(role.toUpperCase());
@@ -91,7 +91,7 @@ public class UserController {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
         Optional<UserEntity> existingUserOptional = userService.getUserById(id);
-        final UserEntity existingUser = setUserValueForPatch(userDTO, existingUserOptional);
+        final UserEntity existingUser = setValuesForUpdate(userDTO, existingUserOptional);
 
         this.userService.saveUser(existingUser);
 
@@ -108,7 +108,7 @@ public class UserController {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
 
-        final UserEntity existingUser = setUserValueForPatch(userDTO, existingUserOptional);
+        final UserEntity existingUser = setValuesForUpdate(userDTO, existingUserOptional);
         this.userService.saveUser(existingUser);
 
         this.userService
@@ -124,7 +124,7 @@ public class UserController {
     }
 
     @DeleteMapping(path = "{id}")
-    public ResponseEntity<UserDTO> deleteUser(@PathVariable int id) {
+    public ResponseEntity<UserDTO> deleteById(@PathVariable int id) {
 
         if (userService.notExists(id)) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
@@ -141,7 +141,7 @@ public class UserController {
      * @param existingUserOptional to update
      * @return UserEntity
      */
-    private static UserEntity setUserValueForPatch(UserDTO userDTO, Optional<UserEntity> existingUserOptional) {
+    private static UserEntity setValuesForUpdate(UserDTO userDTO, Optional<UserEntity> existingUserOptional) {
         UserEntity existingUser = existingUserOptional.orElseGet(UserEntity::new);
 
         if (userDTO.getFirstname() != null) {

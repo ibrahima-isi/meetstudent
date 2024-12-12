@@ -4,6 +4,9 @@ import com.bowe.meetstudent.entities.UserEntity;
 import com.bowe.meetstudent.repositories.UserRepository;
 import com.bowe.meetstudent.utils.Role;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -22,8 +25,12 @@ public class UserService {
         return this.userRepository.save(userEntity);
     }
 
-    public List<UserEntity> getAllUsers() {
+    public List<UserEntity> findAllToList() {
         return this.userRepository.findAll();
+    }
+
+    public Page<UserEntity> findAll(Pageable pageable){
+        return this.userRepository.findAll(pageable);
     }
 
     public Optional<UserEntity> getUserById(int id) {
