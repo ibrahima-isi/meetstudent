@@ -1,5 +1,11 @@
 package com.bowe.meetstudent.config;
 
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfiguration;
 
-public class SecurityConfig {
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig extends WebSecurityConfiguration {
+
 }
