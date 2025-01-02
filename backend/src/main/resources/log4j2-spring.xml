@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN" monitorInterval="30" packages="com.bowe.meetstudent">
+    <Appenders>
+        <!-- Appender Console -->
+        <Console name="Console" target="SYSTEM_OUT">
+            <JsonLayout compact="false" eventEol="true" includeTimeMillis="false">
+                <KeyValuePair key="timestamp" value="%d{yyyy-MM-dd'T'HH:mm:ss.SSSZ}" />
+                <KeyValuePair key="message" value="%m" />
+            </JsonLayout>
+        </Console>
+
+        <!-- Appender Fichier avec rotation -->
+        <RollingFile name="File" fileName="logs/application.log"
+                     filePattern="logs/application-%d{yyyy-MM-dd}.%i.log.gz">
+            <JsonLayout compact="false" eventEol="true" stacktraceAsString="true" includeTimeMillis="false">
+                <KeyValuePair key="timestamp" value="$${date:yyyy-MM-dd'T'HH:mm:ss.SSSZ}"/>
+                <KeyValuePair key="message" value="%m" />
+            </JsonLayout>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1" />
+                <SizeBasedTriggeringPolicy size="10MB" />
+            </Policies>
+            <DefaultRolloverStrategy max="10" />
+        </RollingFile>
+    </Appenders>
+
+    <!-- Loggers -->
+    <Loggers>
+        <!-- Logger pour un package spécifique -->
+        <Logger name="com.bowe.meetstudent" level="info" additivity="false">
+            <AppenderRef ref="Console" />
+            <AppenderRef ref="File" />
+        </Logger>
+
+        <!-- Root Logger -->
+        <Root level="error">
+            <AppenderRef ref="Console" />
+            <AppenderRef ref="File" />
+        </Root>
+    </Loggers>
+</Configuration>

@@ -2,6 +2,7 @@ package com.bowe.meetstudent.entities;
 
 import com.bowe.meetstudent.utils.Role;
 import com.bowe.meetstudent.utils.Utils;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
