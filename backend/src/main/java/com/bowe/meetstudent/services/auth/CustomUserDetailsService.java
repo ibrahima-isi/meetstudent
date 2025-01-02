@@ -16,8 +16,10 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserPrincipal loadUserByUsername(String email) throws UsernameNotFoundException {
+        System.out.println("Tentative de load ");
         UserEntity user = userRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        System.out.println("reussi de load ");
         return new UserPrincipal(user);
     }
 }
