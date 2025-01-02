@@ -1,16 +1,19 @@
-package com.bowe.meetstudent.services.utils;
+package com.bowe.meetstudent.utils;
 
 import com.bowe.meetstudent.entities.UserEntity;
-import com.bowe.meetstudent.utils.Role;
+import com.bowe.meetstudent.services.UserService;
 import com.github.javafaker.Faker;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Locale;
 import java.util.Random;
 
-public class FakeUserService {
+@Component
+@RequiredArgsConstructor
+public class FakeUserGenerator {
 
+    private final UserService userService;
     private final Faker faker = new Faker(new Locale("en-GB"));
     private final Random random = new Random();
 
@@ -20,21 +23,18 @@ public class FakeUserService {
         userEntity.setLastname(faker.name().lastName());
         userEntity.setEmail(faker.internet().emailAddress());
         userEntity.setBirthday(faker.date().birthday());
-        userEntity.setPassword(faker.internet().password());
+        userEntity.setPassword("Passer123");
         userEntity.setSpeciality(faker.job().field());
         userEntity.setRole(getRandomRole());
 
         return userEntity;
     }
 
-    public List<UserEntity> generateFakeUsers(int count){
-
-        List<UserEntity> generatedUsers = new ArrayList<>();
+    public void generateFakeUsers(int count){
         for(int i = 0; i < count; i++){
             UserEntity userEntity = fakerUser();
-            generatedUsers.add(userEntity);
+            userService.saveUser(userEntity);
         }
-        return generatedUsers;
     }
 
     public Role getRandomRole(){

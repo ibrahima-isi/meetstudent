@@ -4,6 +4,7 @@ import com.bowe.meetstudent.dto.UserDTO;
 import com.bowe.meetstudent.entities.UserEntity;
 import com.bowe.meetstudent.mappers.Mapper;
 import com.bowe.meetstudent.services.UserService;
+import com.bowe.meetstudent.utils.FakeUserGenerator;
 import com.bowe.meetstudent.utils.Role;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -24,6 +25,7 @@ public class UserController {
 
     private final UserService userService;
     private final Mapper<UserEntity, UserDTO> userMapper;
+    private final FakeUserGenerator fake;
 
 
     @PostMapping
@@ -39,7 +41,7 @@ public class UserController {
 
     @GetMapping
     public Page<UserDTO> findAll() {
-
+        fake.generateFakeUsers(10);
         Pageable pageable = PageRequest.of(0, 10, Sort.by("firstname").descending()); // 10 schools per page, sorted by name ascending
         Page<UserEntity> userEntities = this.userService.findAll(pageable);
         return userEntities.map(userMapper::toDTO);

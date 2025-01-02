@@ -13,7 +13,7 @@ import java.util.Optional;
  */
 @Repository
 public interface UserRepository extends JpaRepository<UserEntity, Integer> {
-    Optional<UserEntity> findByEmailIgnoreCase(String email);
 
+    Optional<UserEntity> findByEmailIgnoreCase(String email);
     List<UserEntity> findUserEntityByRole(Role role);
 }
