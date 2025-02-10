@@ -8,18 +8,28 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+/**
+ * Service class for loading user details by email.
+ */
 @Service
 @RequiredArgsConstructor
 public class CustomUserDetailsService implements UserDetailsService {
 
     private final UserRepository userRepository;
 
+    /**
+     * Loads the user details by email.
+     *
+     * @param email the email of the user
+     * @return the user principal containing user details
+     * @throws UsernameNotFoundException if the user is not found
+     */
     @Override
     public UserPrincipal loadUserByUsername(String email) throws UsernameNotFoundException {
-        System.out.println("Tentative de load ");
+
         UserEntity user = userRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-        System.out.println("reussi de load ");
+
         return new UserPrincipal(user);
     }
 }

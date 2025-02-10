@@ -1,0 +1,48 @@
+{
+  "instant" : {
+    "epochSecond" : 1739189077,
+    "nanoOfSecond" : 145500700
+  },
+  "thread" : "main",
+  "level" : "INFO",
+  "loggerName" : "com.bowe.meetstudent.MeetstudentApplication",
+  "message" : "Starting MeetstudentApplication using Java 17.0.12 with PID 4500 (C:\\Users\\Ibrahima\\meetstudent\\backend\\target\\classes started by Ibrahima in C:\\Users\\Ibrahima\\meetstudent\\backend)",
+  "endOfBatch" : false,
+  "loggerFqcn" : "org.apache.commons.logging.LogAdapter$Log4jLog",
+  "threadId" : 1,
+  "threadPriority" : 5,
+  "timestamp" : "2025-02-10T12:04:37.145+0000",
+  "message" : "%m"
+}
+{
+  "instant" : {
+    "epochSecond" : 1739189077,
+    "nanoOfSecond" : 490786100
+  },
+  "thread" : "main",
+  "level" : "INFO",
+  "loggerName" : "com.bowe.meetstudent.MeetstudentApplication",
+  "message" : "No active profile set, falling back to 1 default profile: \"default\"",
+  "endOfBatch" : false,
+  "loggerFqcn" : "org.apache.commons.logging.LogAdapter$Log4jLog",
+  "threadId" : 1,
+  "threadPriority" : 5,
+  "timestamp" : "2025-02-10T12:04:37.490+0000",
+  "message" : "%m"
+}
+{
+  "instant" : {
+    "epochSecond" : 1739189090,
+    "nanoOfSecond" : 172559900
+  },
+  "thread" : "main",
+  "level" : "INFO",
+  "loggerName" : "com.bowe.meetstudent.MeetstudentApplication",
+  "message" : "Started MeetstudentApplication in 15.875 seconds (process running for 17.573)",
+  "endOfBatch" : false,
+  "loggerFqcn" : "org.apache.commons.logging.LogAdapter$Log4jLog",
+  "threadId" : 1,
+  "threadPriority" : 5,
+  "timestamp" : "2025-02-10T12:04:50.172+0000",
+  "message" : "%m"
+}

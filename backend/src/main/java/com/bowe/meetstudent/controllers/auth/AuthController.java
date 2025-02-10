@@ -26,13 +26,24 @@ public class AuthController {
     @PostMapping
     public LoginResponse login(@RequestBody @Validated LoginRequest request){
         var auth = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+                new UsernamePasswordAuthenticationToken(
+                        request.getEmail(),
+                        request.getPassword()
+                )
         );
         SecurityContextHolder.getContext().setAuthentication(auth);
 
         var principal = (UserPrincipal) auth.getPrincipal();
-        var roles = principal.getAuthorities().stream().map(GrantedAuthority::getAuthority).toList();
-        var token = jwtIssuer.issue(principal.getUserId(), principal.getEmail(), roles);
+        var roles = principal.getAuthorities()
+                .stream()
+                .map(GrantedAuthority::getAuthority)
+                .toList();
+
+        var token = jwtIssuer.issue(
+                principal.getUserId(),
+                principal.getEmail(),
+                roles
+        );
 
         return LoginResponse.builder()
                 .accessToken(token)

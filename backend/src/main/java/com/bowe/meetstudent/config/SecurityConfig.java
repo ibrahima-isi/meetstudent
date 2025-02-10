@@ -9,7 +9,6 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfiguration;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -25,6 +24,13 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter filter;
     private final CustomUserDetailsService customUserDetailsService;
 
+    /**
+     * Configures the security filter chain for the application.
+     *
+     * @param httpSecurity the {@link HttpSecurity} object used to configure the security filter chain
+     * @return the configured {@link SecurityFilterChain} instance
+     * @throws Exception if an error occurs while configuring the security filter chain
+     */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
 
@@ -49,11 +55,23 @@ public class SecurityConfig {
         return httpSecurity.build();
     }
 
+    /**
+     * Creates a bean for password encoding.
+     *
+     * @return a `PasswordEncoder` instance using `BCryptPasswordEncoder`
+     */
     @Bean
     public PasswordEncoder passwordEncoder(){
         return new BCryptPasswordEncoder();
     }
 
+    /**
+     * Configures the `AuthenticationManager` bean.
+     *
+     * @param httpSecurity the `HttpSecurity` object used to configure the `AuthenticationManagerBuilder`
+     * @return the configured `AuthenticationManager` instance
+     * @throws Exception if an error occurs while building the `AuthenticationManager`
+     */
     @Bean
     public AuthenticationManager authenticationManager(HttpSecurity httpSecurity) throws Exception {
         AuthenticationManagerBuilder authenticationManagerBuilder = httpSecurity.getSharedObject(
