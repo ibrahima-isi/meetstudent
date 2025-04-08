@@ -1,0 +1,4 @@
+# JWT secret key
+#security:
+#  jwt:
+#    secret-key: thisisthesecrectkeyformyappindeven!

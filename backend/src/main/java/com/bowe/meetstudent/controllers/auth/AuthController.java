@@ -2,8 +2,6 @@ package com.bowe.meetstudent.controllers.auth;
 
 import com.bowe.meetstudent.models.LoginRequest;
 import com.bowe.meetstudent.models.LoginResponse;
-import com.bowe.meetstudent.security.JwtIssuer;
-import com.bowe.meetstudent.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -20,33 +18,33 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping(path = "/api/auth")
 public class AuthController {
 
-    private final JwtIssuer jwtIssuer;
-    private final AuthenticationManager authenticationManager;
+//    private final JwtIssuer jwtIssuer;
+//    private final AuthenticationManager authenticationManager;
 
-    @PostMapping
-    public LoginResponse login(@RequestBody @Validated LoginRequest request){
-        var auth = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.getEmail(),
-                        request.getPassword()
-                )
-        );
-        SecurityContextHolder.getContext().setAuthentication(auth);
-
-        var principal = (UserPrincipal) auth.getPrincipal();
-        var roles = principal.getAuthorities()
-                .stream()
-                .map(GrantedAuthority::getAuthority)
-                .toList();
-
-        var token = jwtIssuer.issue(
-                principal.getUserId(),
-                principal.getEmail(),
-                roles
-        );
-
-        return LoginResponse.builder()
-                .accessToken(token)
-                .build();
-    }
+//    @PostMapping
+//    public LoginResponse login(@RequestBody @Validated LoginRequest request){
+//        var auth = authenticationManager.authenticate(
+//                new UsernamePasswordAuthenticationToken(
+//                        request.getEmail(),
+//                        request.getPassword()
+//                )
+//        );
+//        SecurityContextHolder.getContext().setAuthentication(auth);
+//
+//        var principal = (UserPrincipal) auth.getPrincipal();
+//        var roles = principal.getAuthorities()
+//                .stream()
+//                .map(GrantedAuthority::getAuthority)
+//                .toList();
+//
+//        var token = jwtIssuer.issue(
+//                principal.getUserId(),
+//                principal.getEmail(),
+//                roles
+//        );
+//
+//        return LoginResponse.builder()
+//                .accessToken(token)
+//                .build();
+//    }
 }
