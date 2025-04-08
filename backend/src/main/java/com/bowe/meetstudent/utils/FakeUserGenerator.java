@@ -2,46 +2,63 @@ package com.bowe.meetstudent.utils;
 
 import com.bowe.meetstudent.entities.UserEntity;
 import com.bowe.meetstudent.services.UserService;
-import com.github.javafaker.Faker;
 import lombok.RequiredArgsConstructor;
+import net.datafaker.Faker;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.util.Locale;
 import java.util.Random;
 
+/**
+ * A utility class for generating fake user data.
+ */
 @Component
 @RequiredArgsConstructor
 public class FakeUserGenerator {
 
     private final UserService userService;
+    private final PasswordEncoder passwordEncoder;
     private final Faker faker = new Faker(new Locale("en-GB"));
     private final Random random = new Random();
 
-    public UserEntity fakerUser(){
+    /**
+     * Generates a fake user entity with random data.
+     *
+     * @return a {@link UserEntity} instance with fake data
+     */
+    public UserEntity fakerUser() {
         UserEntity userEntity = new UserEntity();
         userEntity.setFirstname(faker.name().firstName());
         userEntity.setLastname(faker.name().lastName());
         userEntity.setEmail(faker.internet().emailAddress());
-        userEntity.setBirthday(faker.date().birthday());
-        userEntity.setPassword("Passer123");
+        userEntity.setBirthday(faker.date().birthday(18, 75));
+        userEntity.setPassword(passwordEncoder.encode("Passer123"));
         userEntity.setSpeciality(faker.job().field());
         userEntity.setRole(getRandomRole());
 
         return userEntity;
     }
 
-    public void generateFakeUsers(int count){
-        for(int i = 0; i < count; i++){
+    /**
+     * Generates a specified number of fake users and saves them using the {@link UserService}.
+     *
+     * @param count the number of fake users to generate
+     */
+    public void generateFakeUsers(int count) {
+        for (int i = 0; i < count; i++) {
             UserEntity userEntity = fakerUser();
             userService.saveUser(userEntity);
         }
     }
 
-    public Role getRandomRole(){
+    /**
+     * Returns a random role from the available roles.
+     *
+     * @return a randomly selected {@link Role}
+     */
+    public Role getRandomRole() {
         Role[] roles = Role.values();
         return roles[random.nextInt(roles.length)];
     }
-
-
-
 }

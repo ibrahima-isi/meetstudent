@@ -2,12 +2,14 @@ services:
   postgres_db:
     image: postgres:latest
     ports:
-      - "5432:5432"
+      - "5433:5432"
     restart: always
-    environment:
-      POSTGRES_DB: meetstudent
-      POSTGRES_USER: ibrahima
-      POSTGRES_PASSWORD: changeMeInProd!
+#    environment:
+#      POSTGRES_DB: meetstudent
+#      POSTGRES_USER: ibrahima
+#      POSTGRES_PASSWORD: changeMeInProd!
+    env_file:
+      - .env
     volumes:
       - pgMeetStudentData:/var/lib/postgresql/data
 
