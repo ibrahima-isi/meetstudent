@@ -7,7 +7,7 @@ server:
 
 spring:
     profiles:
-        active: dev # We can specify multiple values by using a coma lie this: dev,test,prod
+        active: dev # You can specify multiple active profiles as a comma-separated list (e.g. dev,test,prod)
     application:
         name: meetstudent
     datasource:
