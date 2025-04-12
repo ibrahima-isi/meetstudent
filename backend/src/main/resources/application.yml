@@ -6,15 +6,15 @@ server:
     include-path: always
 
 spring:
-#    profiles:
-#        active: dev,test,prod
+    profiles:
+        active: dev # You can specify multiple active profiles as a comma-separated list (e.g. dev,test,prod)
     application:
         name: meetstudent
     datasource:
         password: changeMeInProd!
         username: ibrahima
         driver-class-name: org.postgresql.Driver
-        url: jdbc:postgresql://localhost:5435/meetstudent
+        url: jdbc:postgresql://localhost:5433/meetstudent
     jpa:
         show-sql: true
         hibernate:
@@ -28,8 +28,3 @@ spring:
     flyway:
         enabled: true
         locations: classpath:db/migration
-
-# JWT secret key
-security:
-  jwt:
-    secret-key: thisisthesecrectkeyformyappindeven!

@@ -3,18 +3,15 @@ package com.bowe.meetstudent.mappers.implementations;
 import com.bowe.meetstudent.dto.UserDTO;
 import com.bowe.meetstudent.entities.UserEntity;
 import com.bowe.meetstudent.mappers.Mapper;
+import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class UserMapper implements Mapper<UserEntity, UserDTO> {
 
     private final ModelMapper modelMapper;
-
-    public UserMapper(ModelMapper modelMapper) {
-        this.modelMapper = modelMapper;
-    }
-
 
     /**
      * Get a UserDTO from a UserEntity

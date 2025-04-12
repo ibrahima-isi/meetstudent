@@ -1,7 +1,5 @@
 package com.bowe.meetstudent.config;
 
-import com.bowe.meetstudent.security.JwtAuthenticationFilter;
-import com.bowe.meetstudent.services.auth.CustomUserDetailsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,15 +12,14 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final JwtAuthenticationFilter filter;
-    private final CustomUserDetailsService customUserDetailsService;
+//    private final JwtAuthenticationFilter filter;
+//    private final CustomUserDetailsService customUserDetailsService;
 
     /**
      * Configures the security filter chain for the application.
@@ -35,7 +32,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
 
         // do the customer filter before using the UsernamePasswordAuthFilter class
-        httpSecurity.addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class);
+//        httpSecurity.addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class);
 
         httpSecurity
                 .cors(AbstractHttpConfigurer::disable)
@@ -72,14 +69,14 @@ public class SecurityConfig {
      * @return the configured `AuthenticationManager` instance
      * @throws Exception if an error occurs while building the `AuthenticationManager`
      */
-    @Bean
-    public AuthenticationManager authenticationManager(HttpSecurity httpSecurity) throws Exception {
-        AuthenticationManagerBuilder authenticationManagerBuilder = httpSecurity.getSharedObject(
-                AuthenticationManagerBuilder.class
-        );
-
-        authenticationManagerBuilder.userDetailsService(customUserDetailsService).passwordEncoder(passwordEncoder());
-
-        return authenticationManagerBuilder.build();
-    }
+//    @Bean
+//    public AuthenticationManager authenticationManager(HttpSecurity httpSecurity) throws Exception {
+//        AuthenticationManagerBuilder authenticationManagerBuilder = httpSecurity.getSharedObject(
+//                AuthenticationManagerBuilder.class
+//        );
+//
+//        authenticationManagerBuilder.userDetailsService(customUserDetailsService).passwordEncoder(passwordEncoder());
+//
+//        return authenticationManagerBuilder.build();
+//    }
 }

@@ -1,48 +1,48 @@
 {
   "instant" : {
-    "epochSecond" : 1739189077,
-    "nanoOfSecond" : 145500700
+    "epochSecond" : 1744476351,
+    "nanoOfSecond" : 514139300
   },
   "thread" : "main",
   "level" : "INFO",
-  "loggerName" : "com.bowe.meetstudent.MeetstudentApplication",
-  "message" : "Starting MeetstudentApplication using Java 17.0.12 with PID 4500 (C:\\Users\\Ibrahima\\meetstudent\\backend\\target\\classes started by Ibrahima in C:\\Users\\Ibrahima\\meetstudent\\backend)",
+  "loggerName" : "com.bowe.meetstudent.controllers.SchoolControllerIntegrationTests",
+  "message" : "Starting SchoolControllerIntegrationTests using Java 17.0.13 with PID 22832 (started by ibrab in C:\\Users\\ibrab\\IdeaProjects\\meetstudent\\backend)",
   "endOfBatch" : false,
   "loggerFqcn" : "org.apache.commons.logging.LogAdapter$Log4jLog",
   "threadId" : 1,
   "threadPriority" : 5,
-  "timestamp" : "2025-02-10T12:04:37.145+0000",
+  "timestamp" : "2025-04-12T16:45:51.514+0000",
   "message" : "%m"
 }
 {
   "instant" : {
-    "epochSecond" : 1739189077,
-    "nanoOfSecond" : 490786100
+    "epochSecond" : 1744476351,
+    "nanoOfSecond" : 896750400
   },
   "thread" : "main",
   "level" : "INFO",
-  "loggerName" : "com.bowe.meetstudent.MeetstudentApplication",
+  "loggerName" : "com.bowe.meetstudent.controllers.SchoolControllerIntegrationTests",
   "message" : "No active profile set, falling back to 1 default profile: \"default\"",
   "endOfBatch" : false,
   "loggerFqcn" : "org.apache.commons.logging.LogAdapter$Log4jLog",
   "threadId" : 1,
   "threadPriority" : 5,
-  "timestamp" : "2025-02-10T12:04:37.490+0000",
+  "timestamp" : "2025-04-12T16:45:51.896+0000",
   "message" : "%m"
 }
 {
   "instant" : {
-    "epochSecond" : 1739189090,
-    "nanoOfSecond" : 172559900
+    "epochSecond" : 1744476380,
+    "nanoOfSecond" : 221413900
   },
   "thread" : "main",
   "level" : "INFO",
-  "loggerName" : "com.bowe.meetstudent.MeetstudentApplication",
-  "message" : "Started MeetstudentApplication in 15.875 seconds (process running for 17.573)",
+  "loggerName" : "com.bowe.meetstudent.controllers.SchoolControllerIntegrationTests",
+  "message" : "Started SchoolControllerIntegrationTests in 30.313 seconds (process running for 35.092)",
   "endOfBatch" : false,
   "loggerFqcn" : "org.apache.commons.logging.LogAdapter$Log4jLog",
   "threadId" : 1,
   "threadPriority" : 5,
-  "timestamp" : "2025-02-10T12:04:50.172+0000",
+  "timestamp" : "2025-04-12T16:46:20.221+0000",
   "message" : "%m"
 }
