@@ -11,8 +11,8 @@ spring:
     application:
         name: meetstudent
     datasource:
-        password: changeMeInProd!
-        username: ibrahima
+        password: ${DB_PASSWORD}
+        username: ${DB_USER}
         driver-class-name: org.postgresql.Driver
         url: jdbc:postgresql://localhost:5433/meetstudent
     jpa:
