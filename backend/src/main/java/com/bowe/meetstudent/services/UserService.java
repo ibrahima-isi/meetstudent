@@ -63,5 +63,8 @@ public class UserService {
         return !this.userRepository.existsById(id);
     }
 
+    public boolean emailNotExists(String email){
+        return !this.userRepository.existsByEmail(email);
+    }
 
 }
