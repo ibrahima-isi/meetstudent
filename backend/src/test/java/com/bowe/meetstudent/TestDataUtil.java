@@ -4,7 +4,7 @@ import com.bowe.meetstudent.dto.SchoolDTO;
 import com.bowe.meetstudent.dto.UserDTO;
 import com.bowe.meetstudent.entities.embedded.Address;
 import com.bowe.meetstudent.utils.Role;
-import com.github.javafaker.Faker;
+import net.datafaker.Faker;
 
 import java.util.Calendar;
 import java.util.Random;

@@ -21,22 +21,6 @@
 		<java.version>17</java.version>
 	</properties>
 
-	<dependencyManagement>
-		<dependencies>
-			<!-- Exclure spring-boot-starter-logging pour toutes les dépendances Spring Boot -->
-			<dependency>
-				<groupId>org.springframework.boot</groupId>
-				<artifactId>spring-boot-starter</artifactId>
-				<exclusions>
-					<exclusion>
-						<groupId>org.springframework.boot</groupId>
-						<artifactId>spring-boot-starter-logging</artifactId>
-					</exclusion>
-				</exclusions>
-			</dependency>
-		</dependencies>
-	</dependencyManagement>
-
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -47,7 +31,7 @@
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
 
-<!-- Persistance dependencies  -->
+<!--Persistance dependencies  -->
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
@@ -64,7 +48,7 @@
 			<version>10.20.1</version>
 		</dependency>
 
-<!--		Features dependencies -->
+<!--Features dependencies -->
 		<dependency>
 			<groupId>org.modelmapper</groupId>
 			<artifactId>modelmapper</artifactId>
@@ -140,6 +124,8 @@
 				</exclusion>
 			</exclusions>
 		</dependency>
+
+		<!-- Tools -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-devtools</artifactId>
