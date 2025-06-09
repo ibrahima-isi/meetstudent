@@ -3,7 +3,7 @@
     <Appenders>
         <!-- Appender Console -->
         <Console name="Console" target="SYSTEM_OUT">
-            <JsonLayout compact="false" eventEol="true" includeTimeMillis="false">
+            <JsonLayout compact="true" eventEol="true" includeTimeMillis="false">
                 <KeyValuePair key="timestamp" value="%d{yyyy-MM-dd'T'HH:mm:ss.SSSZ}" />
                 <KeyValuePair key="message" value="%m" />
             </JsonLayout>
@@ -27,7 +27,7 @@
     <!-- Loggers -->
     <Loggers>
         <!-- Logger pour un package spécifique -->
-        <Logger name="com.bowe.meetstudent" level="info" additivity="false">
+        <Logger name="com.bowe.meetstudent" level="error" additivity="false">
             <AppenderRef ref="Console" />
             <AppenderRef ref="File" />
         </Logger>

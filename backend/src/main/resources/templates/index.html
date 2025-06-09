@@ -1,23 +1,43 @@
 <!DOCTYPE html>
-<html lang="en">
+<!--<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org">-->
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Landing Page</title>
+<!--    <link rel="stylesheet" th:href="@{/css/styles.css}">-->
     <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
 <header>
     <nav>
-        <ul>
+        <ul sec:authorize="!isAuthenticated()">
             <li><a href="#">Home</a></li>
             <li><a href="#">About</a></li>
             <li><a href="#">Services</a></li>
             <li><a href="#">Contact</a></li>
+            <li><a href="/api/auth/register">Register</a></li>
+            <li><a href="/api/auth/login">Login</a></li>
+        </ul>
+        <ul sec:authorize="isAuthenticated()">
+            <li><a href="#">Home</a></li>
+            <li><a href="#">About</a></li>
+            <li><a href="#">Services</a></li>
+            <li><a href="#">Contact</a></li>
+            <li><a href="/logout">Logout</a></li>
         </ul>
     </nav>
 </header>
 
+<div  th:if="${success}" class="message alert alert-success">
+    <span >Le compte a ete cree avec succes</span>
+</div>
+<div th:if="${loginSuccess}" style="background-color: #d4edda; color: #155724; padding: 10px;
+                                    border: 1px solid #c3e6cb; border-radius: 4px; margin-bottom: 15px;">
+    <span th:text="${loginSuccess}"></span>
+</div>
 <section id="hero">
     <div class="hero-content">
         <h1>Welcome to Our Amazing Landing Page</h1>
