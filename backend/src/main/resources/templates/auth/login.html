@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<form th:action="@{/api/auth/process-login}" method="post" th:object="${dto}">
+<!--    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />-->
+    <div th:if="${#fields.hasAnyErrors()}" class="error-message">
+            <p th:each="err : ${#fields.allErrors()}" th:text="${err}" class="text-danger"></p>
+    </div>
+
+    <label for="email">Username</label>
+    <input type="text" id="email" th:field="*{email}" required>
+    <span th:if="${#fields.hasErrors('email')}" th:errorclass="text-danger" th:errors="*{email}"></span>
+
+    <label for="password">Password</label>
+    <input type="password" id="password" th:field="*{password}" required>
+    <span th:if="${#fields.hasErrors('password')}" th:errorclass="text-danger" th:errors="*{password}"></span>
+
+    <button type="submit">Login</button>
+</form>
+</body>
+</html>
