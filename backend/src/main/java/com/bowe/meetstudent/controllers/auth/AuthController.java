@@ -3,6 +3,7 @@ package com.bowe.meetstudent.controllers.auth;
 import com.bowe.meetstudent.dto.UserDTO;
 import com.bowe.meetstudent.dto.auth.LoginDTO;
 import com.bowe.meetstudent.entities.UserEntity;
+import com.bowe.meetstudent.mappers.implementations.UserMapper;
 import com.bowe.meetstudent.services.UserService;
 import com.bowe.meetstudent.services.auth.AuthenticationService;
 import jakarta.validation.Valid;
@@ -30,7 +31,6 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class AuthController {
 
     private final AuthenticationService authenticationService;
-    private final UserService userService;
     private final PasswordEncoder encoder;
 
     /**
@@ -43,61 +43,43 @@ public class AuthController {
         return "auth/register";
     }
 
+    /**
+     * Handles user registration form submission.
+     * Validates the input, registers the user, and returns the appropriate view.
+     */
     @PostMapping("/register")
     public String register(Model model, @Valid @ModelAttribute UserDTO userDTO, BindingResult result) {
-        if (!userDTO.getPassword().equals(userDTO.getConfirmedPassword())) {
-            result.addError(
-                    new FieldError("userDTO", "confirmedPassword", "Mot de passe different")
-            );
-        }
 
-        if (userService.emailNotExists(userDTO.getEmail())) {
-            result.addError(
-                    new FieldError(
-                            "userDTO",
-                            "email",
-                            "Cet email existe deja !"
-                    )
-            );
-        }
-
+        authenticationService.register(userDTO, encoder, result);
         if (result.hasErrors()) {
             return "auth/register";
         }
-
-        try {
-            UserEntity userEntity = new UserEntity();
-            userEntity.setFirstname(userDTO.getFirstname());
-            userEntity.setLastname(userDTO.getLastname());
-            userEntity.setEmail(userDTO.getEmail());
-            userEntity.setPassword(userDTO.getPassword());
-            userEntity.setBirthday(userDTO.getBirthday());
-
-            if (userDTO.getRole() != null) {
-                userEntity.setRole(userDTO.getRole());
-            }
-            if (!userDTO.getSpeciality().isEmpty()) {
-                userEntity.setSpeciality(userDTO.getSpeciality());
-            }
-            var saved = userService.saveUser(userEntity);
-            model.addAttribute("success", true);
-
-        } catch (Exception exception) {
-            result.addError(
-                    new ObjectError("userDTO", exception.getMessage())
-            );
-            return "auth/register";
-        }
+        model.addAttribute("success", true);
         return "index";
     }
 
+    /**
+     * Displays the login form.
+     * Adds an empty LoginDTO to the model for form binding.
+     */
     @GetMapping("/login")
     public String login(Model model) {
-        LoginDTO dto = new LoginDTO();
-        model.addAttribute("dto", dto);
+        model.addAttribute("dto", new LoginDTO());
         return "auth/login";
     }
 
+
+    /**
+     * Processes the login form submission.
+     * Validates the input fields, attempts authentication, and handles errors.
+     * On successful login, adds a flash attribute and redirects to the home page.
+     *
+     * @param model the model to add attributes to
+     * @param dto the login data transfer object containing user credentials
+     * @param result the binding result for validation errors
+     * @param redirectAttributes attributes for a redirect scenario
+     * @return the view name to render or redirect to
+     */
     @PostMapping("/process-login")
     public String login(Model model, @Valid @ModelAttribute("dto") LoginDTO dto, BindingResult result, RedirectAttributes redirectAttributes) {
         if (dto.getEmail().isEmpty() || dto.getPassword().isEmpty()) {
@@ -106,31 +88,12 @@ public class AuthController {
             );
         }
 
+        authenticationService.login(dto, result);
         if (result.hasErrors()) {
             return "auth/login";
         }
-
-        try {
-            UserDetails userDetails = authenticationService.loadUserByUsername(dto.getEmail());
-            if (userDetails == null || !encoder.matches(dto.getPassword(), userDetails.getPassword())) {
-                result.addError(new ObjectError("dto", "Controller error: Email ou mot de passe incorrect !"));
-                return "auth/login";
-            }
-            // Set authentication in SecurityContext
-            Authentication authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-            SecurityContextHolder.getContext().setAuthentication(authentication);
-
-            // Add flash attribute for success message
-            redirectAttributes.addFlashAttribute("loginSuccess", "Connexion réussie!");
-
-        } catch (UsernameNotFoundException e) {
-            result.addError(new ObjectError("dto", "Email ou mot de passe incorrect !"));
-            return "auth/login";
-        } catch (Exception e) {
-            result.addError(new ObjectError("dto", "Erreur Inconnu: " + e.getMessage()));
-            return "auth/login";
-        }
-
+        // Add flash attribute for success message
+        redirectAttributes.addFlashAttribute("loginSuccess", "Connexion réussie!");
         model.addAttribute("success", true);
         return "redirect:/"; // Redirect to the home page or another page
     }

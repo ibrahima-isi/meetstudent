@@ -9,6 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.validation.FieldError;
 
 import java.util.List;
 import java.util.Optional;
@@ -21,9 +22,8 @@ import java.util.Optional;
 public class UserService {
 
     private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
 
-    public UserEntity saveUser(UserEntity userEntity) {
+    public UserEntity saveUser(UserEntity userEntity, PasswordEncoder passwordEncoder ) {
         userEntity.setPassword(
                 passwordEncoder.encode(
                         userEntity.getPassword()
@@ -65,6 +65,10 @@ public class UserService {
 
     public boolean emailNotExists(String email){
         return !this.userRepository.existsByEmail(email);
+    }
+
+    public boolean isPasswordConfirmed(String password, String confirmedPassword) {
+        return password != null && password.equals(confirmedPassword);
     }
 
 }

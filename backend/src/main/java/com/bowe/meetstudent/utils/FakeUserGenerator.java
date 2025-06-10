@@ -48,7 +48,7 @@ public class FakeUserGenerator {
     public void generateFakeUsers(int count) {
         for (int i = 0; i < count; i++) {
             UserEntity userEntity = fakerUser();
-            userService.saveUser(userEntity);
+            userService.saveUser(userEntity, passwordEncoder);
         }
     }
 

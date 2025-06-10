@@ -13,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,6 +25,7 @@ import java.util.Optional;
 public class UserController {
 
     private final UserService userService;
+    private final PasswordEncoder encoder;
     private final Mapper<UserEntity, UserDTO> userMapper;
     private final FakeUserGenerator fake;
 
@@ -32,8 +34,7 @@ public class UserController {
     public ResponseEntity<UserDTO> saveUser(@RequestBody UserDTO userDTO) {
 
         UserEntity userEntity = this.userMapper.toEntity(userDTO);
-        this.userService.saveUser(userEntity);
-        UserEntity savedUser = this.userService.saveUser(userEntity);
+        UserEntity savedUser = this.userService.saveUser(userEntity, encoder);
         UserDTO savedUserDto = this.userMapper.toDTO(savedUser);
 
         return new ResponseEntity<>(savedUserDto, HttpStatus.CREATED);
@@ -95,8 +96,7 @@ public class UserController {
         Optional<UserEntity> existingUserOptional = userService.getUserById(id);
         final UserEntity existingUser = setValuesForUpdate(userDTO, existingUserOptional);
 
-        this.userService.saveUser(existingUser);
-
+        this.userService.saveUser(existingUser, encoder);
         UserDTO savedUser = this.userMapper.toDTO(existingUser);
         return new ResponseEntity<>(savedUser,HttpStatus.OK);
     }
@@ -111,7 +111,7 @@ public class UserController {
         }
 
         final UserEntity existingUser = setValuesForUpdate(userDTO, existingUserOptional);
-        this.userService.saveUser(existingUser);
+        this.userService.saveUser(existingUser, encoder);
 
         this.userService
                 .getUserById(id)
