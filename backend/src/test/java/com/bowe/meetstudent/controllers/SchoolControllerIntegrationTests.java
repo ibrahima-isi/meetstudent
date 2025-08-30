@@ -6,7 +6,6 @@ import com.bowe.meetstudent.dto.SchoolDTO;
 import com.bowe.meetstudent.mappers.implementations.SchoolMapper;
 import com.bowe.meetstudent.services.SchoolService;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
