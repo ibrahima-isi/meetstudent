@@ -3,6 +3,7 @@ package com.bowe.meetstudent.config;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -16,6 +17,7 @@ import org.thymeleaf.extras.springsecurity6.dialect.SpringSecurityDialect;
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
+@Profile("!test")
 public class SecurityConfig {
 
     /**
@@ -32,6 +34,7 @@ public class SecurityConfig {
                     registry.requestMatchers("/", "/css/**", "/js/**", "/images/**", "/webjars/**").permitAll();
                     registry.requestMatchers("/logout").permitAll();
                     registry.requestMatchers("/api/auth/**").permitAll();
+                    registry.requestMatchers("/api/users").permitAll();
                     registry.requestMatchers("/api/admin/**").hasRole("ADMIN");
                     registry.anyRequest().authenticated();
                 })

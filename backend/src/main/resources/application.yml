@@ -4,27 +4,15 @@ server:
     include-binding-errors: always
     include-exception: true
     include-path: always
-
 spring:
-    profiles:
-        active: dev # You can specify multiple active profiles as a comma-separated list (e.g. dev,test,prod)
-    application:
-        name: meetstudent
+#    profiles:
+#        active: dev # You can specify multiple active profiles as a comma-separated list (e.g. dev,test,prod)
     datasource:
-        password: ${PGPASSWORD}
-        username: ${PGUSER}
+        url: jdbc:postgresql://${PGHOST:localhost}/${PGDATABASE:meetstudent}?sslmode=require
+        username: ${PGUSER:admin}
+        password: ${PGPASSWORD:password}
         driver-class-name: org.postgresql.Driver
-        url: jdbc:postgresql://${PGHOST}/${PGDATABASE}?sslmode=require
-    jpa:
-        show-sql: true
-        hibernate:
-            ddl-auto: update
-        properties:
-            hibernate:
-                format_sql: true
-    sql:
-        init:
-            mode: never
+
     flyway:
         enabled: true
         locations: classpath:db/migration

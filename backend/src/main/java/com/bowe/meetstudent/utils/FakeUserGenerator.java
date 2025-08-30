@@ -7,6 +7,8 @@ import net.datafaker.Faker;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.time.ZoneId;
+import java.util.Date;
 import java.util.Locale;
 import java.util.Random;
 
@@ -21,6 +23,9 @@ public class FakeUserGenerator {
     private final PasswordEncoder passwordEncoder;
     private final Faker faker = new Faker(new Locale("en-GB"));
     private final Random random = new Random();
+    Date birthday = Date.from(faker.timeAndDate().birthday(18, 75)
+            .atStartOfDay(ZoneId.systemDefault()).toInstant()
+    );
 
     /**
      * Generates a fake user entity with random data.
@@ -32,7 +37,7 @@ public class FakeUserGenerator {
         userEntity.setFirstname(faker.name().firstName());
         userEntity.setLastname(faker.name().lastName());
         userEntity.setEmail(faker.internet().emailAddress());
-        userEntity.setBirthday(faker.date().birthday(18, 75));
+        userEntity.setBirthday(birthday);
         userEntity.setPassword(passwordEncoder.encode("Passer123"));
         userEntity.setSpeciality(faker.job().field());
         userEntity.setRole(getRandomRole());
