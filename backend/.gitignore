@@ -35,7 +35,6 @@ build/
 ### Docker ###
 secrets/
 .env
-appilication-test.yml
+application-test.yml
 application-prod.yml
-
-/src/main/resources/application-test.yml
+application-dev.yml
