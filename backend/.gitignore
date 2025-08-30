@@ -35,3 +35,6 @@ build/
 ### Docker ###
 secrets/
 .env
+application-test.yml
+application-prod.yml
+application-dev.yml
