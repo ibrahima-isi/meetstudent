@@ -197,3 +197,19 @@
   "timestamp" : "2025-08-27T11:36:26.402+0000",
   "message" : "%m"
 }
+{
+  "instant" : {
+    "epochSecond" : 1759699626,
+    "nanoOfSecond" : 129656700
+  },
+  "thread" : "main",
+  "level" : "ERROR",
+  "loggerName" : "org.springframework.boot.diagnostics.LoggingFailureAnalysisReporter",
+  "message" : "\r\n\r\n***************************\r\nAPPLICATION FAILED TO START\r\n***************************\r\n\r\nDescription:\r\n\r\nParameter 1 of constructor in com.bowe.meetstudent.services.auth.AuthenticationService required a bean of type 'org.springframework.security.crypto.password.PasswordEncoder' that could not be found.\r\n\r\n\r\nAction:\r\n\r\nConsider defining a bean of type 'org.springframework.security.crypto.password.PasswordEncoder' in your configuration.\r\n",
+  "endOfBatch" : false,
+  "loggerFqcn" : "org.apache.commons.logging.LogAdapter$Log4jLog",
+  "threadId" : 1,
+  "threadPriority" : 5,
+  "timestamp" : "2025-10-05T21:27:06.129+0000",
+  "message" : "%m"
+}

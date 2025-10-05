@@ -14,6 +14,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
@@ -23,8 +24,9 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 @ExtendWith(SpringExtension.class)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @AutoConfigureMockMvc
+@ActiveProfiles("test")
 @Import(TestSecurityConfig.class)
-public class SchoolControllerIntegrationTests {
+class SchoolControllerIntegrationTests {
 
     @Autowired
     private MockMvc mockMvc;
@@ -39,7 +41,7 @@ public class SchoolControllerIntegrationTests {
     private SchoolMapper schoolMapper;
 
     @Test
-    public void testThatCreateSchoolReturnsHttpStatus201Created() throws Exception {
+    void testThatCreateSchoolReturnsHttpStatus201Created() throws Exception {
         SchoolDTO schoolDTO = TestDataUtil.createSchoolDto();
 
         String json = objectMapper.writeValueAsString(schoolDTO);
@@ -55,7 +57,7 @@ public class SchoolControllerIntegrationTests {
     }
 
     @Test
-    public void testThatSchoolCanBeCreatedSuccessfullyAndRecalled() throws Exception {
+    void testThatSchoolCanBeCreatedSuccessfullyAndRecalled() throws Exception {
         SchoolDTO schoolDTO = TestDataUtil.createSchoolDto();
 
         String json = objectMapper.writeValueAsString(schoolDTO);
@@ -73,7 +75,7 @@ public class SchoolControllerIntegrationTests {
     }
 
     @Test
-    public void testThatGetAllSchoolsReturnsHttpStatus200() throws Exception {
+    void testThatGetAllSchoolsReturnsHttpStatus200() throws Exception {
         mockMvc.perform(
                 MockMvcRequestBuilders.get("/api/schools")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -83,7 +85,7 @@ public class SchoolControllerIntegrationTests {
     }
 
     @Test
-    public void testThatGetAllSchoolsReturnsAListOfSchools() throws Exception {
+    void testThatGetAllSchoolsReturnsAListOfSchools() throws Exception {
         SchoolDTO schoolDTO = TestDataUtil.createSchoolDto();
         SchoolDTO schoolDTO0 = TestDataUtil.createSchoolDto();
         SchoolDTO schoolDTO1 = TestDataUtil.createSchoolDto();
@@ -92,23 +94,21 @@ public class SchoolControllerIntegrationTests {
         this.schoolService.save(this.schoolMapper.toEntity(schoolDTO0));
         this.schoolService.save(this.schoolMapper.toEntity(schoolDTO1));
 
-
         mockMvc.perform(
                 MockMvcRequestBuilders.get("/api/schools")
                         .contentType(MediaType.APPLICATION_JSON)
         ).andExpect(
-                MockMvcResultMatchers.jsonPath("$[0].id").value(1)
+                MockMvcResultMatchers.jsonPath("$.content[0].id").value(1)
         ).andExpect(
-                MockMvcResultMatchers.jsonPath("$[0].name").value(schoolDTO.getName())
+                MockMvcResultMatchers.jsonPath("$.content[0].name").value(schoolDTO.getName())
         ).andExpect(
-                MockMvcResultMatchers.jsonPath("$[1].id").isNumber()
+                MockMvcResultMatchers.jsonPath("$.content[1].id").isNumber()
         ).andExpect(
-                MockMvcResultMatchers.jsonPath("$[2].id").isNumber()
+                MockMvcResultMatchers.jsonPath("$.content[2].id").isNumber()
         ).andExpect(
-                MockMvcResultMatchers.jsonPath("$[2].name").value(schoolDTO1.getName())
+                MockMvcResultMatchers.jsonPath("$.content[2].name").value(schoolDTO1.getName())
         ).andExpect(
                 MockMvcResultMatchers.status().isOk()
         );
-
     }
 }
