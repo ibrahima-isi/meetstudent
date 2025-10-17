@@ -3,9 +3,10 @@ package com.bowe.meetstudent.models;
 import lombok.Builder;
 import lombok.Getter;
 
-@Getter
 @Builder
+@Getter
 public class LoginRequest {
-    private String email;
+
+    private String username;
     private String password;
 }
