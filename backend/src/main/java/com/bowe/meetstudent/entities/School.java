@@ -13,12 +13,13 @@ import java.util.Objects;
 
 @Getter
 @Setter
-@ToString
 @AllArgsConstructor
 @NoArgsConstructor
 @SuperBuilder
 @Entity
 @Table(name = "schools")
+@EqualsAndHashCode(callSuper = true, onlyExplicitlyIncluded = true)
+@ToString(callSuper = true, onlyExplicitlyIncluded = true)
 public class School extends BaseEntity{
 
     private Date creation;
@@ -33,20 +34,4 @@ public class School extends BaseEntity{
     @OneToMany(mappedBy = "school")
     @ToString.Exclude
     private List<SchoolRate> schoolRates;
-
-    @Override
-    public final boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null) return false;
-        Class<?> oEffectiveClass = o instanceof HibernateProxy ? ((HibernateProxy) o).getHibernateLazyInitializer().getPersistentClass() : o.getClass();
-        Class<?> thisEffectiveClass = this instanceof HibernateProxy ? ((HibernateProxy) this).getHibernateLazyInitializer().getPersistentClass() : this.getClass();
-        if (thisEffectiveClass != oEffectiveClass) return false;
-        School school = (School) o;
-        return getId() != null && Objects.equals(getId(), school.getId());
-    }
-
-    @Override
-    public final int hashCode() {
-        return this instanceof HibernateProxy ? ((HibernateProxy) this).getHibernateLazyInitializer().getPersistentClass().hashCode() : getClass().hashCode();
-    }
 }

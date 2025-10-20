@@ -1,6 +1,6 @@
 package com.bowe.meetstudent.dto;
 
-import com.bowe.meetstudent.utils.Role;
+import com.bowe.meetstudent.entities.Role;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.AllArgsConstructor;
@@ -37,6 +37,6 @@ public class UserDTO {
 
     @NotEmpty(message = "Confirmez le mot de passe")
     private String confirmedPassword;
-    private Role role;
+    private Role roles;
     private String speciality;
 }

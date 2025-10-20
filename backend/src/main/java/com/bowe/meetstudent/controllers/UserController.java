@@ -3,9 +3,9 @@ package com.bowe.meetstudent.controllers;
 import com.bowe.meetstudent.dto.UserDTO;
 import com.bowe.meetstudent.entities.UserEntity;
 import com.bowe.meetstudent.mappers.Mapper;
+import com.bowe.meetstudent.services.RoleService;
 import com.bowe.meetstudent.services.UserService;
-import com.bowe.meetstudent.utils.FakeUserGenerator;
-import com.bowe.meetstudent.utils.Role;
+import com.bowe.meetstudent.entities.Role;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -27,7 +27,7 @@ public class UserController {
     private final UserService userService;
     private final PasswordEncoder encoder;
     private final Mapper<UserEntity, UserDTO> userMapper;
-    private final FakeUserGenerator fake;
+    private final RoleService roleService;
 
 
     @PostMapping
@@ -42,7 +42,6 @@ public class UserController {
 
     @GetMapping
     public Page<UserDTO> findAll() {
-        fake.generateFakeUsers(10);
         Pageable pageable = PageRequest.of(0, 10, Sort.by("firstname").descending()); // 10 schools per page, sorted by name ascending
         Page<UserEntity> userEntities = this.userService.findAll(pageable);
         return userEntities.map(userMapper::toDTO);
@@ -73,18 +72,19 @@ public class UserController {
     @GetMapping(path = "/role/{role}")
     public ResponseEntity<List<UserDTO>> findByRole(@PathVariable String role) {
 
-        try {
-            Role convertedRole = Role.valueOf(role.toUpperCase());
-            List<UserDTO> userDTOS = this.userService
-                    .getUsersByRole(convertedRole)
-                    .stream()
-                    .map(userMapper::toDTO)
-                    .toList();
+        Optional<Role> roleOptional = roleService.findRoleByName(role.toUpperCase());
 
-            return new ResponseEntity<>(userDTOS, HttpStatus.OK);
-        } catch (IllegalArgumentException e) {
+        if (roleOptional.isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
+
+        List<UserDTO> userDTOS = this.userService
+                .getUsersByRole(roleOptional.get())
+                .stream()
+                .map(userMapper::toDTO)
+                .toList();
+
+        return new ResponseEntity<>(userDTOS, HttpStatus.OK);
     }
 
     @PutMapping(path = "/{id}")
@@ -161,8 +161,8 @@ public class UserController {
         if(userDTO.getSpeciality() != null){
             existingUser.setSpeciality(userDTO.getSpeciality());
         }
-        if(userDTO.getRole() != null) {
-            existingUser.setRole(userDTO.getRole());
+        if(userDTO.getRoles() != null) {
+            existingUser.setRoles(userDTO.getRoles());
         }
         if(userDTO.getBirthday() != null) {
             existingUser.setBirthday(userDTO.getBirthday());

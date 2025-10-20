@@ -3,28 +3,35 @@ package com.bowe.meetstudent;
 import com.bowe.meetstudent.dto.SchoolDTO;
 import com.bowe.meetstudent.dto.UserDTO;
 import com.bowe.meetstudent.entities.embedded.Address;
-import com.bowe.meetstudent.utils.Role;
+import com.bowe.meetstudent.entities.Role;
 import net.datafaker.Faker;
 
 import java.time.ZoneId;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Random;
+import java.util.List;
 
 public class TestDataUtil {
 
     private static final Faker faker = new Faker();
     private static final Random random = new Random();
 
+    private static final List<Role> ROLES = List.of(
+            Role.builder().id(1).name("ADMIN").build(),
+            Role.builder().id(2).name("USER").build(),
+            Role.builder().id(3).name("EXPERT").build(),
+            Role.builder().id(4).name("STUDENT").build()
+    );
+
     public static Role getRandomRole(){
-        Role[] roles = Role.values();
-        return roles[random.nextInt(roles.length)];
+        return ROLES.get(random.nextInt(ROLES.size()));
     }
 
     public static UserDTO createUserDto(){
         return UserDTO.builder()
                 .email(faker.internet().emailAddress())
-                .role(getRandomRole())
+                .roles(getRandomRole())
                 .lastname(faker.name().lastName())
                 .firstname(faker.name().firstName())
                 .password(faker.regexify("[a-zA-Z0-9]{8,16}"))

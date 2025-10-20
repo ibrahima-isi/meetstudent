@@ -1,5 +1,6 @@
 package com.bowe.meetstudent.security;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Builder;
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
@@ -10,9 +11,14 @@ import java.util.Collection;
 @Getter
 @Builder
 public class UserPrincipal implements UserDetails {
+
     private final Integer id;
+
     private final String username;
+
+    @JsonIgnore
     private final String password;
+
     private final Collection<? extends GrantedAuthority> authorities;
 
     @Override

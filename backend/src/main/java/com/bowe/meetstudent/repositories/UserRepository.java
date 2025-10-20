@@ -1,7 +1,7 @@
 package com.bowe.meetstudent.repositories;
 
 import com.bowe.meetstudent.entities.UserEntity;
-import com.bowe.meetstudent.utils.Role;
+import com.bowe.meetstudent.entities.Role;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -15,7 +15,7 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<UserEntity, Integer> {
 
     Optional<UserEntity> findByEmailIgnoreCase(String email);
-    List<UserEntity> findUserEntityByRole(Role role);
+    List<UserEntity> findByRoles(Role role);
 
     boolean existsByEmail(String email);
 }

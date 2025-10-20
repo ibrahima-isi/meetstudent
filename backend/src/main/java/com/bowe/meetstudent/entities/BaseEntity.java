@@ -11,21 +11,26 @@ import java.util.Objects;
 
 @Getter
 @Setter
-@ToString
 @RequiredArgsConstructor
 @AllArgsConstructor
 @SuperBuilder
 @MappedSuperclass
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@ToString(onlyExplicitlyIncluded = true)
 public class BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @ToString.Include
+    @EqualsAndHashCode.Include
     private Integer id;
 
     @Column(length = 5, unique = true)
+    @ToString.Include
     private String code;
 
     @Column(length = 50)
+    @ToString.Include
     private String name;
 
     private LocalDateTime createdAt;
@@ -52,21 +57,5 @@ public class BaseEntity {
         this.setModifiedAt(
                 Utils.dakarTimeZone()
         );
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null) return false;
-        Class<?> oEffectiveClass = o instanceof HibernateProxy ? ((HibernateProxy) o).getHibernateLazyInitializer().getPersistentClass() : o.getClass();
-        Class<?> thisEffectiveClass = this instanceof HibernateProxy ? ((HibernateProxy) this).getHibernateLazyInitializer().getPersistentClass() : this.getClass();
-        if (thisEffectiveClass != oEffectiveClass) return false;
-        BaseEntity that = (BaseEntity) o;
-        return getId() != null && Objects.equals(getId(), that.getId());
-    }
-
-    @Override
-    public int hashCode() {
-        return this instanceof HibernateProxy ? ((HibernateProxy) this).getHibernateLazyInitializer().getPersistentClass().hashCode() : getClass().hashCode();
     }
 }

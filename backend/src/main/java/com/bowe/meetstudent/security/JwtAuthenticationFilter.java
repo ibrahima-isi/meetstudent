@@ -16,8 +16,11 @@ import java.util.Optional;
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
     private final JwtDecoder jwtDecoder;
+
     private final JwtToPrincipalConverter jwtToPrincipalConverter;
+
     @Override
     protected void doFilterInternal(
             HttpServletRequest request,
@@ -30,8 +33,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 .ifPresent(auth -> SecurityContextHolder.getContext().setAuthentication(auth));
 
         filterChain.doFilter(request, response);
-
-
     }
 
     private Optional<String> extractTokenFromRequest(HttpServletRequest request){

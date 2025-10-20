@@ -2,14 +2,12 @@ package com.bowe.meetstudent.services;
 
 import com.bowe.meetstudent.entities.UserEntity;
 import com.bowe.meetstudent.repositories.UserRepository;
-import com.bowe.meetstudent.utils.Role;
+import com.bowe.meetstudent.entities.Role;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.validation.FieldError;
 
 import java.util.List;
 import java.util.Optional;
@@ -49,7 +47,7 @@ public class UserService {
     }
 
     public List<UserEntity> getUsersByRole(Role role){
-        return this.userRepository.findUserEntityByRole(role);
+        return this.userRepository.findByRoles(role);
     }
 
     public UserEntity deleteUser(int id) {

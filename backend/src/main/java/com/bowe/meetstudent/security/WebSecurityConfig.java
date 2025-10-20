@@ -1,11 +1,11 @@
-package com.bowe.meetstudent.config;
+package com.bowe.meetstudent.security;
 
-import com.bowe.meetstudent.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -15,15 +15,16 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.thymeleaf.extras.springsecurity6.dialect.SpringSecurityDialect;
 
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
 @Profile("!test")
-public class SecurityConfig {
+public class WebSecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    private final CustomUserDetailsService userDetailsService;
 
     /**
      * Configures the security filter chain for the application.
@@ -49,6 +50,15 @@ public class SecurityConfig {
                 .authorizeHttpRequests(registry ->
                         registry
                                 .requestMatchers("/").permitAll()
+                                .requestMatchers(
+                                        "/swagger-ui.html",
+                                        "/swagger-ui/index.html",
+                                        "/api-docs",
+                                        "/v3/api-docs/**",
+                                        "/v3/api-docs.yaml",
+                                        "/swagger-resources/**",
+                                        "/webjars/**"
+                                    ).permitAll()
                                 .requestMatchers("/api/auth/**").permitAll()
                                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                                 .anyRequest().authenticated()
@@ -66,11 +76,16 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-//    @Bean
-//    public AuthenticationManager authenticationManager(
-//            AuthenticationConfiguration authenticationConfiguration) throws Exception {
-//        return authenticationConfiguration.getAuthenticationManager();
-//    }
+    @Bean
+    public AuthenticationManager authenticationManager(HttpSecurity httpSecurity) throws Exception {
+        AuthenticationManagerBuilder authBuilder = httpSecurity
+                .getSharedObject(AuthenticationManagerBuilder.class);
+
+        authBuilder.userDetailsService(userDetailsService)
+                .passwordEncoder(passwordEncoder());
+
+        return authBuilder.build();
+    }
 
 //    @Bean
 //    public SpringSecurityDialect securityDialect() {
