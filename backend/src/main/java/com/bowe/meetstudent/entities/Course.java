@@ -23,6 +23,5 @@ public class Course extends BaseEntity {
     private String code;
 
     @OneToMany(mappedBy = "course")
-    @ToString.Exclude
     private List<CourseRate> courseRates;
 }

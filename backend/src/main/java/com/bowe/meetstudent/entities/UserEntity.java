@@ -57,7 +57,7 @@ public class UserEntity {
     @ManyToOne
     @JoinColumn(name = "role_id")
     @ToString.Include
-    private Role roles;
+    private Role role;
 
     @Column(length = 100)
     private String speciality;
@@ -66,7 +66,6 @@ public class UserEntity {
      * relationship with the user's diploma
      */
     @ManyToMany(mappedBy = "users")
-    @ToString.Exclude
     private List<Diploma> diplomas;
 
     /**

@@ -4,7 +4,12 @@ import com.bowe.meetstudent.dto.SchoolDTO;
 import com.bowe.meetstudent.entities.School;
 import com.bowe.meetstudent.mappers.implementations.SchoolMapper;
 import com.bowe.meetstudent.services.SchoolService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -13,18 +18,20 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Optional;
 
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = "/api/schools")
+@Tag(name = "3. Schools")
 public class SchoolController {
 
     private final SchoolService schoolService;
     private final SchoolMapper schoolMapper;
 
     @PostMapping
+    @Operation(summary = "Create a new school")
+    @ApiResponse(responseCode = "201", description = "School created successfully")
     private ResponseEntity<SchoolDTO> create(@RequestBody SchoolDTO schoolDTO) {
 
         School school = schoolMapper.toEntity(schoolDTO);
@@ -35,14 +42,19 @@ public class SchoolController {
     }
 
     @GetMapping
-    public Page<SchoolDTO> getSchools(Pageable pageable) {
+    @Operation(summary = "Get all schools (paginated)", description = "Provides a paginated list of all schools. Pagination and sorting can be controlled via query parameters.")
+    @ApiResponse(responseCode = "200", description = "List of schools")
+    public Page<SchoolDTO> getSchools(@ParameterObject Pageable pageable) {
         return this.schoolService
                 .findAll(pageable)
                 .map(schoolMapper::toDTO);
     }
 
     @GetMapping(path = "/{id}")
-    public ResponseEntity<SchoolDTO> getSchoolById(@PathVariable int id) {
+    @Operation(summary = "Get a school by ID")
+    @ApiResponse(responseCode = "302", description = "School found")
+    @ApiResponse(responseCode = "404", description = "School not found")
+    public ResponseEntity<SchoolDTO> getSchoolById(@Parameter(description = "ID of the school to retrieve") @PathVariable int id) {
 
         return this.schoolService.getSchoolById(id)
                 .map(school -> {
@@ -55,7 +67,9 @@ public class SchoolController {
     }
 
     @GetMapping(path = "/name/{name}")
-    public Page<SchoolDTO> getSchoolByName(@PathVariable String name, Pageable pageable) {
+    @Operation(summary = "Search schools by name (paginated)")
+    @ApiResponse(responseCode = "200", description = "List of schools matching the name")
+    public Page<SchoolDTO> getSchoolByName(@Parameter(description = "Name to search for") @PathVariable String name, @ParameterObject Pageable pageable) {
 
         return this.schoolService
                 .getSchoolByName(name, pageable)
@@ -63,7 +77,9 @@ public class SchoolController {
     }
 
     @GetMapping(path = "/address/{city}")
-    public Page<SchoolDTO> getSchoolByCity(@PathVariable String city){
+    @Operation(summary = "Search schools by city (paginated)")
+    @ApiResponse(responseCode = "200", description = "List of schools in the specified city")
+    public Page<SchoolDTO> getSchoolByCity(@Parameter(description = "City to search for") @PathVariable String city){
 
         Pageable pageable = PageRequest.of(0, 10, Sort.by("name").descending()); // 10 schools per page, sorted by name ascending
         return this.schoolService.findSchoolByCity(city, pageable)
@@ -71,19 +87,28 @@ public class SchoolController {
     }
 
     @PutMapping(path = "/{id}")
-    public ResponseEntity<SchoolDTO> update(@RequestBody SchoolDTO newSchool, @PathVariable int id) {
+    @Operation(summary = "Update a school by ID")
+    @ApiResponse(responseCode = "200", description = "School updated successfully")
+    @ApiResponse(responseCode = "404", description = "School not found")
+    public ResponseEntity<SchoolDTO> update(@RequestBody SchoolDTO newSchool, @Parameter(description = "ID of the school to update") @PathVariable int id) {
 
         return getSchoolDTOResponseEntity(newSchool, id);
     }
 
     @PatchMapping(path = "/{id}")
-    public ResponseEntity<SchoolDTO> patch(@RequestBody SchoolDTO schoolDTO, @PathVariable int id) {
+    @Operation(summary = "Partially update a school by ID")
+    @ApiResponse(responseCode = "200", description = "School patched successfully")
+    @ApiResponse(responseCode = "404", description = "School not found")
+    public ResponseEntity<SchoolDTO> patch(@RequestBody SchoolDTO schoolDTO, @Parameter(description = "ID of the school to patch") @PathVariable int id) {
 
         return getSchoolDTOResponseEntity(schoolDTO, id);
     }
 
     @DeleteMapping(path = "/{id}")
-    public ResponseEntity<SchoolDTO> delete(@PathVariable int id) {
+    @Operation(summary = "Delete a school by ID")
+    @ApiResponse(responseCode = "200", description = "School deleted successfully")
+    @ApiResponse(responseCode = "404", description = "School not found")
+    public ResponseEntity<SchoolDTO> delete(@Parameter(description = "ID of the school to delete") @PathVariable int id) {
 
         if (!this.schoolService.exists(id))
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);

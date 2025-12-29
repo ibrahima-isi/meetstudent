@@ -47,7 +47,7 @@ public class UserService {
     }
 
     public List<UserEntity> getUsersByRole(Role role){
-        return this.userRepository.findByRoles(role);
+        return this.userRepository.findByRole(role);
     }
 
     public UserEntity deleteUser(int id) {

@@ -1,3 +1,3 @@
 spring:
     profiles:
-        active: dev # You can specify multiple active profiles as a comma-separated list (e.g. dev,test,prod)
+        active: dev # You can specify multiple active profiles as a comma-separated list (e.g. dev,test,prod,docker)

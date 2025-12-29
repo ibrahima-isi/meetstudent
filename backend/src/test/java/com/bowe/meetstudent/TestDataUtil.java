@@ -31,7 +31,7 @@ public class TestDataUtil {
     public static UserDTO createUserDto(){
         return UserDTO.builder()
                 .email(faker.internet().emailAddress())
-                .roles(getRandomRole())
+                .role(getRandomRole())
                 .lastname(faker.name().lastName())
                 .firstname(faker.name().firstName())
                 .password(faker.regexify("[a-zA-Z0-9]{8,16}"))

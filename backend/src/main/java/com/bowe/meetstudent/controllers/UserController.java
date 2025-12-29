@@ -6,6 +6,10 @@ import com.bowe.meetstudent.mappers.Mapper;
 import com.bowe.meetstudent.services.RoleService;
 import com.bowe.meetstudent.services.UserService;
 import com.bowe.meetstudent.entities.Role;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -22,6 +26,7 @@ import java.util.Optional;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = "/api/users")
+@Tag(name = "4. Users")
 public class UserController {
 
     private final UserService userService;
@@ -31,6 +36,8 @@ public class UserController {
 
 
     @PostMapping
+    @Operation(summary = "Create a new user")
+    @ApiResponse(responseCode = "201", description = "User created successfully")
     public ResponseEntity<UserDTO> saveUser(@RequestBody UserDTO userDTO) {
 
         UserEntity userEntity = this.userMapper.toEntity(userDTO);
@@ -41,6 +48,8 @@ public class UserController {
     }
 
     @GetMapping
+    @Operation(summary = "Get all users (paginated)")
+    @ApiResponse(responseCode = "200", description = "List of all users")
     public Page<UserDTO> findAll() {
         Pageable pageable = PageRequest.of(0, 10, Sort.by("firstname").descending()); // 10 schools per page, sorted by name ascending
         Page<UserEntity> userEntities = this.userService.findAll(pageable);
@@ -48,7 +57,10 @@ public class UserController {
     }
 
     @GetMapping(path = "/id/{id}")
-    public ResponseEntity<UserDTO> findById(@PathVariable int id) {
+    @Operation(summary = "Get a user by ID")
+    @ApiResponse(responseCode = "302", description = "User found")
+    @ApiResponse(responseCode = "404", description = "User not found")
+    public ResponseEntity<UserDTO> findById(@Parameter(description = "ID of the user to retrieve") @PathVariable int id) {
 
         Optional<UserEntity> user = this.userService.getUserById(id);
         return user.map( foundUser ->{
@@ -59,7 +71,10 @@ public class UserController {
     }
 
     @GetMapping(path = "/email/{email}")
-    public ResponseEntity<UserDTO> findByEmail(@PathVariable String email) {
+    @Operation(summary = "Get a user by email")
+    @ApiResponse(responseCode = "302", description = "User found")
+    @ApiResponse(responseCode = "404", description = "User not found")
+    public ResponseEntity<UserDTO> findByEmail(@Parameter(description = "Email of the user to retrieve") @PathVariable String email) {
         Optional<UserEntity> user = this.userService.getUserByEmail(email);
 
         return user.map( foundUser ->{
@@ -70,7 +85,10 @@ public class UserController {
     }
 
     @GetMapping(path = "/role/{role}")
-    public ResponseEntity<List<UserDTO>> findByRole(@PathVariable String role) {
+    @Operation(summary = "Get users by role name")
+    @ApiResponse(responseCode = "200", description = "List of users for the given role")
+    @ApiResponse(responseCode = "400", description = "Role not found")
+    public ResponseEntity<List<UserDTO>> findByRole(@Parameter(description = "Name of the role (e.g., STUDENT)") @PathVariable String role) {
 
         Optional<Role> roleOptional = roleService.findRoleByName(role.toUpperCase());
 
@@ -88,7 +106,10 @@ public class UserController {
     }
 
     @PutMapping(path = "/{id}")
-    public ResponseEntity<UserDTO> updateUser(@PathVariable int id, @RequestBody UserDTO userDTO) {
+    @Operation(summary = "Update a user by ID")
+    @ApiResponse(responseCode = "200", description = "User updated successfully")
+    @ApiResponse(responseCode = "404", description = "User not found")
+    public ResponseEntity<UserDTO> updateUser(@Parameter(description = "ID of the user to update") @PathVariable int id, @RequestBody UserDTO userDTO) {
 
         if (userService.notExists(id)) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
@@ -102,7 +123,11 @@ public class UserController {
     }
 
     @PatchMapping(path = "{id}")
-    public ResponseEntity<UserDTO> patchUser(@PathVariable int id, @RequestBody UserDTO userDTO) {
+    @Operation(summary = "Partially update a user by ID")
+    @ApiResponse(responseCode = "200", description = "User updated successfully")
+    @ApiResponse(responseCode = "404", description = "User not found")
+    @ApiResponse(responseCode = "400", description = "Bad request")
+    public ResponseEntity<UserDTO> patchUser(@Parameter(description = "ID of the user to patch") @PathVariable int id, @RequestBody UserDTO userDTO) {
 
         Optional<UserEntity> existingUserOptional = userService.getUserById(id);
 
@@ -126,7 +151,10 @@ public class UserController {
     }
 
     @DeleteMapping(path = "{id}")
-    public ResponseEntity<UserDTO> deleteById(@PathVariable int id) {
+    @Operation(summary = "Delete a user by ID")
+    @ApiResponse(responseCode = "200", description = "User deleted successfully")
+    @ApiResponse(responseCode = "404", description = "User not found")
+    public ResponseEntity<UserDTO> deleteById(@Parameter(description = "ID of the user to delete") @PathVariable int id) {
 
         if (userService.notExists(id)) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
@@ -161,8 +189,8 @@ public class UserController {
         if(userDTO.getSpeciality() != null){
             existingUser.setSpeciality(userDTO.getSpeciality());
         }
-        if(userDTO.getRoles() != null) {
-            existingUser.setRoles(userDTO.getRoles());
+        if(userDTO.getRole() != null) {
+            existingUser.setRole(userDTO.getRole());
         }
         if(userDTO.getBirthday() != null) {
             existingUser.setBirthday(userDTO.getBirthday());

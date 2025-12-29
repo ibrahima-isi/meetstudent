@@ -37,6 +37,6 @@ public class UserDTO {
 
     @NotEmpty(message = "Confirmez le mot de passe")
     private String confirmedPassword;
-    private Role roles;
+    private Role role;
     private String speciality;
 }

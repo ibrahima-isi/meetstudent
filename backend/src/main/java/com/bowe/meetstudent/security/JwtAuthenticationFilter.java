@@ -5,6 +5,9 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.jspecify.annotations.NonNull;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -17,20 +20,26 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
+    private static final Logger logger = LogManager.getLogger(JwtAuthenticationFilter.class);
     private final JwtDecoder jwtDecoder;
-
     private final JwtToPrincipalConverter jwtToPrincipalConverter;
 
     @Override
     protected void doFilterInternal(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            FilterChain filterChain) throws ServletException, IOException {
-        extractTokenFromRequest(request)
+        @NonNull HttpServletRequest request,
+        @NonNull HttpServletResponse response,
+        FilterChain filterChain) throws ServletException, IOException {
+        try{
+            extractTokenFromRequest(request)
                 .map(jwtDecoder::decodedJWT)
                 .map(jwtToPrincipalConverter::convert)
                 .map(UserPrincipalAuthenticationToken::new)
                 .ifPresent(auth -> SecurityContextHolder.getContext().setAuthentication(auth));
+        }catch (Exception e){
+            logger.error("JWT authentication failed: {}", e.getMessage(), e);
+            SecurityContextHolder.clearContext();
+        }
+
 
         filterChain.doFilter(request, response);
     }

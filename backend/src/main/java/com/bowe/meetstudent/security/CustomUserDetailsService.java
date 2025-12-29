@@ -17,14 +17,15 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        var user = userService.getUserByEmail(username).orElseThrow();
+        var user = userService.getUserByEmail(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + username));
 
         return UserPrincipal.builder()
                 .id(user.getId())
                 .username(user.getEmail())
                 .authorities(List.of(
                         new SimpleGrantedAuthority(
-                            user.getRoles().getName()
+                            user.getRole().getName()
                         )
                     )
                 )

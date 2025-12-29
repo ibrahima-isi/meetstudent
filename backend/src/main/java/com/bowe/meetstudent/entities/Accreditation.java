@@ -21,6 +21,5 @@ import java.util.Objects;
 public class Accreditation extends BaseEntity{
 
     @OneToMany(mappedBy = "accreditation")
-    @ToString.Exclude
     private List<ProgramAccreditation> programAccreditations;
 }

@@ -28,10 +28,8 @@ public class School extends BaseEntity{
     private Address address;
 
     @OneToMany(mappedBy = "school")
-    @ToString.Exclude
     private List<Program> programs;
 
     @OneToMany(mappedBy = "school")
-    @ToString.Exclude
     private List<SchoolRate> schoolRates;
 }

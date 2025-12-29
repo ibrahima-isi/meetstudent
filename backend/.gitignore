@@ -38,3 +38,11 @@ secrets/
 application-test.yml
 application-prod.yml
 application-dev.yml
+application-*.yml
+
+### Logs ###
+logs/
+*.log
+*.log.gz
+hs_err_pid*.log
+gemini-response.md

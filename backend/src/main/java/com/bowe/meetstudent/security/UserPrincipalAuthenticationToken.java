@@ -3,8 +3,6 @@ package com.bowe.meetstudent.security;
 
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 
-import javax.security.auth.Subject;
-
 public class UserPrincipalAuthenticationToken extends AbstractAuthenticationToken {
 
     private final UserPrincipal userPrincipal;

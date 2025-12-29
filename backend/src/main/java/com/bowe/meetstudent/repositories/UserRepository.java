@@ -15,7 +15,7 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<UserEntity, Integer> {
 
     Optional<UserEntity> findByEmailIgnoreCase(String email);
-    List<UserEntity> findByRoles(Role role);
+    List<UserEntity> findByRole(Role role);
 
     boolean existsByEmail(String email);
 }
