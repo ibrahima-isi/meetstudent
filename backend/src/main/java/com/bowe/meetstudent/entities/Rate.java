@@ -6,12 +6,13 @@ import lombok.experimental.SuperBuilder;
 
 @Getter
 @Setter
-@ToString
+@ToString(callSuper = true)
 @AllArgsConstructor
 @NoArgsConstructor
 @SuperBuilder
 @MappedSuperclass
-public class Rate extends BaseEntity{
+@EqualsAndHashCode(callSuper = true, onlyExplicitlyIncluded = true)
+public class Rate extends AbstractEntity {
 
     private Double note;
 
