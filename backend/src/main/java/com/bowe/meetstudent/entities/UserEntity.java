@@ -60,13 +60,11 @@ public class UserEntity {
     private Role role;
 
     @Column(length = 100)
-    private String speciality;
+    private String qualification;
 
-    /**
-     * relationship with the user's diploma
-     */
-    @ManyToMany(mappedBy = "users")
-    private List<Diploma> diplomas;
+    @Column(columnDefinition = "text[]")
+    @org.hibernate.annotations.JdbcTypeCode(java.sql.Types.ARRAY)
+    private List<String> diplomas;
 
     /**
      * Run before each Creation of entity

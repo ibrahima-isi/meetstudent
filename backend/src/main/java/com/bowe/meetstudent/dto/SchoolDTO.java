@@ -16,5 +16,7 @@ public class SchoolDTO extends BaseDTO{
 
     private Date creation;
     private Address address;
+    private String logoUrl;
+    private String coverPhotoUrl;
 
 }

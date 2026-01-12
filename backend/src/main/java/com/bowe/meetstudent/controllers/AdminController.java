@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping(path = "/api/admins")
+@RequestMapping(path = "/api/v1/admins")
+@io.swagger.v3.oas.annotations.tags.Tag(name = "9. Admins", description = "Endpoints for admin operations")
 public class AdminController {
 }

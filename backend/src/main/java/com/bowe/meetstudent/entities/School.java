@@ -5,11 +5,9 @@ import com.bowe.meetstudent.entities.rates.SchoolRate;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.hibernate.proxy.HibernateProxy;
 
 import java.util.Date;
 import java.util.List;
-import java.util.Objects;
 
 @Getter
 @Setter
@@ -26,6 +24,12 @@ public class School extends BaseEntity{
 
     @Embedded
     private Address address;
+
+    @Column(name = "logo_url")
+    private String logoUrl;
+
+    @Column(name = "cover_photo_url")
+    private String coverPhotoUrl;
 
     @OneToMany(mappedBy = "school")
     private List<Program> programs;

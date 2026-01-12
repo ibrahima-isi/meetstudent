@@ -60,8 +60,9 @@ public class WebSecurityConfig {
                 .authorizeHttpRequests(registry ->
                         registry
                                 .requestMatchers("/").permitAll()
-                                .requestMatchers("/api/auth/**").permitAll()
-                                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                                .requestMatchers("/api/v1/auth/**").permitAll()
+                                .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                                .requestMatchers("/uploads/**").permitAll()
                                 .anyRequest().authenticated()
                 );
         return http.build();

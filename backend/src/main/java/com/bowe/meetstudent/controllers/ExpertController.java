@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping(path = "/api/experts")
+@RequestMapping(path = "/api/v1/experts")
+@io.swagger.v3.oas.annotations.tags.Tag(name = "11. Experts", description = "Endpoints for expert operations")
 public class ExpertController {
 }

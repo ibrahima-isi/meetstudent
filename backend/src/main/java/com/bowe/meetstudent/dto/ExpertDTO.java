@@ -10,5 +10,5 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Builder
 public class ExpertDTO {
-    private String speciality;
+    private String qualification;
 }

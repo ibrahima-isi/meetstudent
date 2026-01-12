@@ -22,8 +22,8 @@ import java.util.Optional;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping(path = "/api/schools")
-@Tag(name = "3. Schools")
+@RequestMapping(path = "/api/v1/schools")
+@Tag(name = "3. Schools", description = "Endpoints for managing schools")
 public class SchoolController {
 
     private final SchoolService schoolService;

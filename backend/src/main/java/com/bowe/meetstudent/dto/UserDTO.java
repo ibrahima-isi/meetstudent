@@ -38,5 +38,7 @@ public class UserDTO {
     @NotEmpty(message = "Confirmez le mot de passe")
     private String confirmedPassword;
     private Role role;
-    private String speciality;
+    private String qualification;
+    private java.util.List<String> diplomas;
+    private String photoUrl;
 }
