@@ -11,6 +11,5 @@ import java.util.Date;
 @NoArgsConstructor
 @SuperBuilder
 public class CourseDTO extends BaseDTO {
-    private Date dateCreation;
     private String photoUrl;
 }

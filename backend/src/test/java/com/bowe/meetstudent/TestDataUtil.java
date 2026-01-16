@@ -49,7 +49,6 @@ public class TestDataUtil {
                 .name(faker.educator().university())
                 .address(address)
                 .code(faker.random().hex(5))
-                .creation(Date.from(faker.timeAndDate().between(start.getTime().toInstant(), end.getTime().toInstant())))
                 .build();
     }
 

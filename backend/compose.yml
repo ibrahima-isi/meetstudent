@@ -57,7 +57,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres_db:5432/meetstudent
     networks:
       - meetstudent-network
-    restart: unless-stopped
+    restart: no
 
 volumes:
   pgMeetStudentData:

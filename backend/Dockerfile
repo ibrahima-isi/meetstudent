@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM eclipse-temurin:21-jdk-alpine AS build
 LABEL authors="ibrahimadiallo"
 WORKDIR /app
@@ -5,9 +6,11 @@ COPY mvnw .
 COPY .mvn .mvn
 RUN chmod +x mvnw
 COPY pom.xml .
-RUN ./mvnw -q -e -B dependency:go-offline
+# Use cache mount to persist dependencies between builds
+RUN --mount=type=cache,target=/root/.m2 ./mvnw -q -e -B dependency:go-offline
 COPY src src
-RUN ./mvnw -q -e -B package -DskipTests
+# Use cache mount to speed up the package phase
+RUN --mount=type=cache,target=/root/.m2 ./mvnw -q -e -B package -DskipTests
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app

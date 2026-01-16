@@ -14,6 +14,5 @@ import java.util.Date;
 @NoArgsConstructor
 @SuperBuilder
 public class ProgramDTO extends BaseDTO{
-    private Date creationDate;
     private String photoUrl;
 }
