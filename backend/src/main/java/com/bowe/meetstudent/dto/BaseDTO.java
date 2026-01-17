@@ -4,27 +4,15 @@ import jakarta.persistence.MappedSuperclass;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
-import java.time.LocalDateTime;
-
 @Getter
 @Setter
-@ToString
+@ToString(callSuper = true)
 @RequiredArgsConstructor
 @SuperBuilder
 @MappedSuperclass
-public class BaseDTO {
-
-    private Integer id;
+public class BaseDTO extends AbstractDTO {
 
     private String code;
 
     private String name;
-
-    private LocalDateTime createdAt;
-
-    private LocalDateTime modifiedAt ;
-
-    private Integer createdBy;
-
-    private Integer modifiedBy;
 }

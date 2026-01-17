@@ -6,13 +6,11 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
-import java.util.Date;
-
 @EqualsAndHashCode(callSuper = true)
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @SuperBuilder
-public class ProgramDTO extends BaseDTO{
-    private String photoUrl;
+public class CourseRateDTO extends RateDTO {
+    private Integer courseId;
 }

@@ -22,6 +22,9 @@ public class Course extends BaseEntity {
 
     private String code;
 
+    @Column(name = "photo_url")
+    private String photoUrl;
+
     @OneToMany(mappedBy = "course")
     private List<CourseRate> courseRates;
 }

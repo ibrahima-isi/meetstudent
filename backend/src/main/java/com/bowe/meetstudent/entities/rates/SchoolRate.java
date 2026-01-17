@@ -19,7 +19,7 @@ import java.util.Objects;
 @SuperBuilder
 @AllArgsConstructor
 @Entity
-@DiscriminatorValue(value = "SCHOOL")
+@Table(name = "school_rates")
 public class SchoolRate extends Rate {
 
     @ManyToOne

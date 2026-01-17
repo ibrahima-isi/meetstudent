@@ -25,8 +25,8 @@ import java.util.Optional;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping(path = "/api/users")
-@Tag(name = "4. Users")
+@RequestMapping(path = "/api/v1/users")
+@Tag(name = "4. Users", description = "Endpoints for managing users")
 public class UserController {
 
     private final UserService userService;
@@ -186,8 +186,11 @@ public class UserController {
         if (userDTO.getPassword() != null) {
             existingUser.setPassword(userDTO.getPassword());
         }
-        if(userDTO.getSpeciality() != null){
-            existingUser.setSpeciality(userDTO.getSpeciality());
+        if(userDTO.getQualification() != null){
+            existingUser.setQualification(userDTO.getQualification());
+        }
+        if(userDTO.getDiplomas() != null){
+            existingUser.setDiplomas(userDTO.getDiplomas());
         }
         if(userDTO.getRole() != null) {
             existingUser.setRole(userDTO.getRole());

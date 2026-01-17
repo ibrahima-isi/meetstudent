@@ -48,7 +48,7 @@ class AuthIntegrationTest {
     void setUp() {
         // Ensure roles exist (Flyway might have run, but H2 can be tricky with profiles)
         // We check and insert if needed just to be safe for the test context
-        if (roleRepository.findByName("ROLE_USER").isEmpty()) {
+        if (roleRepository.ROLE_STUDENT.isEmpty()) {
             roleRepository.save(Role.builder().name("ROLE_USER").description("User").build());
         }
     }
@@ -61,7 +61,7 @@ class AuthIntegrationTest {
         
         // We create entity directly or via service
         // Creating role first
-        Role userRole = roleRepository.findByName("ROLE_USER").orElseThrow();
+        Role userRole = roleRepository.ROLE_STUDENT.orElseThrow();
 
         // Note: Using Service is better to ensure encoding, but we can do it manually for speed/control
         // However, userService.saveUser encodes password.
@@ -93,7 +93,7 @@ class AuthIntegrationTest {
     void shouldFailLogin_whenPasswordIsWrong() throws Exception {
         // 1. Create a User
         String email = "wrongpass@test.com";
-        Role userRole = roleRepository.findByName("ROLE_USER").orElseThrow();
+        Role userRole = roleRepository.ROLE_STUDENT.orElseThrow();
         
         com.bowe.meetstudent.entities.UserEntity user = com.bowe.meetstudent.entities.UserEntity.builder()
                 .email(email)

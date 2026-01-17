@@ -1,11 +1,10 @@
 package com.bowe.meetstudent.entities;
 
-import com.bowe.meetstudent.utils.Utils;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
-import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 
@@ -17,18 +16,12 @@ import java.util.List;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-@Builder
+@SuperBuilder
 @Entity
 @Table(name = "users")
-@EqualsAndHashCode(onlyExplicitlyIncluded = true)
-@ToString(onlyExplicitlyIncluded = true)
-public class UserEntity {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @EqualsAndHashCode.Include
-    @ToString.Include
-    private Integer id;
+@EqualsAndHashCode(callSuper = true, onlyExplicitlyIncluded = true)
+@ToString(callSuper = true, onlyExplicitlyIncluded = true)
+public class UserEntity extends AbstractEntity {
 
     @Column(length = 100)
     @ToString.Include
@@ -48,47 +41,15 @@ public class UserEntity {
     @JsonIgnore
     private String password;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @Column(name = "modified_at", nullable = false)
-    private LocalDateTime modifiedAt;
-
     @ManyToOne
     @JoinColumn(name = "role_id")
     @ToString.Include
     private Role role;
 
     @Column(length = 100)
-    private String speciality;
+    private String qualification;
 
-    /**
-     * relationship with the user's diploma
-     */
-    @ManyToMany(mappedBy = "users")
-    private List<Diploma> diplomas;
-
-    /**
-     * Run before each Creation of entity
-     */
-    @PrePersist
-    protected void onCreate() {
-        setCreatedAt(
-                Utils.dakarTimeZone()
-        );
-        setModifiedAt(
-                Utils.dakarTimeZone()
-        );
-    }
-
-    /**
-     * Run before each Update of an entity orElse creation.
-     */
-    @PreUpdate
-    protected void onUpdate() {
-
-        this.setModifiedAt(
-                Utils.dakarTimeZone()
-        );
-    }
+    @Column(columnDefinition = "text[]")
+    @org.hibernate.annotations.JdbcTypeCode(java.sql.Types.ARRAY)
+    private List<String> diplomas;
 }

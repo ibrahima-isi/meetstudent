@@ -23,6 +23,7 @@ public class UserMapper implements Mapper<UserEntity, UserDTO> {
     public UserDTO toDTO(UserEntity userEntity) {
         UserDTO dto = modelMapper.map(userEntity, UserDTO.class);
         dto.setPassword(null);
+        dto.setConfirmedPassword(null);
 
         return dto;
     }

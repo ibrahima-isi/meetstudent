@@ -36,7 +36,7 @@ public class TestDataUtil {
                 .firstname(faker.name().firstName())
                 .password(faker.regexify("[a-zA-Z0-9]{8,16}"))
                 .birthday(Date.from(faker.timeAndDate().birthday().atStartOfDay(ZoneId.systemDefault()).toInstant()))
-                .speciality(faker.job().field())
+                .qualification(faker.job().field())
                 .build();
     }
 
@@ -49,7 +49,6 @@ public class TestDataUtil {
                 .name(faker.educator().university())
                 .address(address)
                 .code(faker.random().hex(5))
-                .creation(Date.from(faker.timeAndDate().between(start.getTime().toInstant(), end.getTime().toInstant())))
                 .build();
     }
 
