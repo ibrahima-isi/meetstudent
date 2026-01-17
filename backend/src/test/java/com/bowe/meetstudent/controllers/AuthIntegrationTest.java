@@ -48,8 +48,8 @@ class AuthIntegrationTest {
     void setUp() {
         // Ensure roles exist (Flyway might have run, but H2 can be tricky with profiles)
         // We check and insert if needed just to be safe for the test context
-        if (roleRepository.ROLE_STUDENT.isEmpty()) {
-            roleRepository.save(Role.builder().name("ROLE_USER").description("User").build());
+        if (roleRepository.findByName("ROLE_STUDENT").isEmpty()) {
+            roleRepository.save(Role.builder().name("ROLE_STUDENT").description("User").build());
         }
     }
 
@@ -61,7 +61,7 @@ class AuthIntegrationTest {
         
         // We create entity directly or via service
         // Creating role first
-        Role userRole = roleRepository.ROLE_STUDENT.orElseThrow();
+        Role userRole = roleRepository.findByName("ROLE_STUDENT").orElseThrow();
 
         // Note: Using Service is better to ensure encoding, but we can do it manually for speed/control
         // However, userService.saveUser encodes password.
@@ -82,7 +82,7 @@ class AuthIntegrationTest {
                 .password(rawPassword)
                 .build();
 
-        mockMvc.perform(post("/api/auth")
+        mockMvc.perform(post("/api/v1/auth")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(loginRequest)))
                 .andExpect(status().isOk())
@@ -93,7 +93,7 @@ class AuthIntegrationTest {
     void shouldFailLogin_whenPasswordIsWrong() throws Exception {
         // 1. Create a User
         String email = "wrongpass@test.com";
-        Role userRole = roleRepository.ROLE_STUDENT.orElseThrow();
+        Role userRole = roleRepository.findByName("ROLE_STUDENT").orElseThrow();
         
         com.bowe.meetstudent.entities.UserEntity user = com.bowe.meetstudent.entities.UserEntity.builder()
                 .email(email)
@@ -111,7 +111,7 @@ class AuthIntegrationTest {
                 .password("wrongPassword")
                 .build();
 
-        mockMvc.perform(post("/api/auth")
+        mockMvc.perform(post("/api/v1/auth")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(loginRequest)))
                 .andExpect(status().isUnauthorized()); // Expect 401
@@ -119,7 +119,7 @@ class AuthIntegrationTest {
 
     @Test
     void shouldFailAccessSecuredEndpoint_withoutToken() throws Exception {
-        mockMvc.perform(get("/api/users")) // Assuming this is secured now
+        mockMvc.perform(get("/api/v1/users")) // Assuming this is secured now
                 .andExpect(status().isForbidden()); // Expect 403
     }
 }

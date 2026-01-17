@@ -71,4 +71,14 @@ public class TestDataUtil {
         end.set(2015, Calendar.DECEMBER, 31);
         return end;
     }
+
+    public static org.springframework.test.web.servlet.request.RequestPostProcessor mockUser(String role) {
+        com.bowe.meetstudent.security.UserPrincipal principal = com.bowe.meetstudent.security.UserPrincipal.builder()
+                .id(1)
+                .username("testUser")
+                .authorities(List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority(role)))
+                .build();
+        com.bowe.meetstudent.security.UserPrincipalAuthenticationToken auth = new com.bowe.meetstudent.security.UserPrincipalAuthenticationToken(principal);
+        return org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication(auth);
+    }
 }

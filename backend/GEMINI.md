@@ -68,3 +68,21 @@ When asked to implement a feature:
 7. Create Controller with Swagger annotations.
 8. Add Flyway migration script.
 9. Add Unit/Integration tests.
+
+## Testing Guidelines & Best Practices
+
+### H2 & PostgreSQL Compatibility
+- **Array Types:** Do **NOT** use `@Column(columnDefinition = "text[]")`. This causes syntax errors in H2.
+    - **Use:** `@org.hibernate.annotations.JdbcTypeCode(java.sql.Types.ARRAY)` on `List<String>` or similar fields. This ensures Hibernate generates the correct SQL for both Postgres and H2.
+- **Test Config:** In `src/test/resources/application.yml`:
+    - Set `spring.flyway.enabled: false`.
+    - Set `spring.jpa.hibernate.ddl-auto: create-drop`.
+    - Use `jdbc:h2:mem:testdb;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH`.
+
+### Authentication in Tests
+- The application uses a custom `UserPrincipal` in `JpaAuditingConfig`.
+- **Do NOT use:** standard `jwt().authorities(...)` from `SecurityMockMvcRequestPostProcessors` alone, as this creates a generic principal that causes `ClassCastException`.
+- **Use:** `TestDataUtil.mockUser(String role)`. This helper creates a `UserPrincipalAuthenticationToken` containing a valid `UserPrincipal` that adheres to the application's security context.
+
+### Endpoint Paths
+- Integration tests must use the full API version path (e.g., `/api/v1/schools`, not `/api/schools`).
