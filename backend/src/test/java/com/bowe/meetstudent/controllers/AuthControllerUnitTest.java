@@ -50,7 +50,7 @@ class AuthControllerUnitTest {
         UserPrincipal principal = UserPrincipal.builder()
                 .id(1)
                 .username(email)
-                .authorities(List.of(new SimpleGrantedAuthority("ROLE_USER")))
+                .authorities(List.of(new SimpleGrantedAuthority("ROLE_STUDENT")))
                 .build();
 
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
@@ -58,7 +58,7 @@ class AuthControllerUnitTest {
         when(authentication.getPrincipal()).thenReturn(principal);
 
         // Mock JWT Issue
-        when(jwtIssuer.issueToken(principal.getId(), principal.getUsername(), List.of("ROLE_USER")))
+        when(jwtIssuer.issueToken(principal.getId(), principal.getUsername(), List.of("ROLE_STUDENT")))
                 .thenReturn(expectedToken);
 
         // Act

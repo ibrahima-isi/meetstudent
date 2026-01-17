@@ -1,6 +1,5 @@
 -- Insert initial roles with descriptions
 INSERT INTO roles (id, name, description) VALUES (1, 'ROLE_ADMIN', 'Administrator with full access');
-INSERT INTO roles (id, name, description) VALUES (2, 'ROLE_USER', 'Standard user with basic access');
 INSERT INTO roles (id, name, description) VALUES (3, 'ROLE_EXPERT', 'Expert user capable of rating content');
 INSERT INTO roles (id, name, description) VALUES (4, 'ROLE_STUDENT', 'Student user accessing educational content');
 
