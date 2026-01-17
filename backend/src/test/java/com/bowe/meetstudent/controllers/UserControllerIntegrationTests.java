@@ -46,10 +46,10 @@ class UserControllerIntegrationTests {
 
         String json = objectMapper.writeValueAsString(userDTO);
         mockMvc.perform(
-                MockMvcRequestBuilders.post("/api/users")
+                MockMvcRequestBuilders.post("/api/v1/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json)
-                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN"))
         ).andExpect(
                 MockMvcResultMatchers.status().isCreated()
         );
@@ -65,10 +65,10 @@ class UserControllerIntegrationTests {
 
         String json = objectMapper.writeValueAsString(user);
         mockMvc.perform(
-                MockMvcRequestBuilders.post("/api/users")
+                MockMvcRequestBuilders.post("/api/v1/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json)
-                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN"))
         ).andExpect(
                 MockMvcResultMatchers.jsonPath("$.id").isNumber()
         ).andExpect(

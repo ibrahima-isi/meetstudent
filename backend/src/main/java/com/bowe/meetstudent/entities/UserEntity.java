@@ -49,7 +49,7 @@ public class UserEntity extends AbstractEntity {
     @Column(length = 100)
     private String qualification;
 
-    @Column(columnDefinition = "text[]")
+    @Column
     @org.hibernate.annotations.JdbcTypeCode(java.sql.Types.ARRAY)
     private List<String> diplomas;
 }

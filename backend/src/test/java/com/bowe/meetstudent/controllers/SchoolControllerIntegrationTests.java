@@ -46,10 +46,10 @@ class SchoolControllerIntegrationTests {
 
         String json = objectMapper.writeValueAsString(schoolDTO);
         mockMvc.perform(
-                MockMvcRequestBuilders.post("/api/schools")
+                MockMvcRequestBuilders.post("/api/v1/schools")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json)
-                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN"))
         ).andExpect(
                 MockMvcResultMatchers.status().isCreated()
         ).andExpect(
@@ -63,10 +63,10 @@ class SchoolControllerIntegrationTests {
 
         String json = objectMapper.writeValueAsString(schoolDTO);
         mockMvc.perform(
-                MockMvcRequestBuilders.post("/api/schools")
+                MockMvcRequestBuilders.post("/api/v1/schools")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json)
-                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN"))
         ).andExpect(
                 MockMvcResultMatchers.status().isCreated()
         ).andExpect(
@@ -79,9 +79,9 @@ class SchoolControllerIntegrationTests {
     @Test
     void testThatGetAllSchoolsReturnsHttpStatus200() throws Exception {
         mockMvc.perform(
-                MockMvcRequestBuilders.get("/api/schools")
+                MockMvcRequestBuilders.get("/api/v1/schools")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN"))
         ).andExpect(
                 MockMvcResultMatchers.status().isOk()
         );
@@ -98,9 +98,9 @@ class SchoolControllerIntegrationTests {
         this.schoolService.save(this.schoolMapper.toEntity(schoolDTO1));
 
         mockMvc.perform(
-                MockMvcRequestBuilders.get("/api/schools")
+                MockMvcRequestBuilders.get("/api/v1/schools")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN"))
         ).andExpect(
                 MockMvcResultMatchers.jsonPath("$.content[0].id").value(1)
         ).andExpect(
