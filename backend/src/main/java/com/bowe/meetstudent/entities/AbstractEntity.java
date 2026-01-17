@@ -1,9 +1,13 @@
 package com.bowe.meetstudent.entities;
 
-import com.bowe.meetstudent.utils.Utils;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 
@@ -13,6 +17,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @SuperBuilder
 @MappedSuperclass
+@EntityListeners(AuditingEntityListener.class)
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @ToString(onlyExplicitlyIncluded = true)
 public class AbstractEntity {
@@ -23,28 +28,15 @@ public class AbstractEntity {
     @EqualsAndHashCode.Include
     private Integer id;
 
+    @CreatedDate
     private LocalDateTime createdAt;
 
+    @LastModifiedDate
     private LocalDateTime modifiedAt;
 
+    @CreatedBy
     private Integer createdBy;
 
+    @LastModifiedBy
     private Integer modifiedBy;
-
-    @PrePersist
-    protected void onCreate() {
-        setCreatedAt(
-                Utils.dakarTimeZone()
-        );
-        setModifiedAt(
-                Utils.dakarTimeZone()
-        );
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        this.setModifiedAt(
-                Utils.dakarTimeZone()
-        );
-    }
 }
