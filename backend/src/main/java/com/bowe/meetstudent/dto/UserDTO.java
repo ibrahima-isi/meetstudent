@@ -3,21 +3,19 @@ package com.bowe.meetstudent.dto;
 import com.bowe.meetstudent.entities.Role;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotEmpty;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import lombok.experimental.SuperBuilder;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import java.util.Date;
 
+@EqualsAndHashCode(callSuper = true)
+@ToString(callSuper = true)
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Builder
-public class UserDTO {
-
-    private Integer id;
+@SuperBuilder
+public class UserDTO extends AbstractDTO {
 
     @NotEmpty(message = "prenom vide")
     private String firstname;
