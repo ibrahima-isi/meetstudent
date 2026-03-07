@@ -59,6 +59,22 @@ services:
       - meetstudent-network
     restart: no
 
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: build
+    working_dir: /app
+    command: ["./mvnw", "test"]
+    volumes:
+      - ./:/app
+      - ~/.m2:/root/.m2
+    environment:
+      SPRING_PROFILES_ACTIVE: test
+    networks:
+      - meetstudent-network
+    restart: no
+
 volumes:
   pgMeetStudentData:
     driver: local
