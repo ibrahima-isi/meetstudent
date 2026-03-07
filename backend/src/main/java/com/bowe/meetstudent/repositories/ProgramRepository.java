@@ -1,6 +1,8 @@
 package com.bowe.meetstudent.repositories;
 
 import com.bowe.meetstudent.entities.Program;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -13,4 +15,6 @@ public interface ProgramRepository extends JpaRepository<Program, Integer> {
 
     @Query("SELECT DISTINCT p FROM Program p JOIN p.programAccreditations pa JOIN pa.accreditation a WHERE LOWER(a.code) LIKE LOWER(CONCAT('%', :accreditationCode, '%'))")
     List<Program> findProgramByProgramAccreditationsContainingIgnoreCase (@Param("accreditationCode") String accreditationCode);
+
+    Page<Program> findByNameContainingIgnoreCase(String name, Pageable pageable);
 }

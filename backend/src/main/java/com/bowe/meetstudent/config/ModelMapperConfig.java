@@ -15,6 +15,7 @@ public class ModelMapperConfig {
 
         // This line will save one entity passed to another entity
         modelMapper.getConfiguration().setMatchingStrategy(MatchingStrategies.LOOSE);
+        modelMapper.getConfiguration().setSkipNullEnabled(true);
 
         return modelMapper;
     }
