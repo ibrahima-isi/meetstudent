@@ -20,10 +20,12 @@ import java.util.Objects;
 @ToString(callSuper = true, onlyExplicitlyIncluded = true)
 public class Course extends BaseEntity {
 
-    private String code;
-
     @Column(name = "photo_url")
     private String photoUrl;
+
+    @ManyToOne
+    @JoinColumn(name = "program_id")
+    private Program program;
 
     @OneToMany(mappedBy = "course")
     private List<CourseRate> courseRates;

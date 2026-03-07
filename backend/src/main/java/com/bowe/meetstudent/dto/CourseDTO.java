@@ -12,4 +12,5 @@ import java.util.Date;
 @SuperBuilder
 public class CourseDTO extends BaseDTO {
     private String photoUrl;
+    private Integer programId;
 }
