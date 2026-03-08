@@ -12,6 +12,8 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class ProgramAccreditationService {
@@ -19,6 +21,10 @@ public class ProgramAccreditationService {
     private final ProgramRepository programRepository;
     private final AccreditationRepository accreditationRepository;
     private final ProgramAccreditationRepository programAccreditationRepository;
+
+    public List<ProgramAccreditation> findByProgramId(Integer programId) {
+        return programAccreditationRepository.findByProgramId(programId);
+    }
 
     /**
      * Link a program with an accreditation

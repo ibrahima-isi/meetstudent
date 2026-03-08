@@ -7,7 +7,8 @@ import lombok.experimental.SuperBuilder;
 @Getter
 @Setter
 @ToString(callSuper = true)
-@RequiredArgsConstructor
+@NoArgsConstructor
+@AllArgsConstructor
 @SuperBuilder
 @MappedSuperclass
 public class BaseDTO extends AbstractDTO {

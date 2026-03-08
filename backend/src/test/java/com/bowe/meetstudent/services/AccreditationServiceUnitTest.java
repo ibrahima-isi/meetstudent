@@ -1,0 +1,72 @@
+package com.bowe.meetstudent.services;
+
+import com.bowe.meetstudent.entities.Accreditation;
+import com.bowe.meetstudent.repositories.AccreditationRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+
+import java.util.List;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+
+@ExtendWith(MockitoExtension.class)
+class AccreditationServiceUnitTest {
+
+    @Mock
+    private AccreditationRepository accreditationRepository;
+
+    @InjectMocks
+    private AccreditationService accreditationService;
+
+    private Accreditation accreditation;
+
+    @BeforeEach
+    void setUp() {
+        accreditation = new Accreditation();
+        accreditation.setId(1);
+        accreditation.setName("AACSB");
+        accreditation.setCode("AACSB");
+    }
+
+    @Test
+    void testSave() {
+        Mockito.when(accreditationRepository.save(any(Accreditation.class))).thenReturn(accreditation);
+        Accreditation saved = accreditationService.save(accreditation);
+        assertNotNull(saved);
+        assertEquals("AACSB", saved.getName());
+    }
+
+    @Test
+    void testFindById() {
+        Mockito.when(accreditationRepository.findById(1)).thenReturn(Optional.of(accreditation));
+        Optional<Accreditation> found = accreditationService.findById(1);
+        assertTrue(found.isPresent());
+        assertEquals("AACSB", found.get().getCode());
+    }
+
+    @Test
+    void testFindAll() {
+        PageRequest pageRequest = PageRequest.of(0, 10);
+        Page<Accreditation> page = new PageImpl<>(List.of(accreditation));
+        Mockito.when(accreditationRepository.findAll(pageRequest)).thenReturn(page);
+        Page<Accreditation> result = accreditationService.findAll(pageRequest);
+        assertEquals(1, result.getTotalElements());
+    }
+
+    @Test
+    void testDelete() {
+        Mockito.doNothing().when(accreditationRepository).deleteById(1);
+        accreditationService.delete(1);
+        Mockito.verify(accreditationRepository, Mockito.times(1)).deleteById(1);
+    }
+}

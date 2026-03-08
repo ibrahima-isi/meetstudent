@@ -21,6 +21,12 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Optional;
 
+import com.bowe.meetstudent.dto.ProgramAccreditationDTO;
+import com.bowe.meetstudent.entities.ProgramAccreditation;
+import com.bowe.meetstudent.mappers.implementations.ProgramAccreditationMapper;
+import com.bowe.meetstudent.services.ProgramAccreditationService;
+import java.util.List;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = "/api/v1/programs")
@@ -31,7 +37,43 @@ public class ProgramController {
     private final SchoolService schoolService;
     private final ProgramMapper programMapper;
     private final ModelMapper modelMapper;
+    private final ProgramAccreditationService programAccreditationService;
+    private final ProgramAccreditationMapper programAccreditationMapper;
 
+    @PostMapping(path = "/{programId}/accreditations/{accreditationId}")
+    @Operation(summary = "Link an accreditation to a program")
+    @ApiResponse(responseCode = "201", description = "Accreditation linked successfully")
+    public ResponseEntity<ProgramAccreditationDTO> linkAccreditation(
+            @PathVariable Integer programId,
+            @PathVariable Integer accreditationId,
+            @RequestParam Integer startsAt,
+            @RequestParam Integer endsAt) {
+        ProgramAccreditation linked = programAccreditationService.addAccreditationToProgram(programId, accreditationId, startsAt, endsAt);
+        return new ResponseEntity<>(programAccreditationMapper.toDTO(linked), HttpStatus.CREATED);
+    }
+
+    @DeleteMapping(path = "/{programId}/accreditations/{accreditationId}")
+    @Operation(summary = "Unlink an accreditation from a program")
+    @ApiResponse(responseCode = "204", description = "Accreditation unlinked successfully")
+    public ResponseEntity<Void> unlinkAccreditation(
+            @PathVariable Integer programId,
+            @PathVariable Integer accreditationId) {
+        programAccreditationService.removeAccreditationFromProgram(programId, accreditationId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping(path = "/{programId}/accreditations")
+    @Operation(summary = "Get all accreditations for a specific program")
+    @ApiResponse(responseCode = "200", description = "List of program accreditations")
+    public ResponseEntity<List<ProgramAccreditationDTO>> getProgramAccreditations(@PathVariable Integer programId) {
+        // We need a method in ProgramAccreditationService or Repository
+        // I'll add it to the service
+        List<ProgramAccreditationDTO> list = programAccreditationService.findByProgramId(programId)
+                .stream()
+                .map(programAccreditationMapper::toDTO)
+                .toList();
+        return ResponseEntity.ok(list);
+    }
     @PostMapping
     @Operation(summary = "Create a new program")
     @ApiResponse(responseCode = "201", description = "Program created successfully")

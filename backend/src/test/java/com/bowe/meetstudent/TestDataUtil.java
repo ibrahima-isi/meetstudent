@@ -1,5 +1,6 @@
 package com.bowe.meetstudent;
 
+import com.bowe.meetstudent.dto.AccreditationDTO;
 import com.bowe.meetstudent.dto.CourseDTO;
 import com.bowe.meetstudent.dto.ProgramDTO;
 import com.bowe.meetstudent.dto.SchoolDTO;
@@ -66,6 +67,13 @@ public class TestDataUtil {
         return CourseDTO.builder()
                 .name(faker.educator().course())
                 .code(faker.random().hex(5))
+                .build();
+    }
+
+    public static AccreditationDTO createAccreditationDto(){
+        return AccreditationDTO.builder()
+                .name(faker.company().name())
+                .code(faker.random().hex(5).toUpperCase())
                 .build();
     }
 

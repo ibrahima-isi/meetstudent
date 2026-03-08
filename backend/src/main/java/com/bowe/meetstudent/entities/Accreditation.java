@@ -20,6 +20,8 @@ import java.util.Objects;
 @ToString(callSuper = true, onlyExplicitlyIncluded = true)
 public class Accreditation extends BaseEntity{
 
+    private String description;
+
     @OneToMany(mappedBy = "accreditation")
     private List<ProgramAccreditation> programAccreditations;
 }
