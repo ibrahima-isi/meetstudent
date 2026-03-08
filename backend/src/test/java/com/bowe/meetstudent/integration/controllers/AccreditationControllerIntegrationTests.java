@@ -23,7 +23,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-class AccreditationControllerIT {
+class AccreditationControllerIntegrationTests {
 
     @Autowired
     private MockMvc mockMvc;

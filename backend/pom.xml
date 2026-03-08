@@ -152,7 +152,7 @@
                 </executions>
                 <configuration>
                     <includes>
-                        <include>**/*IT.java</include>
+                        <include>**/*IntegrationTests.java</include>
                     </includes>
                 </configuration>
             </plugin>
