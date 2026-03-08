@@ -1,0 +1,14 @@
+spring:
+  datasource:
+    # Prioritize Neon/External URL from .env, fallback to internal docker network DB
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres_db:5432/meetstudent}
+    username: ${POSTGRES_USER:ibrahima}
+    password: ${POSTGRES_PASSWORD:changeMeInProd!}
+  
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+security:
+  jwt:
+    secret-key: ${JWT_SECRET_KEY:dockerSecretKeyForInternalOnly!1234567890}
