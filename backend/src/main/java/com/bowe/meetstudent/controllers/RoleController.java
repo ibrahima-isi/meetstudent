@@ -18,15 +18,16 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = "/api/v1/roles")
-@Tag(name = "2. Roles", description = "Endpoints for managing user roles")
+@Tag(name = "2. Roles", description = "Endpoints for managing user access levels and permissions (Roles)")
 public class RoleController {
 
     private final RoleService roleService;
     private final Mapper<Role, RoleDTO> roleMapper;
 
     @PostMapping
-    @Operation(summary = "Create a new role")
+    @Operation(summary = "Create a new role", description = "Adds a new user role to the system.")
     @ApiResponse(responseCode = "201", description = "Role created successfully")
+    @ApiResponse(responseCode = "400", description = "Invalid role data")
     public ResponseEntity<RoleDTO> createRole(@RequestBody RoleDTO roleDTO) {
         Role roleEntity = roleMapper.toEntity(roleDTO);
         Role newRole = roleService.createRole(roleEntity);
@@ -34,8 +35,8 @@ public class RoleController {
     }
 
     @GetMapping
-    @Operation(summary = "Get all roles")
-    @ApiResponse(responseCode = "200", description = "List of all roles")
+    @Operation(summary = "Get all roles", description = "Retrieves a list of all defined user roles.")
+    @ApiResponse(responseCode = "200", description = "List of roles retrieved")
     public ResponseEntity<List<RoleDTO>> getAllRoles() {
         List<RoleDTO> roles = roleService.findAllRoles()
                 .stream()
@@ -45,20 +46,23 @@ public class RoleController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Get a role by ID")
-    @ApiResponse(responseCode = "200", description = "Role found")
+    @Operation(summary = "Get a role by ID", description = "Retrieves details of a specific role using its unique ID.")
+    @ApiResponse(responseCode = "302", description = "Role found")
     @ApiResponse(responseCode = "404", description = "Role not found")
-    public ResponseEntity<RoleDTO> getRoleById(@Parameter(description = "ID of the role to retrieve") @PathVariable Integer id) {
+    public ResponseEntity<RoleDTO> getRoleById(
+            @Parameter(description = "ID of the role to retrieve") @PathVariable Integer id) {
         return roleService.findRoleById(id)
-                .map(role -> new ResponseEntity<>(roleMapper.toDTO(role), HttpStatus.OK))
+                .map(role -> new ResponseEntity<>(roleMapper.toDTO(role), HttpStatus.FOUND))
                 .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Update an existing role")
+    @Operation(summary = "Update an existing role", description = "Performs a full update of a role's information.")
     @ApiResponse(responseCode = "200", description = "Role updated successfully")
     @ApiResponse(responseCode = "404", description = "Role not found")
-    public ResponseEntity<RoleDTO> updateRole(@Parameter(description = "ID of the role to update") @PathVariable Integer id, @RequestBody RoleDTO roleDetailsDTO) {
+    public ResponseEntity<RoleDTO> updateRole(
+            @Parameter(description = "ID of the role to update") @PathVariable Integer id, 
+            @RequestBody RoleDTO roleDetailsDTO) {
         try {
             Role roleDetailsEntity = roleMapper.toEntity(roleDetailsDTO);
             Role updatedRole = roleService.updateRole(id, roleDetailsEntity);
@@ -69,9 +73,11 @@ public class RoleController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Delete a role by ID")
+    @Operation(summary = "Delete a role by ID", description = "Removes a role from the system using its unique ID.")
     @ApiResponse(responseCode = "204", description = "Role deleted successfully")
-    public ResponseEntity<Void> deleteRole(@Parameter(description = "ID of the role to delete") @PathVariable Integer id) {
+    @ApiResponse(responseCode = "404", description = "Role not found")
+    public ResponseEntity<Void> deleteRole(
+            @Parameter(description = "ID of the role to delete") @PathVariable Integer id) {
         roleService.deleteRole(id);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }

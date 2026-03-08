@@ -1,20 +1,20 @@
 package com.bowe.meetstudent.controllers;
 
 import com.bowe.meetstudent.dto.UserDTO;
+import com.bowe.meetstudent.entities.Role;
 import com.bowe.meetstudent.entities.UserEntity;
 import com.bowe.meetstudent.mappers.Mapper;
 import com.bowe.meetstudent.services.RoleService;
 import com.bowe.meetstudent.services.UserService;
-import com.bowe.meetstudent.entities.Role;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.modelmapper.ModelMapper;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -23,12 +23,10 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Optional;
 
-import org.modelmapper.ModelMapper;
-
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = "/api/v1/users")
-@Tag(name = "4. Users", description = "Endpoints for managing users")
+@Tag(name = "4. Users", description = "Endpoints for managing user accounts (Admins, Students, Experts)")
 public class UserController {
 
     private final UserService userService;
@@ -37,49 +35,45 @@ public class UserController {
     private final RoleService roleService;
     private final ModelMapper modelMapper;
 
-
     @PostMapping
-    @Operation(summary = "Create a new user")
+    @Operation(summary = "Create a new user", description = "Registers a new user in the system with a specified role.")
     @ApiResponse(responseCode = "201", description = "User created successfully")
+    @ApiResponse(responseCode = "400", description = "Invalid input data or email already exists")
     public ResponseEntity<UserDTO> saveUser(@RequestBody UserDTO userDTO) {
-
         UserEntity userEntity = this.userMapper.toEntity(userDTO);
         UserEntity savedUser = this.userService.saveUser(userEntity, encoder);
         UserDTO savedUserDto = this.userMapper.toDTO(savedUser);
-
         return new ResponseEntity<>(savedUserDto, HttpStatus.CREATED);
     }
 
     @GetMapping
-    @Operation(summary = "Get all users (paginated)")
-    @ApiResponse(responseCode = "200", description = "List of all users")
-    public Page<UserDTO> findAll() {
-        Pageable pageable = PageRequest.of(0, 10, Sort.by("firstname").descending()); // 10 schools per page, sorted by name ascending
+    @Operation(summary = "Get all users (paginated)", description = "Retrieves a paginated list of all users registered on the platform.")
+    @ApiResponse(responseCode = "200", description = "List of users retrieved")
+    public Page<UserDTO> findAll(@ParameterObject Pageable pageable) {
         Page<UserEntity> userEntities = this.userService.findAll(pageable);
         return userEntities.map(userMapper::toDTO);
     }
 
     @GetMapping(path = "/id/{id}")
-    @Operation(summary = "Get a user by ID")
+    @Operation(summary = "Get a user by ID", description = "Retrieves detailed information about a specific user by their unique ID.")
     @ApiResponse(responseCode = "302", description = "User found")
     @ApiResponse(responseCode = "404", description = "User not found")
-    public ResponseEntity<UserDTO> findById(@Parameter(description = "ID of the user to retrieve") @PathVariable int id) {
-
+    public ResponseEntity<UserDTO> findById(
+            @Parameter(description = "ID of the user to retrieve") @PathVariable int id) {
         Optional<UserEntity> user = this.userService.getUserById(id);
         return user.map( foundUser ->{
             UserDTO dto = this.userMapper.toDTO(foundUser);
             return new ResponseEntity<>(dto, HttpStatus.FOUND);
-        })
-                .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
+        }).orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
 
     @GetMapping(path = "/email/{email}")
-    @Operation(summary = "Get a user by email")
+    @Operation(summary = "Get a user by email", description = "Retrieves user details using their unique email address.")
     @ApiResponse(responseCode = "302", description = "User found")
     @ApiResponse(responseCode = "404", description = "User not found")
-    public ResponseEntity<UserDTO> findByEmail(@Parameter(description = "Email of the user to retrieve") @PathVariable String email) {
+    public ResponseEntity<UserDTO> findByEmail(
+            @Parameter(description = "Email of the user to retrieve") @PathVariable String email) {
         Optional<UserEntity> user = this.userService.getUserByEmail(email);
-
         return user.map( foundUser ->{
                     UserDTO dto = this.userMapper.toDTO(foundUser);
                     return new ResponseEntity<>(dto, HttpStatus.FOUND);
@@ -88,74 +82,67 @@ public class UserController {
     }
 
     @GetMapping(path = "/role/{role}")
-    @Operation(summary = "Get users by role name")
-    @ApiResponse(responseCode = "200", description = "List of users for the given role")
+    @Operation(summary = "Get users by role name", description = "Retrieves a list of all users assigned to a specific role (e.g., STUDENT).")
+    @ApiResponse(responseCode = "200", description = "List of users for the given role retrieved")
     @ApiResponse(responseCode = "400", description = "Role not found")
-    public ResponseEntity<List<UserDTO>> findByRole(@Parameter(description = "Name of the role (e.g., STUDENT)") @PathVariable String role) {
-
+    public ResponseEntity<List<UserDTO>> findByRole(
+            @Parameter(description = "Name of the role (e.g., STUDENT)") @PathVariable String role) {
         Optional<Role> roleOptional = roleService.findRoleByName(role.toUpperCase());
-
         if (roleOptional.isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
-
         List<UserDTO> userDTOS = this.userService
                 .getUsersByRole(roleOptional.get())
                 .stream()
                 .map(userMapper::toDTO)
                 .toList();
-
         return new ResponseEntity<>(userDTOS, HttpStatus.OK);
     }
 
     @PutMapping(path = "/{id}")
-    @Operation(summary = "Update a user by ID")
+    @Operation(summary = "Update a user by ID", description = "Performs a full update of an existing user's information.")
     @ApiResponse(responseCode = "200", description = "User updated successfully")
     @ApiResponse(responseCode = "404", description = "User not found")
-    public ResponseEntity<UserDTO> updateUser(@Parameter(description = "ID of the user to update") @PathVariable int id, @RequestBody UserDTO userDTO) {
-
+    public ResponseEntity<UserDTO> updateUser(
+            @Parameter(description = "ID of the user to update") @PathVariable int id, 
+            @RequestBody UserDTO userDTO) {
         if (userService.notExists(id)) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
         Optional<UserEntity> existingUserOptional = userService.getUserById(id);
         UserEntity existingUser = existingUserOptional.get();
-        
         UserEntity mappedUpdate = userMapper.toEntity(userDTO);
         mappedUpdate.setId(existingUser.getId());
-
         UserEntity saved = this.userService.saveUser(mappedUpdate, encoder);
         return new ResponseEntity<>(userMapper.toDTO(saved), HttpStatus.OK);
     }
 
     @PatchMapping(path = "{id}")
-    @Operation(summary = "Partially update a user by ID")
-    @ApiResponse(responseCode = "200", description = "User updated successfully")
+    @Operation(summary = "Partially update a user by ID", description = "Updates only the specific fields provided for a user.")
+    @ApiResponse(responseCode = "200", description = "User patched successfully")
     @ApiResponse(responseCode = "404", description = "User not found")
-    public ResponseEntity<UserDTO> patchUser(@Parameter(description = "ID of the user to patch") @PathVariable int id, @RequestBody UserDTO userDTO) {
-
+    public ResponseEntity<UserDTO> patchUser(
+            @Parameter(description = "ID of the user to patch") @PathVariable int id, 
+            @RequestBody UserDTO userDTO) {
         Optional<UserEntity> existingUserOptional = userService.getUserById(id);
-
         if (existingUserOptional.isEmpty()) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
-
         UserEntity existingUser = existingUserOptional.get();
         modelMapper.map(userDTO, existingUser);
-        
         UserEntity saved = this.userService.saveUser(existingUser, encoder);
         return new ResponseEntity<>(userMapper.toDTO(saved), HttpStatus.OK);
     }
 
     @DeleteMapping(path = "{id}")
-    @Operation(summary = "Delete a user by ID")
+    @Operation(summary = "Delete a user by ID", description = "Removes a user account from the platform.")
     @ApiResponse(responseCode = "200", description = "User deleted successfully")
     @ApiResponse(responseCode = "404", description = "User not found")
-    public ResponseEntity<UserDTO> deleteById(@Parameter(description = "ID of the user to delete") @PathVariable int id) {
-
+    public ResponseEntity<UserDTO> deleteById(
+            @Parameter(description = "ID of the user to delete") @PathVariable int id) {
         if (userService.notExists(id)) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
-
         UserEntity deletedUser =  this.userService.deleteUser(id);
         UserDTO deletedUserDto = this.userMapper.toDTO(deletedUser);
         return new ResponseEntity<>(deletedUserDto, HttpStatus.OK);

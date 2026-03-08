@@ -20,7 +20,6 @@ spring:
     show-sql: true
     properties:
       hibernate:
-        format_sql: true
         connection:
           autocommit: false
     database-platform: org.hibernate.dialect.PostgreSQLDialect
@@ -28,9 +27,6 @@ spring:
   sql:
     init:
       mode: never
-  
-  flyway:
-    enabled: true
 
 security:
   jwt:

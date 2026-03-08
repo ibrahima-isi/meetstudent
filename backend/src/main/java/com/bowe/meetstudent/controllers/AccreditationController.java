@@ -22,7 +22,7 @@ import java.util.Optional;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = "/api/v1/accreditations")
-@Tag(name = "8. Accreditations", description = "Endpoints for managing accreditations")
+@Tag(name = "8. Accreditations", description = "Endpoints for managing global accreditations (e.g., AACSB, EQUIS)")
 public class AccreditationController {
 
     private final AccreditationService accreditationService;
@@ -30,8 +30,9 @@ public class AccreditationController {
     private final ModelMapper modelMapper;
 
     @PostMapping
-    @Operation(summary = "Create a new accreditation")
+    @Operation(summary = "Create a new accreditation", description = "Adds a new accreditation type to the system.")
     @ApiResponse(responseCode = "201", description = "Accreditation created successfully")
+    @ApiResponse(responseCode = "400", description = "Invalid input data")
     public ResponseEntity<AccreditationDTO> create(@RequestBody AccreditationDTO accreditationDTO) {
         Accreditation accreditation = accreditationMapper.toEntity(accreditationDTO);
         Accreditation saved = accreditationService.save(accreditation);
@@ -39,14 +40,14 @@ public class AccreditationController {
     }
 
     @GetMapping
-    @Operation(summary = "Get all accreditations (paginated)")
-    @ApiResponse(responseCode = "200", description = "List of accreditations")
+    @Operation(summary = "Get all accreditations (paginated)", description = "Retrieves a paginated list of all available accreditations.")
+    @ApiResponse(responseCode = "200", description = "List of accreditations retrieved")
     public Page<AccreditationDTO> getAccreditations(@ParameterObject Pageable pageable) {
         return accreditationService.findAll(pageable).map(accreditationMapper::toDTO);
     }
 
     @GetMapping(path = "/{id}")
-    @Operation(summary = "Get an accreditation by ID")
+    @Operation(summary = "Get an accreditation by ID", description = "Retrieves details of a specific accreditation using its unique ID.")
     @ApiResponse(responseCode = "302", description = "Accreditation found")
     @ApiResponse(responseCode = "404", description = "Accreditation not found")
     public ResponseEntity<AccreditationDTO> getAccreditationById(
@@ -57,8 +58,8 @@ public class AccreditationController {
     }
 
     @GetMapping(path = "/name/{name}")
-    @Operation(summary = "Search accreditations by name (paginated)")
-    @ApiResponse(responseCode = "200", description = "List of accreditations matching the name")
+    @Operation(summary = "Search accreditations by name (paginated)", description = "Searches for accreditations whose name contains the given string.")
+    @ApiResponse(responseCode = "200", description = "Search results retrieved")
     public Page<AccreditationDTO> getAccreditationByName(
             @Parameter(description = "Name to search for") @PathVariable String name,
             @ParameterObject Pageable pageable) {
@@ -66,7 +67,7 @@ public class AccreditationController {
     }
 
     @PutMapping(path = "/{id}")
-    @Operation(summary = "Update an accreditation by ID")
+    @Operation(summary = "Update an accreditation by ID", description = "Performs a full update of an existing accreditation.")
     @ApiResponse(responseCode = "200", description = "Accreditation updated successfully")
     @ApiResponse(responseCode = "404", description = "Accreditation not found")
     public ResponseEntity<AccreditationDTO> update(
@@ -85,7 +86,7 @@ public class AccreditationController {
     }
 
     @PatchMapping(path = "/{id}")
-    @Operation(summary = "Partially update an accreditation by ID")
+    @Operation(summary = "Partially update an accreditation by ID", description = "Updates only the provided fields of an existing accreditation.")
     @ApiResponse(responseCode = "200", description = "Accreditation patched successfully")
     @ApiResponse(responseCode = "404", description = "Accreditation not found")
     public ResponseEntity<AccreditationDTO> patch(
@@ -104,7 +105,7 @@ public class AccreditationController {
     }
 
     @DeleteMapping(path = "/{id}")
-    @Operation(summary = "Delete an accreditation by ID")
+    @Operation(summary = "Delete an accreditation by ID", description = "Removes an accreditation from the system.")
     @ApiResponse(responseCode = "200", description = "Accreditation deleted successfully")
     @ApiResponse(responseCode = "404", description = "Accreditation not found")
     public ResponseEntity<AccreditationDTO> delete(@Parameter(description = "ID of the accreditation to delete") @PathVariable int id) {

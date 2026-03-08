@@ -31,7 +31,7 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = "/api/v1/programs")
-@Tag(name = "12. Programs", description = "Endpoints for managing educational programs")
+@Tag(name = "12. Programs", description = "Endpoints for managing educational programs (Degrees, Certifications, etc.)")
 public class ProgramController {
 
     private final ProgramService programService;
@@ -43,43 +43,45 @@ public class ProgramController {
     private final ProgramRateService programRateService;
 
     @PostMapping(path = "/{programId}/accreditations/{accreditationId}")
-    @Operation(summary = "Link an accreditation to a program")
+    @Operation(summary = "Link an accreditation to a program", description = "Associates a specific accreditation with a program, specifying start and end years.")
     @ApiResponse(responseCode = "201", description = "Accreditation linked successfully")
+    @ApiResponse(responseCode = "404", description = "Program or Accreditation not found")
     public ResponseEntity<ProgramAccreditationDTO> linkAccreditation(
-            @PathVariable Integer programId,
-            @PathVariable Integer accreditationId,
-            @RequestParam Integer startsAt,
-            @RequestParam Integer endsAt) {
+            @Parameter(description = "ID of the program") @PathVariable Integer programId,
+            @Parameter(description = "ID of the accreditation") @PathVariable Integer accreditationId,
+            @Parameter(description = "Year the accreditation starts") @RequestParam Integer startsAt,
+            @Parameter(description = "Year the accreditation expires") @RequestParam Integer endsAt) {
         ProgramAccreditation linked = programAccreditationService.addAccreditationToProgram(programId, accreditationId, startsAt, endsAt);
         return new ResponseEntity<>(programAccreditationMapper.toDTO(linked), HttpStatus.CREATED);
     }
 
     @DeleteMapping(path = "/{programId}/accreditations/{accreditationId}")
-    @Operation(summary = "Unlink an accreditation from a program")
+    @Operation(summary = "Unlink an accreditation from a program", description = "Removes the association between a program and an accreditation.")
     @ApiResponse(responseCode = "204", description = "Accreditation unlinked successfully")
+    @ApiResponse(responseCode = "404", description = "Association not found")
     public ResponseEntity<Void> unlinkAccreditation(
-            @PathVariable Integer programId,
-            @PathVariable Integer accreditationId) {
+            @Parameter(description = "ID of the program") @PathVariable Integer programId,
+            @Parameter(description = "ID of the accreditation") @PathVariable Integer accreditationId) {
         programAccreditationService.removeAccreditationFromProgram(programId, accreditationId);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping(path = "/{programId}/accreditations")
-    @Operation(summary = "Get all accreditations for a specific program")
-    @ApiResponse(responseCode = "200", description = "List of program accreditations")
-    public ResponseEntity<List<ProgramAccreditationDTO>> getProgramAccreditations(@PathVariable Integer programId) {
-        // We need a method in ProgramAccreditationService or Repository
-        // I'll add it to the service
+    @Operation(summary = "Get all accreditations for a program", description = "Retrieves a list of all accreditations currently held by the specified program.")
+    @ApiResponse(responseCode = "200", description = "List of program accreditations retrieved")
+    public ResponseEntity<List<ProgramAccreditationDTO>> getProgramAccreditations(
+            @Parameter(description = "ID of the program") @PathVariable Integer programId) {
         List<ProgramAccreditationDTO> list = programAccreditationService.findByProgramId(programId)
                 .stream()
                 .map(programAccreditationMapper::toDTO)
                 .toList();
         return ResponseEntity.ok(list);
     }
+
     @PostMapping
-    @Operation(summary = "Create a new program")
+    @Operation(summary = "Create a new program", description = "Adds a new educational program to the system, optionally linking it to a school.")
     @ApiResponse(responseCode = "201", description = "Program created successfully")
-    @ApiResponse(responseCode = "400", description = "Invalid School ID")
+    @ApiResponse(responseCode = "400", description = "Invalid School ID or input data")
     public ResponseEntity<ProgramDTO> create(@RequestBody ProgramDTO programDTO) {
         Program program = programMapper.toEntity(programDTO);
         
@@ -98,8 +100,8 @@ public class ProgramController {
     }
 
     @GetMapping
-    @Operation(summary = "Get all programs (paginated)", description = "Provides a paginated list of all programs.")
-    @ApiResponse(responseCode = "200", description = "List of programs")
+    @Operation(summary = "Get all programs (paginated)", description = "Provides a paginated list of all programs, including their average ratings.")
+    @ApiResponse(responseCode = "200", description = "List of programs retrieved")
     public Page<ProgramDTO> getPrograms(@ParameterObject Pageable pageable) {
         return programService.findAll(pageable).map(program -> {
             ProgramDTO dto = programMapper.toDTO(program);
@@ -109,7 +111,7 @@ public class ProgramController {
     }
 
     @GetMapping(path = "/{id}")
-    @Operation(summary = "Get a program by ID")
+    @Operation(summary = "Get a program by ID", description = "Retrieves details of a specific program using its unique ID.")
     @ApiResponse(responseCode = "302", description = "Program found")
     @ApiResponse(responseCode = "404", description = "Program not found")
     public ResponseEntity<ProgramDTO> getProgramById(
@@ -124,8 +126,8 @@ public class ProgramController {
     }
 
     @GetMapping(path = "/name/{name}")
-    @Operation(summary = "Search programs by name (paginated)")
-    @ApiResponse(responseCode = "200", description = "List of programs matching the name")
+    @Operation(summary = "Search programs by name (paginated)", description = "Searches for programs whose name contains the given string.")
+    @ApiResponse(responseCode = "200", description = "Search results retrieved")
     public Page<ProgramDTO> getProgramByName(
             @Parameter(description = "Name to search for") @PathVariable String name,
             @ParameterObject Pageable pageable) {
@@ -137,7 +139,7 @@ public class ProgramController {
     }
 
     @PutMapping(path = "/{id}")
-    @Operation(summary = "Update a program by ID")
+    @Operation(summary = "Update a program by ID", description = "Performs a full update of an existing program.")
     @ApiResponse(responseCode = "200", description = "Program updated successfully")
     @ApiResponse(responseCode = "404", description = "Program not found")
     @ApiResponse(responseCode = "400", description = "Invalid School ID")
@@ -151,7 +153,6 @@ public class ProgramController {
         }
 
         Program existingProgram = existingOpt.get();
-        // Complete update so map everything
         Program mappedUpdate = programMapper.toEntity(newProgramDTO);
         mappedUpdate.setId(existingProgram.getId());
         
@@ -167,7 +168,7 @@ public class ProgramController {
     }
 
     @PatchMapping(path = "/{id}")
-    @Operation(summary = "Partially update a program by ID")
+    @Operation(summary = "Partially update a program by ID", description = "Updates only the provided fields of an existing program.")
     @ApiResponse(responseCode = "200", description = "Program patched successfully")
     @ApiResponse(responseCode = "404", description = "Program not found")
     @ApiResponse(responseCode = "400", description = "Invalid School ID")
@@ -181,8 +182,6 @@ public class ProgramController {
         }
 
         Program existingProgram = existingOpt.get();
-        
-        // Use ModelMapper to update non-null fields
         modelMapper.map(programDTO, existingProgram);
         
         if (programDTO.getSchoolId() != null) {
@@ -197,7 +196,7 @@ public class ProgramController {
     }
 
     @DeleteMapping(path = "/{id}")
-    @Operation(summary = "Delete a program by ID")
+    @Operation(summary = "Delete a program by ID", description = "Removes a program from the system.")
     @ApiResponse(responseCode = "200", description = "Program deleted successfully")
     @ApiResponse(responseCode = "404", description = "Program not found")
     public ResponseEntity<ProgramDTO> delete(@Parameter(description = "ID of the program to delete") @PathVariable int id) {

@@ -4,6 +4,7 @@ import com.bowe.meetstudent.dto.CourseDTO;
 import com.bowe.meetstudent.entities.Course;
 import com.bowe.meetstudent.entities.Program;
 import com.bowe.meetstudent.mappers.implementations.CourseMapper;
+import com.bowe.meetstudent.services.CourseRateService;
 import com.bowe.meetstudent.services.CourseService;
 import com.bowe.meetstudent.services.ProgramService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -21,12 +22,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Optional;
 
-import com.bowe.meetstudent.services.CourseRateService;
-
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = "/api/v1/courses")
-@Tag(name = "10. Courses", description = "Endpoints for managing courses")
+@Tag(name = "10. Courses", description = "Endpoints for managing individual subjects or modules (Courses)")
 public class CourseController {
 
     private final CourseService courseService;
@@ -36,9 +35,9 @@ public class CourseController {
     private final CourseRateService courseRateService;
 
     @PostMapping
-    @Operation(summary = "Create a new course")
+    @Operation(summary = "Create a new course", description = "Adds a new course to the system, optionally linking it to a program.")
     @ApiResponse(responseCode = "201", description = "Course created successfully")
-    @ApiResponse(responseCode = "400", description = "Invalid Program ID")
+    @ApiResponse(responseCode = "400", description = "Invalid Program ID or input data")
     public ResponseEntity<CourseDTO> create(@RequestBody CourseDTO courseDTO) {
         Course course = courseMapper.toEntity(courseDTO);
         
@@ -57,8 +56,8 @@ public class CourseController {
     }
 
     @GetMapping
-    @Operation(summary = "Get all courses (paginated)")
-    @ApiResponse(responseCode = "200", description = "List of courses")
+    @Operation(summary = "Get all courses (paginated)", description = "Provides a paginated list of all courses, including their average ratings.")
+    @ApiResponse(responseCode = "200", description = "List of courses retrieved")
     public Page<CourseDTO> getCourses(@ParameterObject Pageable pageable) {
         return courseService.findAll(pageable).map(course -> {
             CourseDTO dto = courseMapper.toDTO(course);
@@ -68,7 +67,7 @@ public class CourseController {
     }
 
     @GetMapping(path = "/{id}")
-    @Operation(summary = "Get a course by ID")
+    @Operation(summary = "Get a course by ID", description = "Retrieves details of a specific course using its unique ID.")
     @ApiResponse(responseCode = "302", description = "Course found")
     @ApiResponse(responseCode = "404", description = "Course not found")
     public ResponseEntity<CourseDTO> getCourseById(
@@ -83,8 +82,8 @@ public class CourseController {
     }
 
     @GetMapping(path = "/name/{name}")
-    @Operation(summary = "Search courses by name (paginated)")
-    @ApiResponse(responseCode = "200", description = "List of courses matching the name")
+    @Operation(summary = "Search courses by name (paginated)", description = "Searches for courses whose name contains the given string.")
+    @ApiResponse(responseCode = "200", description = "Search results retrieved")
     public Page<CourseDTO> getCourseByName(
             @Parameter(description = "Name to search for") @PathVariable String name,
             @ParameterObject Pageable pageable) {
@@ -96,7 +95,7 @@ public class CourseController {
     }
 
     @PutMapping(path = "/{id}")
-    @Operation(summary = "Update a course by ID")
+    @Operation(summary = "Update a course by ID", description = "Performs a full update of an existing course.")
     @ApiResponse(responseCode = "200", description = "Course updated successfully")
     @ApiResponse(responseCode = "404", description = "Course not found")
     @ApiResponse(responseCode = "400", description = "Invalid Program ID")
@@ -127,7 +126,7 @@ public class CourseController {
     }
 
     @PatchMapping(path = "/{id}")
-    @Operation(summary = "Partially update a course by ID")
+    @Operation(summary = "Partially update a course by ID", description = "Updates only the provided fields of an existing course.")
     @ApiResponse(responseCode = "200", description = "Course patched successfully")
     @ApiResponse(responseCode = "404", description = "Course not found")
     @ApiResponse(responseCode = "400", description = "Invalid Program ID")
@@ -155,7 +154,7 @@ public class CourseController {
     }
 
     @DeleteMapping(path = "/{id}")
-    @Operation(summary = "Delete a course by ID")
+    @Operation(summary = "Delete a course by ID", description = "Removes a course from the system.")
     @ApiResponse(responseCode = "200", description = "Course deleted successfully")
     @ApiResponse(responseCode = "404", description = "Course not found")
     public ResponseEntity<CourseDTO> delete(@Parameter(description = "ID of the course to delete") @PathVariable int id) {
