@@ -22,6 +22,8 @@ import java.util.Optional;
 
 import com.bowe.meetstudent.services.SchoolRateService;
 
+import org.modelmapper.ModelMapper;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = "/api/v1/schools")
@@ -31,6 +33,7 @@ public class SchoolController {
     private final SchoolService schoolService;
     private final SchoolMapper schoolMapper;
     private final SchoolRateService schoolRateService;
+    private final ModelMapper modelMapper;
 
     @PostMapping
     @Operation(summary = "Create a new school")
@@ -115,11 +118,24 @@ public class SchoolController {
     @ApiResponse(responseCode = "200", description = "School updated successfully")
     @ApiResponse(responseCode = "404", description = "School not found")
     public ResponseEntity<SchoolDTO> update(
-        @RequestBody SchoolDTO newSchool,
+        @RequestBody SchoolDTO newSchoolDTO,
         @Parameter(description = "ID of the school to update")
         @PathVariable int id) {
 
-        return getSchoolDTOResponseEntity(newSchool, id);
+        if (!this.schoolService.exists(id)) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+
+        Optional<School> existingSchool = this.schoolService.getSchoolById(id);
+        School school = existingSchool.get();
+        // Complete update
+        School mappedUpdate = schoolMapper.toEntity(newSchoolDTO);
+        mappedUpdate.setId(school.getId());
+
+        School saved = schoolService.save(mappedUpdate);
+        SchoolDTO dto = schoolMapper.toDTO(saved);
+        dto.setAverageRate(schoolRateService.getAverageNoteBySchoolId(saved.getId()));
+        return new ResponseEntity<>(dto, HttpStatus.OK);
     }
 
     @PatchMapping(path = "/{id}")
@@ -131,7 +147,19 @@ public class SchoolController {
         @Parameter(description = "ID of the school to patch")
         @PathVariable int id) {
 
-        return getSchoolDTOResponseEntity(schoolDTO, id);
+        if (!this.schoolService.exists(id)) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+
+        Optional<School> existingSchool = this.schoolService.getSchoolById(id);
+        School school = existingSchool.get();
+        
+        modelMapper.map(schoolDTO, school);
+
+        School saved = schoolService.save(school);
+        SchoolDTO dto = schoolMapper.toDTO(saved);
+        dto.setAverageRate(schoolRateService.getAverageNoteBySchoolId(saved.getId()));
+        return new ResponseEntity<>(dto, HttpStatus.OK);
     }
 
     @DeleteMapping(path = "/{id}")
@@ -149,38 +177,5 @@ public class SchoolController {
             return new ResponseEntity<>(schoolMapper.toDTO(toDelete), HttpStatus.OK);
         })
                 .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
-    }
-
-    private School setSchoolValuesForUpdate(SchoolDTO schoolDTO, Optional<School> existingSchool) {
-
-        School school = existingSchool.orElse(new School());
-
-        if (schoolDTO.getAddress() != null) {
-            school.setAddress(schoolDTO.getAddress());
-        }
-        if (schoolDTO.getName() != null) {
-            school.setName(schoolDTO.getName());
-        }
-        if (schoolDTO.getCode() != null){
-            school.setCode(schoolDTO.getCode());
-        }
-        return school;
-    }
-
-    private ResponseEntity<SchoolDTO> getSchoolDTOResponseEntity(SchoolDTO newSchool, int id) {
-
-        if (!this.schoolService.exists(id)) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-
-        Optional<School> existingSchool = this.schoolService.getSchoolById(id);
-        School toSave =  setSchoolValuesForUpdate(newSchool, existingSchool);
-
-        return new ResponseEntity<>(
-                this.schoolMapper.toDTO(
-                        this.schoolService.save(toSave)
-                ),
-                HttpStatus.OK
-        );
     }
 }

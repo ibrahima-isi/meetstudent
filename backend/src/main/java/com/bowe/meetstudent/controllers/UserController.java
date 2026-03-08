@@ -23,6 +23,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Optional;
 
+import org.modelmapper.ModelMapper;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = "/api/v1/users")
@@ -33,6 +35,7 @@ public class UserController {
     private final PasswordEncoder encoder;
     private final Mapper<UserEntity, UserDTO> userMapper;
     private final RoleService roleService;
+    private final ModelMapper modelMapper;
 
 
     @PostMapping
@@ -115,18 +118,19 @@ public class UserController {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
         Optional<UserEntity> existingUserOptional = userService.getUserById(id);
-        final UserEntity existingUser = setValuesForUpdate(userDTO, existingUserOptional);
+        UserEntity existingUser = existingUserOptional.get();
+        
+        UserEntity mappedUpdate = userMapper.toEntity(userDTO);
+        mappedUpdate.setId(existingUser.getId());
 
-        this.userService.saveUser(existingUser, encoder);
-        UserDTO savedUser = this.userMapper.toDTO(existingUser);
-        return new ResponseEntity<>(savedUser,HttpStatus.OK);
+        UserEntity saved = this.userService.saveUser(mappedUpdate, encoder);
+        return new ResponseEntity<>(userMapper.toDTO(saved), HttpStatus.OK);
     }
 
     @PatchMapping(path = "{id}")
     @Operation(summary = "Partially update a user by ID")
     @ApiResponse(responseCode = "200", description = "User updated successfully")
     @ApiResponse(responseCode = "404", description = "User not found")
-    @ApiResponse(responseCode = "400", description = "Bad request")
     public ResponseEntity<UserDTO> patchUser(@Parameter(description = "ID of the user to patch") @PathVariable int id, @RequestBody UserDTO userDTO) {
 
         Optional<UserEntity> existingUserOptional = userService.getUserById(id);
@@ -135,19 +139,11 @@ public class UserController {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
 
-        final UserEntity existingUser = setValuesForUpdate(userDTO, existingUserOptional);
-        this.userService.saveUser(existingUser, encoder);
-
-        this.userService
-                .getUserById(id)
-                .map(
-                        user -> {
-                            UserDTO savedUser = userMapper.toDTO(user);
-                            return new ResponseEntity<>(savedUser, HttpStatus.OK);
-                        }
-                    );
-
-        return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        UserEntity existingUser = existingUserOptional.get();
+        modelMapper.map(userDTO, existingUser);
+        
+        UserEntity saved = this.userService.saveUser(existingUser, encoder);
+        return new ResponseEntity<>(userMapper.toDTO(saved), HttpStatus.OK);
     }
 
     @DeleteMapping(path = "{id}")
@@ -164,42 +160,4 @@ public class UserController {
         UserDTO deletedUserDto = this.userMapper.toDTO(deletedUser);
         return new ResponseEntity<>(deletedUserDto, HttpStatus.OK);
     }
-
-    /**
-     * Get an existing from the Database orElse a new User
-     * @param userDTO the user with the new values
-     * @param existingUserOptional to update
-     * @return UserEntity
-     */
-    private static UserEntity setValuesForUpdate(UserDTO userDTO, Optional<UserEntity> existingUserOptional) {
-        UserEntity existingUser = existingUserOptional.orElseGet(UserEntity::new);
-
-        if (userDTO.getFirstname() != null) {
-            existingUser.setFirstname(userDTO.getFirstname());
-        }
-        if (userDTO.getLastname() != null) {
-            existingUser.setLastname(userDTO.getLastname());
-        }
-        if (userDTO.getEmail() != null) {
-            existingUser.setEmail(userDTO.getEmail());
-        }
-        if (userDTO.getPassword() != null) {
-            existingUser.setPassword(userDTO.getPassword());
-        }
-        if(userDTO.getQualification() != null){
-            existingUser.setQualification(userDTO.getQualification());
-        }
-        if(userDTO.getDiplomas() != null){
-            existingUser.setDiplomas(userDTO.getDiplomas());
-        }
-        if(userDTO.getRole() != null) {
-            existingUser.setRole(userDTO.getRole());
-        }
-        if(userDTO.getBirthday() != null) {
-            existingUser.setBirthday(userDTO.getBirthday());
-        }
-        return existingUser;
-    }
-
-
 }

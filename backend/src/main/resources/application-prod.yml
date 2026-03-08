@@ -1,0 +1,23 @@
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+  
+  flyway:
+    enabled: true
+
+security:
+  jwt:
+    secret-key: ${JWT_SECRET_KEY}
+
+logging:
+  level:
+    root: WARN
+    com.bowe.meetstudent: INFO

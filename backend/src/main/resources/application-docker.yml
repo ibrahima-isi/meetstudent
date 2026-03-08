@@ -1,0 +1,16 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres_db:5432/meetstudent
+    username: ${POSTGRES_USER:ibrahima}
+    password: ${POSTGRES_PASSWORD:changeMeInProd!}
+  
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  
+  flyway:
+    enabled: true
+
+security:
+  jwt:
+    secret-key: ${JWT_SECRET_KEY:dockerSecretKeyForInternalOnly!1234567890}

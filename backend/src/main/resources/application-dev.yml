@@ -1,0 +1,37 @@
+spring:
+  devtools:
+    restart:
+      enabled: true
+      additional-paths: src/main/java
+      exclude: META-INF/resources/**,static/**,public/**
+
+  datasource:
+    url: jdbc:postgresql://localhost:5433/meetstudent
+    username: ${POSTGRES_USER:ibrahima}
+    password: ${POSTGRES_PASSWORD:changeMeInProd!}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      auto-commit: false
+      connection-timeout: 30000
+  
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        connection:
+          autocommit: false
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+
+  sql:
+    init:
+      mode: never
+  
+  flyway:
+    enabled: true
+
+security:
+  jwt:
+    secret-key: ${JWT_SECRET_KEY:devSecretKeyForLocalOnly!1234567890}
