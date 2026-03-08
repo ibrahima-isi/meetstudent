@@ -1,6 +1,7 @@
 spring:
   datasource:
-    url: jdbc:postgresql://postgres_db:5432/meetstudent
+    # Prioritize Neon/External URL from .env, fallback to internal docker network DB
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres_db:5432/meetstudent}
     username: ${POSTGRES_USER:ibrahima}
     password: ${POSTGRES_PASSWORD:changeMeInProd!}
   

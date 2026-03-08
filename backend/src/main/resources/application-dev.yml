@@ -6,7 +6,8 @@ spring:
       exclude: META-INF/resources/**,static/**,public/**
 
   datasource:
-    url: jdbc:postgresql://localhost:5433/meetstudent
+    # Prioritize Neon/External URL from .env, fallback to local docker-mapped port
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/meetstudent}
     username: ${POSTGRES_USER:ibrahima}
     password: ${POSTGRES_PASSWORD:changeMeInProd!}
     driver-class-name: org.postgresql.Driver
