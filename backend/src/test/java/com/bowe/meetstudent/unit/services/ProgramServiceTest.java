@@ -1,7 +1,8 @@
-package com.bowe.meetstudent.services;
+package com.bowe.meetstudent.unit.services;
 
 import com.bowe.meetstudent.entities.Program;
 import com.bowe.meetstudent.repositories.ProgramRepository;
+import com.bowe.meetstudent.services.ProgramService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 
 @ExtendWith(MockitoExtension.class)
-class ProgramServiceUnitTest {
+class ProgramServiceTest {
 
     @Mock
     private ProgramRepository programRepository;

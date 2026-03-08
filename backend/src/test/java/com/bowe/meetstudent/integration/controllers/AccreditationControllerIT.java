@@ -1,8 +1,7 @@
-package com.bowe.meetstudent.controllers;
+package com.bowe.meetstudent.integration.controllers;
 
 import com.bowe.meetstudent.TestDataUtil;
 import com.bowe.meetstudent.dto.AccreditationDTO;
-import com.bowe.meetstudent.entities.Accreditation;
 import com.bowe.meetstudent.mappers.implementations.AccreditationMapper;
 import com.bowe.meetstudent.services.AccreditationService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -24,7 +23,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-class AccreditationControllerIntegrationTests {
+class AccreditationControllerIT {
 
     @Autowired
     private MockMvc mockMvc;

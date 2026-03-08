@@ -1,10 +1,8 @@
-package com.bowe.meetstudent.controllers;
+package com.bowe.meetstudent.integration.controllers;
 
-import com.bowe.meetstudent.dto.UserDTO;
 import com.bowe.meetstudent.entities.Role;
 import com.bowe.meetstudent.models.LoginRequest;
 import com.bowe.meetstudent.repositories.RoleRepository;
-import com.bowe.meetstudent.security.JwtDecoder;
 import com.bowe.meetstudent.services.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,7 +25,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test") // Use standard 'test' profile
 @Transactional // Rollback DB after each test
-class AuthIntegrationTest {
+class AuthIT {
 
     @Autowired
     private MockMvc mockMvc;

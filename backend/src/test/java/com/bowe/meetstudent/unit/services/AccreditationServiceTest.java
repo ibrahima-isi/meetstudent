@@ -1,7 +1,8 @@
-package com.bowe.meetstudent.services;
+package com.bowe.meetstudent.unit.services;
 
 import com.bowe.meetstudent.entities.Accreditation;
 import com.bowe.meetstudent.repositories.AccreditationRepository;
+import com.bowe.meetstudent.services.AccreditationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 
 @ExtendWith(MockitoExtension.class)
-class AccreditationServiceUnitTest {
+class AccreditationServiceTest {
 
     @Mock
     private AccreditationRepository accreditationRepository;

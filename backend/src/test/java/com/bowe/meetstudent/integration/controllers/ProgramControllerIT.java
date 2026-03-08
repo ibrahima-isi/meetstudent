@@ -1,4 +1,4 @@
-package com.bowe.meetstudent.controllers;
+package com.bowe.meetstudent.integration.controllers;
 
 import com.bowe.meetstudent.TestDataUtil;
 import com.bowe.meetstudent.dto.ProgramDTO;
@@ -30,7 +30,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-class ProgramControllerIntegrationTests {
+class ProgramControllerIT {
 
     @Autowired
     private MockMvc mockMvc;

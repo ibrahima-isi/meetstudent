@@ -1,5 +1,6 @@
-package com.bowe.meetstudent.controllers;
+package com.bowe.meetstudent.unit.controllers;
 
+import com.bowe.meetstudent.controllers.AuthController;
 import com.bowe.meetstudent.models.LoginRequest;
 import com.bowe.meetstudent.models.LoginResponse;
 import com.bowe.meetstudent.security.JwtIssuer;
@@ -22,7 +23,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class AuthControllerUnitTest {
+class AuthControllerTest {
 
     @Mock
     private JwtIssuer jwtIssuer;

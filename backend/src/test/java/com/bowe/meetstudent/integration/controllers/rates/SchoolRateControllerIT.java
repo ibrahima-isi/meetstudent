@@ -1,13 +1,10 @@
-package com.bowe.meetstudent.controllers.rates;
+package com.bowe.meetstudent.integration.controllers.rates;
 
 import com.bowe.meetstudent.TestDataUtil;
-import com.bowe.meetstudent.dto.SchoolDTO;
 import com.bowe.meetstudent.dto.SchoolRateDTO;
 import com.bowe.meetstudent.entities.School;
-import com.bowe.meetstudent.entities.UserEntity;
 import com.bowe.meetstudent.mappers.implementations.SchoolMapper;
 import com.bowe.meetstudent.services.SchoolService;
-import com.bowe.meetstudent.services.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,7 +24,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-class SchoolRateControllerIntegrationTests {
+class SchoolRateControllerIT {
 
     @Autowired
     private MockMvc mockMvc;
