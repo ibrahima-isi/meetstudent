@@ -21,6 +21,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Optional;
 
+import com.bowe.meetstudent.services.CourseRateService;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = "/api/v1/courses")
@@ -31,6 +33,7 @@ public class CourseController {
     private final ProgramService programService;
     private final CourseMapper courseMapper;
     private final ModelMapper modelMapper;
+    private final CourseRateService courseRateService;
 
     @PostMapping
     @Operation(summary = "Create a new course")
@@ -57,7 +60,11 @@ public class CourseController {
     @Operation(summary = "Get all courses (paginated)")
     @ApiResponse(responseCode = "200", description = "List of courses")
     public Page<CourseDTO> getCourses(@ParameterObject Pageable pageable) {
-        return courseService.findAll(pageable).map(courseMapper::toDTO);
+        return courseService.findAll(pageable).map(course -> {
+            CourseDTO dto = courseMapper.toDTO(course);
+            dto.setAverageRate(courseRateService.getAverageNoteByCourseId(course.getId()));
+            return dto;
+        });
     }
 
     @GetMapping(path = "/{id}")
@@ -67,7 +74,11 @@ public class CourseController {
     public ResponseEntity<CourseDTO> getCourseById(
             @Parameter(description = "ID of the course to retrieve") @PathVariable int id) {
         return courseService.findById(id)
-                .map(course -> new ResponseEntity<>(courseMapper.toDTO(course), HttpStatus.FOUND))
+                .map(course -> {
+                    CourseDTO dto = courseMapper.toDTO(course);
+                    dto.setAverageRate(courseRateService.getAverageNoteByCourseId(course.getId()));
+                    return new ResponseEntity<>(dto, HttpStatus.FOUND);
+                })
                 .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
 
@@ -77,7 +88,11 @@ public class CourseController {
     public Page<CourseDTO> getCourseByName(
             @Parameter(description = "Name to search for") @PathVariable String name,
             @ParameterObject Pageable pageable) {
-        return courseService.findByName(name, pageable).map(courseMapper::toDTO);
+        return courseService.findByName(name, pageable).map(course -> {
+            CourseDTO dto = courseMapper.toDTO(course);
+            dto.setAverageRate(courseRateService.getAverageNoteByCourseId(course.getId()));
+            return dto;
+        });
     }
 
     @PutMapping(path = "/{id}")

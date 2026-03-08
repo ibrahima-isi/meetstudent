@@ -10,10 +10,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -31,5 +30,16 @@ public class ProgramRateController {
         ProgramRate rate = mapper.toEntity(dto);
         var saved = this.service.save(rate);
         return new ResponseEntity<>(mapper.toDTO(saved), HttpStatus.CREATED);
+    }
+
+    @GetMapping("/program/{id}")
+    @Operation(summary = "Get all ratings for a specific program")
+    @ApiResponse(responseCode = "200", description = "List of program ratings")
+    public ResponseEntity<List<ProgramRateDTO>> getRatesByProgram(@PathVariable Integer id) {
+        List<ProgramRateDTO> rates = service.findByProgramId(id)
+                .stream()
+                .map(mapper::toDTO)
+                .toList();
+        return ResponseEntity.ok(rates);
     }
 }

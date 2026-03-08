@@ -13,4 +13,5 @@ import java.util.Date;
 public class CourseDTO extends BaseDTO {
     private String photoUrl;
     private Integer programId;
+    private Double averageRate;
 }

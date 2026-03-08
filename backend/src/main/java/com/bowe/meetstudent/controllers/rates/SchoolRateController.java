@@ -12,6 +12,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import java.util.List;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/school-rates")
@@ -29,6 +32,17 @@ public class SchoolRateController {
         SchoolRate rate = mapper.toEntity(dto);
         var saved = this.service.save(rate);
         return new ResponseEntity<>(mapper.toDTO(saved), HttpStatus.CREATED);
+    }
+
+    @GetMapping("/school/{id}")
+    @Operation(summary = "Get all ratings for a specific school")
+    @ApiResponse(responseCode = "200", description = "List of school ratings")
+    public ResponseEntity<List<SchoolRateDTO>> getRatesBySchool(@PathVariable Integer id) {
+        List<SchoolRateDTO> rates = service.findBySchoolId(id)
+                .stream()
+                .map(mapper::toDTO)
+                .toList();
+        return ResponseEntity.ok(rates);
     }
 
 }

@@ -15,4 +15,5 @@ public class ProgramDTO extends BaseDTO{
     private Integer duration;
     private String photoUrl;
     private Integer schoolId;
+    private Double averageRate;
 }

@@ -7,6 +7,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class SchoolRateService {
@@ -14,5 +16,13 @@ public class SchoolRateService {
 
     public SchoolRate save(SchoolRate schoolRate) {
         return this.schoolRateRepository.save(schoolRate);
+    }
+
+    public List<SchoolRate> findBySchoolId(Integer schoolId) {
+        return schoolRateRepository.findBySchoolId(schoolId);
+    }
+
+    public Double getAverageNoteBySchoolId(Integer schoolId) {
+        return schoolRateRepository.getAverageNoteBySchoolId(schoolId);
     }
 }

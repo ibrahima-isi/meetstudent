@@ -15,5 +15,6 @@ public class SchoolDTO extends BaseDTO{
     private Address address;
     private String logoUrl;
     private String coverPhotoUrl;
+    private Double averageRate;
 
 }

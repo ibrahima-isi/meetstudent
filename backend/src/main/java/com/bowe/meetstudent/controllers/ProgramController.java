@@ -25,6 +25,7 @@ import com.bowe.meetstudent.dto.ProgramAccreditationDTO;
 import com.bowe.meetstudent.entities.ProgramAccreditation;
 import com.bowe.meetstudent.mappers.implementations.ProgramAccreditationMapper;
 import com.bowe.meetstudent.services.ProgramAccreditationService;
+import com.bowe.meetstudent.services.ProgramRateService;
 import java.util.List;
 
 @RestController
@@ -39,6 +40,7 @@ public class ProgramController {
     private final ModelMapper modelMapper;
     private final ProgramAccreditationService programAccreditationService;
     private final ProgramAccreditationMapper programAccreditationMapper;
+    private final ProgramRateService programRateService;
 
     @PostMapping(path = "/{programId}/accreditations/{accreditationId}")
     @Operation(summary = "Link an accreditation to a program")
@@ -99,7 +101,11 @@ public class ProgramController {
     @Operation(summary = "Get all programs (paginated)", description = "Provides a paginated list of all programs.")
     @ApiResponse(responseCode = "200", description = "List of programs")
     public Page<ProgramDTO> getPrograms(@ParameterObject Pageable pageable) {
-        return programService.findAll(pageable).map(programMapper::toDTO);
+        return programService.findAll(pageable).map(program -> {
+            ProgramDTO dto = programMapper.toDTO(program);
+            dto.setAverageRate(programRateService.getAverageNoteByProgramId(program.getId()));
+            return dto;
+        });
     }
 
     @GetMapping(path = "/{id}")
@@ -109,7 +115,11 @@ public class ProgramController {
     public ResponseEntity<ProgramDTO> getProgramById(
             @Parameter(description = "ID of the program to retrieve") @PathVariable int id) {
         return programService.findById(id)
-                .map(program -> new ResponseEntity<>(programMapper.toDTO(program), HttpStatus.FOUND))
+                .map(program -> {
+                    ProgramDTO dto = programMapper.toDTO(program);
+                    dto.setAverageRate(programRateService.getAverageNoteByProgramId(program.getId()));
+                    return new ResponseEntity<>(dto, HttpStatus.FOUND);
+                })
                 .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
 
@@ -119,7 +129,11 @@ public class ProgramController {
     public Page<ProgramDTO> getProgramByName(
             @Parameter(description = "Name to search for") @PathVariable String name,
             @ParameterObject Pageable pageable) {
-        return programService.findByName(name, pageable).map(programMapper::toDTO);
+        return programService.findByName(name, pageable).map(program -> {
+            ProgramDTO dto = programMapper.toDTO(program);
+            dto.setAverageRate(programRateService.getAverageNoteByProgramId(program.getId()));
+            return dto;
+        });
     }
 
     @PutMapping(path = "/{id}")

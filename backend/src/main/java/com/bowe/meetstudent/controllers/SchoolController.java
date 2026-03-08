@@ -20,6 +20,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Optional;
 
+import com.bowe.meetstudent.services.SchoolRateService;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = "/api/v1/schools")
@@ -28,6 +30,7 @@ public class SchoolController {
 
     private final SchoolService schoolService;
     private final SchoolMapper schoolMapper;
+    private final SchoolRateService schoolRateService;
 
     @PostMapping
     @Operation(summary = "Create a new school")
@@ -48,7 +51,11 @@ public class SchoolController {
     public Page<SchoolDTO> getSchools(@ParameterObject Pageable pageable) {
         return this.schoolService
                 .findAll(pageable)
-                .map(schoolMapper::toDTO);
+                .map(school -> {
+                    SchoolDTO dto = schoolMapper.toDTO(school);
+                    dto.setAverageRate(schoolRateService.getAverageNoteBySchoolId(school.getId()));
+                    return dto;
+                });
     }
 
     @GetMapping(path = "/{id}")
@@ -63,6 +70,7 @@ public class SchoolController {
                 .map(school -> {
 
                     SchoolDTO schoolDTO = schoolMapper.toDTO(school);
+                    schoolDTO.setAverageRate(schoolRateService.getAverageNoteBySchoolId(school.getId()));
                     return new ResponseEntity<>(schoolDTO, HttpStatus.FOUND);
 
                 })
@@ -79,7 +87,11 @@ public class SchoolController {
 
         return this.schoolService
                 .getSchoolByName(name, pageable)
-                .map(schoolMapper::toDTO);
+                .map(school -> {
+                    SchoolDTO dto = schoolMapper.toDTO(school);
+                    dto.setAverageRate(schoolRateService.getAverageNoteBySchoolId(school.getId()));
+                    return dto;
+                });
     }
 
     @GetMapping(path = "/address/{city}")
@@ -91,7 +103,11 @@ public class SchoolController {
 
         Pageable pageable = PageRequest.of(0, 10, Sort.by("name").descending());
         return this.schoolService.findSchoolByCity(city, pageable)
-                .map(schoolMapper::toDTO);
+                .map(school -> {
+                    SchoolDTO dto = schoolMapper.toDTO(school);
+                    dto.setAverageRate(schoolRateService.getAverageNoteBySchoolId(school.getId()));
+                    return dto;
+                });
     }
 
     @PutMapping(path = "/{id}")
