@@ -4,16 +4,22 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.Builder;
 import lombok.experimental.SuperBuilder;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @EqualsAndHashCode(callSuper = true)
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @SuperBuilder
-public class ProgramDTO extends BaseDTO{
+public class ProgramDTO extends BaseDTO {
     private Integer duration;
     private String photoUrl;
     private Integer schoolId;
     private Double averageRate;
+
+    private List<CourseDTO> courses;
 }

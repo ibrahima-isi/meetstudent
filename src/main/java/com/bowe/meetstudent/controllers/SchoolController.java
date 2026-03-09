@@ -57,7 +57,7 @@ public class SchoolController {
 
     @GetMapping(path = "/{id}")
     @Operation(summary = "Get a school by ID", description = "Retrieves detailed information about a school using its ID.")
-    @ApiResponse(responseCode = "302", description = "School found")
+    @ApiResponse(responseCode = "200", description = "School found")
     @ApiResponse(responseCode = "404", description = "School not found")
     public ResponseEntity<SchoolDTO> getSchoolById(
         @Parameter(description = "ID of the school to retrieve") @PathVariable int id) {
@@ -65,7 +65,7 @@ public class SchoolController {
                 .map(school -> {
                     SchoolDTO schoolDTO = schoolMapper.toDTO(school);
                     schoolDTO.setAverageRate(schoolRateService.getAverageNoteBySchoolId(school.getId()));
-                    return new ResponseEntity<>(schoolDTO, HttpStatus.FOUND);
+                    return new ResponseEntity<>(schoolDTO, HttpStatus.OK);
                 })
                 .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
@@ -107,19 +107,13 @@ public class SchoolController {
         @RequestBody SchoolDTO newSchoolDTO,
         @Parameter(description = "ID of the school to update") @PathVariable int id) {
 
-        if (!this.schoolService.exists(id)) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-
-        Optional<School> existingSchool = this.schoolService.getSchoolById(id);
-        School school = existingSchool.get();
-        School mappedUpdate = schoolMapper.toEntity(newSchoolDTO);
-        mappedUpdate.setId(school.getId());
-
-        School saved = schoolService.save(mappedUpdate);
-        SchoolDTO dto = schoolMapper.toDTO(saved);
-        dto.setAverageRate(schoolRateService.getAverageNoteBySchoolId(saved.getId()));
-        return new ResponseEntity<>(dto, HttpStatus.OK);
+        return this.schoolService.getSchoolById(id).map(school -> {
+            modelMapper.map(newSchoolDTO, school);
+            School saved = schoolService.save(school);
+            SchoolDTO dto = schoolMapper.toDTO(saved);
+            dto.setAverageRate(schoolRateService.getAverageNoteBySchoolId(saved.getId()));
+            return new ResponseEntity<>(dto, HttpStatus.OK);
+        }).orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
 
     @PatchMapping(path = "/{id}")
@@ -130,18 +124,13 @@ public class SchoolController {
         @RequestBody SchoolDTO schoolDTO,
         @Parameter(description = "ID of the school to patch") @PathVariable int id) {
 
-        if (!this.schoolService.exists(id)) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-
-        Optional<School> existingSchool = this.schoolService.getSchoolById(id);
-        School school = existingSchool.get();
-        modelMapper.map(schoolDTO, school);
-
-        School saved = schoolService.save(school);
-        SchoolDTO dto = schoolMapper.toDTO(saved);
-        dto.setAverageRate(schoolRateService.getAverageNoteBySchoolId(saved.getId()));
-        return new ResponseEntity<>(dto, HttpStatus.OK);
+        return this.schoolService.getSchoolById(id).map(school -> {
+            modelMapper.map(schoolDTO, school);
+            School saved = schoolService.save(school);
+            SchoolDTO dto = schoolMapper.toDTO(saved);
+            dto.setAverageRate(schoolRateService.getAverageNoteBySchoolId(saved.getId()));
+            return new ResponseEntity<>(dto, HttpStatus.OK);
+        }).orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
 
     @DeleteMapping(path = "/{id}")
@@ -150,9 +139,6 @@ public class SchoolController {
     @ApiResponse(responseCode = "404", description = "School not found")
     public ResponseEntity<SchoolDTO> delete(
             @Parameter(description = "ID of the school to delete") @PathVariable int id) {
-        if (!this.schoolService.exists(id))
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-
         return this.schoolService.getSchoolById(id).map(toDelete -> {
             this.schoolService.delete(toDelete.getId());
             return new ResponseEntity<>(schoolMapper.toDTO(toDelete), HttpStatus.OK);

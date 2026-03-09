@@ -112,4 +112,174 @@ class SchoolControllerIntegrationTests {
                 MockMvcResultMatchers.status().isOk()
         );
     }
+
+    @Test
+    void testThatGetSchoolByIdReturnsHttpStatus200AndSchool() throws Exception {
+        SchoolDTO schoolDTO = TestDataUtil.createSchoolDto();
+        com.bowe.meetstudent.entities.School savedSchool = this.schoolService.save(this.schoolMapper.toEntity(schoolDTO));
+
+        mockMvc.perform(
+                MockMvcRequestBuilders.get("/api/v1/schools/" + savedSchool.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN"))
+        ).andExpect(
+                MockMvcResultMatchers.status().isOk()
+        ).andExpect(
+                MockMvcResultMatchers.jsonPath("$.id").value(savedSchool.getId())
+        ).andExpect(
+                MockMvcResultMatchers.jsonPath("$.name").value(schoolDTO.getName())
+        );
+    }
+
+    @Test
+    void testThatGetSchoolByIdReturns404WhenNotFound() throws Exception {
+        mockMvc.perform(
+                MockMvcRequestBuilders.get("/api/v1/schools/99999")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN"))
+        ).andExpect(
+                MockMvcResultMatchers.status().isNotFound()
+        );
+    }
+
+    @Test
+    void testThatGetSchoolByNameReturnsResults() throws Exception {
+        SchoolDTO schoolDTO = TestDataUtil.createSchoolDto();
+        schoolDTO.setName("Specific Test University");
+        this.schoolService.save(this.schoolMapper.toEntity(schoolDTO));
+
+        mockMvc.perform(
+                MockMvcRequestBuilders.get("/api/v1/schools/name/Specific")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN"))
+        ).andExpect(
+                MockMvcResultMatchers.status().isOk()
+        ).andExpect(
+                MockMvcResultMatchers.jsonPath("$.content[0].name").value(schoolDTO.getName())
+        );
+    }
+
+    @Test
+    void testThatGetSchoolByCityReturnsResults() throws Exception {
+        SchoolDTO schoolDTO = TestDataUtil.createSchoolDto();
+        schoolDTO.getAddress().setCity("UniqueCityName");
+        this.schoolService.save(this.schoolMapper.toEntity(schoolDTO));
+
+        mockMvc.perform(
+                MockMvcRequestBuilders.get("/api/v1/schools/address/UniqueCityName")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN"))
+        ).andExpect(
+                MockMvcResultMatchers.status().isOk()
+        ).andExpect(
+                MockMvcResultMatchers.jsonPath("$.content[0].address.city").value("UniqueCityName")
+        );
+    }
+
+    @Test
+    void testThatUpdateSchoolReturnsHttpStatus200AndUpdatedSchool() throws Exception {
+        SchoolDTO schoolDTO = TestDataUtil.createSchoolDto();
+        com.bowe.meetstudent.entities.School savedSchool = this.schoolService.save(this.schoolMapper.toEntity(schoolDTO));
+
+        SchoolDTO updatedDto = TestDataUtil.createSchoolDto();
+        updatedDto.setName("UPDATED NAME");
+
+        String json = objectMapper.writeValueAsString(updatedDto);
+        mockMvc.perform(
+                MockMvcRequestBuilders.put("/api/v1/schools/" + savedSchool.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json)
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN"))
+        ).andExpect(
+                MockMvcResultMatchers.status().isOk()
+        ).andExpect(
+                MockMvcResultMatchers.jsonPath("$.name").value("UPDATED NAME")
+        );
+    }
+
+    @Test
+    void testThatPatchSchoolReturnsHttpStatus200AndPatchedSchool() throws Exception {
+        SchoolDTO schoolDTO = TestDataUtil.createSchoolDto();
+        com.bowe.meetstudent.entities.School savedSchool = this.schoolService.save(this.schoolMapper.toEntity(schoolDTO));
+
+        SchoolDTO patchDto = new SchoolDTO();
+        patchDto.setName("PATCHED NAME");
+
+        String json = objectMapper.writeValueAsString(patchDto);
+        mockMvc.perform(
+                MockMvcRequestBuilders.patch("/api/v1/schools/" + savedSchool.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json)
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN"))
+        ).andExpect(
+                MockMvcResultMatchers.status().isOk()
+        ).andExpect(
+                MockMvcResultMatchers.jsonPath("$.name").value("PATCHED NAME")
+        ).andExpect(
+                MockMvcResultMatchers.jsonPath("$.code").value(schoolDTO.getCode())
+        );
+    }
+
+    @Test
+    void testThatDeleteSchoolReturnsHttpStatus200() throws Exception {
+        SchoolDTO schoolDTO = TestDataUtil.createSchoolDto();
+        com.bowe.meetstudent.entities.School savedSchool = this.schoolService.save(this.schoolMapper.toEntity(schoolDTO));
+
+        mockMvc.perform(
+                MockMvcRequestBuilders.delete("/api/v1/schools/" + savedSchool.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN"))
+        ).andExpect(
+                MockMvcResultMatchers.status().isOk()
+        );
+    }
+
+    @Test
+    void testThatDeleteSchoolReturns404WhenNotFound() throws Exception {
+        mockMvc.perform(
+                MockMvcRequestBuilders.delete("/api/v1/schools/99999")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN"))
+        ).andExpect(
+                MockMvcResultMatchers.status().isNotFound()
+        );
+    }
+
+    @Test
+    void testThatSchoolCanBeCreatedWithNestedProgramsAndCourses() throws Exception {
+        String json = """
+            {
+              "name": "MIT",
+              "code": "MIT01",
+              "programs": [
+                {
+                  "name": "Computer Science",
+                  "code": "CS01",
+                  "duration": 4,
+                  "courses": [
+                    {
+                      "name": "Algorithms",
+                      "code": "ALG01"
+                    }
+                  ]
+                }
+              ]
+            }
+            """;
+
+        mockMvc.perform(
+                MockMvcRequestBuilders.post("/api/v1/schools")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json)
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN"))
+        ).andExpect(
+                MockMvcResultMatchers.status().isCreated()
+        ).andExpect(
+                MockMvcResultMatchers.jsonPath("$.name").value("MIT")
+        ).andExpect(
+                MockMvcResultMatchers.jsonPath("$.programs[0].name").value("Computer Science")
+        ).andExpect(
+                MockMvcResultMatchers.jsonPath("$.programs[0].courses[0].name").value("Algorithms")
+        );
+    }
 }

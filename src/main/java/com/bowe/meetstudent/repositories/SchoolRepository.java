@@ -11,7 +11,7 @@ import java.util.List;
 @Repository
 public interface SchoolRepository extends JpaRepository<School, Integer> {
 
-    Page<School> findSchoolByName(String name, Pageable pageable);
+    Page<School> findSchoolByNameContainingIgnoreCase(String name, Pageable pageable);
 
     Page<School> findSchoolByAddress_City(String city, Pageable pageable);
 }

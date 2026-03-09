@@ -24,6 +24,9 @@ public class ProgramMapper implements Mapper<Program, ProgramDTO> {
         if (programDTO.getSchoolId() == null) {
             program.setSchool(null);
         }
+        if (program.getCourses() != null) {
+            program.getCourses().forEach(c -> c.setProgram(program));
+        }
         return program;
     }
 }

@@ -42,7 +42,7 @@ public class SchoolService {
     }
 
     public Page<School> getSchoolByName(String name, Pageable pageable) {
-        return this.schoolRepository.findSchoolByName(name, pageable);
+        return this.schoolRepository.findSchoolByNameContainingIgnoreCase(name, pageable);
     }
 
     public Page<School> findSchoolByCity(String city, Pageable pageable) {

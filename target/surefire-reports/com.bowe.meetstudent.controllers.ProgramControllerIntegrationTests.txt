@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: com.bowe.meetstudent.controllers.ProgramControllerIntegrationTests
--------------------------------------------------------------------------------
-Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 3.569 s -- in com.bowe.meetstudent.controllers.ProgramControllerIntegrationTests

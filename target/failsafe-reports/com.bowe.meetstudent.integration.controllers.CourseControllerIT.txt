@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: com.bowe.meetstudent.integration.controllers.CourseControllerIT
--------------------------------------------------------------------------------
-Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 4.920 s -- in com.bowe.meetstudent.integration.controllers.CourseControllerIT

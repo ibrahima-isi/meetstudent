@@ -31,9 +31,22 @@ public class School extends BaseEntity{
     @Column(name = "cover_photo_url")
     private String coverPhotoUrl;
 
-    @OneToMany(mappedBy = "school")
+    @OneToMany(mappedBy = "school", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Program> programs;
 
-    @OneToMany(mappedBy = "school")
+    @OneToMany(mappedBy = "school", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<SchoolRate> schoolRates;
+
+    public void addProgram(Program program) {
+        if (programs == null) programs = new java.util.ArrayList<>();
+        programs.add(program);
+        program.setSchool(this);
+    }
+
+    public void removeProgram(Program program) {
+        if (programs != null) {
+            programs.remove(program);
+            program.setSchool(null);
+        }
+    }
 }

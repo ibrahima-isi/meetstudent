@@ -31,10 +31,26 @@ public class Program extends BaseEntity{
     /**
      * Relation with the accreditations of this program
      */
-    @OneToMany(mappedBy = "program")
+    @OneToMany(mappedBy = "program", cascade = CascadeType.ALL, orphanRemoval = true)
     @ToString.Exclude
     private List<ProgramAccreditation> programAccreditations;
 
-    @OneToMany(mappedBy = "program")
+    @OneToMany(mappedBy = "program", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProgramRate> programRates;
+
+    @OneToMany(mappedBy = "program", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Course> courses;
+
+    public void addCourse(Course course) {
+        if (courses == null) courses = new java.util.ArrayList<>();
+        courses.add(course);
+        course.setProgram(this);
+    }
+
+    public void removeCourse(Course course) {
+        if (courses != null) {
+            courses.remove(course);
+            course.setProgram(null);
+        }
+    }
 }

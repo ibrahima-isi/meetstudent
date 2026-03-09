@@ -100,7 +100,7 @@ class SchoolRateControllerIntegrationTests {
                 MockMvcRequestBuilders.get("/api/v1/schools/" + school.getId())
                         .with(TestDataUtil.mockUser("ROLE_STUDENT"))
         ).andExpect(
-                MockMvcResultMatchers.status().isFound()
+                MockMvcResultMatchers.status().isOk()
         ).andExpect(
                 MockMvcResultMatchers.jsonPath("$.averageRate").value(4.0)
         );

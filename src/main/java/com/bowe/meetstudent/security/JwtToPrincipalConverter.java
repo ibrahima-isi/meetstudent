@@ -22,6 +22,8 @@ public class JwtToPrincipalConverter {
     private List<SimpleGrantedAuthority> extractAuthoritiesFromClaim(DecodedJWT jwt){
         var claim = jwt.getClaim("roles");
         if(claim.isNull() || claim.isMissing()) return List.of();
-        return claim.asList(SimpleGrantedAuthority.class);
+        return claim.asList(String.class).stream()
+                .map(SimpleGrantedAuthority::new)
+                .toList();
     }
 }

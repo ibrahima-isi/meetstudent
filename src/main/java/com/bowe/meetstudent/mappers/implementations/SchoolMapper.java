@@ -32,6 +32,15 @@ public class SchoolMapper implements Mapper<School, SchoolDTO> {
      */
     @Override
     public School toEntity(SchoolDTO schoolDTO) {
-        return modelMapper.map(schoolDTO, School.class);
+        School school = modelMapper.map(schoolDTO, School.class);
+        if (school.getPrograms() != null) {
+            school.getPrograms().forEach(p -> {
+                p.setSchool(school);
+                if (p.getCourses() != null) {
+                    p.getCourses().forEach(c -> c.setProgram(p));
+                }
+            });
+        }
+        return school;
     }
 }

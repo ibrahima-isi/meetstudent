@@ -1,20 +1,24 @@
 package com.bowe.meetstudent.dto;
 
-
 import com.bowe.meetstudent.entities.embedded.Address;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @EqualsAndHashCode(callSuper = true)
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @SuperBuilder
-public class SchoolDTO extends BaseDTO{
+public class SchoolDTO extends BaseDTO {
 
     private Address address;
     private String logoUrl;
     private String coverPhotoUrl;
     private Double averageRate;
+
+    private List<ProgramDTO> programs;
 
 }

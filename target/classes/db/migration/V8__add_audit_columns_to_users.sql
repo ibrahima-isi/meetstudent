@@ -1,3 +1,0 @@
-ALTER TABLE users
-    ADD COLUMN IF NOT EXISTS created_by INTEGER,
-    ADD COLUMN IF NOT EXISTS modified_by INTEGER;
