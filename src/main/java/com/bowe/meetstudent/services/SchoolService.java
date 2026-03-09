@@ -49,6 +49,14 @@ public class SchoolService {
         return this.schoolRepository.findSchoolByAddress_City(city, pageable);
     }
 
+    public Page<School> findSchoolByCountry(String country, Pageable pageable) {
+        return this.schoolRepository.findSchoolByAddress_Country(country, pageable);
+    }
+
+    public Page<School> searchSchools(String city, String country, String programName, Pageable pageable) {
+        return this.schoolRepository.searchSchools(city, country, programName, pageable);
+    }
+
     public Page<School> findAllOrderByRateDesc(Pageable pageable) {
         return schoolRepository.findAllByOrderByAverageRateDesc(pageable);
     }

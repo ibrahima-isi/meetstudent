@@ -110,6 +110,38 @@ public class SchoolController {
                 });
     }
 
+    @GetMapping(path = "/address/country/{country}")
+    @Operation(summary = "Search schools by country (paginated)", description = "Retrieves a list of schools located in the specified country.")
+    @ApiResponse(responseCode = "200", description = "List of schools in the country retrieved")
+    public Page<SchoolDTO> getSchoolByCountry(
+        @Parameter(description = "Country to search for") @PathVariable String country,
+        @ParameterObject Pageable pageable){
+        return this.schoolService.findSchoolByCountry(country, pageable)
+                .map(school -> {
+                    SchoolDTO dto = schoolMapper.toDTO(school);
+                    dto.setAverageRate(schoolRateService.getAverageNoteBySchoolId(school.getId()));
+                    return dto;
+                });
+    }
+
+    @GetMapping(path = "/search")
+    @Operation(summary = "Search schools by city, country, and/or program name (paginated)", 
+               description = "Allows complex filtering of schools by their location and offered programs.")
+    @ApiResponse(responseCode = "200", description = "Search results retrieved")
+    public Page<SchoolDTO> searchSchools(
+        @Parameter(description = "City to filter by") @RequestParam(required = false) String city,
+        @Parameter(description = "Country to filter by") @RequestParam(required = false) String country,
+        @Parameter(description = "Program name to filter by (partial match)") @RequestParam(required = false) String program,
+        @ParameterObject Pageable pageable) {
+        
+        return this.schoolService.searchSchools(city, country, program, pageable)
+                .map(school -> {
+                    SchoolDTO dto = schoolMapper.toDTO(school);
+                    dto.setAverageRate(schoolRateService.getAverageNoteBySchoolId(school.getId()));
+                    return dto;
+                });
+    }
+
     @PutMapping(path = "/{id}")
     @Operation(summary = "Update a school by ID", description = "Performs a full update of an existing school's information.")
     @ApiResponse(responseCode = "200", description = "School updated successfully")
