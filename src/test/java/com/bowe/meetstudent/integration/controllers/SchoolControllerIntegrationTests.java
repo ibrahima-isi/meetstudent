@@ -282,4 +282,60 @@ class SchoolControllerIntegrationTests {
                 MockMvcResultMatchers.jsonPath("$.programs[0].courses[0].name").value("Algorithms")
         );
     }
+
+    @Test
+    void testThatGetSchoolsSortedByRateReturnsCorrectOrder() throws Exception {
+        SchoolDTO s1 = TestDataUtil.createSchoolDto();
+        s1.setName("Best School");
+        s1.setCode("BS001");
+        com.bowe.meetstudent.entities.School school1 = schoolService.save(schoolMapper.toEntity(s1));
+
+        SchoolDTO s2 = TestDataUtil.createSchoolDto();
+        s2.setName("Average School");
+        s2.setCode("AS001");
+        com.bowe.meetstudent.entities.School school2 = schoolService.save(schoolMapper.toEntity(s2));
+        
+        // Rate school1 with 5.0, school2 with 3.0
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/school-rates")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"note\": 5.0, \"schoolId\": " + school1.getId() + ", \"userId\": 1}")
+                .with(TestDataUtil.mockUser("ROLE_STUDENT")));
+        
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/school-rates")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"note\": 3.0, \"schoolId\": " + school2.getId() + ", \"userId\": 1}")
+                .with(TestDataUtil.mockUser("ROLE_STUDENT")));
+
+        mockMvc.perform(
+                MockMvcRequestBuilders.get("/api/v1/schools?sortRate=most")
+                        .with(TestDataUtil.mockUser("ROLE_STUDENT"))
+        ).andExpect(
+                MockMvcResultMatchers.status().isOk()
+        ).andExpect(
+                MockMvcResultMatchers.jsonPath("$.content[0].id").value(school1.getId())
+        ).andExpect(
+                MockMvcResultMatchers.jsonPath("$.content[1].id").value(school2.getId())
+        );
+    }
+
+    @Test
+    void testThatSearchSchoolsByProgramReturnsCorrectResults() throws Exception {
+        SchoolDTO s = TestDataUtil.createSchoolDto();
+        s.setName("Tech Institute");
+        com.bowe.meetstudent.entities.School school = schoolService.save(schoolMapper.toEntity(s));
+        
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/programs")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\": \"Computer Science\", \"code\": \"CS99\", \"schoolId\": " + school.getId() + "}")
+                .with(TestDataUtil.mockUser("ROLE_ADMIN")));
+
+        mockMvc.perform(
+                MockMvcRequestBuilders.get("/api/v1/schools/search?program=Computer")
+                        .with(TestDataUtil.mockUser("ROLE_STUDENT"))
+        ).andExpect(
+                MockMvcResultMatchers.status().isOk()
+        ).andExpect(
+                MockMvcResultMatchers.jsonPath("$.content[0].name").value("Tech Institute")
+        );
+    }
 }

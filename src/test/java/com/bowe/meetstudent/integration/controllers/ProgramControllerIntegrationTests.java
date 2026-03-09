@@ -192,4 +192,39 @@ class ProgramControllerIntegrationTests {
                 MockMvcResultMatchers.status().isNoContent()
         );
     }
+
+    @Test
+    void testThatGetProgramsSortedByRateReturnsCorrectOrder() throws Exception {
+        ProgramDTO p1 = TestDataUtil.createProgramDto();
+        p1.setName("Best Program");
+        p1.setCode("BP001");
+        Program program1 = programService.save(programMapper.toEntity(p1));
+
+        ProgramDTO p2 = TestDataUtil.createProgramDto();
+        p2.setName("Average Program");
+        p2.setCode("AP001");
+        Program program2 = programService.save(programMapper.toEntity(p2));
+        
+        // Rate program1 with 5.0, program2 with 3.0
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/program-rates")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"note\": 5.0, \"programId\": " + program1.getId() + ", \"userId\": 1}")
+                .with(TestDataUtil.mockUser("ROLE_STUDENT")));
+        
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/program-rates")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"note\": 3.0, \"programId\": " + program2.getId() + ", \"userId\": 1}")
+                .with(TestDataUtil.mockUser("ROLE_STUDENT")));
+
+        mockMvc.perform(
+                MockMvcRequestBuilders.get("/api/v1/programs?sortRate=most")
+                        .with(TestDataUtil.mockUser("ROLE_STUDENT"))
+        ).andExpect(
+                MockMvcResultMatchers.status().isOk()
+        ).andExpect(
+                MockMvcResultMatchers.jsonPath("$.content[0].id").value(program1.getId())
+        ).andExpect(
+                MockMvcResultMatchers.jsonPath("$.content[1].id").value(program2.getId())
+        );
+    }
 }

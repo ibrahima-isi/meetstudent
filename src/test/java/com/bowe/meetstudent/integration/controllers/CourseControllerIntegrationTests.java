@@ -129,4 +129,39 @@ class CourseControllerIntegrationTests {
                 MockMvcResultMatchers.jsonPath("$.content[1].id").isNumber()
         );
     }
+
+    @Test
+    void testThatGetCoursesSortedByRateReturnsCorrectOrder() throws Exception {
+        CourseDTO c1 = TestDataUtil.createCourseDto();
+        c1.setName("Best Course");
+        c1.setCode("BC001");
+        com.bowe.meetstudent.entities.Course course1 = courseService.save(courseMapper.toEntity(c1));
+
+        CourseDTO c2 = TestDataUtil.createCourseDto();
+        c2.setName("Average Course");
+        c2.setCode("AC001");
+        com.bowe.meetstudent.entities.Course course2 = courseService.save(courseMapper.toEntity(c2));
+        
+        // Rate course1 with 5.0, course2 with 3.0
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/course-rates")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"note\": 5.0, \"courseId\": " + course1.getId() + ", \"userId\": 1}")
+                .with(TestDataUtil.mockUser("ROLE_STUDENT")));
+        
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/course-rates")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"note\": 3.0, \"courseId\": " + course2.getId() + ", \"userId\": 1}")
+                .with(TestDataUtil.mockUser("ROLE_STUDENT")));
+
+        mockMvc.perform(
+                MockMvcRequestBuilders.get("/api/v1/courses?sortRate=most")
+                        .with(TestDataUtil.mockUser("ROLE_STUDENT"))
+        ).andExpect(
+                MockMvcResultMatchers.status().isOk()
+        ).andExpect(
+                MockMvcResultMatchers.jsonPath("$.content[0].id").value(course1.getId())
+        ).andExpect(
+                MockMvcResultMatchers.jsonPath("$.content[1].id").value(course2.getId())
+        );
+    }
 }
