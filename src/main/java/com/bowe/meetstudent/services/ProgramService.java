@@ -41,4 +41,12 @@ public class ProgramService {
     public void delete(int id) {
         this.programRepository.deleteById(id);
     }
+
+    public Page<Program> findAllOrderByRateDesc(Pageable pageable) {
+        return programRepository.findAllByOrderByAverageRateDesc(pageable);
+    }
+
+    public Page<Program> findAllOrderByRateAsc(Pageable pageable) {
+        return programRepository.findAllByOrderByAverageRateAsc(pageable);
+    }
 }

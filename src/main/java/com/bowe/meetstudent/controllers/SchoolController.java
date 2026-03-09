@@ -43,16 +43,27 @@ public class SchoolController {
     }
 
     @GetMapping
-    @Operation(summary = "Get all schools (paginated)", description = "Provides a paginated list of all schools, including their average ratings.")
+    @Operation(summary = "Get all schools (paginated)", description = "Provides a paginated list of all schools, including their average ratings. Can be sorted by rating (most/less).")
     @ApiResponse(responseCode = "200", description = "List of schools retrieved")
-    public Page<SchoolDTO> getSchools(@ParameterObject Pageable pageable) {
-        return this.schoolService
-                .findAll(pageable)
-                .map(school -> {
-                    SchoolDTO dto = schoolMapper.toDTO(school);
-                    dto.setAverageRate(schoolRateService.getAverageNoteBySchoolId(school.getId()));
-                    return dto;
-                });
+    public Page<SchoolDTO> getSchools(
+            @Parameter(description = "Sort by rate: 'most' for highest rated, 'less' for lowest rated") 
+            @RequestParam(required = false) String sortRate,
+            @ParameterObject Pageable pageable) {
+        
+        Page<School> schoolPage;
+        if ("most".equalsIgnoreCase(sortRate)) {
+            schoolPage = schoolService.findAllOrderByRateDesc(pageable);
+        } else if ("less".equalsIgnoreCase(sortRate)) {
+            schoolPage = schoolService.findAllOrderByRateAsc(pageable);
+        } else {
+            schoolPage = schoolService.findAll(pageable);
+        }
+
+        return schoolPage.map(school -> {
+            SchoolDTO dto = schoolMapper.toDTO(school);
+            dto.setAverageRate(schoolRateService.getAverageNoteBySchoolId(school.getId()));
+            return dto;
+        });
     }
 
     @GetMapping(path = "/{id}")

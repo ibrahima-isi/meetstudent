@@ -100,10 +100,23 @@ public class ProgramController {
     }
 
     @GetMapping
-    @Operation(summary = "Get all programs (paginated)", description = "Provides a paginated list of all programs, including their average ratings.")
+    @Operation(summary = "Get all programs (paginated)", description = "Provides a paginated list of all programs, including their average ratings. Can be sorted by rating (most/less).")
     @ApiResponse(responseCode = "200", description = "List of programs retrieved")
-    public Page<ProgramDTO> getPrograms(@ParameterObject Pageable pageable) {
-        return programService.findAll(pageable).map(program -> {
+    public Page<ProgramDTO> getPrograms(
+            @Parameter(description = "Sort by rate: 'most' for highest rated, 'less' for lowest rated") 
+            @RequestParam(required = false) String sortRate,
+            @ParameterObject Pageable pageable) {
+        
+        Page<Program> programPage;
+        if ("most".equalsIgnoreCase(sortRate)) {
+            programPage = programService.findAllOrderByRateDesc(pageable);
+        } else if ("less".equalsIgnoreCase(sortRate)) {
+            programPage = programService.findAllOrderByRateAsc(pageable);
+        } else {
+            programPage = programService.findAll(pageable);
+        }
+
+        return programPage.map(program -> {
             ProgramDTO dto = programMapper.toDTO(program);
             dto.setAverageRate(programRateService.getAverageNoteByProgramId(program.getId()));
             return dto;

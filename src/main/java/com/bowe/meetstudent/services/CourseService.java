@@ -41,4 +41,12 @@ public class CourseService {
     public void delete(int id) {
         this.courseRepository.deleteById(id);
     }
+
+    public Page<Course> findAllOrderByRateDesc(Pageable pageable) {
+        return courseRepository.findAllByOrderByAverageRateDesc(pageable);
+    }
+
+    public Page<Course> findAllOrderByRateAsc(Pageable pageable) {
+        return courseRepository.findAllByOrderByAverageRateAsc(pageable);
+    }
 }

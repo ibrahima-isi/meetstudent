@@ -48,4 +48,12 @@ public class SchoolService {
     public Page<School> findSchoolByCity(String city, Pageable pageable) {
         return this.schoolRepository.findSchoolByAddress_City(city, pageable);
     }
+
+    public Page<School> findAllOrderByRateDesc(Pageable pageable) {
+        return schoolRepository.findAllByOrderByAverageRateDesc(pageable);
+    }
+
+    public Page<School> findAllOrderByRateAsc(Pageable pageable) {
+        return schoolRepository.findAllByOrderByAverageRateAsc(pageable);
+    }
 }

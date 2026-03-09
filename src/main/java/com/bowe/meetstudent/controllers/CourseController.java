@@ -56,10 +56,23 @@ public class CourseController {
     }
 
     @GetMapping
-    @Operation(summary = "Get all courses (paginated)", description = "Provides a paginated list of all courses, including their average ratings.")
+    @Operation(summary = "Get all courses (paginated)", description = "Provides a paginated list of all courses, including their average ratings. Can be sorted by rating (most/less).")
     @ApiResponse(responseCode = "200", description = "List of courses retrieved")
-    public Page<CourseDTO> getCourses(@ParameterObject Pageable pageable) {
-        return courseService.findAll(pageable).map(course -> {
+    public Page<CourseDTO> getCourses(
+            @Parameter(description = "Sort by rate: 'most' for highest rated, 'less' for lowest rated") 
+            @RequestParam(required = false) String sortRate,
+            @ParameterObject Pageable pageable) {
+        
+        Page<Course> coursePage;
+        if ("most".equalsIgnoreCase(sortRate)) {
+            coursePage = courseService.findAllOrderByRateDesc(pageable);
+        } else if ("less".equalsIgnoreCase(sortRate)) {
+            coursePage = courseService.findAllOrderByRateAsc(pageable);
+        } else {
+            coursePage = courseService.findAll(pageable);
+        }
+
+        return coursePage.map(course -> {
             CourseDTO dto = courseMapper.toDTO(course);
             dto.setAverageRate(courseRateService.getAverageNoteByCourseId(course.getId()));
             return dto;

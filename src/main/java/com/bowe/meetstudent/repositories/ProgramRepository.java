@@ -17,4 +17,10 @@ public interface ProgramRepository extends JpaRepository<Program, Integer> {
     List<Program> findProgramByProgramAccreditationsContainingIgnoreCase (@Param("accreditationCode") String accreditationCode);
 
     Page<Program> findByNameContainingIgnoreCase(String name, Pageable pageable);
+
+    @Query("SELECT p FROM Program p LEFT JOIN p.programRates r GROUP BY p.id ORDER BY AVG(r.note) DESC NULLS LAST")
+    Page<Program> findAllByOrderByAverageRateDesc(Pageable pageable);
+
+    @Query("SELECT p FROM Program p LEFT JOIN p.programRates r GROUP BY p.id ORDER BY AVG(r.note) ASC NULLS LAST")
+    Page<Program> findAllByOrderByAverageRateAsc(Pageable pageable);
 }
