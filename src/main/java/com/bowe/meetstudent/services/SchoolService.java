@@ -61,7 +61,11 @@ public class SchoolService {
     }
 
     public Page<School> searchSchools(String city, String country, String programName, String tag, Pageable pageable) {
-        return this.schoolRepository.searchSchools(city, country, programName, tag, pageable);
+        String safeCity = (city == null) ? "" : city;
+        String safeCountry = (country == null) ? "" : country;
+        String safeProgramName = (programName == null) ? "" : programName;
+        String safeTag = (tag == null) ? "" : tag;
+        return this.schoolRepository.searchSchools(safeCity, safeCountry, safeProgramName, safeTag, pageable);
     }
 
     public Page<School> findAllOrderByRateDesc(Pageable pageable) {

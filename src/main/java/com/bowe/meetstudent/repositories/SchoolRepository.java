@@ -24,10 +24,10 @@ public interface SchoolRepository extends JpaRepository<School, Integer> {
     @Query("SELECT DISTINCT s FROM School s " +
            "LEFT JOIN s.programs p " +
            "LEFT JOIN s.tags t " +
-           "WHERE (:city IS NULL OR LOWER(s.address.city) = LOWER(:city)) " +
-           "AND (:country IS NULL OR LOWER(s.address.country) = LOWER(:country)) " +
-           "AND (:programName IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :programName, '%'))) " +
-           "AND (:tagName IS NULL OR LOWER(t.name) = LOWER(:tagName))")
+           "WHERE (:city = '' OR LOWER(s.address.city) = LOWER(CAST(:city AS text))) " +
+           "AND (:country = '' OR LOWER(s.address.country) = LOWER(CAST(:country AS text))) " +
+           "AND (:programName = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', CAST(:programName AS text), '%'))) " +
+           "AND (:tagName = '' OR LOWER(t.name) = LOWER(CAST(:tagName AS text)))")
     Page<School> searchSchools(
             @Param("city") String city, 
             @Param("country") String country, 
