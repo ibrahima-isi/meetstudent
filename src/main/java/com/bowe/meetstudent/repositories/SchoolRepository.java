@@ -23,13 +23,16 @@ public interface SchoolRepository extends JpaRepository<School, Integer> {
 
     @Query("SELECT DISTINCT s FROM School s " +
            "LEFT JOIN s.programs p " +
+           "LEFT JOIN s.tags t " +
            "WHERE (:city IS NULL OR LOWER(s.address.city) = LOWER(:city)) " +
            "AND (:country IS NULL OR LOWER(s.address.country) = LOWER(:country)) " +
-           "AND (:programName IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :programName, '%')))")
+           "AND (:programName IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :programName, '%'))) " +
+           "AND (:tagName IS NULL OR LOWER(t.name) = LOWER(:tagName))")
     Page<School> searchSchools(
             @Param("city") String city, 
             @Param("country") String country, 
             @Param("programName") String programName, 
+            @Param("tagName") String tagName,
             Pageable pageable);
 
     @Query("SELECT s FROM School s LEFT JOIN s.schoolRates r GROUP BY s.id ORDER BY AVG(r.note) DESC NULLS LAST")

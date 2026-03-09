@@ -36,6 +36,14 @@ public class School extends BaseEntity{
     @OneToMany(mappedBy = "school", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<SchoolRate> schoolRates;
 
+    @ManyToMany
+    @JoinTable(
+        name = "school_tags",
+        joinColumns = @JoinColumn(name = "school_id"),
+        inverseJoinColumns = @JoinColumn(name = "tag_id")
+    )
+    private List<Tag> tags;
+
     public void addProgram(Program program) {
         if (programs == null) programs = new java.util.ArrayList<>();
         programs.add(program);

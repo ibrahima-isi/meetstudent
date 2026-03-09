@@ -125,16 +125,17 @@ public class SchoolController {
     }
 
     @GetMapping(path = "/search")
-    @Operation(summary = "Search schools by city, country, and/or program name (paginated)", 
-               description = "Allows complex filtering of schools by their location and offered programs.")
+    @Operation(summary = "Search schools by city, country, tag, and/or program name (paginated)", 
+               description = "Allows complex filtering of schools by their location, classification, and offered programs.")
     @ApiResponse(responseCode = "200", description = "Search results retrieved")
     public Page<SchoolDTO> searchSchools(
         @Parameter(description = "City to filter by") @RequestParam(required = false) String city,
         @Parameter(description = "Country to filter by") @RequestParam(required = false) String country,
+        @Parameter(description = "Tag to filter by (e.g., PUBLIC, PRIVATE, GRANDE_ECOLE)") @RequestParam(required = false) String tag,
         @Parameter(description = "Program name to filter by (partial match)") @RequestParam(required = false) String program,
         @ParameterObject Pageable pageable) {
         
-        return this.schoolService.searchSchools(city, country, program, pageable)
+        return this.schoolService.searchSchools(city, country, program, tag, pageable)
                 .map(school -> {
                     SchoolDTO dto = schoolMapper.toDTO(school);
                     dto.setAverageRate(schoolRateService.getAverageNoteBySchoolId(school.getId()));

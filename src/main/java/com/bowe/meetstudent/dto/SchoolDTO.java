@@ -18,6 +18,7 @@ public class SchoolDTO extends BaseDTO {
     private String logoUrl;
     private String coverPhotoUrl;
     private Double averageRate;
+    private List<TagDTO> tags;
 
     private List<ProgramDTO> programs;
 

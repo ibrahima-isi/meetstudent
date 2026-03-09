@@ -60,8 +60,8 @@ public class SchoolService {
         return this.schoolRepository.findSchoolByAddress_Country(country, pageable);
     }
 
-    public Page<School> searchSchools(String city, String country, String programName, Pageable pageable) {
-        return this.schoolRepository.searchSchools(city, country, programName, pageable);
+    public Page<School> searchSchools(String city, String country, String programName, String tag, Pageable pageable) {
+        return this.schoolRepository.searchSchools(city, country, programName, tag, pageable);
     }
 
     public Page<School> findAllOrderByRateDesc(Pageable pageable) {
@@ -86,6 +86,7 @@ public class SchoolService {
             if (updates.getAddress() != null) existing.setAddress(updates.getAddress());
             if (updates.getLogoUrl() != null) existing.setLogoUrl(updates.getLogoUrl());
             if (updates.getCoverPhotoUrl() != null) existing.setCoverPhotoUrl(updates.getCoverPhotoUrl());
+            if (updates.getTags() != null) existing.setTags(updates.getTags());
             
             return schoolRepository.save(existing);
         }).orElseThrow(() -> new com.bowe.meetstudent.exceptions.ResourceNotFoundException("School not found"));
