@@ -51,4 +51,19 @@ public class UserEntity extends AbstractEntity {
     @Column
     @org.hibernate.annotations.JdbcTypeCode(java.sql.Types.ARRAY)
     private List<String> diplomas;
+
+    @Column
+    @org.hibernate.annotations.JdbcTypeCode(java.sql.Types.ARRAY)
+    private List<String> certificates;
+
+    @Column(name = "presentation_video_url")
+    private String presentationVideoUrl;
+
+    @ManyToMany
+    @JoinTable(
+        name = "user_wishlist",
+        joinColumns = @JoinColumn(name = "user_id"),
+        inverseJoinColumns = @JoinColumn(name = "school_id")
+    )
+    private List<School> wishlist;
 }

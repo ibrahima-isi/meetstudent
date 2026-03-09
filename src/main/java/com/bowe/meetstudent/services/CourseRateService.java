@@ -22,8 +22,8 @@ public class CourseRateService {
         return courseRateRepository.save(courseRate);
     }
 
-    public List<CourseRate> findByCourseId(Integer courseId) {
-        return courseRateRepository.findByCourseId(courseId);
+    public List<CourseRate> findByCourseId(Integer courseId, org.springframework.data.domain.Sort sort) {
+        return courseRateRepository.findByCourseId(courseId, sort);
     }
 
     public Double getAverageNoteByCourseId(Integer courseId) {

@@ -4,25 +4,22 @@ import com.bowe.meetstudent.dto.ProgramRateDTO;
 import com.bowe.meetstudent.entities.rates.ProgramRate;
 import com.bowe.meetstudent.mappers.Mapper;
 import com.bowe.meetstudent.services.ProgramRateService;
+import com.bowe.meetstudent.services.ProgramService;
+import com.bowe.meetstudent.services.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-
-import com.bowe.meetstudent.services.ProgramService;
-import com.bowe.meetstudent.services.UserService;
-import io.swagger.v3.oas.annotations.Parameter;
 import org.modelmapper.ModelMapper;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -41,11 +38,8 @@ public class ProgramRateController {
     private final UserService userService;
 
     @PostMapping
-    @Operation(summary = "Rate a program", description = "Allows students or experts to post a rating and comment for an educational program.")
-    @ApiResponse(responseCode = "201", description = "Program rate created successfully")
-    @ApiResponse(responseCode = "403", description = "Access denied")
-    @ApiResponse(responseCode = "400", description = "Invalid program or user ID")
-    @PreAuthorize("hasRole('EXPERT') or hasRole('STUDENT')")
+    @Operation(summary = "Rate a program", description = "Allows experts to post a rating and comment for an educational program.")
+    @PreAuthorize("hasRole('EXPERT')")
     public ResponseEntity<ProgramRateDTO> create(@RequestBody ProgramRateDTO dto) {
         ProgramRate rate = mapper.toEntity(dto);
         
@@ -66,95 +60,53 @@ public class ProgramRateController {
     }
 
     @GetMapping
-    @Operation(summary = "Get all program ratings (paginated)", description = "Retrieves a paginated list of all program ratings.")
-    @ApiResponse(responseCode = "200", description = "List of program ratings retrieved")
-    public Page<ProgramRateDTO> getAll(@ParameterObject Pageable pageable) {
-        return service.findAll(pageable).map(mapper::toDTO);
-    }
-
-    @GetMapping("/{id}")
-    @Operation(summary = "Get a program rating by ID", description = "Retrieves details of a specific program rating using its unique ID.")
-    @ApiResponse(responseCode = "200", description = "Program rating found")
-    @ApiResponse(responseCode = "404", description = "Program rating not found")
-    public ResponseEntity<ProgramRateDTO> getById(@PathVariable Integer id) {
-        return service.findById(id)
-                .map(rate -> ResponseEntity.ok(mapper.toDTO(rate)))
-                .orElse(ResponseEntity.notFound().build());
+    @Operation(summary = "Get all program ratings (paginated)", description = "Retrieves a paginated list of all program ratings. Default sort: newest first.")
+    public Page<ProgramRateDTO> getAll(
+            @Parameter(description = "Sort: 'newest', 'oldest', 'highest', 'lowest'") @RequestParam(required = false) String sort,
+            @ParameterObject Pageable pageable) {
+        
+        Pageable sortedPageable = applySorting(pageable, sort);
+        return service.findAll(sortedPageable).map(mapper::toDTO);
     }
 
     @GetMapping("/program/{id}")
-    @Operation(summary = "Get all ratings for a specific program", description = "Retrieves a list of all ratings posted for the given program ID.")
-    @ApiResponse(responseCode = "200", description = "List of program ratings retrieved")
-    @ApiResponse(responseCode = "404", description = "Program not found")
+    @Operation(summary = "Get all ratings for a specific program", description = "Retrieves a list of all ratings for a program. Default sort: newest first.")
     public ResponseEntity<List<ProgramRateDTO>> getRatesByProgram(
-            @Parameter(description = "ID of the program") @PathVariable Integer id) {
+            @PathVariable Integer id,
+            @Parameter(description = "Sort: 'newest', 'oldest', 'highest', 'lowest'") @RequestParam(required = false) String sort) {
+        
         if (!programService.exists(id)) return ResponseEntity.notFound().build();
-        List<ProgramRateDTO> rates = service.findByProgramId(id)
+        
+        Sort sorting = getSort(sort);
+        List<ProgramRateDTO> rates = service.findByProgramId(id, sorting)
                 .stream()
                 .map(mapper::toDTO)
                 .toList();
         return ResponseEntity.ok(rates);
     }
 
-    @PutMapping("/{id}")
-    @Operation(summary = "Update a program rating by ID", description = "Performs a full update of an existing program rating.")
-    @ApiResponse(responseCode = "200", description = "Program rating updated successfully")
-    @ApiResponse(responseCode = "404", description = "Program rating not found")
-    @PreAuthorize("hasRole('EXPERT') or hasRole('STUDENT')")
-    public ResponseEntity<ProgramRateDTO> update(@PathVariable Integer id, @RequestBody ProgramRateDTO dto) {
-        Optional<ProgramRate> existing = service.findById(id);
-        if (existing.isEmpty()) return ResponseEntity.notFound().build();
-
-        ProgramRate rate = mapper.toEntity(dto);
-        rate.setId(id);
-
-        if (dto.getProgramId() != null) {
-            var program = programService.findById(dto.getProgramId());
-            if (program.isEmpty()) return ResponseEntity.badRequest().build();
-            rate.setProgram(program.get());
-        }
-        
-        if (dto.getUserId() != null) {
-            var user = userService.getUserById(dto.getUserId());
-            if (user.isEmpty()) return ResponseEntity.badRequest().build();
-            rate.setUserEntity(user.get());
-        }
-
-        return ResponseEntity.ok(mapper.toDTO(service.save(rate)));
-    }
-
-    @PatchMapping("/{id}")
-    @Operation(summary = "Partially update a program rating by ID", description = "Updates only the provided fields of an existing program rating.")
-    @ApiResponse(responseCode = "200", description = "Program rating patched successfully")
-    @ApiResponse(responseCode = "404", description = "Program rating not found")
-    @PreAuthorize("hasRole('EXPERT') or hasRole('STUDENT')")
-    public ResponseEntity<ProgramRateDTO> patch(@PathVariable Integer id, @RequestBody ProgramRateDTO dto) {
-        return service.findById(id).map(existing -> {
-            modelMapper.map(dto, existing);
-            
-            if (dto.getProgramId() != null) {
-                var program = programService.findById(dto.getProgramId());
-                if (program.isPresent()) existing.setProgram(program.get());
-            }
-            
-            if (dto.getUserId() != null) {
-                var user = userService.getUserById(dto.getUserId());
-                if (user.isPresent()) existing.setUserEntity(user.get());
-            }
-
-            return ResponseEntity.ok(mapper.toDTO(service.save(existing)));
-        }).orElse(ResponseEntity.notFound().build());
+    @GetMapping("/{id}")
+    public ResponseEntity<ProgramRateDTO> getById(@PathVariable Integer id) {
+        return service.findById(id)
+                .map(rate -> ResponseEntity.ok(mapper.toDTO(rate)))
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Delete a program rating by ID", description = "Removes a program rating from the system.")
-    @ApiResponse(responseCode = "200", description = "Program rating deleted successfully")
-    @ApiResponse(responseCode = "404", description = "Program rating not found")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('EXPERT') or hasRole('STUDENT')")
-    public ResponseEntity<ProgramRateDTO> delete(@PathVariable Integer id) {
-        return service.findById(id).map(rate -> {
-            service.delete(id);
-            return ResponseEntity.ok(mapper.toDTO(rate));
-        }).orElse(ResponseEntity.notFound().build());
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> delete(@PathVariable Integer id) {
+        service.delete(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    private Pageable applySorting(Pageable pageable, String sort) {
+        return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), getSort(sort));
+    }
+
+    private Sort getSort(String sort) {
+        if ("highest".equalsIgnoreCase(sort)) return Sort.by(Sort.Direction.DESC, "note");
+        if ("lowest".equalsIgnoreCase(sort)) return Sort.by(Sort.Direction.ASC, "note");
+        if ("oldest".equalsIgnoreCase(sort)) return Sort.by(Sort.Direction.ASC, "createdAt");
+        return Sort.by(Sort.Direction.DESC, "createdAt"); // default newest
     }
 }

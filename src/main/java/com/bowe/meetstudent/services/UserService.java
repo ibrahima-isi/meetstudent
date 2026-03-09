@@ -1,7 +1,9 @@
 package com.bowe.meetstudent.services;
 
 import com.bowe.meetstudent.entities.UserEntity;
+import com.bowe.meetstudent.entities.School;
 import com.bowe.meetstudent.repositories.UserRepository;
+import com.bowe.meetstudent.repositories.SchoolRepository;
 import com.bowe.meetstudent.entities.Role;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -12,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.ArrayList;
 
 /**
  * UserService handle the logic of the UserEntity
@@ -21,6 +24,7 @@ import java.util.Optional;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final SchoolRepository schoolRepository;
     private final MediaService mediaService;
 
     public UserEntity saveUser(UserEntity userEntity, PasswordEncoder passwordEncoder ) {
@@ -61,6 +65,13 @@ public class UserService {
             if (toDelete.getDiplomas() != null) {
                 toDelete.getDiplomas().forEach(mediaService::deleteMediaByUrl);
             }
+            // Delete certificates
+            if (toDelete.getCertificates() != null) {
+                toDelete.getCertificates().forEach(mediaService::deleteMediaByUrl);
+            }
+            // Delete video
+            mediaService.deleteMediaByUrl(toDelete.getPresentationVideoUrl());
+            
             this.userRepository.deleteById(id);
             return toDelete;
         }
@@ -88,6 +99,15 @@ public class UserService {
                 existing.setDiplomas(updates.getDiplomas());
             }
             
+            // Handle certificate changes
+            if (updates.getCertificates() != null) {
+                mediaService.deleteRemovedMedia(existing.getCertificates(), updates.getCertificates());
+                existing.setCertificates(updates.getCertificates());
+            }
+
+            // Handle video change
+            mediaService.deleteOldMediaIfChanged(existing.getPresentationVideoUrl(), updates.getPresentationVideoUrl());
+            
             // Map remaining fields
             if (updates.getFirstname() != null) existing.setFirstname(updates.getFirstname());
             if (updates.getLastname() != null) existing.setLastname(updates.getLastname());
@@ -95,6 +115,7 @@ public class UserService {
             if (updates.getBirthday() != null) existing.setBirthday(updates.getBirthday());
             if (updates.getQualification() != null) existing.setQualification(updates.getQualification());
             if (updates.getRole() != null) existing.setRole(updates.getRole());
+            if (updates.getPresentationVideoUrl() != null) existing.setPresentationVideoUrl(updates.getPresentationVideoUrl());
             
             if (updates.getPassword() != null && !updates.getPassword().isEmpty()) {
                 existing.setPassword(encoder.encode(updates.getPassword()));
@@ -102,6 +123,36 @@ public class UserService {
             
             return userRepository.save(existing);
         }).orElseThrow(() -> new com.bowe.meetstudent.exceptions.ResourceNotFoundException("User not found"));
+    }
+
+    @Transactional
+    public UserEntity addToWishlist(Integer userId, Integer schoolId) {
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(() -> new com.bowe.meetstudent.exceptions.ResourceNotFoundException("User not found"));
+        School school = schoolRepository.findById(schoolId)
+                .orElseThrow(() -> new com.bowe.meetstudent.exceptions.ResourceNotFoundException("School not found"));
+        
+        if (user.getWishlist() == null) {
+            user.setWishlist(new ArrayList<>());
+        }
+        
+        if (!user.getWishlist().contains(school)) {
+            user.getWishlist().add(school);
+        }
+        
+        return userRepository.save(user);
+    }
+
+    @Transactional
+    public UserEntity removeFromWishlist(Integer userId, Integer schoolId) {
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(() -> new com.bowe.meetstudent.exceptions.ResourceNotFoundException("User not found"));
+        
+        if (user.getWishlist() != null) {
+            user.getWishlist().removeIf(s -> s.getId().equals(schoolId));
+        }
+        
+        return userRepository.save(user);
     }
 
 }

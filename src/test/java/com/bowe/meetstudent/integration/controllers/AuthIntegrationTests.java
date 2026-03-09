@@ -84,7 +84,48 @@ class AuthIntegrationTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(loginRequest)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accessToken").exists());
+                .andExpect(jsonPath("$.accessToken").exists())
+                .andExpect(jsonPath("$.refreshToken").exists());
+    }
+
+    @Test
+    void shouldRefreshAccessTokenSuccessfully() throws Exception {
+        // 1. Create User
+        String email = "refresh@test.com";
+        String rawPassword = "password123";
+        Role userRole = roleRepository.save(Role.builder().name("ROLE_REFRESH").description("Refresh").build());
+
+        com.bowe.meetstudent.entities.UserEntity user = com.bowe.meetstudent.entities.UserEntity.builder()
+                .email(email)
+                .password(rawPassword)
+                .firstname("Test")
+                .lastname("User")
+                .role(userRole)
+                .build();
+        userService.saveUser(user, passwordEncoder);
+
+
+        // 2. Login to get initial tokens
+        LoginRequest loginRequest = LoginRequest.builder().username(email).password(rawPassword).build();
+        String loginResponse = mockMvc.perform(post("/api/v1/auth")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginRequest)))
+                .andReturn().getResponse().getContentAsString();
+        
+        com.bowe.meetstudent.models.LoginResponse response = objectMapper.readValue(loginResponse, com.bowe.meetstudent.models.LoginResponse.class);
+        String refreshToken = response.getRefreshToken();
+
+        // 3. Use Refresh Token
+        com.bowe.meetstudent.models.TokenRefreshRequest refreshRequest = new com.bowe.meetstudent.models.TokenRefreshRequest();
+        refreshRequest.setRefreshToken(refreshToken);
+
+        mockMvc.perform(post("/api/v1/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(refreshRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").exists())
+                .andExpect(jsonPath("$.refreshToken").exists())
+                .andExpect(jsonPath("$.refreshToken").value(org.hamcrest.Matchers.not(refreshToken))); // Rotation check
     }
 
     @Test
@@ -118,6 +159,6 @@ class AuthIntegrationTests {
     @Test
     void shouldFailAccessSecuredEndpoint_withoutToken() throws Exception {
         mockMvc.perform(get("/api/v1/users")) // Assuming this is secured now
-                .andExpect(status().isForbidden()); // Expect 403
+                .andExpect(status().isUnauthorized()); // Expect 401
     }
 }

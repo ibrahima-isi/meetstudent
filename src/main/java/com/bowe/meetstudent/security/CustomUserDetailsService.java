@@ -20,15 +20,15 @@ public class CustomUserDetailsService implements UserDetailsService {
         var user = userService.getUserByEmail(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + username));
 
+        String roleName = user.getRole().getName();
+        if (!roleName.startsWith("ROLE_")) {
+            roleName = "ROLE_" + roleName;
+        }
+
         return UserPrincipal.builder()
                 .id(user.getId())
                 .username(user.getEmail())
-                .authorities(List.of(
-                        new SimpleGrantedAuthority(
-                            user.getRole().getName()
-                        )
-                    )
-                )
+                .authorities(List.of(new SimpleGrantedAuthority(roleName)))
                 .password(user.getPassword())
                 .build();
     }

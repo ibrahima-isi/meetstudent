@@ -4,6 +4,7 @@ import com.bowe.meetstudent.dto.UserDTO;
 import com.bowe.meetstudent.entities.Role;
 import com.bowe.meetstudent.entities.UserEntity;
 import com.bowe.meetstudent.mappers.Mapper;
+import com.bowe.meetstudent.security.UserPrincipal;
 import com.bowe.meetstudent.services.RoleService;
 import com.bowe.meetstudent.services.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -17,6 +18,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -59,7 +62,11 @@ public class UserController {
     @ApiResponse(responseCode = "302", description = "User found")
     @ApiResponse(responseCode = "404", description = "User not found")
     public ResponseEntity<UserDTO> findById(
+            @AuthenticationPrincipal UserPrincipal principal,
             @Parameter(description = "ID of the user to retrieve") @PathVariable int id) {
+        
+        checkOwnershipOrAdmin(principal, id);
+        
         Optional<UserEntity> user = this.userService.getUserById(id);
         return user.map( foundUser ->{
             UserDTO dto = this.userMapper.toDTO(foundUser);
@@ -69,22 +76,20 @@ public class UserController {
 
     @GetMapping(path = "/email/{email}")
     @Operation(summary = "Get a user by email", description = "Retrieves user details using their unique email address.")
-    @ApiResponse(responseCode = "302", description = "User found")
-    @ApiResponse(responseCode = "404", description = "User not found")
     public ResponseEntity<UserDTO> findByEmail(
+            @AuthenticationPrincipal UserPrincipal principal,
             @Parameter(description = "Email of the user to retrieve") @PathVariable String email) {
+        
         Optional<UserEntity> user = this.userService.getUserByEmail(email);
-        return user.map( foundUser ->{
-                    UserDTO dto = this.userMapper.toDTO(foundUser);
-                    return new ResponseEntity<>(dto, HttpStatus.FOUND);
-                })
-                .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
+        if (user.isPresent()) {
+            checkOwnershipOrAdmin(principal, user.get().getId());
+            return new ResponseEntity<>(this.userMapper.toDTO(user.get()), HttpStatus.FOUND);
+        }
+        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
 
     @GetMapping(path = "/role/{role}")
     @Operation(summary = "Get users by role name", description = "Retrieves a list of all users assigned to a specific role (e.g., STUDENT).")
-    @ApiResponse(responseCode = "200", description = "List of users for the given role retrieved")
-    @ApiResponse(responseCode = "400", description = "Role not found")
     public ResponseEntity<List<UserDTO>> findByRole(
             @Parameter(description = "Name of the role (e.g., STUDENT)") @PathVariable String role) {
         Optional<Role> roleOptional = roleService.findRoleByName(role.toUpperCase());
@@ -101,11 +106,13 @@ public class UserController {
 
     @PutMapping(path = "/{id}")
     @Operation(summary = "Update a user by ID", description = "Performs a full update of an existing user's information.")
-    @ApiResponse(responseCode = "200", description = "User updated successfully")
-    @ApiResponse(responseCode = "404", description = "User not found")
     public ResponseEntity<UserDTO> updateUser(
+            @AuthenticationPrincipal UserPrincipal principal,
             @Parameter(description = "ID of the user to update") @PathVariable int id, 
             @RequestBody UserDTO userDTO) {
+        
+        checkOwnershipOrAdmin(principal, id);
+        
         UserEntity updates = userMapper.toEntity(userDTO);
         UserEntity saved = this.userService.patch(id, updates, encoder);
         return ResponseEntity.ok(userMapper.toDTO(saved));
@@ -113,11 +120,13 @@ public class UserController {
 
     @PatchMapping(path = "{id}")
     @Operation(summary = "Partially update a user by ID", description = "Updates only the specific fields provided for a user.")
-    @ApiResponse(responseCode = "200", description = "User patched successfully")
-    @ApiResponse(responseCode = "404", description = "User not found")
     public ResponseEntity<UserDTO> patchUser(
+            @AuthenticationPrincipal UserPrincipal principal,
             @Parameter(description = "ID of the user to patch") @PathVariable int id, 
             @RequestBody UserDTO userDTO) {
+        
+        checkOwnershipOrAdmin(principal, id);
+        
         UserEntity updates = userMapper.toEntity(userDTO);
         UserEntity saved = this.userService.patch(id, updates, encoder);
         return ResponseEntity.ok(userMapper.toDTO(saved));
@@ -125,15 +134,49 @@ public class UserController {
 
     @DeleteMapping(path = "{id}")
     @Operation(summary = "Delete a user by ID", description = "Removes a user account from the platform.")
-    @ApiResponse(responseCode = "200", description = "User deleted successfully")
-    @ApiResponse(responseCode = "404", description = "User not found")
     public ResponseEntity<UserDTO> deleteById(
+            @AuthenticationPrincipal UserPrincipal principal,
             @Parameter(description = "ID of the user to delete") @PathVariable int id) {
-        if (userService.notExists(id)) {
+        
+        checkOwnershipOrAdmin(principal, id);
+        
+        UserEntity deletedUser =  this.userService.deleteUser(id);
+        if (deletedUser == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
-        UserEntity deletedUser =  this.userService.deleteUser(id);
         UserDTO deletedUserDto = this.userMapper.toDTO(deletedUser);
         return new ResponseEntity<>(deletedUserDto, HttpStatus.OK);
+    }
+
+    @PostMapping("/{userId}/wishlist/{schoolId}")
+    @Operation(summary = "Add a school to user wishlist", description = "Adds a specific school to the user's personal wishlist.")
+    public ResponseEntity<UserDTO> addToWishlist(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Integer userId, 
+            @PathVariable Integer schoolId) {
+        
+        checkOwnershipOrAdmin(principal, userId);
+        UserEntity user = userService.addToWishlist(userId, schoolId);
+        return ResponseEntity.ok(userMapper.toDTO(user));
+    }
+
+    @DeleteMapping("/{userId}/wishlist/{schoolId}")
+    @Operation(summary = "Remove a school from user wishlist", description = "Removes a specific school from the user's wishlist.")
+    public ResponseEntity<UserDTO> removeFromWishlist(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Integer userId, 
+            @PathVariable Integer schoolId) {
+        
+        checkOwnershipOrAdmin(principal, userId);
+        UserEntity user = userService.removeFromWishlist(userId, schoolId);
+        return ResponseEntity.ok(userMapper.toDTO(user));
+    }
+
+    private void checkOwnershipOrAdmin(UserPrincipal principal, Integer userId) {
+        boolean isAdmin = principal.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        if (!isAdmin && !principal.getId().equals(userId)) {
+            throw new AccessDeniedException("You can only access or modify your own profile.");
+        }
     }
 }

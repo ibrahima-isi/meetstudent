@@ -15,8 +15,8 @@ import lombok.experimental.SuperBuilder;
 public class RateDTO extends AbstractDTO {
 
     @NotNull(message = "Note is required")
-    @DecimalMin(value = "0.0", message = "Rating must be at least 0")
-    @DecimalMax(value = "5.0", message = "Rating must be at most 5")
+    @Min(value = 1, message = "Note must be at least 1")
+    @Max(value = 5, message = "Note cannot exceed 5")
     private Double note;
 
     @Size(max = 500, message = "Comment cannot exceed 500 characters")

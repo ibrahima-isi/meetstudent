@@ -8,6 +8,7 @@ import lombok.experimental.SuperBuilder;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import java.util.Date;
+import java.util.List;
 
 @EqualsAndHashCode(callSuper = true)
 @ToString(callSuper = true)
@@ -37,6 +38,9 @@ public class UserDTO extends AbstractDTO {
     private String confirmedPassword;
     private Role role;
     private String qualification;
-    private java.util.List<String> diplomas;
+    private List<String> diplomas;
+    private List<String> certificates;
+    private String presentationVideoUrl;
+    private List<SchoolDTO> wishlist;
     private String photoUrl;
 }

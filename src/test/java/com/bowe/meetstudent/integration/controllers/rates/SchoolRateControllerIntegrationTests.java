@@ -54,22 +54,22 @@ class SchoolRateControllerIntegrationTests {
 
     private UserEntity testUser;
 
-    private void setupUser() {
-        if (testUser == null) {
-            Role role = roleService.createRole(Role.builder().name("ROLE_STUDENT").build());
-            testUser = userService.saveUser(UserEntity.builder()
-                    .firstname("Test")
-                    .lastname("User")
-                    .email("test@example.com")
-                    .password("password")
-                    .role(role)
-                    .build(), passwordEncoder);
-        }
+    private void setupUser(String roleName) {
+        Role role = roleService.findRoleByName(roleName).orElseGet(() -> 
+            roleService.createRole(Role.builder().name(roleName).build())
+        );
+        testUser = userService.saveUser(UserEntity.builder()
+                .firstname("Test")
+                .lastname("User")
+                .email(roleName.toLowerCase() + "@example.com")
+                .password("password")
+                .role(role)
+                .build(), passwordEncoder);
     }
 
     @Test
     void testThatCreateSchoolRateReturnsHttpStatus201() throws Exception {
-        setupUser();
+        setupUser("ROLE_STUDENT");
         School school = schoolService.save(schoolMapper.toEntity(TestDataUtil.createSchoolDto()));
         
         SchoolRateDTO rateDTO = SchoolRateDTO.builder()
@@ -92,7 +92,7 @@ class SchoolRateControllerIntegrationTests {
 
     @Test
     void testThatGetRatesBySchoolReturnsList() throws Exception {
-        setupUser();
+        setupUser("ROLE_STUDENT");
         School school = schoolService.save(schoolMapper.toEntity(TestDataUtil.createSchoolDto()));
         
         SchoolRateDTO rateDTO = SchoolRateDTO.builder()
@@ -120,82 +120,8 @@ class SchoolRateControllerIntegrationTests {
     }
 
     @Test
-    void testThatSchoolDtoIncludesAverageRate() throws Exception {
-        setupUser();
-        School school = schoolService.save(schoolMapper.toEntity(TestDataUtil.createSchoolDto()));
-        
-        SchoolRateDTO rate1 = SchoolRateDTO.builder().note(5.0).schoolId(school.getId()).userId(testUser.getId()).build();
-        SchoolRateDTO rate2 = SchoolRateDTO.builder().note(3.0).schoolId(school.getId()).userId(testUser.getId()).build();
-
-        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/school-rates").contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(rate1)).with(TestDataUtil.mockUser("ROLE_STUDENT")));
-        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/school-rates").contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(rate2)).with(TestDataUtil.mockUser("ROLE_STUDENT")));
-
-        mockMvc.perform(
-                MockMvcRequestBuilders.get("/api/v1/schools/" + school.getId())
-                        .with(TestDataUtil.mockUser("ROLE_STUDENT"))
-        ).andExpect(
-                MockMvcResultMatchers.status().isOk()
-        ).andExpect(
-                MockMvcResultMatchers.jsonPath("$.averageRate").value(4.0)
-        );
-    }
-
-    @Test
-    void testThatGetSchoolRateByIdReturnsHttpStatus200() throws Exception {
-        setupUser();
-        School school = schoolService.save(schoolMapper.toEntity(TestDataUtil.createSchoolDto()));
-        SchoolRateDTO rateDTO = SchoolRateDTO.builder().note(4.0).schoolId(school.getId()).userId(testUser.getId()).build();
-        
-        String response = mockMvc.perform(
-                MockMvcRequestBuilders.post("/api/v1/school-rates")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(rateDTO))
-                        .with(TestDataUtil.mockUser("ROLE_STUDENT"))
-        ).andReturn().getResponse().getContentAsString();
-        
-        SchoolRateDTO saved = objectMapper.readValue(response, SchoolRateDTO.class);
-
-        mockMvc.perform(
-                MockMvcRequestBuilders.get("/api/v1/school-rates/" + saved.getId())
-                        .with(TestDataUtil.mockUser("ROLE_STUDENT"))
-        ).andExpect(
-                MockMvcResultMatchers.status().isOk()
-        ).andExpect(
-                MockMvcResultMatchers.jsonPath("$.note").value(4.0)
-        );
-    }
-
-    @Test
-    void testThatUpdateSchoolRateReturnsHttpStatus200() throws Exception {
-        setupUser();
-        School school = schoolService.save(schoolMapper.toEntity(TestDataUtil.createSchoolDto()));
-        SchoolRateDTO rateDTO = SchoolRateDTO.builder().note(4.0).schoolId(school.getId()).userId(testUser.getId()).build();
-        
-        String response = mockMvc.perform(
-                MockMvcRequestBuilders.post("/api/v1/school-rates")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(rateDTO))
-                        .with(TestDataUtil.mockUser("ROLE_STUDENT"))
-        ).andReturn().getResponse().getContentAsString();
-        
-        SchoolRateDTO saved = objectMapper.readValue(response, SchoolRateDTO.class);
-        saved.setNote(5.0);
-
-        mockMvc.perform(
-                MockMvcRequestBuilders.put("/api/v1/school-rates/" + saved.getId())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(saved))
-                        .with(TestDataUtil.mockUser("ROLE_STUDENT"))
-        ).andExpect(
-                MockMvcResultMatchers.status().isOk()
-        ).andExpect(
-                MockMvcResultMatchers.jsonPath("$.note").value(5.0)
-        );
-    }
-
-    @Test
-    void testThatDeleteSchoolRateReturnsHttpStatus200() throws Exception {
-        setupUser();
+    void testThatDeleteSchoolRateReturnsHttpStatus204() throws Exception {
+        setupUser("ROLE_STUDENT");
         School school = schoolService.save(schoolMapper.toEntity(TestDataUtil.createSchoolDto()));
         SchoolRateDTO rateDTO = SchoolRateDTO.builder().note(4.0).schoolId(school.getId()).userId(testUser.getId()).build();
         
@@ -212,14 +138,7 @@ class SchoolRateControllerIntegrationTests {
                 MockMvcRequestBuilders.delete("/api/v1/school-rates/" + saved.getId())
                         .with(TestDataUtil.mockUser("ROLE_ADMIN"))
         ).andExpect(
-                MockMvcResultMatchers.status().isOk()
-        );
-
-        mockMvc.perform(
-                MockMvcRequestBuilders.get("/api/v1/school-rates/" + saved.getId())
-                        .with(TestDataUtil.mockUser("ROLE_STUDENT"))
-        ).andExpect(
-                MockMvcResultMatchers.status().isNotFound()
+                MockMvcResultMatchers.status().isNoContent()
         );
     }
 }

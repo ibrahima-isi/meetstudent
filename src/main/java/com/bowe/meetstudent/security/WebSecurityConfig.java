@@ -3,14 +3,11 @@ package com.bowe.meetstudent.security;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Profile;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -20,79 +17,84 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity
 @RequiredArgsConstructor
 public class WebSecurityConfig {
-
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
-
-    private final CustomUserDetailsService userDetailsService;
+    private final CustomUserDetailsService customUserDetailsService;
+    private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
 
     @Bean
-    public WebSecurityCustomizer webSecurityCustomizer() {
-        return (web) -> web.ignoring().requestMatchers(
-                "/swagger-ui/**",
-                "/v3/api-docs/**",
-                "/swagger-ui.html",
-                "/api-docs/**"
-        );
-    }
-
-    /**
-     * Configures the security filter chain for the application.
-     *
-     * @param http the {@link HttpSecurity} object used to configure the security filter chain
-     * @return the configured {@link SecurityFilterChain} instance
-     * @throws Exception if an error occurs while configuring the security filter chain
-     */
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-
+    public SecurityFilterChain applicationSecurity(HttpSecurity http) throws Exception {
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
         http
                 .cors(AbstractHttpConfigurer::disable)
                 .csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(
-                                SessionCreationPolicy.STATELESS
-                        )
-                )
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .formLogin(AbstractHttpConfigurer::disable)
+                .exceptionHandling(h -> h.authenticationEntryPoint(customAuthenticationEntryPoint))
                 .securityMatcher("/**")
                 .authorizeHttpRequests(registry ->
                         registry
+                                // Public endpoints
                                 .requestMatchers("/").permitAll()
                                 .requestMatchers("/api/v1/auth/**").permitAll()
-                                .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                                 .requestMatchers("/uploads/**").permitAll()
+                                
+                                // Public Read access for content
+                                .requestMatchers(HttpMethod.GET, "/api/v1/schools/**").permitAll()
+                                .requestMatchers(HttpMethod.GET, "/api/v1/programs/**").permitAll()
+                                .requestMatchers(HttpMethod.GET, "/api/v1/courses/**").permitAll()
+                                .requestMatchers(HttpMethod.GET, "/api/v1/accreditations/**").permitAll()
+                                .requestMatchers(HttpMethod.GET, "/api/v1/tags/**").permitAll()
+                                .requestMatchers(HttpMethod.GET, "/api/v1/course-rates/**").permitAll()
+                                .requestMatchers(HttpMethod.GET, "/api/v1/program-rates/**").permitAll()
+                                .requestMatchers(HttpMethod.GET, "/api/v1/school-rates/**").permitAll()
+
+                                // Admin CRUD and Moderation
+                                .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                                .requestMatchers(HttpMethod.POST, "/api/v1/schools/**").hasRole("ADMIN")
+                                .requestMatchers(HttpMethod.PUT, "/api/v1/schools/**").hasRole("ADMIN")
+                                .requestMatchers(HttpMethod.DELETE, "/api/v1/schools/**").hasRole("ADMIN")
+                                .requestMatchers(HttpMethod.POST, "/api/v1/programs/**").hasRole("ADMIN")
+                                .requestMatchers(HttpMethod.PUT, "/api/v1/programs/**").hasRole("ADMIN")
+                                .requestMatchers(HttpMethod.DELETE, "/api/v1/programs/**").hasRole("ADMIN")
+                                .requestMatchers(HttpMethod.POST, "/api/v1/courses/**").hasRole("ADMIN")
+                                .requestMatchers(HttpMethod.PUT, "/api/v1/courses/**").hasRole("ADMIN")
+                                .requestMatchers(HttpMethod.DELETE, "/api/v1/courses/**").hasRole("ADMIN")
+                                .requestMatchers("/api/v1/accreditations/**").hasRole("ADMIN")
+                                .requestMatchers("/api/v1/tags/**").hasRole("ADMIN")
+                                .requestMatchers(HttpMethod.DELETE, "/api/v1/course-rates/**").hasRole("ADMIN")
+                                .requestMatchers(HttpMethod.DELETE, "/api/v1/program-rates/**").hasRole("ADMIN")
+                                .requestMatchers(HttpMethod.DELETE, "/api/v1/school-rates/**").hasRole("ADMIN")
+
+                                // Wishlist restricted to Students
+                                .requestMatchers("/api/v1/users/*/wishlist/**").hasRole("STUDENT")
+
+                                // Rating Permissions (More granular check in Controller)
+                                .requestMatchers("/api/v1/school-rates/**").hasAnyRole("STUDENT", "EXPERT")
+                                .requestMatchers("/api/v1/program-rates/**").hasRole("EXPERT")
+                                .requestMatchers("/api/v1/course-rates/**").hasRole("EXPERT")
+
+                                // User Profile (Ownership handled in controller)
+                                .requestMatchers(HttpMethod.POST, "/api/v1/users").permitAll() // Registration
                                 .anyRequest().authenticated()
                 );
         return http.build();
     }
 
-    /**
-     * Creates a bean for password encoding.
-     *
-     * @return a `PasswordEncoder` instance using `BCryptPasswordEncoder`
-     */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(HttpSecurity httpSecurity) throws Exception {
-        AuthenticationManagerBuilder authBuilder = httpSecurity
-                .getSharedObject(AuthenticationManagerBuilder.class);
-
-        authBuilder.userDetailsService(userDetailsService)
+    public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
+        var authBuilder = http.getSharedObject(AuthenticationManagerBuilder.class);
+        authBuilder
+                .userDetailsService(customUserDetailsService)
                 .passwordEncoder(passwordEncoder());
 
         return authBuilder.build();
     }
-
-//    @Bean
-//    public SpringSecurityDialect securityDialect() {
-//        return new SpringSecurityDialect();
-//    }
 }

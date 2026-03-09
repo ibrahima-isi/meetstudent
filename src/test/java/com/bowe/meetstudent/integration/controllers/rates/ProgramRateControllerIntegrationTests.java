@@ -54,22 +54,22 @@ class ProgramRateControllerIntegrationTests {
 
     private UserEntity testUser;
 
-    private void setupUser() {
-        if (testUser == null) {
-            Role role = roleService.createRole(Role.builder().name("ROLE_STUDENT").build());
-            testUser = userService.saveUser(UserEntity.builder()
-                    .firstname("Test")
-                    .lastname("User")
-                    .email("test@example.com")
-                    .password("password")
-                    .role(role)
-                    .build(), passwordEncoder);
-        }
+    private void setupUser(String roleName) {
+        Role role = roleService.findRoleByName(roleName).orElseGet(() -> 
+            roleService.createRole(Role.builder().name(roleName).build())
+        );
+        testUser = userService.saveUser(UserEntity.builder()
+                .firstname("Test")
+                .lastname("User")
+                .email(roleName.toLowerCase() + "@example.com")
+                .password("password")
+                .role(role)
+                .build(), passwordEncoder);
     }
 
     @Test
     void testThatCreateProgramRateReturnsHttpStatus201() throws Exception {
-        setupUser();
+        setupUser("ROLE_EXPERT");
         Program program = programService.save(programMapper.toEntity(TestDataUtil.createProgramDto()));
         
         ProgramRateDTO rateDTO = ProgramRateDTO.builder()
@@ -84,7 +84,7 @@ class ProgramRateControllerIntegrationTests {
                 MockMvcRequestBuilders.post("/api/v1/program-rates")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json)
-                        .with(TestDataUtil.mockUser("ROLE_STUDENT"))
+                        .with(TestDataUtil.mockUser("ROLE_EXPERT"))
         ).andExpect(
                 MockMvcResultMatchers.status().isCreated()
         );
@@ -92,7 +92,7 @@ class ProgramRateControllerIntegrationTests {
 
     @Test
     void testThatGetProgramRateByIdReturnsHttpStatus200() throws Exception {
-        setupUser();
+        setupUser("ROLE_EXPERT");
         Program program = programService.save(programMapper.toEntity(TestDataUtil.createProgramDto()));
         ProgramRateDTO rateDTO = ProgramRateDTO.builder().note(4.0).programId(program.getId()).userId(testUser.getId()).build();
         
@@ -100,7 +100,7 @@ class ProgramRateControllerIntegrationTests {
                 MockMvcRequestBuilders.post("/api/v1/program-rates")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(rateDTO))
-                        .with(TestDataUtil.mockUser("ROLE_STUDENT"))
+                        .with(TestDataUtil.mockUser("ROLE_EXPERT"))
         ).andReturn().getResponse().getContentAsString();
         
         ProgramRateDTO saved = objectMapper.readValue(response, ProgramRateDTO.class);
@@ -116,8 +116,8 @@ class ProgramRateControllerIntegrationTests {
     }
 
     @Test
-    void testThatDeleteProgramRateReturnsHttpStatus200() throws Exception {
-        setupUser();
+    void testThatDeleteProgramRateReturnsHttpStatus204() throws Exception {
+        setupUser("ROLE_EXPERT");
         Program program = programService.save(programMapper.toEntity(TestDataUtil.createProgramDto()));
         ProgramRateDTO rateDTO = ProgramRateDTO.builder().note(4.0).programId(program.getId()).userId(testUser.getId()).build();
         
@@ -125,7 +125,7 @@ class ProgramRateControllerIntegrationTests {
                 MockMvcRequestBuilders.post("/api/v1/program-rates")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(rateDTO))
-                        .with(TestDataUtil.mockUser("ROLE_STUDENT"))
+                        .with(TestDataUtil.mockUser("ROLE_EXPERT"))
         ).andReturn().getResponse().getContentAsString();
         
         ProgramRateDTO saved = objectMapper.readValue(response, ProgramRateDTO.class);
@@ -134,7 +134,7 @@ class ProgramRateControllerIntegrationTests {
                 MockMvcRequestBuilders.delete("/api/v1/program-rates/" + saved.getId())
                         .with(TestDataUtil.mockUser("ROLE_ADMIN"))
         ).andExpect(
-                MockMvcResultMatchers.status().isOk()
+                MockMvcResultMatchers.status().isNoContent()
         );
     }
 }

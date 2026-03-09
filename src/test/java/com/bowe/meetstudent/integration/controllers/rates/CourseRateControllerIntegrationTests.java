@@ -24,6 +24,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
+import java.util.ArrayList;
+
 @SpringBootTest
 @ExtendWith(SpringExtension.class)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
@@ -54,22 +56,22 @@ class CourseRateControllerIntegrationTests {
 
     private UserEntity testUser;
 
-    private void setupUser() {
-        if (testUser == null) {
-            Role role = roleService.createRole(Role.builder().name("ROLE_STUDENT").build());
-            testUser = userService.saveUser(UserEntity.builder()
-                    .firstname("Test")
-                    .lastname("User")
-                    .email("test@example.com")
-                    .password("password")
-                    .role(role)
-                    .build(), passwordEncoder);
-        }
+    private void setupUser(String roleName) {
+        Role role = roleService.findRoleByName(roleName).orElseGet(() -> 
+            roleService.createRole(Role.builder().name(roleName).build())
+        );
+        testUser = userService.saveUser(UserEntity.builder()
+                .firstname("Test")
+                .lastname("User")
+                .email(roleName.toLowerCase() + "@example.com")
+                .password("password")
+                .role(role)
+                .build(), passwordEncoder);
     }
 
     @Test
     void testThatCreateCourseRateReturnsHttpStatus201() throws Exception {
-        setupUser();
+        setupUser("ROLE_EXPERT");
         Course course = courseService.save(courseMapper.toEntity(TestDataUtil.createCourseDto()));
         
         CourseRateDTO rateDTO = CourseRateDTO.builder()
@@ -84,7 +86,7 @@ class CourseRateControllerIntegrationTests {
                 MockMvcRequestBuilders.post("/api/v1/course-rates")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json)
-                        .with(TestDataUtil.mockUser("ROLE_STUDENT"))
+                        .with(TestDataUtil.mockUser("ROLE_EXPERT"))
         ).andExpect(
                 MockMvcResultMatchers.status().isCreated()
         );
@@ -92,7 +94,7 @@ class CourseRateControllerIntegrationTests {
 
     @Test
     void testThatGetCourseRateByIdReturnsHttpStatus200() throws Exception {
-        setupUser();
+        setupUser("ROLE_EXPERT");
         Course course = courseService.save(courseMapper.toEntity(TestDataUtil.createCourseDto()));
         CourseRateDTO rateDTO = CourseRateDTO.builder().note(4.0).courseId(course.getId()).userId(testUser.getId()).build();
         
@@ -100,7 +102,7 @@ class CourseRateControllerIntegrationTests {
                 MockMvcRequestBuilders.post("/api/v1/course-rates")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(rateDTO))
-                        .with(TestDataUtil.mockUser("ROLE_STUDENT"))
+                        .with(TestDataUtil.mockUser("ROLE_EXPERT"))
         ).andReturn().getResponse().getContentAsString();
         
         CourseRateDTO saved = objectMapper.readValue(response, CourseRateDTO.class);
@@ -116,8 +118,8 @@ class CourseRateControllerIntegrationTests {
     }
 
     @Test
-    void testThatDeleteCourseRateReturnsHttpStatus200() throws Exception {
-        setupUser();
+    void testThatDeleteCourseRateReturnsHttpStatus204() throws Exception {
+        setupUser("ROLE_EXPERT");
         Course course = courseService.save(courseMapper.toEntity(TestDataUtil.createCourseDto()));
         CourseRateDTO rateDTO = CourseRateDTO.builder().note(4.0).courseId(course.getId()).userId(testUser.getId()).build();
         
@@ -125,7 +127,7 @@ class CourseRateControllerIntegrationTests {
                 MockMvcRequestBuilders.post("/api/v1/course-rates")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(rateDTO))
-                        .with(TestDataUtil.mockUser("ROLE_STUDENT"))
+                        .with(TestDataUtil.mockUser("ROLE_EXPERT"))
         ).andReturn().getResponse().getContentAsString();
         
         CourseRateDTO saved = objectMapper.readValue(response, CourseRateDTO.class);
@@ -134,7 +136,7 @@ class CourseRateControllerIntegrationTests {
                 MockMvcRequestBuilders.delete("/api/v1/course-rates/" + saved.getId())
                         .with(TestDataUtil.mockUser("ROLE_ADMIN"))
         ).andExpect(
-                MockMvcResultMatchers.status().isOk()
+                MockMvcResultMatchers.status().isNoContent()
         );
     }
 }

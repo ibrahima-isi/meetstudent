@@ -22,8 +22,8 @@ public class ProgramRateService {
         return programRateRepository.save(programRate);
     }
 
-    public List<ProgramRate> findByProgramId(Integer programId) {
-        return programRateRepository.findByProgramId(programId);
+    public List<ProgramRate> findByProgramId(Integer programId, org.springframework.data.domain.Sort sort) {
+        return programRateRepository.findByProgramId(programId, sort);
     }
 
     public Double getAverageNoteByProgramId(Integer programId) {

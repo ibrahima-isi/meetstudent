@@ -24,8 +24,8 @@ public class SchoolRateService {
         return this.schoolRateRepository.save(schoolRate);
     }
 
-    public List<SchoolRate> findBySchoolId(Integer schoolId) {
-        return schoolRateRepository.findBySchoolId(schoolId);
+    public List<SchoolRate> findBySchoolId(Integer schoolId, org.springframework.data.domain.Sort sort) {
+        return schoolRateRepository.findBySchoolId(schoolId, sort);
     }
 
     public Double getAverageNoteBySchoolId(Integer schoolId) {
