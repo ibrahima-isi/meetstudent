@@ -1,38 +1,20 @@
 services:
-#  postgres_db:
-#    image: postgres:17-alpine3.23
-#    ports:
-#      - "5433:5432"
-#    restart: always
-#    env_file:
-#      - .env
-#    volumes:
-#      - pgMeetStudentData:/var/lib/postgresql/data
-#    networks:
-#      - meetstudent-network
-#    healthcheck:
-#      test: ["CMD-SHELL", "pg_isready -U ibrahima -d meetstudent"]
-#      interval: 10s
-#      timeout: 5s
-#      retries: 5
-
+  # Production-like container (Builds and runs the final standalone JAR)
   app:
     build:
       context: .
       dockerfile: Dockerfile
     ports:
       - "8080:8080"
-#    depends_on:
-#      postgres_db:
-#        condition: service_healthy
     env_file:
       - .env
     environment:
       SPRING_PROFILES_ACTIVE: docker
     networks:
       - meetstudent-network
-    restart: on-failure:5
+    restart: no
 
+  # Development container with hot-reload (Maps local code to the container)
   app-dev:
     build:
       context: .
@@ -45,40 +27,22 @@ services:
       - ~/.m2:/root/.m2
     ports:
       - "8080:8080"
-#    depends_on:
-#      postgres_db:
-#        condition: service_healthy
     env_file:
       - .env
     environment:
-      SPRING_PROFILES_ACTIVE: dev,docker
+      SPRING_PROFILES_ACTIVE: dev
     networks:
       - meetstudent-network
     restart: no
 
-  unit-test:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: build
-    working_dir: /app
-    command: ["./mvnw", "test"]
-    volumes:
-      - ./:/app
-      - ~/.m2:/root/.m2
-    environment:
-      SPRING_PROFILES_ACTIVE: test
-    networks:
-      - meetstudent-network
-    restart: no
-
+  # Test execution container (Runs all unit and integration tests)
   test:
     build:
       context: .
       dockerfile: Dockerfile
       target: build
     working_dir: /app
-    command: ["./mvnw", "verify"]
+    command: ["./mvnw", "clean", "verify"]
     volumes:
       - ./:/app
       - ~/.m2:/root/.m2
@@ -88,9 +52,6 @@ services:
       - meetstudent-network
     restart: no
 
-volumes:
-  pgMeetStudentData:
-    driver: local
 networks:
   meetstudent-network:
     driver: bridge
