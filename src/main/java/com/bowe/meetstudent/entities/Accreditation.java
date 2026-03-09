@@ -16,9 +16,9 @@ import java.util.Objects;
 @SuperBuilder
 @Entity
 @Table(name = "accreditations")
-@EqualsAndHashCode(callSuper = true, onlyExplicitlyIncluded = true)
 @ToString(callSuper = true, onlyExplicitlyIncluded = true)
-public class Accreditation extends BaseEntity{
+public class Accreditation extends BaseEntity {
+
 
     private String description;
 

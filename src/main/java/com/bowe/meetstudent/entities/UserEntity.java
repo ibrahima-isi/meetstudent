@@ -19,7 +19,6 @@ import java.util.List;
 @SuperBuilder
 @Entity
 @Table(name = "users")
-@EqualsAndHashCode(callSuper = true, onlyExplicitlyIncluded = true)
 @ToString(callSuper = true, onlyExplicitlyIncluded = true)
 public class UserEntity extends AbstractEntity {
 

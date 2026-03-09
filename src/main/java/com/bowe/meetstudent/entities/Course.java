@@ -16,7 +16,6 @@ import java.util.Objects;
 @SuperBuilder
 @Entity
 @Table(name = "courses")
-@EqualsAndHashCode(callSuper = true, onlyExplicitlyIncluded = true)
 @ToString(callSuper = true, onlyExplicitlyIncluded = true)
 public class Course extends BaseEntity {
 

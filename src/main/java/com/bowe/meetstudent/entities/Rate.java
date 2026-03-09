@@ -11,7 +11,6 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @SuperBuilder
 @MappedSuperclass
-@EqualsAndHashCode(callSuper = true, onlyExplicitlyIncluded = true)
 public class Rate extends AbstractEntity {
 
     private Double note;
