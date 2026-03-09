@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -15,6 +16,7 @@ import java.util.Optional;
 public class SchoolService {
 
     private final SchoolRepository schoolRepository;
+    private final MediaService mediaService;
 
 
     public School save(School school) {
@@ -33,8 +35,13 @@ public class SchoolService {
         return this.schoolRepository.findById(id);
     }
 
+    @Transactional
     public void delete(int id){
-        this.schoolRepository.deleteById(id);
+        this.schoolRepository.findById(id).ifPresent(school -> {
+            mediaService.deleteMediaByUrl(school.getLogoUrl());
+            mediaService.deleteMediaByUrl(school.getCoverPhotoUrl());
+            this.schoolRepository.deleteById(id);
+        });
     }
 
     public Boolean exists(int id){
@@ -63,5 +70,24 @@ public class SchoolService {
 
     public Page<School> findAllOrderByRateAsc(Pageable pageable) {
         return schoolRepository.findAllByOrderByAverageRateAsc(pageable);
+    }
+
+    @Transactional
+    public School patch(Integer id, School updates) {
+        return schoolRepository.findById(id).map(existing -> {
+            // Check for media changes before updating
+            mediaService.deleteOldMediaIfChanged(existing.getLogoUrl(), updates.getLogoUrl());
+            mediaService.deleteOldMediaIfChanged(existing.getCoverPhotoUrl(), updates.getCoverPhotoUrl());
+            
+            // Map remaining fields
+            if (updates.getName() != null) existing.setName(updates.getName());
+            if (updates.getCode() != null) existing.setCode(updates.getCode());
+            if (updates.getCreation() != null) existing.setCreation(updates.getCreation());
+            if (updates.getAddress() != null) existing.setAddress(updates.getAddress());
+            if (updates.getLogoUrl() != null) existing.setLogoUrl(updates.getLogoUrl());
+            if (updates.getCoverPhotoUrl() != null) existing.setCoverPhotoUrl(updates.getCoverPhotoUrl());
+            
+            return schoolRepository.save(existing);
+        }).orElseThrow(() -> new com.bowe.meetstudent.exceptions.ResourceNotFoundException("School not found"));
     }
 }

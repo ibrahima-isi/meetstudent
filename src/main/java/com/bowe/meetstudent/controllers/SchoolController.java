@@ -150,13 +150,11 @@ public class SchoolController {
         @RequestBody SchoolDTO newSchoolDTO,
         @Parameter(description = "ID of the school to update") @PathVariable int id) {
 
-        return this.schoolService.getSchoolById(id).map(school -> {
-            modelMapper.map(newSchoolDTO, school);
-            School saved = schoolService.save(school);
-            SchoolDTO dto = schoolMapper.toDTO(saved);
-            dto.setAverageRate(schoolRateService.getAverageNoteBySchoolId(saved.getId()));
-            return new ResponseEntity<>(dto, HttpStatus.OK);
-        }).orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
+        School updates = schoolMapper.toEntity(newSchoolDTO);
+        School saved = schoolService.patch(id, updates);
+        SchoolDTO dto = schoolMapper.toDTO(saved);
+        dto.setAverageRate(schoolRateService.getAverageNoteBySchoolId(saved.getId()));
+        return ResponseEntity.ok(dto);
     }
 
     @PatchMapping(path = "/{id}")
@@ -167,13 +165,11 @@ public class SchoolController {
         @RequestBody SchoolDTO schoolDTO,
         @Parameter(description = "ID of the school to patch") @PathVariable int id) {
 
-        return this.schoolService.getSchoolById(id).map(school -> {
-            modelMapper.map(schoolDTO, school);
-            School saved = schoolService.save(school);
-            SchoolDTO dto = schoolMapper.toDTO(saved);
-            dto.setAverageRate(schoolRateService.getAverageNoteBySchoolId(saved.getId()));
-            return new ResponseEntity<>(dto, HttpStatus.OK);
-        }).orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
+        School updates = schoolMapper.toEntity(schoolDTO);
+        School saved = schoolService.patch(id, updates);
+        SchoolDTO dto = schoolMapper.toDTO(saved);
+        dto.setAverageRate(schoolRateService.getAverageNoteBySchoolId(saved.getId()));
+        return ResponseEntity.ok(dto);
     }
 
     @DeleteMapping(path = "/{id}")

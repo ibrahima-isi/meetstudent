@@ -106,15 +106,9 @@ public class UserController {
     public ResponseEntity<UserDTO> updateUser(
             @Parameter(description = "ID of the user to update") @PathVariable int id, 
             @RequestBody UserDTO userDTO) {
-        if (userService.notExists(id)) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-        Optional<UserEntity> existingUserOptional = userService.getUserById(id);
-        UserEntity existingUser = existingUserOptional.get();
-        UserEntity mappedUpdate = userMapper.toEntity(userDTO);
-        mappedUpdate.setId(existingUser.getId());
-        UserEntity saved = this.userService.saveUser(mappedUpdate, encoder);
-        return new ResponseEntity<>(userMapper.toDTO(saved), HttpStatus.OK);
+        UserEntity updates = userMapper.toEntity(userDTO);
+        UserEntity saved = this.userService.patch(id, updates, encoder);
+        return ResponseEntity.ok(userMapper.toDTO(saved));
     }
 
     @PatchMapping(path = "{id}")
@@ -124,14 +118,9 @@ public class UserController {
     public ResponseEntity<UserDTO> patchUser(
             @Parameter(description = "ID of the user to patch") @PathVariable int id, 
             @RequestBody UserDTO userDTO) {
-        Optional<UserEntity> existingUserOptional = userService.getUserById(id);
-        if (existingUserOptional.isEmpty()) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-        UserEntity existingUser = existingUserOptional.get();
-        modelMapper.map(userDTO, existingUser);
-        UserEntity saved = this.userService.saveUser(existingUser, encoder);
-        return new ResponseEntity<>(userMapper.toDTO(saved), HttpStatus.OK);
+        UserEntity updates = userMapper.toEntity(userDTO);
+        UserEntity saved = this.userService.patch(id, updates, encoder);
+        return ResponseEntity.ok(userMapper.toDTO(saved));
     }
 
     @DeleteMapping(path = "{id}")

@@ -15,6 +15,7 @@ import java.util.Optional;
 public class CourseService {
 
     private final CourseRepository courseRepository;
+    private final MediaService mediaService;
 
     @Transactional
     public Course save(Course course) {
@@ -39,7 +40,10 @@ public class CourseService {
 
     @Transactional
     public void delete(int id) {
-        this.courseRepository.deleteById(id);
+        this.courseRepository.findById(id).ifPresent(course -> {
+            mediaService.deleteMediaByUrl(course.getPhotoUrl());
+            this.courseRepository.deleteById(id);
+        });
     }
 
     public Page<Course> findAllOrderByRateDesc(Pageable pageable) {
@@ -48,5 +52,19 @@ public class CourseService {
 
     public Page<Course> findAllOrderByRateAsc(Pageable pageable) {
         return courseRepository.findAllByOrderByAverageRateAsc(pageable);
+    }
+
+    @Transactional
+    public Course patch(Integer id, Course updates) {
+        return courseRepository.findById(id).map(existing -> {
+            mediaService.deleteOldMediaIfChanged(existing.getPhotoUrl(), updates.getPhotoUrl());
+            
+            if (updates.getName() != null) existing.setName(updates.getName());
+            if (updates.getCode() != null) existing.setCode(updates.getCode());
+            if (updates.getPhotoUrl() != null) existing.setPhotoUrl(updates.getPhotoUrl());
+            if (updates.getProgram() != null) existing.setProgram(updates.getProgram());
+            
+            return courseRepository.save(existing);
+        }).orElseThrow(() -> new com.bowe.meetstudent.exceptions.ResourceNotFoundException("Course not found"));
     }
 }

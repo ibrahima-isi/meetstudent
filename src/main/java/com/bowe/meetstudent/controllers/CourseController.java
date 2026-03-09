@@ -116,26 +116,15 @@ public class CourseController {
             @RequestBody CourseDTO newCourseDTO,
             @Parameter(description = "ID of the course to update") @PathVariable int id) {
         
-        Optional<Course> existingOpt = courseService.findById(id);
-        if (existingOpt.isEmpty()) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-
-        Course existingCourse = existingOpt.get();
-        Course mappedUpdate = courseMapper.toEntity(newCourseDTO);
-        mappedUpdate.setId(existingCourse.getId());
-        
+        Course updates = courseMapper.toEntity(newCourseDTO);
         if (newCourseDTO.getProgramId() != null) {
             Optional<Program> programOpt = programService.findById(newCourseDTO.getProgramId());
-            if (programOpt.isEmpty()) {
-                return ResponseEntity.badRequest().build();
-            }
-            mappedUpdate.setProgram(programOpt.get());
-        } else {
-            mappedUpdate.setProgram(null);
+            if (programOpt.isEmpty()) return ResponseEntity.badRequest().build();
+            updates.setProgram(programOpt.get());
         }
 
-        return new ResponseEntity<>(courseMapper.toDTO(courseService.save(mappedUpdate)), HttpStatus.OK);
+        Course saved = courseService.patch(id, updates);
+        return ResponseEntity.ok(courseMapper.toDTO(saved));
     }
 
     @PatchMapping(path = "/{id}")
@@ -147,23 +136,14 @@ public class CourseController {
             @RequestBody CourseDTO courseDTO,
             @Parameter(description = "ID of the course to patch") @PathVariable int id) {
         
-        Optional<Course> existingOpt = courseService.findById(id);
-        if (existingOpt.isEmpty()) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-
-        Course existingCourse = existingOpt.get();
-        modelMapper.map(courseDTO, existingCourse);
-        
+        Course updates = courseMapper.toEntity(courseDTO);
         if (courseDTO.getProgramId() != null) {
             Optional<Program> programOpt = programService.findById(courseDTO.getProgramId());
-            if (programOpt.isEmpty()) {
-                return ResponseEntity.badRequest().build();
-            }
-            existingCourse.setProgram(programOpt.get());
+            if (programOpt.isPresent()) updates.setProgram(programOpt.get());
         }
 
-        return new ResponseEntity<>(courseMapper.toDTO(courseService.save(existingCourse)), HttpStatus.OK);
+        Course saved = courseService.patch(id, updates);
+        return ResponseEntity.ok(courseMapper.toDTO(saved));
     }
 
     @DeleteMapping(path = "/{id}")

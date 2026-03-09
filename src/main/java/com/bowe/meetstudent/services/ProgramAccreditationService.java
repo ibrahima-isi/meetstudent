@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -24,6 +25,10 @@ public class ProgramAccreditationService {
 
     public List<ProgramAccreditation> findByProgramId(Integer programId) {
         return programAccreditationRepository.findByProgramId(programId);
+    }
+
+    public Optional<ProgramAccreditation> findById(Integer programId, Integer accreditationId) {
+        return programAccreditationRepository.findById(new ProgramAccreditationId(programId, accreditationId));
     }
 
     /**
@@ -56,6 +61,30 @@ public class ProgramAccreditationService {
         programAccreditation.setEndsAt(endsAt);
 
         return programAccreditationRepository.save(programAccreditation);
+    }
+
+    /**
+     * Update program accreditation dates
+     * @param programId the id of the program
+     * @param accreditationId the id of the accreditation
+     * @param startsAt the new start year
+     * @param endsAt the new end year
+     * @return Updated ProgramAccreditation
+     */
+    @Transactional
+    public ProgramAccreditation updateAccreditationForProgram(
+            Integer programId,
+            Integer accreditationId,
+            Integer startsAt,
+            Integer endsAt
+    ) {
+        ProgramAccreditation pa = programAccreditationRepository.findById(new ProgramAccreditationId(programId, accreditationId))
+                .orElseThrow(() -> new ResourceNotFoundException("Association non trouvée"));
+        
+        pa.setStartsAt(startsAt);
+        pa.setEndsAt(endsAt);
+        
+        return programAccreditationRepository.save(pa);
     }
 
     /**

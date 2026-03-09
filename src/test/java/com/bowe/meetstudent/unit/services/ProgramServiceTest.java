@@ -2,6 +2,7 @@ package com.bowe.meetstudent.unit.services;
 
 import com.bowe.meetstudent.entities.Program;
 import com.bowe.meetstudent.repositories.ProgramRepository;
+import com.bowe.meetstudent.services.MediaService;
 import com.bowe.meetstudent.services.ProgramService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,6 +27,9 @@ class ProgramServiceTest {
     @Mock
     private ProgramRepository programRepository;
 
+    @Mock
+    private MediaService mediaService;
+
     @InjectMocks
     private ProgramService programService;
 
@@ -38,6 +42,7 @@ class ProgramServiceTest {
         program.setName("Computer Science");
         program.setCode("CS101");
         program.setDuration(4);
+        program.setPhotoUrl("programs/test.jpg");
     }
 
     @Test
@@ -93,8 +98,26 @@ class ProgramServiceTest {
 
     @Test
     void testDelete() {
+        Mockito.when(programRepository.findById(1)).thenReturn(Optional.of(program));
         Mockito.doNothing().when(programRepository).deleteById(1);
+        
         programService.delete(1);
+        
+        Mockito.verify(programRepository, Mockito.times(1)).findById(1);
         Mockito.verify(programRepository, Mockito.times(1)).deleteById(1);
+        Mockito.verify(mediaService, Mockito.times(1)).deleteMediaByUrl("programs/test.jpg");
+    }
+
+    @Test
+    void testPatch() {
+        Program updates = Program.builder().name("New Name").photoUrl("programs/new.jpg").build();
+        Mockito.when(programRepository.findById(1)).thenReturn(Optional.of(program));
+        Mockito.when(programRepository.save(any(Program.class))).thenReturn(program);
+
+        programService.patch(1, updates);
+
+        assertEquals("New Name", program.getName());
+        assertEquals("programs/new.jpg", program.getPhotoUrl());
+        Mockito.verify(mediaService).deleteOldMediaIfChanged("programs/test.jpg", "programs/new.jpg");
     }
 }

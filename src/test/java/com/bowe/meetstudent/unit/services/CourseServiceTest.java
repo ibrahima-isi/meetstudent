@@ -3,6 +3,7 @@ package com.bowe.meetstudent.unit.services;
 import com.bowe.meetstudent.entities.Course;
 import com.bowe.meetstudent.repositories.CourseRepository;
 import com.bowe.meetstudent.services.CourseService;
+import com.bowe.meetstudent.services.MediaService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,6 +27,9 @@ class CourseServiceTest {
     @Mock
     private CourseRepository courseRepository;
 
+    @Mock
+    private MediaService mediaService;
+
     @InjectMocks
     private CourseService courseService;
 
@@ -35,8 +39,9 @@ class CourseServiceTest {
     void setUp() {
         course = new Course();
         course.setId(1);
-        course.setName("Java Basics");
+        course.setName("Java Programming");
         course.setCode("JV101");
+        course.setPhotoUrl("courses/test.jpg");
     }
 
     @Test
@@ -46,7 +51,7 @@ class CourseServiceTest {
         Course saved = courseService.save(course);
         
         assertNotNull(saved);
-        assertEquals("Java Basics", saved.getName());
+        assertEquals("Java Programming", saved.getName());
         Mockito.verify(courseRepository, Mockito.times(1)).save(course);
     }
 
@@ -92,8 +97,26 @@ class CourseServiceTest {
 
     @Test
     void testDelete() {
+        Mockito.when(courseRepository.findById(1)).thenReturn(Optional.of(course));
         Mockito.doNothing().when(courseRepository).deleteById(1);
+        
         courseService.delete(1);
+        
+        Mockito.verify(courseRepository, Mockito.times(1)).findById(1);
         Mockito.verify(courseRepository, Mockito.times(1)).deleteById(1);
+        Mockito.verify(mediaService, Mockito.times(1)).deleteMediaByUrl("courses/test.jpg");
+    }
+
+    @Test
+    void testPatch() {
+        Course updates = Course.builder().name("New Java").photoUrl("courses/new.jpg").build();
+        Mockito.when(courseRepository.findById(1)).thenReturn(Optional.of(course));
+        Mockito.when(courseRepository.save(any(Course.class))).thenReturn(course);
+
+        courseService.patch(1, updates);
+
+        assertEquals("New Java", course.getName());
+        assertEquals("courses/new.jpg", course.getPhotoUrl());
+        Mockito.verify(mediaService).deleteOldMediaIfChanged("courses/test.jpg", "courses/new.jpg");
     }
 }

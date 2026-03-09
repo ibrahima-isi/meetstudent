@@ -162,6 +162,42 @@ class ProgramControllerIntegrationTests {
     }
 
     @Test
+    void testThatGetProgramAccreditationReturnsHttpStatus200() throws Exception {
+        Program program = programService.save(programMapper.toEntity(TestDataUtil.createProgramDto()));
+        Accreditation acc = accreditationService.save(accreditationMapper.toEntity(TestDataUtil.createAccreditationDto()));
+        programAccreditationService.addAccreditationToProgram(program.getId(), acc.getId(), 2020, 2025);
+
+        mockMvc.perform(
+                MockMvcRequestBuilders.get("/api/v1/programs/" + program.getId() + "/accreditations/" + acc.getId())
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN"))
+        ).andExpect(
+                MockMvcResultMatchers.status().isOk()
+        ).andExpect(
+                MockMvcResultMatchers.jsonPath("$.startsAt").value(2020)
+        );
+    }
+
+    @Test
+    void testThatUpdateProgramAccreditationReturnsHttpStatus200() throws Exception {
+        Program program = programService.save(programMapper.toEntity(TestDataUtil.createProgramDto()));
+        Accreditation acc = accreditationService.save(accreditationMapper.toEntity(TestDataUtil.createAccreditationDto()));
+        programAccreditationService.addAccreditationToProgram(program.getId(), acc.getId(), 2020, 2025);
+
+        mockMvc.perform(
+                MockMvcRequestBuilders.put("/api/v1/programs/" + program.getId() + "/accreditations/" + acc.getId())
+                        .param("startsAt", "2021")
+                        .param("endsAt", "2026")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN"))
+        ).andExpect(
+                MockMvcResultMatchers.status().isOk()
+        ).andExpect(
+                MockMvcResultMatchers.jsonPath("$.startsAt").value(2021)
+        ).andExpect(
+                MockMvcResultMatchers.jsonPath("$.endsAt").value(2026)
+        );
+    }
+
+    @Test
     void testThatGetProgramAccreditationsReturnsList() throws Exception {
         Program program = programService.save(programMapper.toEntity(TestDataUtil.createProgramDto()));
         Accreditation acc = accreditationService.save(accreditationMapper.toEntity(TestDataUtil.createAccreditationDto()));

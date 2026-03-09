@@ -55,6 +55,31 @@ public class ProgramController {
         return new ResponseEntity<>(programAccreditationMapper.toDTO(linked), HttpStatus.CREATED);
     }
 
+    @GetMapping(path = "/{programId}/accreditations/{accreditationId}")
+    @Operation(summary = "Get a specific accreditation for a program", description = "Retrieves details of a specific accreditation linked to a program.")
+    @ApiResponse(responseCode = "200", description = "Program accreditation found")
+    @ApiResponse(responseCode = "404", description = "Association not found")
+    public ResponseEntity<ProgramAccreditationDTO> getProgramAccreditation(
+            @Parameter(description = "ID of the program") @PathVariable Integer programId,
+            @Parameter(description = "ID of the accreditation") @PathVariable Integer accreditationId) {
+        return programAccreditationService.findById(programId, accreditationId)
+                .map(pa -> ResponseEntity.ok(programAccreditationMapper.toDTO(pa)))
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping(path = "/{programId}/accreditations/{accreditationId}")
+    @Operation(summary = "Update an accreditation for a program", description = "Updates the start and end years of a specific accreditation linked to a program.")
+    @ApiResponse(responseCode = "200", description = "Accreditation updated successfully")
+    @ApiResponse(responseCode = "404", description = "Association not found")
+    public ResponseEntity<ProgramAccreditationDTO> updateAccreditation(
+            @Parameter(description = "ID of the program") @PathVariable Integer programId,
+            @Parameter(description = "ID of the accreditation") @PathVariable Integer accreditationId,
+            @Parameter(description = "Year the accreditation starts") @RequestParam Integer startsAt,
+            @Parameter(description = "Year the accreditation expires") @RequestParam Integer endsAt) {
+        ProgramAccreditation updated = programAccreditationService.updateAccreditationForProgram(programId, accreditationId, startsAt, endsAt);
+        return ResponseEntity.ok(programAccreditationMapper.toDTO(updated));
+    }
+
     @DeleteMapping(path = "/{programId}/accreditations/{accreditationId}")
     @Operation(summary = "Unlink an accreditation from a program", description = "Removes the association between a program and an accreditation.")
     @ApiResponse(responseCode = "204", description = "Accreditation unlinked successfully")
@@ -160,24 +185,15 @@ public class ProgramController {
             @RequestBody ProgramDTO newProgramDTO,
             @Parameter(description = "ID of the program to update") @PathVariable int id) {
         
-        Optional<Program> existingOpt = programService.findById(id);
-        if (existingOpt.isEmpty()) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-
-        Program existingProgram = existingOpt.get();
-        Program mappedUpdate = programMapper.toEntity(newProgramDTO);
-        mappedUpdate.setId(existingProgram.getId());
-        
+        Program updates = programMapper.toEntity(newProgramDTO);
         if (newProgramDTO.getSchoolId() != null) {
             Optional<School> schoolOpt = schoolService.getSchoolById(newProgramDTO.getSchoolId());
-            if (schoolOpt.isEmpty()) {
-                return ResponseEntity.badRequest().build();
-            }
-            mappedUpdate.setSchool(schoolOpt.get());
+            if (schoolOpt.isEmpty()) return ResponseEntity.badRequest().build();
+            updates.setSchool(schoolOpt.get());
         }
 
-        return new ResponseEntity<>(programMapper.toDTO(programService.save(mappedUpdate)), HttpStatus.OK);
+        Program saved = programService.patch(id, updates);
+        return ResponseEntity.ok(programMapper.toDTO(saved));
     }
 
     @PatchMapping(path = "/{id}")
@@ -189,23 +205,14 @@ public class ProgramController {
             @RequestBody ProgramDTO programDTO,
             @Parameter(description = "ID of the program to patch") @PathVariable int id) {
         
-        Optional<Program> existingOpt = programService.findById(id);
-        if (existingOpt.isEmpty()) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-
-        Program existingProgram = existingOpt.get();
-        modelMapper.map(programDTO, existingProgram);
-        
+        Program updates = programMapper.toEntity(programDTO);
         if (programDTO.getSchoolId() != null) {
             Optional<School> schoolOpt = schoolService.getSchoolById(programDTO.getSchoolId());
-            if (schoolOpt.isEmpty()) {
-                return ResponseEntity.badRequest().build();
-            }
-            existingProgram.setSchool(schoolOpt.get());
+            if (schoolOpt.isPresent()) updates.setSchool(schoolOpt.get());
         }
 
-        return new ResponseEntity<>(programMapper.toDTO(programService.save(existingProgram)), HttpStatus.OK);
+        Program saved = programService.patch(id, updates);
+        return ResponseEntity.ok(programMapper.toDTO(saved));
     }
 
     @DeleteMapping(path = "/{id}")
