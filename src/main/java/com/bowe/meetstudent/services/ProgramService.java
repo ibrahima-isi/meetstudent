@@ -8,6 +8,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -31,7 +32,8 @@ public class ProgramService {
     }
 
     public Page<Program> findByName(String name, Pageable pageable) {
-        return this.programRepository.findByNameContainingIgnoreCase(name, pageable);
+        String safeName = (name == null) ? "" : name;
+        return this.programRepository.findByNameContainingIgnoreCase(safeName, pageable);
     }
 
     public boolean exists(int id) {
@@ -52,6 +54,11 @@ public class ProgramService {
 
     public Page<Program> findAllOrderByRateAsc(Pageable pageable) {
         return programRepository.findAllByOrderByAverageRateAsc(pageable);
+    }
+
+    public List<Program> findProgramByAccreditationCode(String code) {
+        String safeCode = (code == null) ? "" : code;
+        return programRepository.findProgramByProgramAccreditationsContainingIgnoreCase(safeCode);
     }
 
     @Transactional

@@ -29,7 +29,8 @@ public class TagService {
     }
 
     public Optional<Tag> findByName(String name) {
-        return tagRepository.findByNameIgnoreCase(name);
+        String safeName = (name == null) ? "" : name;
+        return tagRepository.findByNameIgnoreCase(safeName);
     }
 
     @Transactional

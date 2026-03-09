@@ -13,7 +13,7 @@ import java.util.List;
 @Repository
 public interface ProgramRepository extends JpaRepository<Program, Integer> {
 
-    @Query("SELECT DISTINCT p FROM Program p JOIN p.programAccreditations pa JOIN pa.accreditation a WHERE LOWER(a.code) LIKE LOWER(CONCAT('%', :accreditationCode, '%'))")
+    @Query("SELECT DISTINCT p FROM Program p JOIN p.programAccreditations pa JOIN pa.accreditation a WHERE (:accreditationCode = '' OR LOWER(a.code) LIKE LOWER(CONCAT('%', CAST(:accreditationCode AS text), '%')))")
     List<Program> findProgramByProgramAccreditationsContainingIgnoreCase (@Param("accreditationCode") String accreditationCode);
 
     Page<Program> findByNameContainingIgnoreCase(String name, Pageable pageable);

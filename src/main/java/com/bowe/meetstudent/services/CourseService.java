@@ -31,7 +31,8 @@ public class CourseService {
     }
 
     public Page<Course> findByName(String name, Pageable pageable) {
-        return this.courseRepository.findByNameContainingIgnoreCase(name, pageable);
+        String safeName = (name == null) ? "" : name;
+        return this.courseRepository.findByNameContainingIgnoreCase(safeName, pageable);
     }
 
     public boolean exists(int id) {

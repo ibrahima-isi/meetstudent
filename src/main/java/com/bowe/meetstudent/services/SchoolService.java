@@ -49,15 +49,18 @@ public class SchoolService {
     }
 
     public Page<School> getSchoolByName(String name, Pageable pageable) {
-        return this.schoolRepository.findSchoolByNameContainingIgnoreCase(name, pageable);
+        String safeName = (name == null) ? "" : name;
+        return this.schoolRepository.findSchoolByNameContainingIgnoreCase(safeName, pageable);
     }
 
     public Page<School> findSchoolByCity(String city, Pageable pageable) {
-        return this.schoolRepository.findSchoolByAddress_City(city, pageable);
+        String safeCity = (city == null) ? "" : city;
+        return this.schoolRepository.findSchoolByAddress_City(safeCity, pageable);
     }
 
     public Page<School> findSchoolByCountry(String country, Pageable pageable) {
-        return this.schoolRepository.findSchoolByAddress_Country(country, pageable);
+        String safeCountry = (country == null) ? "" : country;
+        return this.schoolRepository.findSchoolByAddress_Country(safeCountry, pageable);
     }
 
     public Page<School> searchSchools(String city, String country, String programName, String tag, Pageable pageable) {

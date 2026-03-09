@@ -28,7 +28,7 @@ import java.util.Optional;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/course-rates")
-@Tag(name = "9. Course Rates", description = "Endpoints for managing course ratings and reviews")
+@Tag(name = "11. Course Rates", description = "Endpoints for managing course ratings and reviews")
 public class CourseRateController {
     private final CourseRateService service;
     private final Mapper<CourseRate, CourseRateDTO> mapper;

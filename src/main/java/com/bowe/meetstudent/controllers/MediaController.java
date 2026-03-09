@@ -19,7 +19,7 @@ import java.util.Map;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/media")
-@Tag(name = "5. Media", description = "Endpoints for managing media uploads and storage")
+@Tag(name = "12. Media", description = "Endpoints for managing media uploads and storage")
 public class MediaController {
     private final MediaService mediaService;
 

@@ -28,7 +28,7 @@ import java.util.Optional;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/program-rates")
-@Tag(name = "7. Program Rates", description = "Endpoints for managing program ratings and reviews")
+@Tag(name = "10. Program Rates", description = "Endpoints for managing program ratings and reviews")
 public class ProgramRateController {
 
     private final ProgramRateService service;

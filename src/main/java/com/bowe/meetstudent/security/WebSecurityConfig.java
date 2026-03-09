@@ -40,6 +40,7 @@ public class WebSecurityConfig {
                                 .requestMatchers("/").permitAll()
                                 .requestMatchers("/api/v1/auth/**").permitAll()
                                 .requestMatchers("/uploads/**").permitAll()
+                                .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                                 
                                 // Public Read access for content
                                 .requestMatchers(HttpMethod.GET, "/api/v1/schools/**").permitAll()

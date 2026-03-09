@@ -31,7 +31,7 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = "/api/v1/programs")
-@Tag(name = "12. Programs", description = "Endpoints for managing educational programs (Degrees, Certifications, etc.)")
+@Tag(name = "05. Programs", description = "Endpoints for managing educational programs (Degrees, Certifications, etc.)")
 public class ProgramController {
 
     private final ProgramService programService;

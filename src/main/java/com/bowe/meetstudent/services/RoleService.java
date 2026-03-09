@@ -27,7 +27,8 @@ public class RoleService {
     }
 
     public Optional<Role> findRoleByName(String name) {
-        return roleRepository.findByName(name);
+        String safeName = (name == null) ? "" : name;
+        return roleRepository.findByName(safeName);
     }
 
     public Role updateRole(Integer id, Role roleDetails) {

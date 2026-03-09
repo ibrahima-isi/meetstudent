@@ -27,7 +27,7 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/auth")
-@Tag(name = "1. Authentication", description = "Endpoints for user authentication")
+@Tag(name = "01. Authentication", description = "Endpoints for user authentication")
 public class AuthController {
     private final JwtIssuer jwtIssuer;
     private final AuthenticationManager authenticationManager;

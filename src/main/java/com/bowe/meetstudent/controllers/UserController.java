@@ -29,7 +29,7 @@ import java.util.Optional;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = "/api/v1/users")
-@Tag(name = "4. Users", description = "Endpoints for managing user accounts (Admins, Students, Experts)")
+@Tag(name = "03. Users", description = "Endpoints for managing user accounts (Admins, Students, Experts)")
 public class UserController {
 
     private final UserService userService;

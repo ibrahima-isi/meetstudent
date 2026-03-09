@@ -30,7 +30,8 @@ public class AccreditationService {
     }
 
     public Page<Accreditation> findByName(String name, Pageable pageable) {
-        return this.accreditationRepository.findByNameContainingIgnoreCase(name, pageable);
+        String safeName = (name == null) ? "" : name;
+        return this.accreditationRepository.findByNameContainingIgnoreCase(safeName, pageable);
     }
 
     public boolean exists(int id) {

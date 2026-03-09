@@ -21,7 +21,7 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/tags")
-@io.swagger.v3.oas.annotations.tags.Tag(name = "13. Tags", description = "Endpoints for managing school classifications and categories independently")
+@io.swagger.v3.oas.annotations.tags.Tag(name = "07. Tags", description = "Endpoints for managing school classifications and categories independently")
 public class TagController {
 
     private final TagService tagService;

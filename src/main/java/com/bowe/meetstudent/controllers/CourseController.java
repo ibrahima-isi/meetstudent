@@ -25,7 +25,7 @@ import java.util.Optional;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = "/api/v1/courses")
-@Tag(name = "10. Courses", description = "Endpoints for managing individual subjects or modules (Courses)")
+@Tag(name = "06. Courses", description = "Endpoints for managing individual subjects or modules (Courses)")
 public class CourseController {
 
     private final CourseService courseService;

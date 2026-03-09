@@ -22,7 +22,7 @@ import java.util.Optional;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = "/api/v1/accreditations")
-@Tag(name = "8. Accreditations", description = "Endpoints for managing global accreditations (e.g., AACSB, EQUIS)")
+@Tag(name = "08. Accreditations", description = "Endpoints for managing global accreditations (e.g., AACSB, EQUIS)")
 public class AccreditationController {
 
     private final AccreditationService accreditationService;
