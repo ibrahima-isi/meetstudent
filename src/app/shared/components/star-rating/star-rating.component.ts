@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { LucideAngularModule, Star, MessageSquare } from 'lucide-angular';
 import { RatingService } from '@services/rating.service';
 import { TokenService } from '@services/token.service';
+import { Observable } from 'rxjs';
 
 @Component({
   selector: 'app-star-rating',
@@ -102,7 +103,7 @@ export class StarRatingComponent {
     const userId = user.id;
     const commentText = this.comment();
 
-    const obs = this.itemType() === 'school' 
+    const obs: Observable<any> = this.itemType() === 'school' 
       ? this.ratingService.rateSchool(this.itemId(), userId, note, commentText)
       : this.itemType() === 'program'
       ? this.ratingService.rateProgram(this.itemId(), userId, note, commentText)
