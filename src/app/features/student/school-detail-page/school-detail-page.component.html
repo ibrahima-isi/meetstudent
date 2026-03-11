@@ -1,0 +1,163 @@
+<div class="min-h-screen bg-gray-50">
+  @if (showLoginPrompt()) {
+    <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+        <h3 class="text-gray-900 mb-2 font-bold text-lg">Connexion requise</h3>
+        <p class="text-gray-600 mb-6">
+          Vous devez être connecté pour ajouter des formations à votre liste de souhaits.
+        </p>
+        <div class="flex gap-3">
+          <button
+            (click)="handleLoginClick()"
+            class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            Se connecter
+          </button>
+          <button
+            (click)="showLoginPrompt.set(false)"
+            class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            Annuler
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <div class="relative h-64 md:h-80">
+    <app-image-with-fallback
+      [src]="school().coverPhotoUrl || ''"
+      [alt]="school().name"
+      class="w-full h-full object-cover block"
+    ></app-image-with-fallback>
+    <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+    <button
+      (click)="onBack.emit()"
+      class="absolute top-4 left-4 flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow-md hover:bg-gray-50 transition-colors cursor-pointer"
+    >
+      <lucide-icon [img]="ArrowLeft" class="w-5 h-5"></lucide-icon>
+      <span>Retour</span>
+    </button>
+    <div class="absolute bottom-6 left-4 right-4 text-white">
+      <div class="max-w-7xl mx-auto px-4">
+        <span class="inline-block px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full mb-2 text-sm">
+          {{ school().type }}
+        </span>
+        <h1 class="text-white mb-3 text-3xl md:text-4xl font-bold">{{ school().name }}</h1>
+        <div class="flex items-center gap-4 flex-wrap">
+          <div class="flex items-center gap-2">
+            <lucide-icon [img]="MapPin" class="w-5 h-5"></lucide-icon>
+            <span>{{ school().address.location }}, {{ school().address.city }}</span>
+          </div>
+          @if (isAuthenticated()) {
+            <div class="flex items-center gap-2">
+              <app-star-rating 
+                [itemId]="school().id || 0"
+                itemType="school"
+                [initialRating]="school().rating"
+              ></app-star-rating>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-4 py-8">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+      <h2 class="text-gray-900 mb-3 text-xl font-bold">À propos</h2>
+      <p class="text-gray-600 leading-relaxed">{{ school().description }}</p>
+    </div>
+
+    <div class="mb-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-gray-900 text-xl font-bold">Formations disponibles ({{ programs().length }})</h2>
+        
+        <div class="flex items-center gap-2">
+          <lucide-icon [img]="ArrowUpDown" class="w-4 h-4 text-gray-500"></lucide-icon>
+          <select
+            [(ngModel)]="sortBy"
+            class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-700"
+          >
+            <option value="name">Trier par A-Z</option>
+            <option value="places">Trier par Places disponibles</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="space-y-4">
+        @for (programme of sortedProgrammes(); track programme.id) {
+          <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+            <div class="flex items-start justify-between mb-4">
+              <div class="flex-1">
+                <div class="flex items-start justify-between mb-2">
+                  <h3 class="text-gray-900 flex-1 line-clamp-2 text-lg font-bold">{{ programme.name }}</h3>
+                  @if (programme.id !== undefined) {
+                    <button
+                      (click)="toggleWishlist(programme.id)"
+                      class="p-2 rounded-full transition-colors cursor-pointer"
+                      [ngClass]="wishlist().includes(programme.id) ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-red-600'"
+                    >
+                      <lucide-icon [img]="Heart" class="w-5 h-5" [ngClass]="wishlist().includes(programme.id) ? 'fill-current' : ''"></lucide-icon>
+                    </button>
+                  }
+                </div>
+                
+                <div class="flex items-center gap-4 flex-wrap text-gray-600 mb-3 text-sm">
+                  <div class="flex items-center gap-2 font-semibold">
+                    <lucide-icon [img]="GraduationCap" class="w-4 h-4"></lucide-icon>
+                    <span>{{ programme.level }}</span>
+                  </div>
+                  <div class="flex items-center gap-2 font-semibold">
+                    <lucide-icon [img]="Clock" class="w-4 h-4"></lucide-icon>
+                    <span>{{ programme.duration }}</span>
+                  </div>
+                  <div class="flex items-center gap-2 font-semibold">
+                    <lucide-icon [img]="Calendar" class="w-4 h-4"></lucide-icon>
+                    <span>{{ programme.startDate }}</span>
+                  </div>
+                </div>
+                
+                @if (isAuthenticated() && programme.id !== undefined) {
+                  <div class="mb-3">
+                    <app-star-rating 
+                      [itemId]="programme.id"
+                      itemType="programme"
+                      [initialRating]="programme.rating"
+                    ></app-star-rating>
+                  </div>
+                }
+                
+                <p class="text-gray-600 mb-4 text-sm">{{ programme.description }}</p>
+                
+                <div class="flex items-center gap-2 text-sm">
+                  <lucide-icon [img]="Users" class="w-4 h-4 text-gray-600"></lucide-icon>
+                  <span>
+                    @if ((programme.capacity || 0) - (programme.enrolled || 0) > 0) {
+                      <span class="text-gray-600">{{ (programme.capacity || 0) - (programme.enrolled || 0) }} places disponibles sur {{ programme.capacity }}</span>
+                    } @else {
+                      <span class="text-red-600 font-medium">Complet</span>
+                    }
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="flex gap-3">
+              <button
+                class="flex-1 px-4 py-2 text-white rounded-lg transition-colors"
+                [ngClass]="(programme.capacity || 0) - (programme.enrolled || 0) > 0 ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-gray-300 cursor-not-allowed text-gray-500'"
+                [disabled]="(programme.capacity || 0) - (programme.enrolled || 0) === 0"
+              >
+                {{ (programme.capacity || 0) - (programme.enrolled || 0) > 0 ? 'Postuler' : 'Liste d\'attente' }}
+              </button>
+              <button class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
+                En savoir plus
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+</div>
