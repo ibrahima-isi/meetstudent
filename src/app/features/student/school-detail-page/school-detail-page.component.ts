@@ -1,12 +1,13 @@
 import { Component, input, output, signal, computed, effect, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { LucideAngularModule, ArrowLeft, MapPin, Heart, GraduationCap, Clock, Calendar, Users, ArrowUpDown } from 'lucide-angular';
+import { LucideAngularModule, ArrowLeft, MapPin, Heart, GraduationCap, Clock, Calendar, Users, ArrowUpDown, Book, Star, X } from 'lucide-angular';
 import { ImageWithFallbackComponent } from '@shared/components/image-with-fallback/image-with-fallback.component';
 import { StarRatingComponent } from '@shared/components/star-rating/star-rating.component';
 import { PROGRAMMES as MOCK_PROGRAMMES } from '@data/programmes';
-import { School, Program, Tag } from '@models/entities';
+import { School, Program, Tag, Course } from '@models/entities';
 import { ProgramService } from '@services/program.service';
+import { CourseService } from '@services/course.service';
 
 @Component({
   selector: 'app-school-detail-page',
@@ -21,6 +22,7 @@ export class SchoolDetailPageComponent implements OnInit, OnDestroy {
   onLoginPrompt = output<void>();
 
   private programService = inject(ProgramService);
+  private courseService = inject(CourseService);
 
   readonly ArrowLeft = ArrowLeft;
   readonly MapPin = MapPin;
@@ -30,11 +32,20 @@ export class SchoolDetailPageComponent implements OnInit, OnDestroy {
   readonly Calendar = Calendar;
   readonly Users = Users;
   readonly ArrowUpDown = ArrowUpDown;
+  readonly Book = Book;
+  readonly Star = Star;
+  readonly X = X;
 
   programs = signal<Program[]>([]);
   wishlist = signal<number[]>([]);
   showLoginPrompt = signal(false);
   sortBy = signal<'name' | 'places'>('name');
+
+  // Course Modal State
+  selectedProgram = signal<Program | null>(null);
+  courses = signal<Course[]>([]);
+  showCoursesModal = signal(false);
+  isLoadingCourses = signal(false);
 
   private listener = () => this.updateWishlist();
 
@@ -49,6 +60,31 @@ export class SchoolDetailPageComponent implements OnInit, OnDestroy {
     if (typeof window !== 'undefined') {
       window.addEventListener('wishlistUpdated', this.listener);
     }
+  }
+
+  openCoursesModal(program: Program) {
+    this.selectedProgram.set(program);
+    this.showCoursesModal.set(true);
+    this.isLoadingCourses.set(true);
+    
+    if (program.id) {
+      this.courseService.getCoursesByProgram(program.id).subscribe({
+        next: (courses) => {
+          this.courses.set(courses);
+          this.isLoadingCourses.set(false);
+        },
+        error: () => {
+          this.courses.set([]);
+          this.isLoadingCourses.set(false);
+        }
+      });
+    }
+  }
+
+  closeCoursesModal() {
+    this.showCoursesModal.set(false);
+    this.selectedProgram.set(null);
+    this.courses.set([]);
   }
 
   loadPrograms() {

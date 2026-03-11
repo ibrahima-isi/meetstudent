@@ -137,8 +137,24 @@
               [alt]="school.name"
               class="w-full h-full object-cover block"
             ></app-image-with-fallback>
-            <div class="absolute top-3 right-3 px-3 py-1 bg-white rounded-full shadow-sm">
-              <span class="text-indigo-600 text-sm font-medium">{{ school.type }}</span>
+            <div class="absolute top-3 right-3 flex flex-col items-end gap-2">
+              <div class="px-3 py-1 bg-white rounded-full shadow-sm">
+                <span class="text-indigo-600 text-sm font-bold">{{ school.type }}</span>
+              </div>
+              @if (school.tags && school.tags.length > 0) {
+                <div class="flex flex-wrap gap-1 justify-end max-w-[150px]">
+                  @for (tag of school.tags.slice(0, 2); track tag.id) {
+                    <span class="px-2 py-0.5 bg-indigo-600/90 text-white text-[10px] font-bold rounded-full backdrop-blur-sm">
+                      {{ tag.name }}
+                    </span>
+                  }
+                  @if (school.tags.length > 2) {
+                    <span class="px-2 py-0.5 bg-gray-800/80 text-white text-[10px] font-bold rounded-full backdrop-blur-sm">
+                      +{{ school.tags.length - 2 }}
+                    </span>
+                  }
+                </div>
+              }
             </div>
           </div>
           
