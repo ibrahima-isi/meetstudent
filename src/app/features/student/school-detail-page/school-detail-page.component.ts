@@ -5,7 +5,7 @@ import { LucideAngularModule, ArrowLeft, MapPin, Heart, GraduationCap, Clock, Ca
 import { ImageWithFallbackComponent } from '@shared/components/image-with-fallback/image-with-fallback.component';
 import { StarRatingComponent } from '@shared/components/star-rating/star-rating.component';
 import { PROGRAMMES as MOCK_PROGRAMMES } from '@data/programmes';
-import { School, Program } from '@models/entities';
+import { School, Program, Tag } from '@models/entities';
 import { ProgramService } from '@services/program.service';
 
 @Component({
