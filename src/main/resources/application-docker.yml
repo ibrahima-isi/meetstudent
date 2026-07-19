@@ -11,4 +11,4 @@ spring:
 
 security:
   jwt:
-    secret-key: ${JWT_SECRET_KEY:dockerSecretKeyForInternalOnly!1234567890}
+    secret-key: ${JWT_SECRET_KEY}

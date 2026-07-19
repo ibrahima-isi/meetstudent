@@ -55,13 +55,17 @@ class ProgramRateControllerIntegrationTests {
     private UserEntity testUser;
 
     private void setupUser(String roleName) {
+        testUser = createUser(roleName, roleName.toLowerCase() + "@example.com");
+    }
+
+    private UserEntity createUser(String roleName, String email) {
         Role role = roleService.findRoleByName(roleName).orElseGet(() -> 
             roleService.createRole(Role.builder().name(roleName).build())
         );
-        testUser = userService.saveUser(UserEntity.builder()
+        return userService.saveUser(UserEntity.builder()
                 .firstname("Test")
                 .lastname("User")
-                .email(roleName.toLowerCase() + "@example.com")
+                .email(email)
                 .password("password")
                 .role(role)
                 .build(), passwordEncoder);
@@ -84,9 +88,54 @@ class ProgramRateControllerIntegrationTests {
                 MockMvcRequestBuilders.post("/api/v1/program-rates")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json)
-                        .with(TestDataUtil.mockUser("ROLE_EXPERT"))
+                        .with(TestDataUtil.mockUser(testUser.getId(), "ROLE_EXPERT"))
         ).andExpect(
                 MockMvcResultMatchers.status().isCreated()
+        ).andExpect(
+                MockMvcResultMatchers.jsonPath("$.userId").value(testUser.getId())
+        );
+    }
+
+    @Test
+    void testThatCreateProgramRateRejectsAnotherUserId() throws Exception {
+        setupUser("ROLE_EXPERT");
+        UserEntity otherUser = createUser("ROLE_EXPERT", "other-expert@example.com");
+        Program program = programService.save(programMapper.toEntity(TestDataUtil.createProgramDto()));
+
+        ProgramRateDTO rateDTO = ProgramRateDTO.builder()
+                .note(4.5)
+                .comment("Impersonation attempt")
+                .programId(program.getId())
+                .userId(otherUser.getId())
+                .build();
+
+        mockMvc.perform(
+                MockMvcRequestBuilders.post("/api/v1/program-rates")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(rateDTO))
+                        .with(TestDataUtil.mockUser(testUser.getId(), "ROLE_EXPERT"))
+        ).andExpect(
+                MockMvcResultMatchers.status().isForbidden()
+        );
+    }
+
+    @Test
+    void testThatStudentCannotCreateProgramRate() throws Exception {
+        setupUser("ROLE_STUDENT");
+        Program program = programService.save(programMapper.toEntity(TestDataUtil.createProgramDto()));
+        ProgramRateDTO rateDTO = ProgramRateDTO.builder()
+                .note(4.5)
+                .programId(program.getId())
+                .userId(testUser.getId())
+                .build();
+
+        mockMvc.perform(
+                MockMvcRequestBuilders.post("/api/v1/program-rates")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(rateDTO))
+                        .with(TestDataUtil.mockUser(testUser.getId(), "ROLE_STUDENT"))
+        ).andExpect(
+                MockMvcResultMatchers.status().isForbidden()
         );
     }
 
@@ -100,7 +149,7 @@ class ProgramRateControllerIntegrationTests {
                 MockMvcRequestBuilders.post("/api/v1/program-rates")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(rateDTO))
-                        .with(TestDataUtil.mockUser("ROLE_EXPERT"))
+                        .with(TestDataUtil.mockUser(testUser.getId(), "ROLE_EXPERT"))
         ).andReturn().getResponse().getContentAsString();
         
         ProgramRateDTO saved = objectMapper.readValue(response, ProgramRateDTO.class);
@@ -125,7 +174,7 @@ class ProgramRateControllerIntegrationTests {
                 MockMvcRequestBuilders.post("/api/v1/program-rates")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(rateDTO))
-                        .with(TestDataUtil.mockUser("ROLE_EXPERT"))
+                        .with(TestDataUtil.mockUser(testUser.getId(), "ROLE_EXPERT"))
         ).andReturn().getResponse().getContentAsString();
         
         ProgramRateDTO saved = objectMapper.readValue(response, ProgramRateDTO.class);
@@ -135,6 +184,29 @@ class ProgramRateControllerIntegrationTests {
                         .with(TestDataUtil.mockUser("ROLE_ADMIN"))
         ).andExpect(
                 MockMvcResultMatchers.status().isNoContent()
+        );
+    }
+
+    @Test
+    void testThatExpertCannotDeleteProgramRate() throws Exception {
+        setupUser("ROLE_EXPERT");
+        Program program = programService.save(programMapper.toEntity(TestDataUtil.createProgramDto()));
+        ProgramRateDTO rateDTO = ProgramRateDTO.builder().note(4.0).programId(program.getId()).userId(testUser.getId()).build();
+
+        String response = mockMvc.perform(
+                MockMvcRequestBuilders.post("/api/v1/program-rates")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(rateDTO))
+                        .with(TestDataUtil.mockUser(testUser.getId(), "ROLE_EXPERT"))
+        ).andReturn().getResponse().getContentAsString();
+
+        ProgramRateDTO saved = objectMapper.readValue(response, ProgramRateDTO.class);
+
+        mockMvc.perform(
+                MockMvcRequestBuilders.delete("/api/v1/program-rates/" + saved.getId())
+                        .with(TestDataUtil.mockUser(testUser.getId(), "ROLE_EXPERT"))
+        ).andExpect(
+                MockMvcResultMatchers.status().isForbidden()
         );
     }
 }

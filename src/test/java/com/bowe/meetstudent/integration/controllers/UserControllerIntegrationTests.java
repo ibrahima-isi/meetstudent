@@ -2,6 +2,7 @@ package com.bowe.meetstudent.integration.controllers;
 
 import com.bowe.meetstudent.TestDataUtil;
 import com.bowe.meetstudent.dto.UserDTO;
+import com.bowe.meetstudent.entities.Role;
 import com.bowe.meetstudent.entities.School;
 import com.bowe.meetstudent.entities.UserEntity;
 import com.bowe.meetstudent.mappers.Mapper;
@@ -60,16 +61,14 @@ class UserControllerIntegrationTests {
     @Test
     void testThatCreateUserReturnStatusCode201Created() throws Exception {
         UserDTO userDTO = TestDataUtil.createUserDto();
-        userDTO.getRole().setId(null);
-        var savedRole = roleRepository.save(userDTO.getRole());
-        userDTO.setRole(savedRole);
+        userDTO.setRole(null);
+        ensureRole("ROLE_STUDENT");
 
         String json = objectMapper.writeValueAsString(userDTO);
         mockMvc.perform(
                 MockMvcRequestBuilders.post("/api/v1/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json)
-                        .with(TestDataUtil.mockUser("ROLE_ADMIN"))
         ).andExpect(
                 MockMvcResultMatchers.status().isCreated()
         );
@@ -78,16 +77,14 @@ class UserControllerIntegrationTests {
     @Test
     void testThatUserCanBeCreatedSuccessfullyAndRecalled() throws Exception {
         UserDTO user = TestDataUtil.createUserDto();
-        user.getRole().setId(null);
-        var savedRole = roleRepository.save(user.getRole());
-        user.setRole(savedRole);
+        user.setRole(null);
+        ensureRole("ROLE_STUDENT");
 
         String json = objectMapper.writeValueAsString(user);
         mockMvc.perform(
                 MockMvcRequestBuilders.post("/api/v1/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json)
-                        .with(TestDataUtil.mockUser("ROLE_ADMIN"))
         ).andExpect(
                 MockMvcResultMatchers.jsonPath("$.id").isNumber()
         ).andExpect(
@@ -105,9 +102,7 @@ class UserControllerIntegrationTests {
     void testThatWishlistCanBeManaged() throws Exception {
         // Create user
         UserDTO userDTO = TestDataUtil.createUserDto();
-        userDTO.getRole().setId(null);
-        var savedRole = roleRepository.save(userDTO.getRole());
-        userDTO.setRole(savedRole);
+        userDTO.setRole(ensureRole("ROLE_STUDENT"));
         UserEntity user = userService.saveUser(userMapper.toEntity(userDTO), passwordEncoder);
 
         // Create school
@@ -116,7 +111,7 @@ class UserControllerIntegrationTests {
         // Add to wishlist
         mockMvc.perform(
                 MockMvcRequestBuilders.post("/api/v1/users/" + user.getId() + "/wishlist/" + school.getId())
-                        .with(TestDataUtil.mockUser("ROLE_STUDENT"))
+                        .with(TestDataUtil.mockUser(user.getId(), "ROLE_STUDENT"))
         ).andExpect(
                 MockMvcResultMatchers.status().isOk()
         ).andExpect(
@@ -126,7 +121,7 @@ class UserControllerIntegrationTests {
         // Remove from wishlist
         mockMvc.perform(
                 MockMvcRequestBuilders.delete("/api/v1/users/" + user.getId() + "/wishlist/" + school.getId())
-                        .with(TestDataUtil.mockUser("ROLE_STUDENT"))
+                        .with(TestDataUtil.mockUser(user.getId(), "ROLE_STUDENT"))
         ).andExpect(
                 MockMvcResultMatchers.status().isOk()
         ).andExpect(
@@ -137,9 +132,7 @@ class UserControllerIntegrationTests {
     @Test
     void testThatUserPatchUpdatesNewFields() throws Exception {
         UserDTO userDTO = TestDataUtil.createUserDto();
-        userDTO.getRole().setId(null);
-        var savedRole = roleRepository.save(userDTO.getRole());
-        userDTO.setRole(savedRole);
+        userDTO.setRole(ensureRole("ROLE_STUDENT"));
         UserEntity user = userService.saveUser(userMapper.toEntity(userDTO), passwordEncoder);
 
         UserDTO updates = UserDTO.builder()
@@ -151,7 +144,7 @@ class UserControllerIntegrationTests {
                 MockMvcRequestBuilders.patch("/api/v1/users/" + user.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updates))
-                        .with(TestDataUtil.mockUser("ROLE_STUDENT"))
+                        .with(TestDataUtil.mockUser(user.getId(), "ROLE_STUDENT"))
         ).andExpect(
                 MockMvcResultMatchers.status().isOk()
         ).andExpect(
@@ -159,5 +152,182 @@ class UserControllerIntegrationTests {
         ).andExpect(
                 MockMvcResultMatchers.jsonPath("$.certificates[0]").value("certs/c1.pdf")
         );
+    }
+
+    @Test
+    void testThatPublicRegistrationAssignsStudentRoleEvenWhenAdminRoleIsRequested() throws Exception {
+        Role studentRole = ensureRole("ROLE_STUDENT");
+        Role adminRole = ensureRole("ROLE_ADMIN");
+        UserDTO userDTO = TestDataUtil.createUserDto();
+        userDTO.setRole(adminRole);
+
+        mockMvc.perform(
+                MockMvcRequestBuilders.post("/api/v1/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(userDTO))
+        ).andExpect(
+                MockMvcResultMatchers.status().isCreated()
+        ).andExpect(
+                MockMvcResultMatchers.jsonPath("$.role.id").value(studentRole.getId())
+        ).andExpect(
+                MockMvcResultMatchers.jsonPath("$.role.name").value("ROLE_STUDENT")
+        );
+    }
+
+    @Test
+    void testThatStudentCannotPatchOwnRole() throws Exception {
+        Role studentRole = ensureRole("ROLE_STUDENT");
+        Role adminRole = ensureRole("ROLE_ADMIN");
+        UserDTO userDTO = TestDataUtil.createUserDto();
+        userDTO.setRole(studentRole);
+        UserEntity user = userService.saveUser(userMapper.toEntity(userDTO), passwordEncoder);
+
+        com.bowe.meetstudent.dto.AdminUpdateUserRoleRequest updates =
+                com.bowe.meetstudent.dto.AdminUpdateUserRoleRequest.builder().roleId(adminRole.getId()).build();
+
+        mockMvc.perform(
+                MockMvcRequestBuilders.patch("/api/v1/users/" + user.getId() + "/role")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updates))
+                        .with(TestDataUtil.mockUser(user.getId(), "ROLE_STUDENT"))
+        ).andExpect(
+                MockMvcResultMatchers.status().isForbidden()
+        );
+
+        UserEntity unchangedUser = userService.getUserById(user.getId()).orElseThrow();
+        org.junit.jupiter.api.Assertions.assertEquals(studentRole.getId(), unchangedUser.getRole().getId());
+    }
+
+    @Test
+    void testThatRoleFieldInProfilePatchIsIgnored() throws Exception {
+        Role studentRole = ensureRole("ROLE_STUDENT");
+        Role adminRole = ensureRole("ROLE_ADMIN");
+        UserDTO userDTO = TestDataUtil.createUserDto();
+        userDTO.setRole(studentRole);
+        UserEntity user = userService.saveUser(userMapper.toEntity(userDTO), passwordEncoder);
+
+        UserDTO updates = UserDTO.builder().firstname("Renamed").role(adminRole).build();
+
+        mockMvc.perform(
+                MockMvcRequestBuilders.patch("/api/v1/users/" + user.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updates))
+                        .with(TestDataUtil.mockUser(user.getId(), "ROLE_STUDENT"))
+        ).andExpect(
+                MockMvcResultMatchers.status().isOk()
+        ).andExpect(
+                MockMvcResultMatchers.jsonPath("$.firstname").value("Renamed")
+        );
+
+        UserEntity unchangedUser = userService.getUserById(user.getId()).orElseThrow();
+        org.junit.jupiter.api.Assertions.assertEquals(studentRole.getId(), unchangedUser.getRole().getId());
+    }
+
+    @Test
+    void testThatAdminCanPatchUserRole() throws Exception {
+        Role studentRole = ensureRole("ROLE_STUDENT");
+        Role expertRole = ensureRole("ROLE_EXPERT");
+        UserDTO userDTO = TestDataUtil.createUserDto();
+        userDTO.setRole(studentRole);
+        UserEntity user = userService.saveUser(userMapper.toEntity(userDTO), passwordEncoder);
+
+        com.bowe.meetstudent.dto.AdminUpdateUserRoleRequest updates =
+                com.bowe.meetstudent.dto.AdminUpdateUserRoleRequest.builder().roleId(expertRole.getId()).build();
+
+        mockMvc.perform(
+                MockMvcRequestBuilders.patch("/api/v1/users/" + user.getId() + "/role")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updates))
+                        .with(TestDataUtil.mockUser(99, "ROLE_ADMIN"))
+        ).andExpect(
+                MockMvcResultMatchers.status().isOk()
+        ).andExpect(
+                MockMvcResultMatchers.jsonPath("$.role.id").value(expertRole.getId())
+        ).andExpect(
+                MockMvcResultMatchers.jsonPath("$.role.name").value("ROLE_EXPERT")
+        );
+    }
+
+    @Test
+    void testThatRegistrationRejectsMismatchedPasswordConfirmation() throws Exception {
+        ensureRole("ROLE_STUDENT");
+        UserDTO userDTO = TestDataUtil.createUserDto();
+        userDTO.setRole(null);
+        userDTO.setConfirmedPassword("something-else");
+
+        mockMvc.perform(
+                MockMvcRequestBuilders.post("/api/v1/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(userDTO))
+        ).andExpect(
+                MockMvcResultMatchers.status().isBadRequest()
+        );
+    }
+
+    @Test
+    void testThatRegistrationRejectsDuplicateEmail() throws Exception {
+        ensureRole("ROLE_STUDENT");
+        UserDTO userDTO = TestDataUtil.createUserDto();
+        userDTO.setRole(null);
+
+        String json = objectMapper.writeValueAsString(userDTO);
+        mockMvc.perform(
+                MockMvcRequestBuilders.post("/api/v1/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json)
+        ).andExpect(
+                MockMvcResultMatchers.status().isCreated()
+        );
+
+        mockMvc.perform(
+                MockMvcRequestBuilders.post("/api/v1/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json)
+        ).andExpect(
+                MockMvcResultMatchers.status().isBadRequest()
+        );
+    }
+
+    @Test
+    void testThatUserCannotPatchAnotherUsersProfile() throws Exception {
+        Role studentRole = ensureRole("ROLE_STUDENT");
+        UserDTO ownerDto = TestDataUtil.createUserDto();
+        ownerDto.setRole(studentRole);
+        UserEntity owner = userService.saveUser(userMapper.toEntity(ownerDto), passwordEncoder);
+
+        UserDTO updates = UserDTO.builder().firstname("Hacked").build();
+
+        mockMvc.perform(
+                MockMvcRequestBuilders.patch("/api/v1/users/" + owner.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updates))
+                        .with(TestDataUtil.mockUser(owner.getId() + 1, "ROLE_STUDENT"))
+        ).andExpect(
+                MockMvcResultMatchers.status().isForbidden()
+        );
+
+        UserEntity unchanged = userService.getUserById(owner.getId()).orElseThrow();
+        org.junit.jupiter.api.Assertions.assertNotEquals("Hacked", unchanged.getFirstname());
+    }
+
+    @Test
+    void testThatUserCannotManageAnotherUsersWishlist() throws Exception {
+        Role studentRole = ensureRole("ROLE_STUDENT");
+        UserDTO ownerDto = TestDataUtil.createUserDto();
+        ownerDto.setRole(studentRole);
+        UserEntity owner = userService.saveUser(userMapper.toEntity(ownerDto), passwordEncoder);
+        School school = schoolService.save(schoolMapper.toEntity(TestDataUtil.createSchoolDto()));
+
+        mockMvc.perform(
+                MockMvcRequestBuilders.post("/api/v1/users/" + owner.getId() + "/wishlist/" + school.getId())
+                        .with(TestDataUtil.mockUser(owner.getId() + 1, "ROLE_STUDENT"))
+        ).andExpect(
+                MockMvcResultMatchers.status().isForbidden()
+        );
+    }
+
+    private Role ensureRole(String roleName) {
+        return roleRepository.findByName(roleName)
+                .orElseGet(() -> roleRepository.save(Role.builder().name(roleName).build()));
     }
 }

@@ -14,16 +14,25 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class MediaServiceTest {
 
+    private static final long MAX_UPLOAD_BYTES = 10_485_760L;
+    private static final byte[] JPEG_CONTENT = {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0, 0x00, 0x10, 'J', 'F', 'I', 'F'};
+
     @TempDir
     Path tempDir;
 
-    @Test
-    void testSaveAndDeleteMedia() throws IOException {
+    private MediaService newMediaService() {
         MediaService mediaService = new MediaService();
         ReflectionTestUtils.setField(mediaService, "uploadDir", tempDir.toString());
+        ReflectionTestUtils.setField(mediaService, "maxUploadBytes", MAX_UPLOAD_BYTES);
+        return mediaService;
+    }
+
+    @Test
+    void testSaveAndDeleteMedia() throws IOException {
+        MediaService mediaService = newMediaService();
 
         MockMultipartFile file = new MockMultipartFile(
-                "file", "test.jpg", "image/jpeg", "test content".getBytes());
+                "file", "test.jpg", "image/jpeg", JPEG_CONTENT);
 
         // Test Save
         String relativePath = mediaService.saveMedia(file, "schools");
@@ -38,9 +47,76 @@ class MediaServiceTest {
     }
 
     @Test
+    void testSaveMediaRejectsFileExceedingMaxSize() {
+        MediaService mediaService = newMediaService();
+        ReflectionTestUtils.setField(mediaService, "maxUploadBytes", 5L);
+
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "test.jpg", "image/jpeg", JPEG_CONTENT);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> mediaService.saveMedia(file, "schools"));
+        assertEquals("File exceeds the maximum allowed size", exception.getMessage());
+    }
+
+    @Test
+    void testSaveMediaRejectsDisallowedExtension() {
+        MediaService mediaService = newMediaService();
+
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "malicious.exe", "application/octet-stream", JPEG_CONTENT);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> mediaService.saveMedia(file, "schools"));
+        assertEquals("File extension is not allowed", exception.getMessage());
+    }
+
+    @Test
+    void testSaveMediaRejectsMimeTypeMismatch() {
+        MediaService mediaService = newMediaService();
+
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "test.jpg", "application/pdf", JPEG_CONTENT);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> mediaService.saveMedia(file, "schools"));
+        assertEquals("File type does not match an allowed media type", exception.getMessage());
+    }
+
+    @Test
+    void testSaveMediaRejectsContentNotMatchingDeclaredType() {
+        MediaService mediaService = newMediaService();
+
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "test.jpg", "image/jpeg", "not a real jpeg".getBytes());
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> mediaService.saveMedia(file, "schools"));
+        assertEquals("File content does not match its declared type", exception.getMessage());
+    }
+
+    @Test
+    void testSaveMediaRejectsInvalidEntityType() {
+        MediaService mediaService = newMediaService();
+
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "test.jpg", "image/jpeg", JPEG_CONTENT);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> mediaService.saveMedia(file, "../../etc"));
+    }
+
+    @Test
+    void testDeleteMediaRejectsPathTraversal() {
+        MediaService mediaService = newMediaService();
+
+        assertThrows(IOException.class,
+                () -> mediaService.deleteMedia("../outside.txt"));
+    }
+
+    @Test
     void testDeleteMediaByUrl() throws IOException {
-        MediaService mediaService = new MediaService();
-        ReflectionTestUtils.setField(mediaService, "uploadDir", tempDir.toString());
+        MediaService mediaService = newMediaService();
 
         // Create a dummy file
         Path schoolsDir = tempDir.resolve("schools");
@@ -51,14 +127,13 @@ class MediaServiceTest {
         // Test deletion via full URL extraction
         String url = "http://localhost:8080/uploads/schools/dummy.jpg";
         mediaService.deleteMediaByUrl(url);
-        
+
         assertFalse(Files.exists(dummyFile));
     }
 
     @Test
     void testDeleteOldMediaIfChanged() throws IOException {
-        MediaService mediaService = new MediaService();
-        ReflectionTestUtils.setField(mediaService, "uploadDir", tempDir.toString());
+        MediaService mediaService = newMediaService();
 
         Path schoolsDir = tempDir.resolve("schools");
         Files.createDirectories(schoolsDir);
@@ -71,8 +146,7 @@ class MediaServiceTest {
 
     @Test
     void testDeleteRemovedMedia() throws IOException {
-        MediaService mediaService = new MediaService();
-        ReflectionTestUtils.setField(mediaService, "uploadDir", tempDir.toString());
+        MediaService mediaService = newMediaService();
 
         Path diplomaDir = tempDir.resolve("users");
         Files.createDirectories(diplomaDir);

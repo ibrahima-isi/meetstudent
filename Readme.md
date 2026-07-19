@@ -4,7 +4,7 @@ A robust Spring Boot REST API for a student meeting and collaboration platform. 
 
 ## 🚀 Tech Stack
 
-- **Framework:** Spring Boot 3.4.7 (Java 17)
+- **Framework:** Spring Boot 3.5.x (Java 21)
 - **Security:** Spring Security + JWT (Auth0) + Database-backed Refresh Tokens
 - **Database:** PostgreSQL (Cloud-hosted via **Neon**)
 - **Migrations:** Flyway

@@ -2,12 +2,15 @@ package com.bowe.meetstudent.services;
 
 import com.bowe.meetstudent.entities.UserEntity;
 import com.bowe.meetstudent.entities.School;
+import com.bowe.meetstudent.exceptions.ResourceNotFoundException;
+import com.bowe.meetstudent.repositories.RoleRepository;
 import com.bowe.meetstudent.repositories.UserRepository;
 import com.bowe.meetstudent.repositories.SchoolRepository;
 import com.bowe.meetstudent.entities.Role;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,8 +26,11 @@ import java.util.ArrayList;
 @RequiredArgsConstructor
 public class UserService {
 
+    private static final String DEFAULT_REGISTRATION_ROLE = "ROLE_STUDENT";
+
     private final UserRepository userRepository;
     private final SchoolRepository schoolRepository;
+    private final RoleRepository roleRepository;
     private final MediaService mediaService;
 
     public UserEntity saveUser(UserEntity userEntity, PasswordEncoder passwordEncoder ) {
@@ -34,6 +40,13 @@ public class UserService {
                 )
         );
         return this.userRepository.save(userEntity);
+    }
+
+    public UserEntity registerStudent(UserEntity userEntity, PasswordEncoder passwordEncoder) {
+        Role studentRole = roleRepository.findByName(DEFAULT_REGISTRATION_ROLE)
+                .orElseThrow(() -> new ResourceNotFoundException("Default student role not found"));
+        userEntity.setRole(studentRole);
+        return saveUser(userEntity, passwordEncoder);
     }
 
     public List<UserEntity> findAllToList() {
@@ -92,6 +105,15 @@ public class UserService {
 
     @Transactional
     public UserEntity patch(Integer id, UserEntity updates, PasswordEncoder encoder) {
+        return patch(id, updates, encoder, false);
+    }
+
+    @Transactional
+    public UserEntity patchAsAdmin(Integer id, UserEntity updates, PasswordEncoder encoder) {
+        return patch(id, updates, encoder, true);
+    }
+
+    private UserEntity patch(Integer id, UserEntity updates, PasswordEncoder encoder, boolean allowRoleUpdate) {
         return userRepository.findById(id).map(existing -> {
             // Handle diploma changes
             if (updates.getDiplomas() != null) {
@@ -114,7 +136,7 @@ public class UserService {
             if (updates.getEmail() != null) existing.setEmail(updates.getEmail());
             if (updates.getBirthday() != null) existing.setBirthday(updates.getBirthday());
             if (updates.getQualification() != null) existing.setQualification(updates.getQualification());
-            if (updates.getRole() != null) existing.setRole(updates.getRole());
+            if (allowRoleUpdate && updates.getRole() != null) existing.setRole(updates.getRole());
             if (updates.getPresentationVideoUrl() != null) existing.setPresentationVideoUrl(updates.getPresentationVideoUrl());
             
             if (updates.getPassword() != null && !updates.getPassword().isEmpty()) {
@@ -123,6 +145,17 @@ public class UserService {
             
             return userRepository.save(existing);
         }).orElseThrow(() -> new com.bowe.meetstudent.exceptions.ResourceNotFoundException("User not found"));
+    }
+
+    public UserEntity resolveAuthenticatedUser(Integer authenticatedUserId, Integer requestedUserId) {
+        if (authenticatedUserId == null) {
+            throw new AccessDeniedException("Authentication is required.");
+        }
+        if (requestedUserId != null && !requestedUserId.equals(authenticatedUserId)) {
+            throw new AccessDeniedException("You cannot act on behalf of another user.");
+        }
+        return userRepository.findById(authenticatedUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("Authenticated user not found"));
     }
 
     @Transactional

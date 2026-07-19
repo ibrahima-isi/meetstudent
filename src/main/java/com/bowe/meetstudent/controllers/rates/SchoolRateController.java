@@ -3,6 +3,7 @@ package com.bowe.meetstudent.controllers.rates;
 import com.bowe.meetstudent.dto.SchoolRateDTO;
 import com.bowe.meetstudent.entities.rates.SchoolRate;
 import com.bowe.meetstudent.mappers.Mapper;
+import com.bowe.meetstudent.security.UserPrincipal;
 import com.bowe.meetstudent.services.SchoolRateService;
 import com.bowe.meetstudent.services.SchoolService;
 import com.bowe.meetstudent.services.UserService;
@@ -11,7 +12,6 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.modelmapper.ModelMapper;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -20,10 +20,10 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequiredArgsConstructor
@@ -33,14 +33,15 @@ public class SchoolRateController {
 
     private final SchoolRateService service;
     private final Mapper<SchoolRate, SchoolRateDTO> mapper;
-    private final ModelMapper modelMapper;
     private final SchoolService schoolService;
     private final UserService userService;
 
     @PostMapping
     @Operation(summary = "Rate a school", description = "Allows students or experts to post a rating and comment for a school.")
     @PreAuthorize("hasRole('EXPERT') or hasRole('STUDENT')")
-    public ResponseEntity<SchoolRateDTO> create(@RequestBody SchoolRateDTO dto) {
+    public ResponseEntity<SchoolRateDTO> create(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestBody SchoolRateDTO dto) {
         SchoolRate rate = mapper.toEntity(dto);
         
         if (dto.getSchoolId() != null) {
@@ -48,12 +49,11 @@ public class SchoolRateController {
             if (school.isEmpty()) return ResponseEntity.badRequest().build();
             rate.setSchool(school.get());
         }
-        
-        if (dto.getUserId() != null) {
-            var user = userService.getUserById(dto.getUserId());
-            if (user.isEmpty()) return ResponseEntity.badRequest().build();
-            rate.setUserEntity(user.get());
-        }
+
+        rate.setUserEntity(userService.resolveAuthenticatedUser(
+                principal == null ? null : principal.getId(),
+                dto.getUserId()
+        ));
 
         var saved = this.service.save(rate);
         return new ResponseEntity<>(mapper.toDTO(saved), HttpStatus.CREATED);
