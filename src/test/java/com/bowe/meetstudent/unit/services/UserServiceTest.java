@@ -55,9 +55,6 @@ class UserServiceTest {
         user.setId(1);
         user.setFirstname("John");
         user.setLastname("Doe");
-        user.setDiplomas(new ArrayList<>(List.of("users/diploma1.pdf")));
-        user.setCertificates(new ArrayList<>(List.of("users/cert1.pdf")));
-        user.setPresentationVideoUrl("users/video.mp4");
         user.setWishlist(new ArrayList<>());
     }
 
@@ -102,9 +99,7 @@ class UserServiceTest {
 
         userService.deleteUser(1);
 
-        Mockito.verify(mediaService).deleteMediaByUrl("users/diploma1.pdf");
-        Mockito.verify(mediaService).deleteMediaByUrl("users/cert1.pdf");
-        Mockito.verify(mediaService).deleteMediaByUrl("users/video.mp4");
+        Mockito.verify(mediaService).deleteAllOwnedBy(1);
         Mockito.verify(userRepository).deleteById(1);
     }
 
@@ -112,19 +107,18 @@ class UserServiceTest {
     void testPatch() {
         UserEntity updates = UserEntity.builder()
                 .firstname("Johnny")
-                .certificates(List.of("users/cert2.pdf"))
-                .presentationVideoUrl("users/new-video.mp4")
+                .qualification("Data Science")
                 .build();
-        
+
         Mockito.when(userRepository.findById(1)).thenReturn(Optional.of(user));
         Mockito.when(userRepository.save(any(UserEntity.class))).thenReturn(user);
 
         userService.patch(1, updates, passwordEncoder);
 
         assertEquals("Johnny", user.getFirstname());
-        assertEquals("users/new-video.mp4", user.getPresentationVideoUrl());
-        Mockito.verify(mediaService).deleteRemovedMedia(any(), any());
-        Mockito.verify(mediaService).deleteOldMediaIfChanged(any(), any());
+        assertEquals("Data Science", user.getQualification());
+        // Media is no longer managed through the user patch.
+        Mockito.verifyNoInteractions(mediaService);
     }
 
     @Test

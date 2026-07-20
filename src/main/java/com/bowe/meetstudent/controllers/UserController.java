@@ -219,9 +219,6 @@ public class UserController {
                 .birthday(request.getBirthday())
                 .password(request.getPassword())
                 .qualification(request.getQualification())
-                .diplomas(request.getDiplomas())
-                .certificates(request.getCertificates())
-                .presentationVideoUrl(request.getPresentationVideoUrl())
                 .build();
     }
 

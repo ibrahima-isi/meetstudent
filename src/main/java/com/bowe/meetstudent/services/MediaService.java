@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -34,7 +33,6 @@ public class MediaService {
     private final MediaStorageService storageService;
     private final MediaRepository mediaRepository;
 
-    private static final Set<String> ALLOWED_ENTITY_TYPES = Set.of("schools", "users", "courses", "programs");
     private static final Map<String, Set<String>> ALLOWED_MIME_TYPES_BY_EXTENSION = Map.of(
             "jpg", Set.of("image/jpeg"),
             "jpeg", Set.of("image/jpeg"),
@@ -51,38 +49,6 @@ public class MediaService {
 
     @Value("${file.max-upload-bytes:10485760}")
     private long maxUploadBytes;
-
-    /**
-     * save file by entity
-     * @param file the file to save
-     * @param entityType the entity
-     * @return String
-     * @throws IOException
-     */
-    public String saveMedia(MultipartFile file, String entityType) throws IOException {
-        validateEntityType(entityType);
-        String extension = validateFile(file);
-        byte[] content = file.getBytes();
-        validateFileContent(extension, content);
-
-        Path uploadBasePath = getUploadBasePath();
-        Path uploadPath = uploadBasePath.resolve(entityType).normalize();
-        ensurePathInsideUploadDir(uploadPath);
-        if(!Files.exists(uploadPath)) {
-            Files.createDirectories(uploadPath);
-        }
-
-        String fileName = UUID.randomUUID() + "." + extension;
-
-        // Persisting the file
-        Path filePath = uploadPath.resolve(fileName).normalize();
-        ensurePathInsideUploadDir(filePath);
-        Files.write(filePath, content);
-
-        // return path or url of the saved file
-        return entityType + "/" + fileName;
-
-    }
 
     /**
      * Delete media file from filesystem
@@ -128,30 +94,6 @@ public class MediaService {
     public void deleteOldMediaIfChanged(String oldUrl, String newUrl) {
         if (oldUrl != null && !oldUrl.isEmpty() && !oldUrl.equals(newUrl)) {
             deleteMediaByUrl(oldUrl);
-        }
-    }
-
-    /**
-     * Compare two lists of media and delete those that are no longer present
-     * @param oldUrls List of previous URLs
-     * @param newUrls List of new URLs
-     */
-    public void deleteRemovedMedia(java.util.List<String> oldUrls, java.util.List<String> newUrls) {
-        if (oldUrls == null) return;
-        for (String oldUrl : oldUrls) {
-            if (newUrls == null || !newUrls.contains(oldUrl)) {
-                deleteMediaByUrl(oldUrl);
-            }
-        }
-    }
-
-    public boolean isAllowedEntityType(String entityType) {
-        return entityType != null && ALLOWED_ENTITY_TYPES.contains(entityType);
-    }
-
-    private void validateEntityType(String entityType) {
-        if (!isAllowedEntityType(entityType)) {
-            throw new IllegalArgumentException("Invalid entity type. Allowed: schools, users, courses, programs");
         }
     }
 

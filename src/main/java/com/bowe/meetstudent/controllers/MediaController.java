@@ -15,6 +15,7 @@ import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -26,7 +27,9 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequiredArgsConstructor
@@ -49,6 +52,11 @@ public class MediaController {
         return new ResponseEntity<>(mediaMapper.toDTO(media), HttpStatus.CREATED);
     }
 
+    // MIME types safe to render inline in the browser. Anything else is forced to download.
+    private static final Set<String> INLINE_SAFE_TYPES = Set.of(
+            MediaType.IMAGE_JPEG_VALUE, MediaType.IMAGE_PNG_VALUE, "image/webp",
+            MediaType.APPLICATION_PDF_VALUE);
+
     @GetMapping("/{id}")
     @Operation(summary = "Download a media file",
             description = "Public media is served to anyone; private media only to its owner or an admin.")
@@ -57,13 +65,26 @@ public class MediaController {
             @PathVariable Integer id) throws IOException {
         Media media = mediaService.getAccessibleMedia(id, principal);
         Resource resource = mediaService.loadContent(media);
+
         String contentType = media.getContentType() != null
                 ? media.getContentType()
                 : MediaType.APPLICATION_OCTET_STREAM_VALUE;
+        // Only render a known-safe type inline; never trust the stored value to be renderable.
+        boolean inline = INLINE_SAFE_TYPES.contains(contentType);
+        String responseType = inline ? contentType : MediaType.APPLICATION_OCTET_STREAM_VALUE;
+
+        // RFC 6266 encoding neutralizes CR/LF and quote injection from the user-supplied filename.
+        String filename = media.getOriginalFilename() != null ? media.getOriginalFilename() : "file";
+        ContentDisposition disposition = ContentDisposition
+                .builder(inline ? "inline" : "attachment")
+                .filename(filename, StandardCharsets.UTF_8)
+                .build();
+
         return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(contentType))
-                .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "inline; filename=\"" + (media.getOriginalFilename() != null ? media.getOriginalFilename() : "file") + "\"")
+                .contentType(MediaType.parseMediaType(responseType))
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
+                .header("X-Content-Type-Options", "nosniff")
+                .header("Content-Security-Policy", "sandbox; default-src 'none'")
                 .body(resource);
     }
 
