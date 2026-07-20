@@ -51,7 +51,9 @@ public class WebSecurityConfig {
                                 // Public endpoints
                                 .requestMatchers("/").permitAll()
                                 .requestMatchers("/api/v1/auth/**").permitAll()
-                                .requestMatchers("/uploads/**").permitAll()
+                                .requestMatchers("/uploads/public/**").permitAll()
+                                .requestMatchers(HttpMethod.GET, "/api/v1/media/mine").authenticated()
+                                .requestMatchers(HttpMethod.GET, "/api/v1/media/*").permitAll()
                                 .requestMatchers("/v3/api-docs/**", "/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Allow preflight
                                 .requestMatchers("/*.js", "/*.css", "/*.ico", "/assets/**").permitAll()

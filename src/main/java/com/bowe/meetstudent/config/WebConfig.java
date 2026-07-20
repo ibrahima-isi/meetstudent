@@ -14,7 +14,9 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry){
-        String uploadPath = Paths.get(uploadDir).toAbsolutePath().normalize().toUri().toString();
-        registry.addResourceHandler("/uploads/**").addResourceLocations(uploadPath);
+        // Only the public subtree is ever served statically. Private files live in file.private-dir,
+        // which is never registered here and is reachable only through GET /api/v1/media/{id}.
+        String publicPath = Paths.get(uploadDir, "public").toAbsolutePath().normalize().toUri().toString();
+        registry.addResourceHandler("/uploads/public/**").addResourceLocations(publicPath);
     }
 }
