@@ -1,7 +1,19 @@
 package com.bowe.meetstudent.services;
 
+import com.bowe.meetstudent.entities.Media;
+import com.bowe.meetstudent.entities.enums.MediaCategory;
+import com.bowe.meetstudent.entities.enums.VerificationStatus;
+import com.bowe.meetstudent.exceptions.ResourceNotFoundException;
+import com.bowe.meetstudent.repositories.MediaRepository;
+import com.bowe.meetstudent.security.UserPrincipal;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -9,12 +21,18 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class MediaService {
+
+    private final MediaStorageService storageService;
+    private final MediaRepository mediaRepository;
 
     private static final Set<String> ALLOWED_ENTITY_TYPES = Set.of("schools", "users", "courses", "programs");
     private static final Map<String, Set<String>> ALLOWED_MIME_TYPES_BY_EXTENSION = Map.of(
@@ -210,6 +228,124 @@ public class MediaService {
         if (!path.toAbsolutePath().normalize().startsWith(getUploadBasePath())) {
             throw new IOException("Invalid media path");
         }
+    }
+
+    // --- Media entity orchestration ---
+
+    @Transactional
+    public Media upload(MultipartFile file, MediaCategory category,
+                        UserPrincipal principal, String idempotencyKey) throws IOException {
+        assertCanUpload(principal, category);
+
+        Integer ownerId = category.isPersonalDocument() || category == MediaCategory.USER_PHOTO
+                ? principal.getId()
+                : null;
+
+        if (idempotencyKey != null && !idempotencyKey.isBlank() && ownerId != null) {
+            Optional<Media> existing = mediaRepository.findByOwnerIdAndIdempotencyKey(ownerId, idempotencyKey);
+            if (existing.isPresent()) {
+                return existing.get();
+            }
+        }
+
+        String extension = validateFile(file);
+        byte[] content = file.getBytes();
+        validateFileContent(extension, content);
+
+        String storageKey = storageService.store(content, extension, category.getVisibility());
+
+        Media media = Media.builder()
+                .storageKey(storageKey)
+                .originalFilename(file.getOriginalFilename())
+                .contentType(file.getContentType())
+                .sizeBytes(file.getSize())
+                .category(category)
+                .visibility(category.getVisibility())
+                .ownerId(ownerId)
+                .verificationStatus(category.isModerated() ? VerificationStatus.PENDING : null)
+                .idempotencyKey(idempotencyKey)
+                .build();
+
+        return mediaRepository.save(media);
+    }
+
+    public void assertCanUpload(UserPrincipal principal, MediaCategory category) {
+        if (principal == null) {
+            throw new AccessDeniedException("Authentication required.");
+        }
+        boolean allowed = principal.getAuthorities().stream()
+                .anyMatch(a -> category.getAllowedUploadRoles().contains(a.getAuthority()));
+        if (!allowed) {
+            throw new AccessDeniedException("You are not allowed to upload this media type.");
+        }
+    }
+
+    public Media getAccessibleMedia(Integer mediaId, UserPrincipal principal) {
+        Media media = mediaRepository.findById(mediaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Media not found"));
+
+        if (media.getVisibility() == com.bowe.meetstudent.entities.enums.MediaVisibility.PUBLIC) {
+            return media;
+        }
+        boolean owner = principal != null && principal.getId() != null
+                && principal.getId().equals(media.getOwnerId());
+        if (owner || isAdmin(principal)) {
+            return media;
+        }
+        throw new AccessDeniedException("You cannot access this document.");
+    }
+
+    public Resource loadContent(Media media) throws IOException {
+        return storageService.loadAsResource(media.getStorageKey());
+    }
+
+    private boolean isAdmin(UserPrincipal principal) {
+        return principal != null && principal.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+    }
+
+    @Transactional
+    public Media setVerification(Integer mediaId, VerificationStatus status, String reason) {
+        if (status == null || status == VerificationStatus.PENDING) {
+            throw new IllegalArgumentException("Status must be VERIFIED or REJECTED.");
+        }
+        Media media = mediaRepository.findById(mediaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Media not found"));
+        media.setVerificationStatus(status);
+        media.setRejectionReason(status == VerificationStatus.REJECTED ? reason : null);
+        return mediaRepository.save(media);
+    }
+
+    public Page<Media> findByStatus(VerificationStatus status, Pageable pageable) {
+        return mediaRepository.findByVerificationStatus(status, pageable);
+    }
+
+    public List<Media> findOwnedBy(Integer ownerId) {
+        return mediaRepository.findByOwnerId(ownerId);
+    }
+
+    public List<Media> findByOwnerIdAndCategory(Integer ownerId, MediaCategory category) {
+        return mediaRepository.findByOwnerIdAndCategory(ownerId, category);
+    }
+
+    @Transactional
+    public void delete(Integer mediaId, UserPrincipal principal) throws IOException {
+        Media media = getAccessibleMedia(mediaId, principal);
+        storageService.delete(media.getStorageKey());
+        mediaRepository.delete(media);
+    }
+
+    @Transactional
+    public void deleteAllOwnedBy(Integer ownerId) {
+        List<Media> owned = mediaRepository.findByOwnerId(ownerId);
+        for (Media media : owned) {
+            try {
+                storageService.delete(media.getStorageKey());
+            } catch (IOException e) {
+                // best-effort file cleanup; the row is still removed
+            }
+        }
+        mediaRepository.deleteAll(owned);
     }
 
 }
