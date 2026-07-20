@@ -34,8 +34,24 @@ A robust Spring Boot REST API for a student meeting and collaboration platform. 
 - **Wishlist:** Students can save schools to their personal wishlist.
 - **Accreditations:** Manage institutional certifications (e.g., AACSB) with validity periods.
 
-### 4. Media Lifecycle Management
-- **Automatic Cleanup:** Files (logos, diplomas, videos) are automatically deleted from the filesystem when an entity is deleted or when a file is replaced/updated.
+### 4. Media & Document Management
+- **`Media` entity:** Each uploaded file is a row carrying its category, visibility, owner, and verification status. Uploads return a media **id** (`MediaDTO`), never a disk path.
+- **Public vs private storage:** Public media (school logos/covers, user photos) is served statically under `/uploads/public/**`. Personal documents (diplomas, certificates, bulletins, presentation videos) are **private** — stored outside the static tree and reachable only via `GET /api/v1/media/{id}` with an owner-or-admin check.
+- **Role-gated upload & idempotency:** Personal documents are uploadable by STUDENT/EXPERT/ADMIN, school media by ADMIN only. Send an `Idempotency-Key` header to make retries safe.
+- **Moderation:** Documents start `PENDING`; an admin marks them `VERIFIED`/`REJECTED` (with an optional reason).
+- **Automatic cleanup:** Files are deleted from disk when the owning entity/media is deleted or replaced.
+
+**Media endpoints**
+| Method | Path | Access |
+| :--- | :--- | :--- |
+| `POST` | `/api/v1/media?category=DIPLOMA` (multipart `file`, optional `Idempotency-Key` header) | Role depends on category |
+| `GET` | `/api/v1/media/{id}` | Public media: anyone; private: owner or admin |
+| `GET` | `/api/v1/media/mine` | Authenticated (own media) |
+| `GET` | `/api/v1/media?status=PENDING` | ADMIN (moderation queue) |
+| `PATCH` | `/api/v1/media/{id}/verification` | ADMIN |
+| `DELETE` | `/api/v1/media/{id}` | Owner or admin |
+
+> **Breaking change:** `diplomas`, `certificates`, and the presentation video are no longer string fields on the user. They are uploaded via `POST /api/v1/media?category=...` and returned on the user as `MediaDTO` objects (`diplomas`/`certificates` are `List<MediaDTO>`, `presentationVideo` is a `MediaDTO`). The old `POST /api/v1/media/{entityType}/upload` endpoint has been removed.
 
 ## 📦 Getting Started
 
