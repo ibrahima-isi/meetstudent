@@ -223,4 +223,42 @@ class MediaServiceTest {
         assertThrows(AccessDeniedException.class,
                 () -> mediaService.delete(5, principal(8, "ROLE_STUDENT")));
     }
+
+    // --- deleteById / findById ---
+
+    @Test
+    void findByIdReturnsEmptyForNullId() {
+        assertTrue(mediaService.findById(null).isEmpty());
+        verifyNoInteractions(mediaRepository);
+    }
+
+    @Test
+    void deleteByIdDeletesFileAndRow() throws IOException {
+        Media media = Media.builder().storageKey("public/x.png")
+                .visibility(MediaVisibility.PUBLIC).category(MediaCategory.SCHOOL_LOGO).build();
+        ReflectionTestUtils.setField(media, "id", 9);
+        when(mediaRepository.findById(9)).thenReturn(Optional.of(media));
+
+        mediaService.deleteById(9);
+
+        verify(storageService).delete("public/x.png");
+        verify(mediaRepository).delete(media);
+    }
+
+    @Test
+    void deleteByIdIsNoOpWhenNotFound() throws IOException {
+        when(mediaRepository.findById(404)).thenReturn(Optional.empty());
+
+        mediaService.deleteById(404);
+
+        verify(storageService, never()).delete(any());
+        verify(mediaRepository, never()).delete(any());
+    }
+
+    @Test
+    void deleteByIdIsNoOpForNullId() throws IOException {
+        mediaService.deleteById(null);
+        verifyNoInteractions(mediaRepository);
+        verify(storageService, never()).delete(any());
+    }
 }

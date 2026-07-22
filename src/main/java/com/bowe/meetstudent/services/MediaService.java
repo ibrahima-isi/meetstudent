@@ -277,6 +277,29 @@ public class MediaService {
         mediaRepository.delete(media);
     }
 
+    public Optional<Media> findById(Integer mediaId) {
+        if (mediaId == null) return Optional.empty();
+        return mediaRepository.findById(mediaId);
+    }
+
+    /**
+     * Server-side delete of a media row and its file, without a principal check.
+     * For orchestration by ROLE_ADMIN-gated entity endpoints (school/course/program
+     * image replace + delete). No-op when the id is null or the row is gone.
+     */
+    @Transactional
+    public void deleteById(Integer mediaId) {
+        if (mediaId == null) return;
+        mediaRepository.findById(mediaId).ifPresent(media -> {
+            try {
+                storageService.delete(media.getStorageKey());
+            } catch (IOException e) {
+                // best-effort file cleanup; the row is still removed
+            }
+            mediaRepository.delete(media);
+        });
+    }
+
     @Transactional
     public void deleteAllOwnedBy(Integer ownerId) {
         List<Media> owned = mediaRepository.findByOwnerId(ownerId);
