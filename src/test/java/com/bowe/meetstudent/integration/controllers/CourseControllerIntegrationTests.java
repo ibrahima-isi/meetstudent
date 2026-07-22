@@ -42,6 +42,50 @@ class CourseControllerIntegrationTests {
     @Autowired
     private CourseMapper courseMapper;
 
+    @Autowired
+    private com.bowe.meetstudent.repositories.MediaRepository mediaRepository;
+
+    private com.bowe.meetstudent.entities.Media persistedCoursePhoto() {
+        var media = com.bowe.meetstudent.entities.Media.builder()
+                .storageKey("public/course-it.png")
+                .originalFilename("c.png").contentType("image/png").sizeBytes(10L)
+                .category(com.bowe.meetstudent.entities.enums.MediaCategory.COURSE_PHOTO)
+                .visibility(com.bowe.meetstudent.entities.enums.MediaVisibility.PUBLIC)
+                .build();
+        return mediaRepository.save(media);
+    }
+
+    @Test
+    void deleteCourseReturns200WithDeletedDto() throws Exception {
+        com.bowe.meetstudent.entities.Course course =
+                courseService.save(courseMapper.toEntity(TestDataUtil.createCourseDto()));
+
+        mockMvc.perform(MockMvcRequestBuilders.delete("/api/v1/courses/" + course.getId())
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.id").value(course.getId()));
+
+        org.junit.jupiter.api.Assertions.assertTrue(courseService.findById(course.getId()).isEmpty());
+    }
+
+    @Test
+    void putCourseWithPhotoMediaIdResolvesPhotoWithPublicUrl() throws Exception {
+        com.bowe.meetstudent.entities.Course saved =
+                courseService.save(courseMapper.toEntity(TestDataUtil.createCourseDto()));
+        var media = persistedCoursePhoto();
+
+        CourseDTO body = TestDataUtil.createCourseDto();
+        body.setPhotoMediaId(media.getId());
+        String json = objectMapper.writeValueAsString(body);
+
+        mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/courses/" + saved.getId())
+                        .contentType(MediaType.APPLICATION_JSON).content(json)
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.photo.id").value(media.getId()))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.photo.publicUrl").value("/uploads/public/course-it.png"));
+    }
+
     @Test
     void testThatCreateCourseReturnsHttpStatus201Created() throws Exception {
         CourseDTO courseDTO = TestDataUtil.createCourseDto();

@@ -135,9 +135,9 @@ class UserControllerIntegrationTests {
         userDTO.setRole(ensureRole("ROLE_STUDENT"));
         UserEntity user = userService.saveUser(userMapper.toEntity(userDTO), passwordEncoder);
 
-        UserDTO updates = UserDTO.builder()
-                .presentationVideoUrl("videos/test.mp4")
-                .certificates(List.of("certs/c1.pdf"))
+        com.bowe.meetstudent.dto.UpdateProfileRequest updates = com.bowe.meetstudent.dto.UpdateProfileRequest.builder()
+                .firstname("Renamed")
+                .qualification("Data Science")
                 .build();
 
         mockMvc.perform(
@@ -148,9 +148,9 @@ class UserControllerIntegrationTests {
         ).andExpect(
                 MockMvcResultMatchers.status().isOk()
         ).andExpect(
-                MockMvcResultMatchers.jsonPath("$.presentationVideoUrl").value("videos/test.mp4")
+                MockMvcResultMatchers.jsonPath("$.firstname").value("Renamed")
         ).andExpect(
-                MockMvcResultMatchers.jsonPath("$.certificates[0]").value("certs/c1.pdf")
+                MockMvcResultMatchers.jsonPath("$.qualification").value("Data Science")
         );
     }
 

@@ -180,8 +180,11 @@ public class SchoolController {
     public ResponseEntity<SchoolDTO> delete(
             @Parameter(description = "ID of the school to delete") @PathVariable int id) {
         return this.schoolService.getSchoolById(id).map(toDelete -> {
+            // Map to DTO BEFORE deleting: the entity's lazy collections cannot be
+            // resolved once it has been removed from the session.
+            SchoolDTO dto = schoolMapper.toDTO(toDelete);
             this.schoolService.delete(toDelete.getId());
-            return new ResponseEntity<>(schoolMapper.toDTO(toDelete), HttpStatus.OK);
+            return new ResponseEntity<>(dto, HttpStatus.OK);
         }).orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
 }

@@ -8,7 +8,6 @@ import lombok.NoArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import java.util.Date;
-import java.util.List;
 
 /**
  * Self-service profile update payload. Deliberately excludes the role:
@@ -33,10 +32,4 @@ public class UpdateProfileRequest {
     private String password;
 
     private String qualification;
-
-    private List<String> diplomas;
-
-    private List<String> certificates;
-
-    private String presentationVideoUrl;
 }

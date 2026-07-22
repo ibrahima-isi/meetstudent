@@ -42,7 +42,7 @@ public class CourseService {
     @Transactional
     public void delete(int id) {
         this.courseRepository.findById(id).ifPresent(course -> {
-            mediaService.deleteMediaByUrl(course.getPhotoUrl());
+            mediaService.deleteById(course.getPhotoMediaId());
             this.courseRepository.deleteById(id);
         });
     }
@@ -58,11 +58,14 @@ public class CourseService {
     @Transactional
     public Course patch(Integer id, Course updates) {
         return courseRepository.findById(id).map(existing -> {
-            mediaService.deleteOldMediaIfChanged(existing.getPhotoUrl(), updates.getPhotoUrl());
-            
+            if (updates.getPhotoMediaId() != null
+                    && !updates.getPhotoMediaId().equals(existing.getPhotoMediaId())) {
+                mediaService.deleteById(existing.getPhotoMediaId());
+            }
+
             if (updates.getName() != null) existing.setName(updates.getName());
             if (updates.getCode() != null) existing.setCode(updates.getCode());
-            if (updates.getPhotoUrl() != null) existing.setPhotoUrl(updates.getPhotoUrl());
+            if (updates.getPhotoMediaId() != null) existing.setPhotoMediaId(updates.getPhotoMediaId());
             if (updates.getProgram() != null) existing.setProgram(updates.getProgram());
             
             return courseRepository.save(existing);

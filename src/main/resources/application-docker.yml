@@ -9,6 +9,11 @@ spring:
     hibernate:
       ddl-auto: validate
 
+file:
+  upload-dir: ${FILE_UPLOAD_DIR:uploads}
+  private-dir: ${FILE_PRIVATE_DIR:storage/private}
+  max-upload-bytes: 10485760
+
 security:
   jwt:
     secret-key: ${JWT_SECRET_KEY}

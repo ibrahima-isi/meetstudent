@@ -1,166 +1,264 @@
 package com.bowe.meetstudent.unit.services;
 
+import com.bowe.meetstudent.entities.Media;
+import com.bowe.meetstudent.entities.enums.MediaCategory;
+import com.bowe.meetstudent.entities.enums.MediaVisibility;
+import com.bowe.meetstudent.entities.enums.VerificationStatus;
+import com.bowe.meetstudent.repositories.MediaRepository;
+import com.bowe.meetstudent.security.UserPrincipal;
 import com.bowe.meetstudent.services.MediaService;
+import com.bowe.meetstudent.services.MediaStorageService;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
 class MediaServiceTest {
 
-    private static final long MAX_UPLOAD_BYTES = 10_485_760L;
-    private static final byte[] JPEG_CONTENT = {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0, 0x00, 0x10, 'J', 'F', 'I', 'F'};
+    private static final byte[] JPEG = {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0, 0, 0x10, 'J', 'F', 'I', 'F'};
 
-    @TempDir
-    Path tempDir;
+    @Mock MediaStorageService storageService;
+    @Mock MediaRepository mediaRepository;
+    @InjectMocks MediaService mediaService;
 
-    private MediaService newMediaService() {
-        MediaService mediaService = new MediaService();
-        ReflectionTestUtils.setField(mediaService, "uploadDir", tempDir.toString());
-        ReflectionTestUtils.setField(mediaService, "maxUploadBytes", MAX_UPLOAD_BYTES);
-        return mediaService;
+    private UserPrincipal principal(Integer id, String role) {
+        return UserPrincipal.builder().id(id).username("u@x.com")
+                .authorities(List.of(new SimpleGrantedAuthority(role))).build();
+    }
+
+    private MockMultipartFile jpeg() {
+        return new MockMultipartFile("file", "photo.jpg", "image/jpeg", JPEG);
+    }
+
+    private void wireStorageAndSave() throws IOException {
+        ReflectionTestUtils.setField(mediaService, "maxUploadBytes", 10_485_760L);
+        when(storageService.store(any(), any(), any())).thenReturn("private/uuid.jpg");
+        when(mediaRepository.save(any(Media.class))).thenAnswer(i -> i.getArgument(0));
+    }
+
+    // --- Task 4: upload + idempotency ---
+
+    @Test
+    void uploadPersonalDocumentAsStudentPersistsPendingMediaOwnedByPrincipal() throws IOException {
+        wireStorageAndSave();
+        when(mediaRepository.findByOwnerIdAndIdempotencyKey(any(), any())).thenReturn(Optional.empty());
+
+        Media saved = mediaService.upload(jpeg(), MediaCategory.DIPLOMA, principal(7, "ROLE_STUDENT"), "key-1");
+
+        ArgumentCaptor<Media> captor = ArgumentCaptor.forClass(Media.class);
+        verify(mediaRepository).save(captor.capture());
+        Media persisted = captor.getValue();
+        assertEquals(7, persisted.getOwnerId());
+        assertEquals(MediaCategory.DIPLOMA, persisted.getCategory());
+        assertEquals(MediaVisibility.PRIVATE, persisted.getVisibility());
+        assertEquals(VerificationStatus.PENDING, persisted.getVerificationStatus());
+        assertEquals("key-1", persisted.getIdempotencyKey());
+        assertEquals("photo.jpg", persisted.getOriginalFilename());
+        assertNotNull(saved);
     }
 
     @Test
-    void testSaveAndDeleteMedia() throws IOException {
-        MediaService mediaService = newMediaService();
-
-        MockMultipartFile file = new MockMultipartFile(
-                "file", "test.jpg", "image/jpeg", JPEG_CONTENT);
-
-        // Test Save
-        String relativePath = mediaService.saveMedia(file, "schools");
-        assertNotNull(relativePath);
-        assertTrue(relativePath.startsWith("schools/"));
-        assertTrue(Files.exists(tempDir.resolve(relativePath)));
-
-        // Test Delete
-        boolean deleted = mediaService.deleteMedia(relativePath);
-        assertTrue(deleted);
-        assertFalse(Files.exists(tempDir.resolve(relativePath)));
+    void uploadSchoolLogoAsStudentIsForbidden() {
+        AccessDeniedException ex = assertThrows(AccessDeniedException.class,
+                () -> mediaService.upload(jpeg(), MediaCategory.SCHOOL_LOGO, principal(7, "ROLE_STUDENT"), null));
+        assertNotNull(ex);
+        verifyNoInteractions(storageService);
     }
 
     @Test
-    void testSaveMediaRejectsFileExceedingMaxSize() {
-        MediaService mediaService = newMediaService();
-        ReflectionTestUtils.setField(mediaService, "maxUploadBytes", 5L);
+    void uploadSchoolLogoAsAdminHasNoOwnerAndNoStatus() throws IOException {
+        ReflectionTestUtils.setField(mediaService, "maxUploadBytes", 10_485_760L);
+        when(storageService.store(any(), any(), any())).thenReturn("public/uuid.png");
+        when(mediaRepository.save(any(Media.class))).thenAnswer(i -> i.getArgument(0));
 
-        MockMultipartFile file = new MockMultipartFile(
-                "file", "test.jpg", "image/jpeg", JPEG_CONTENT);
+        Media saved = mediaService.upload(
+                new MockMultipartFile("file", "logo.png",
+                        "image/png", new byte[]{(byte) 0x89, 0x50, 0x4E, 0x47, 0, 0, 0, 0, 0, 0}),
+                MediaCategory.SCHOOL_LOGO, principal(9, "ROLE_ADMIN"), null);
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-                () -> mediaService.saveMedia(file, "schools"));
-        assertEquals("File exceeds the maximum allowed size", exception.getMessage());
+        assertNull(saved.getOwnerId());
+        assertNull(saved.getVerificationStatus());
+        assertEquals(MediaVisibility.PUBLIC, saved.getVisibility());
     }
 
     @Test
-    void testSaveMediaRejectsDisallowedExtension() {
-        MediaService mediaService = newMediaService();
+    void uploadWithExistingIdempotencyKeyReturnsExistingMediaWithoutStoring() throws IOException {
+        Media existing = Media.builder().storageKey("private/old.jpg")
+                .category(MediaCategory.DIPLOMA).visibility(MediaVisibility.PRIVATE)
+                .ownerId(7).idempotencyKey("key-1").build();
+        when(mediaRepository.findByOwnerIdAndIdempotencyKey(7, "key-1")).thenReturn(Optional.of(existing));
 
-        MockMultipartFile file = new MockMultipartFile(
-                "file", "malicious.exe", "application/octet-stream", JPEG_CONTENT);
+        Media result = mediaService.upload(jpeg(), MediaCategory.DIPLOMA, principal(7, "ROLE_STUDENT"), "key-1");
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-                () -> mediaService.saveMedia(file, "schools"));
-        assertEquals("File extension is not allowed", exception.getMessage());
+        assertSame(existing, result);
+        verifyNoInteractions(storageService);
+        verify(mediaRepository, never()).save(any());
     }
 
     @Test
-    void testSaveMediaRejectsMimeTypeMismatch() {
-        MediaService mediaService = newMediaService();
-
-        MockMultipartFile file = new MockMultipartFile(
-                "file", "test.jpg", "application/pdf", JPEG_CONTENT);
-
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-                () -> mediaService.saveMedia(file, "schools"));
-        assertEquals("File type does not match an allowed media type", exception.getMessage());
-    }
-
-    @Test
-    void testSaveMediaRejectsContentNotMatchingDeclaredType() {
-        MediaService mediaService = newMediaService();
-
-        MockMultipartFile file = new MockMultipartFile(
-                "file", "test.jpg", "image/jpeg", "not a real jpeg".getBytes());
-
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-                () -> mediaService.saveMedia(file, "schools"));
-        assertEquals("File content does not match its declared type", exception.getMessage());
-    }
-
-    @Test
-    void testSaveMediaRejectsInvalidEntityType() {
-        MediaService mediaService = newMediaService();
-
-        MockMultipartFile file = new MockMultipartFile(
-                "file", "test.jpg", "image/jpeg", JPEG_CONTENT);
+    void uploadRejectsContentNotMatchingDeclaredType() {
+        ReflectionTestUtils.setField(mediaService, "maxUploadBytes", 10_485_760L);
+        MockMultipartFile bad = new MockMultipartFile("file", "photo.jpg", "image/jpeg", "not a jpeg".getBytes());
 
         assertThrows(IllegalArgumentException.class,
-                () -> mediaService.saveMedia(file, "../../etc"));
+                () -> mediaService.upload(bad, MediaCategory.DIPLOMA, principal(7, "ROLE_STUDENT"), null));
+    }
+
+    // --- Task 5: download authorization ---
+
+    @Test
+    void publicMediaIsAccessibleToAnonymous() {
+        Media m = Media.builder().visibility(MediaVisibility.PUBLIC).category(MediaCategory.SCHOOL_LOGO).build();
+        when(mediaRepository.findById(5)).thenReturn(Optional.of(m));
+
+        assertSame(m, mediaService.getAccessibleMedia(5, null));
     }
 
     @Test
-    void testDeleteMediaRejectsPathTraversal() {
-        MediaService mediaService = newMediaService();
+    void privateMediaIsAccessibleToOwner() {
+        Media m = Media.builder().visibility(MediaVisibility.PRIVATE)
+                .category(MediaCategory.DIPLOMA).ownerId(7).build();
+        when(mediaRepository.findById(5)).thenReturn(Optional.of(m));
 
-        assertThrows(IOException.class,
-                () -> mediaService.deleteMedia("../outside.txt"));
+        assertSame(m, mediaService.getAccessibleMedia(5, principal(7, "ROLE_STUDENT")));
     }
 
     @Test
-    void testDeleteMediaByUrl() throws IOException {
-        MediaService mediaService = newMediaService();
+    void privateMediaIsAccessibleToAdmin() {
+        Media m = Media.builder().visibility(MediaVisibility.PRIVATE)
+                .category(MediaCategory.DIPLOMA).ownerId(7).build();
+        when(mediaRepository.findById(5)).thenReturn(Optional.of(m));
 
-        // Create a dummy file
-        Path schoolsDir = tempDir.resolve("schools");
-        Files.createDirectories(schoolsDir);
-        Path dummyFile = schoolsDir.resolve("dummy.jpg");
-        Files.write(dummyFile, "content".getBytes());
-
-        // Test deletion via full URL extraction
-        String url = "http://localhost:8080/uploads/schools/dummy.jpg";
-        mediaService.deleteMediaByUrl(url);
-
-        assertFalse(Files.exists(dummyFile));
+        assertSame(m, mediaService.getAccessibleMedia(5, principal(99, "ROLE_ADMIN")));
     }
 
     @Test
-    void testDeleteOldMediaIfChanged() throws IOException {
-        MediaService mediaService = newMediaService();
+    void privateMediaIsForbiddenToOtherUser() {
+        Media m = Media.builder().visibility(MediaVisibility.PRIVATE)
+                .category(MediaCategory.DIPLOMA).ownerId(7).build();
+        when(mediaRepository.findById(5)).thenReturn(Optional.of(m));
 
-        Path schoolsDir = tempDir.resolve("schools");
-        Files.createDirectories(schoolsDir);
-        Path oldFile = schoolsDir.resolve("old.jpg");
-        Files.write(oldFile, "content".getBytes());
-
-        mediaService.deleteOldMediaIfChanged("schools/old.jpg", "schools/new.jpg");
-        assertFalse(Files.exists(oldFile));
+        assertThrows(AccessDeniedException.class,
+                () -> mediaService.getAccessibleMedia(5, principal(8, "ROLE_STUDENT")));
     }
 
     @Test
-    void testDeleteRemovedMedia() throws IOException {
-        MediaService mediaService = newMediaService();
+    void missingMediaThrowsNotFound() {
+        when(mediaRepository.findById(5)).thenReturn(Optional.empty());
 
-        Path diplomaDir = tempDir.resolve("users");
-        Files.createDirectories(diplomaDir);
-        Path file1 = diplomaDir.resolve("file1.pdf");
-        Path file2 = diplomaDir.resolve("file2.pdf");
-        Files.write(file1, "content1".getBytes());
-        Files.write(file2, "content2".getBytes());
+        assertThrows(com.bowe.meetstudent.exceptions.ResourceNotFoundException.class,
+                () -> mediaService.getAccessibleMedia(5, principal(7, "ROLE_STUDENT")));
+    }
 
-        java.util.List<String> oldList = java.util.List.of("users/file1.pdf", "users/file2.pdf");
-        java.util.List<String> newList = java.util.List.of("users/file2.pdf", "users/file3.pdf");
+    // --- Task 6: moderation, delete ---
 
-        mediaService.deleteRemovedMedia(oldList, newList);
+    @Test
+    void setVerificationToRejectedStoresReason() {
+        Media m = Media.builder().visibility(MediaVisibility.PRIVATE)
+                .category(MediaCategory.DIPLOMA).ownerId(7)
+                .verificationStatus(VerificationStatus.PENDING).build();
+        when(mediaRepository.findById(5)).thenReturn(Optional.of(m));
+        when(mediaRepository.save(any(Media.class))).thenAnswer(i -> i.getArgument(0));
 
-        assertFalse(Files.exists(file1), "file1 should be deleted");
-        assertTrue(Files.exists(file2), "file2 should still exist");
+        Media result = mediaService.setVerification(5, VerificationStatus.REJECTED, "blurry scan");
+
+        assertEquals(VerificationStatus.REJECTED, result.getVerificationStatus());
+        assertEquals("blurry scan", result.getRejectionReason());
+    }
+
+    @Test
+    void setVerificationToVerifiedClearsReason() {
+        Media m = Media.builder().visibility(MediaVisibility.PRIVATE)
+                .category(MediaCategory.DIPLOMA).ownerId(7)
+                .verificationStatus(VerificationStatus.REJECTED).rejectionReason("old").build();
+        when(mediaRepository.findById(5)).thenReturn(Optional.of(m));
+        when(mediaRepository.save(any(Media.class))).thenAnswer(i -> i.getArgument(0));
+
+        Media result = mediaService.setVerification(5, VerificationStatus.VERIFIED, null);
+
+        assertEquals(VerificationStatus.VERIFIED, result.getVerificationStatus());
+        assertNull(result.getRejectionReason());
+    }
+
+    @Test
+    void setVerificationToPendingIsRejected() {
+        assertThrows(IllegalArgumentException.class,
+                () -> mediaService.setVerification(5, VerificationStatus.PENDING, null));
+    }
+
+    @Test
+    void deleteByOwnerRemovesFileAndRow() throws Exception {
+        Media m = Media.builder().visibility(MediaVisibility.PRIVATE)
+                .category(MediaCategory.DIPLOMA).ownerId(7).storageKey("private/x.pdf").build();
+        ReflectionTestUtils.setField(m, "id", 5);
+        when(mediaRepository.findById(5)).thenReturn(Optional.of(m));
+
+        mediaService.delete(5, principal(7, "ROLE_STUDENT"));
+
+        verify(storageService).delete("private/x.pdf");
+        verify(mediaRepository).delete(m);
+    }
+
+    @Test
+    void deleteByOtherUserIsForbidden() {
+        Media m = Media.builder().visibility(MediaVisibility.PRIVATE)
+                .category(MediaCategory.DIPLOMA).ownerId(7).storageKey("private/x.pdf").build();
+        when(mediaRepository.findById(5)).thenReturn(Optional.of(m));
+
+        assertThrows(AccessDeniedException.class,
+                () -> mediaService.delete(5, principal(8, "ROLE_STUDENT")));
+    }
+
+    // --- deleteById / findById ---
+
+    @Test
+    void findByIdReturnsEmptyForNullId() {
+        assertTrue(mediaService.findById(null).isEmpty());
+        verifyNoInteractions(mediaRepository);
+    }
+
+    @Test
+    void deleteByIdDeletesFileAndRow() throws IOException {
+        Media media = Media.builder().storageKey("public/x.png")
+                .visibility(MediaVisibility.PUBLIC).category(MediaCategory.SCHOOL_LOGO).build();
+        ReflectionTestUtils.setField(media, "id", 9);
+        when(mediaRepository.findById(9)).thenReturn(Optional.of(media));
+
+        mediaService.deleteById(9);
+
+        verify(storageService).delete("public/x.png");
+        verify(mediaRepository).delete(media);
+    }
+
+    @Test
+    void deleteByIdIsNoOpWhenNotFound() throws IOException {
+        when(mediaRepository.findById(404)).thenReturn(Optional.empty());
+
+        mediaService.deleteById(404);
+
+        verify(storageService, never()).delete(any());
+        verify(mediaRepository, never()).delete(any());
+    }
+
+    @Test
+    void deleteByIdIsNoOpForNullId() throws IOException {
+        mediaService.deleteById(null);
+        verifyNoInteractions(mediaRepository);
+        verify(storageService, never()).delete(any());
     }
 }
