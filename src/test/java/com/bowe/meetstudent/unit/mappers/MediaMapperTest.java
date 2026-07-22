@@ -39,6 +39,33 @@ class MediaMapperTest {
     }
 
     @Test
+    void toDtoSetsPublicUrlForPublicMedia() {
+        Media media = Media.builder()
+                .storageKey("public/logo.png")
+                .category(MediaCategory.SCHOOL_LOGO)
+                .visibility(MediaVisibility.PUBLIC)
+                .build();
+        ReflectionTestUtils.setField(media, "id", 5);
+
+        MediaDTO dto = mapper.toDTO(media);
+
+        assertEquals("/uploads/public/logo.png", dto.getPublicUrl());
+    }
+
+    @Test
+    void toDtoLeavesPublicUrlNullForPrivateMedia() {
+        Media media = Media.builder()
+                .storageKey("private/secret.pdf")
+                .category(MediaCategory.DIPLOMA)
+                .visibility(MediaVisibility.PRIVATE)
+                .build();
+
+        MediaDTO dto = mapper.toDTO(media);
+
+        assertNull(dto.getPublicUrl());
+    }
+
+    @Test
     void toEntityIsUnsupported() {
         assertThrows(UnsupportedOperationException.class, () -> mapper.toEntity(new MediaDTO()));
     }

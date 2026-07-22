@@ -21,4 +21,5 @@ public class MediaDTO {
     private String originalFilename;
     private String contentType;
     private Long sizeBytes;
+    private String publicUrl;
 }

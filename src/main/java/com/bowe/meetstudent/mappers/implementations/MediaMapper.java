@@ -19,7 +19,16 @@ public class MediaMapper implements Mapper<Media, MediaDTO> {
                 .originalFilename(media.getOriginalFilename())
                 .contentType(media.getContentType())
                 .sizeBytes(media.getSizeBytes())
+                .publicUrl(publicUrl(media))
                 .build();
+    }
+
+    private String publicUrl(Media media) {
+        if (media.getVisibility() == com.bowe.meetstudent.entities.enums.MediaVisibility.PUBLIC
+                && media.getStorageKey() != null) {
+            return "/uploads/" + media.getStorageKey();
+        }
+        return null;
     }
 
     @Override
