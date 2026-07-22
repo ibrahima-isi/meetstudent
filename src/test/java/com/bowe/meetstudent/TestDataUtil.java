@@ -32,12 +32,14 @@ public class TestDataUtil {
     }
 
     public static UserDTO createUserDto(){
+        String password = faker.regexify("[a-zA-Z0-9]{8,16}");
         return UserDTO.builder()
                 .email(faker.internet().emailAddress())
                 .role(getRandomRole())
                 .lastname(faker.name().lastName())
                 .firstname(faker.name().firstName())
-                .password(faker.regexify("[a-zA-Z0-9]{8,16}"))
+                .password(password)
+                .confirmedPassword(password)
                 .birthday(Date.from(faker.timeAndDate().birthday().atStartOfDay(ZoneId.systemDefault()).toInstant()))
                 .qualification(faker.job().field())
                 .build();
@@ -98,8 +100,12 @@ public class TestDataUtil {
     }
 
     public static org.springframework.test.web.servlet.request.RequestPostProcessor mockUser(String role) {
+        return mockUser(1, role);
+    }
+
+    public static org.springframework.test.web.servlet.request.RequestPostProcessor mockUser(Integer userId, String role) {
         com.bowe.meetstudent.security.UserPrincipal principal = com.bowe.meetstudent.security.UserPrincipal.builder()
-                .id(1)
+                .id(userId)
                 .username("testUser")
                 .authorities(List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority(role)))
                 .build();

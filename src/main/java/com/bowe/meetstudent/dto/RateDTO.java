@@ -22,7 +22,6 @@ public class RateDTO extends AbstractDTO {
     @Size(max = 500, message = "Comment cannot exceed 500 characters")
     private String comment;
 
-    @NotNull(message = "User ID is required")
     @Positive(message = "User ID must be positive")
     private Integer userId;
 }

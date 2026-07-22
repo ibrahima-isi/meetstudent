@@ -1,5 +1,8 @@
 package com.bowe.meetstudent.controllers;
 
+import com.bowe.meetstudent.dto.AdminUpdateUserRoleRequest;
+import com.bowe.meetstudent.dto.RegisterRequest;
+import com.bowe.meetstudent.dto.UpdateProfileRequest;
 import com.bowe.meetstudent.dto.UserDTO;
 import com.bowe.meetstudent.entities.Role;
 import com.bowe.meetstudent.entities.UserEntity;
@@ -12,15 +15,16 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.modelmapper.ModelMapper;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -36,15 +40,27 @@ public class UserController {
     private final PasswordEncoder encoder;
     private final Mapper<UserEntity, UserDTO> userMapper;
     private final RoleService roleService;
-    private final ModelMapper modelMapper;
 
     @PostMapping
-    @Operation(summary = "Create a new user", description = "Registers a new user in the system with a specified role.")
+    @Operation(summary = "Create a new user", description = "Registers a new student account.")
     @ApiResponse(responseCode = "201", description = "User created successfully")
     @ApiResponse(responseCode = "400", description = "Invalid input data or email already exists")
-    public ResponseEntity<UserDTO> saveUser(@RequestBody UserDTO userDTO) {
-        UserEntity userEntity = this.userMapper.toEntity(userDTO);
-        UserEntity savedUser = this.userService.saveUser(userEntity, encoder);
+    public ResponseEntity<UserDTO> saveUser(@RequestBody @Validated RegisterRequest request) {
+        if (!userService.isPasswordConfirmed(request.getPassword(), request.getConfirmedPassword())) {
+            return ResponseEntity.badRequest().build();
+        }
+        if (!userService.emailNotExists(request.getEmail())) {
+            return ResponseEntity.badRequest().build();
+        }
+        UserEntity userEntity = UserEntity.builder()
+                .firstname(request.getFirstname())
+                .lastname(request.getLastname())
+                .email(request.getEmail())
+                .password(request.getPassword())
+                .birthday(request.getBirthday())
+                .qualification(request.getQualification())
+                .build();
+        UserEntity savedUser = this.userService.registerStudent(userEntity, encoder);
         UserDTO savedUserDto = this.userMapper.toDTO(savedUser);
         return new ResponseEntity<>(savedUserDto, HttpStatus.CREATED);
     }
@@ -105,30 +121,47 @@ public class UserController {
     }
 
     @PutMapping(path = "/{id}")
-    @Operation(summary = "Update a user by ID", description = "Performs a full update of an existing user's information.")
+    @Operation(summary = "Update a user by ID", description = "Performs a full update of an existing user's profile. Role changes go through PATCH /{id}/role.")
     public ResponseEntity<UserDTO> updateUser(
             @AuthenticationPrincipal UserPrincipal principal,
-            @Parameter(description = "ID of the user to update") @PathVariable int id, 
-            @RequestBody UserDTO userDTO) {
-        
+            @Parameter(description = "ID of the user to update") @PathVariable int id,
+            @RequestBody @Validated UpdateProfileRequest request) {
+
         checkOwnershipOrAdmin(principal, id);
-        
-        UserEntity updates = userMapper.toEntity(userDTO);
-        UserEntity saved = this.userService.patch(id, updates, encoder);
+
+        UserEntity saved = this.userService.patch(id, toProfileUpdates(request), encoder);
         return ResponseEntity.ok(userMapper.toDTO(saved));
     }
 
     @PatchMapping(path = "{id}")
-    @Operation(summary = "Partially update a user by ID", description = "Updates only the specific fields provided for a user.")
+    @Operation(summary = "Partially update a user by ID", description = "Updates only the specific profile fields provided. Role changes go through PATCH /{id}/role.")
     public ResponseEntity<UserDTO> patchUser(
             @AuthenticationPrincipal UserPrincipal principal,
-            @Parameter(description = "ID of the user to patch") @PathVariable int id, 
-            @RequestBody UserDTO userDTO) {
-        
+            @Parameter(description = "ID of the user to patch") @PathVariable int id,
+            @RequestBody @Validated UpdateProfileRequest request) {
+
         checkOwnershipOrAdmin(principal, id);
-        
-        UserEntity updates = userMapper.toEntity(userDTO);
-        UserEntity saved = this.userService.patch(id, updates, encoder);
+
+        UserEntity saved = this.userService.patch(id, toProfileUpdates(request), encoder);
+        return ResponseEntity.ok(userMapper.toDTO(saved));
+    }
+
+    @PatchMapping(path = "{id}/role")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Change a user's role (admin only)", description = "Assigns a new role to the user. Restricted to administrators.")
+    @ApiResponse(responseCode = "200", description = "Role updated")
+    @ApiResponse(responseCode = "400", description = "Unknown role")
+    @ApiResponse(responseCode = "403", description = "Caller is not an administrator")
+    public ResponseEntity<UserDTO> patchUserRole(
+            @Parameter(description = "ID of the user") @PathVariable int id,
+            @RequestBody @Validated AdminUpdateUserRoleRequest request) {
+
+        Optional<Role> role = roleService.findRoleById(request.getRoleId());
+        if (role.isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+        UserEntity updates = UserEntity.builder().role(role.get()).build();
+        UserEntity saved = this.userService.patchAsAdmin(id, updates, encoder);
         return ResponseEntity.ok(userMapper.toDTO(saved));
     }
 
@@ -173,10 +206,27 @@ public class UserController {
     }
 
     private void checkOwnershipOrAdmin(UserPrincipal principal, Integer userId) {
-        boolean isAdmin = principal.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-        if (!isAdmin && !principal.getId().equals(userId)) {
+        if (!isAdmin(principal) && !principal.getId().equals(userId)) {
             throw new AccessDeniedException("You can only access or modify your own profile.");
         }
+    }
+
+    private UserEntity toProfileUpdates(UpdateProfileRequest request) {
+        return UserEntity.builder()
+                .firstname(request.getFirstname())
+                .lastname(request.getLastname())
+                .email(request.getEmail())
+                .birthday(request.getBirthday())
+                .password(request.getPassword())
+                .qualification(request.getQualification())
+                .diplomas(request.getDiplomas())
+                .certificates(request.getCertificates())
+                .presentationVideoUrl(request.getPresentationVideoUrl())
+                .build();
+    }
+
+    private boolean isAdmin(UserPrincipal principal) {
+        return principal.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
     }
 }

@@ -39,7 +39,7 @@ public class MediaController {
         @RequestParam("file") MultipartFile file
         ) {
         try{
-            if(!entityType.matches("^(schools|users|courses|programs)$")) {
+            if(!mediaService.isAllowedEntityType(entityType)) {
                 return ResponseEntity.badRequest()
                     .body(Map.of("error", "Invalid entity type. Allowed: schools, users, courses, programs"));
             }
@@ -50,9 +50,11 @@ public class MediaController {
                 .path(relativePath)
                 .toUriString();
             return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("url", fileUrl));
+        } catch (IllegalArgumentException validationException) {
+            return ResponseEntity.badRequest().body(Map.of("error", validationException.getMessage()));
         }catch (IOException ioException){
             return ResponseEntity.internalServerError().body(
-                Map.of("error", "Could not upload file: " + ioException.getMessage())
+                Map.of("error", "Could not upload file")
             );
         }
     }

@@ -55,13 +55,17 @@ class SchoolRateControllerIntegrationTests {
     private UserEntity testUser;
 
     private void setupUser(String roleName) {
+        testUser = createUser(roleName, roleName.toLowerCase() + "@example.com");
+    }
+
+    private UserEntity createUser(String roleName, String email) {
         Role role = roleService.findRoleByName(roleName).orElseGet(() -> 
             roleService.createRole(Role.builder().name(roleName).build())
         );
-        testUser = userService.saveUser(UserEntity.builder()
+        return userService.saveUser(UserEntity.builder()
                 .firstname("Test")
                 .lastname("User")
-                .email(roleName.toLowerCase() + "@example.com")
+                .email(email)
                 .password("password")
                 .role(role)
                 .build(), passwordEncoder);
@@ -84,9 +88,55 @@ class SchoolRateControllerIntegrationTests {
                 MockMvcRequestBuilders.post("/api/v1/school-rates")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json)
-                        .with(TestDataUtil.mockUser("ROLE_STUDENT"))
+                        .with(TestDataUtil.mockUser(testUser.getId(), "ROLE_STUDENT"))
         ).andExpect(
                 MockMvcResultMatchers.status().isCreated()
+        ).andExpect(
+                MockMvcResultMatchers.jsonPath("$.userId").value(testUser.getId())
+        );
+    }
+
+    @Test
+    void testThatCreateSchoolRateRejectsAnotherUserId() throws Exception {
+        setupUser("ROLE_STUDENT");
+        UserEntity otherUser = createUser("ROLE_STUDENT", "other-student@example.com");
+        School school = schoolService.save(schoolMapper.toEntity(TestDataUtil.createSchoolDto()));
+
+        SchoolRateDTO rateDTO = SchoolRateDTO.builder()
+                .note(4.5)
+                .comment("Impersonation attempt")
+                .schoolId(school.getId())
+                .userId(otherUser.getId())
+                .build();
+
+        mockMvc.perform(
+                MockMvcRequestBuilders.post("/api/v1/school-rates")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(rateDTO))
+                        .with(TestDataUtil.mockUser(testUser.getId(), "ROLE_STUDENT"))
+        ).andExpect(
+                MockMvcResultMatchers.status().isForbidden()
+        );
+    }
+
+    @Test
+    void testThatAnonymousCannotCreateSchoolRate() throws Exception {
+        setupUser("ROLE_STUDENT");
+        School school = schoolService.save(schoolMapper.toEntity(TestDataUtil.createSchoolDto()));
+
+        SchoolRateDTO rateDTO = SchoolRateDTO.builder()
+                .note(4.5)
+                .comment("Anonymous attempt")
+                .schoolId(school.getId())
+                .userId(testUser.getId())
+                .build();
+
+        mockMvc.perform(
+                MockMvcRequestBuilders.post("/api/v1/school-rates")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(rateDTO))
+        ).andExpect(
+                MockMvcResultMatchers.status().isUnauthorized()
         );
     }
 
@@ -106,12 +156,12 @@ class SchoolRateControllerIntegrationTests {
                 MockMvcRequestBuilders.post("/api/v1/school-rates")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(rateDTO))
-                        .with(TestDataUtil.mockUser("ROLE_STUDENT"))
+                        .with(TestDataUtil.mockUser(testUser.getId(), "ROLE_STUDENT"))
         );
 
         mockMvc.perform(
                 MockMvcRequestBuilders.get("/api/v1/school-rates/school/" + school.getId())
-                        .with(TestDataUtil.mockUser("ROLE_STUDENT"))
+                        .with(TestDataUtil.mockUser(testUser.getId(), "ROLE_STUDENT"))
         ).andExpect(
                 MockMvcResultMatchers.status().isOk()
         ).andExpect(
@@ -129,7 +179,7 @@ class SchoolRateControllerIntegrationTests {
                 MockMvcRequestBuilders.post("/api/v1/school-rates")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(rateDTO))
-                        .with(TestDataUtil.mockUser("ROLE_STUDENT"))
+                        .with(TestDataUtil.mockUser(testUser.getId(), "ROLE_STUDENT"))
         ).andReturn().getResponse().getContentAsString();
         
         SchoolRateDTO saved = objectMapper.readValue(response, SchoolRateDTO.class);
@@ -139,6 +189,29 @@ class SchoolRateControllerIntegrationTests {
                         .with(TestDataUtil.mockUser("ROLE_ADMIN"))
         ).andExpect(
                 MockMvcResultMatchers.status().isNoContent()
+        );
+    }
+
+    @Test
+    void testThatStudentCannotDeleteSchoolRate() throws Exception {
+        setupUser("ROLE_STUDENT");
+        School school = schoolService.save(schoolMapper.toEntity(TestDataUtil.createSchoolDto()));
+        SchoolRateDTO rateDTO = SchoolRateDTO.builder().note(4.0).schoolId(school.getId()).userId(testUser.getId()).build();
+
+        String response = mockMvc.perform(
+                MockMvcRequestBuilders.post("/api/v1/school-rates")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(rateDTO))
+                        .with(TestDataUtil.mockUser(testUser.getId(), "ROLE_STUDENT"))
+        ).andReturn().getResponse().getContentAsString();
+
+        SchoolRateDTO saved = objectMapper.readValue(response, SchoolRateDTO.class);
+
+        mockMvc.perform(
+                MockMvcRequestBuilders.delete("/api/v1/school-rates/" + saved.getId())
+                        .with(TestDataUtil.mockUser(testUser.getId(), "ROLE_STUDENT"))
+        ).andExpect(
+                MockMvcResultMatchers.status().isForbidden()
         );
     }
 }
