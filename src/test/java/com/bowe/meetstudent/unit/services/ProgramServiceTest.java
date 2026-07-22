@@ -42,7 +42,7 @@ class ProgramServiceTest {
         program.setName("Computer Science");
         program.setCode("CS101");
         program.setDuration(4);
-        program.setPhotoUrl("programs/test.jpg");
+        program.setPhotoMediaId(10);
     }
 
     @Test
@@ -105,19 +105,30 @@ class ProgramServiceTest {
         
         Mockito.verify(programRepository, Mockito.times(1)).findById(1);
         Mockito.verify(programRepository, Mockito.times(1)).deleteById(1);
-        Mockito.verify(mediaService, Mockito.times(1)).deleteMediaByUrl("programs/test.jpg");
+        Mockito.verify(mediaService, Mockito.times(1)).deleteById(10);
     }
 
     @Test
-    void testPatch() {
-        Program updates = Program.builder().name("New Name").photoUrl("programs/new.jpg").build();
+    void testPatchReplacesPhotoMediaAndDeletesOld() {
+        Program updates = Program.builder().name("New Name").photoMediaId(20).build();
         Mockito.when(programRepository.findById(1)).thenReturn(Optional.of(program));
         Mockito.when(programRepository.save(any(Program.class))).thenReturn(program);
 
         programService.patch(1, updates);
 
         assertEquals("New Name", program.getName());
-        assertEquals("programs/new.jpg", program.getPhotoUrl());
-        Mockito.verify(mediaService).deleteOldMediaIfChanged("programs/test.jpg", "programs/new.jpg");
+        assertEquals(20, program.getPhotoMediaId());
+        Mockito.verify(mediaService).deleteById(10);
+    }
+
+    @Test
+    void testPatchWithSamePhotoMediaIdDoesNotDelete() {
+        Program updates = Program.builder().photoMediaId(10).build();
+        Mockito.when(programRepository.findById(1)).thenReturn(Optional.of(program));
+        Mockito.when(programRepository.save(any(Program.class))).thenReturn(program);
+
+        programService.patch(1, updates);
+
+        Mockito.verify(mediaService, Mockito.never()).deleteById(any());
     }
 }

@@ -56,6 +56,36 @@ class ProgramControllerIntegrationTests {
     @Autowired
     private AccreditationMapper accreditationMapper;
 
+    @Autowired
+    private com.bowe.meetstudent.repositories.MediaRepository mediaRepository;
+
+    private com.bowe.meetstudent.entities.Media persistedProgramPhoto() {
+        var media = com.bowe.meetstudent.entities.Media.builder()
+                .storageKey("public/prog-it.png")
+                .originalFilename("p.png").contentType("image/png").sizeBytes(10L)
+                .category(com.bowe.meetstudent.entities.enums.MediaCategory.PROGRAM_PHOTO)
+                .visibility(com.bowe.meetstudent.entities.enums.MediaVisibility.PUBLIC)
+                .build();
+        return mediaRepository.save(media);
+    }
+
+    @Test
+    void putProgramWithPhotoMediaIdResolvesPhotoWithPublicUrl() throws Exception {
+        Program saved = programService.save(programMapper.toEntity(TestDataUtil.createProgramDto()));
+        var media = persistedProgramPhoto();
+
+        ProgramDTO body = TestDataUtil.createProgramDto();
+        body.setPhotoMediaId(media.getId());
+        String json = objectMapper.writeValueAsString(body);
+
+        mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/programs/" + saved.getId())
+                        .contentType(MediaType.APPLICATION_JSON).content(json)
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.photo.id").value(media.getId()))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.photo.publicUrl").value("/uploads/public/prog-it.png"));
+    }
+
     @Test
     void testThatCreateProgramReturnsHttpStatus201Created() throws Exception {
         ProgramDTO programDTO = TestDataUtil.createProgramDto();
