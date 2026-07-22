@@ -38,8 +38,8 @@ public class SchoolService {
     @Transactional
     public void delete(int id){
         this.schoolRepository.findById(id).ifPresent(school -> {
-            mediaService.deleteMediaByUrl(school.getLogoUrl());
-            mediaService.deleteMediaByUrl(school.getCoverPhotoUrl());
+            mediaService.deleteById(school.getLogoMediaId());
+            mediaService.deleteById(school.getCoverMediaId());
             this.schoolRepository.deleteById(id);
         });
     }
@@ -83,16 +83,22 @@ public class SchoolService {
     public School patch(Integer id, School updates) {
         return schoolRepository.findById(id).map(existing -> {
             // Check for media changes before updating
-            mediaService.deleteOldMediaIfChanged(existing.getLogoUrl(), updates.getLogoUrl());
-            mediaService.deleteOldMediaIfChanged(existing.getCoverPhotoUrl(), updates.getCoverPhotoUrl());
-            
+            if (updates.getLogoMediaId() != null
+                    && !updates.getLogoMediaId().equals(existing.getLogoMediaId())) {
+                mediaService.deleteById(existing.getLogoMediaId());
+            }
+            if (updates.getCoverMediaId() != null
+                    && !updates.getCoverMediaId().equals(existing.getCoverMediaId())) {
+                mediaService.deleteById(existing.getCoverMediaId());
+            }
+
             // Map remaining fields
             if (updates.getName() != null) existing.setName(updates.getName());
             if (updates.getCode() != null) existing.setCode(updates.getCode());
             if (updates.getCreation() != null) existing.setCreation(updates.getCreation());
             if (updates.getAddress() != null) existing.setAddress(updates.getAddress());
-            if (updates.getLogoUrl() != null) existing.setLogoUrl(updates.getLogoUrl());
-            if (updates.getCoverPhotoUrl() != null) existing.setCoverPhotoUrl(updates.getCoverPhotoUrl());
+            if (updates.getLogoMediaId() != null) existing.setLogoMediaId(updates.getLogoMediaId());
+            if (updates.getCoverMediaId() != null) existing.setCoverMediaId(updates.getCoverMediaId());
             if (updates.getTags() != null) existing.setTags(updates.getTags());
             
             return schoolRepository.save(existing);

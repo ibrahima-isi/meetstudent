@@ -49,6 +49,50 @@ class SchoolControllerIntegrationTests {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private com.bowe.meetstudent.repositories.MediaRepository mediaRepository;
+
+    private com.bowe.meetstudent.entities.Media persistedLogo() {
+        var media = com.bowe.meetstudent.entities.Media.builder()
+                .storageKey("public/logo-it.png")
+                .originalFilename("logo.png").contentType("image/png").sizeBytes(10L)
+                .category(com.bowe.meetstudent.entities.enums.MediaCategory.SCHOOL_LOGO)
+                .visibility(com.bowe.meetstudent.entities.enums.MediaVisibility.PUBLIC)
+                .build();
+        return mediaRepository.save(media);
+    }
+
+    @Test
+    void putSchoolWithLogoMediaIdResolvesLogoWithPublicUrl() throws Exception {
+        School saved = schoolMapper.toEntity(TestDataUtil.createSchoolDto());
+        School school = schoolService.save(saved);
+        var media = persistedLogo();
+
+        SchoolDTO body = TestDataUtil.createSchoolDto();
+        body.setLogoMediaId(media.getId());
+        String json = objectMapper.writeValueAsString(body);
+
+        mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/schools/" + school.getId())
+                        .contentType(MediaType.APPLICATION_JSON).content(json)
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.logo.id").value(media.getId()))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.logo.publicUrl").value("/uploads/public/logo-it.png"));
+    }
+
+    @Test
+    void deleteSchoolRemovesReferencedLogoMedia() {
+        var media = persistedLogo();
+        School saved = schoolMapper.toEntity(TestDataUtil.createSchoolDto());
+        saved.setLogoMediaId(media.getId());
+        School school = schoolService.save(saved);
+
+        schoolService.delete(school.getId());
+
+        org.junit.jupiter.api.Assertions.assertTrue(mediaRepository.findById(media.getId()).isEmpty());
+        org.junit.jupiter.api.Assertions.assertTrue(schoolService.getSchoolById(school.getId()).isEmpty());
+    }
+
     @Test
     void testThatCreateSchoolReturnsHttpStatus201Created() throws Exception {
         SchoolDTO schoolDTO = TestDataUtil.createSchoolDto();

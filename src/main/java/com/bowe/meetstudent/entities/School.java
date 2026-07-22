@@ -24,11 +24,11 @@ public class School extends BaseEntity{
     @Embedded
     private Address address;
 
-    @Column(name = "logo_url")
-    private String logoUrl;
+    @Column(name = "logo_media_id")
+    private Integer logoMediaId;
 
-    @Column(name = "cover_photo_url")
-    private String coverPhotoUrl;
+    @Column(name = "cover_media_id")
+    private Integer coverMediaId;
 
     @OneToMany(mappedBy = "school", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Program> programs;

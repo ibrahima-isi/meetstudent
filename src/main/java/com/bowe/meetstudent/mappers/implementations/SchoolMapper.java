@@ -3,6 +3,7 @@ package com.bowe.meetstudent.mappers.implementations;
 import com.bowe.meetstudent.dto.SchoolDTO;
 import com.bowe.meetstudent.entities.School;
 import com.bowe.meetstudent.mappers.Mapper;
+import com.bowe.meetstudent.services.MediaService;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Component;
@@ -12,27 +13,24 @@ import org.springframework.stereotype.Component;
 public class SchoolMapper implements Mapper<School, SchoolDTO> {
 
     private final ModelMapper modelMapper;
+    private final MediaService mediaService;
+    private final MediaMapper mediaMapper;
 
-    /**
-     * Get a UserDTO from a UserEntity
-     *
-     * @param school the user entity to map from
-     * @return UserDTO that have been mapped
-     */
     @Override
     public SchoolDTO toDTO(School school) {
-        return modelMapper.map(school, SchoolDTO.class);
+        SchoolDTO dto = modelMapper.map(school, SchoolDTO.class);
+        dto.setLogoMediaId(school.getLogoMediaId());
+        dto.setCoverMediaId(school.getCoverMediaId());
+        dto.setLogo(mediaService.findById(school.getLogoMediaId()).map(mediaMapper::toDTO).orElse(null));
+        dto.setCover(mediaService.findById(school.getCoverMediaId()).map(mediaMapper::toDTO).orElse(null));
+        return dto;
     }
 
-    /**
-     * Get a UserEntity from a UserDTO
-     *
-     * @param schoolDTO the user DTO to map from
-     * @return UserEntity that have been mapped
-     */
     @Override
     public School toEntity(SchoolDTO schoolDTO) {
         School school = modelMapper.map(schoolDTO, School.class);
+        school.setLogoMediaId(schoolDTO.getLogoMediaId());
+        school.setCoverMediaId(schoolDTO.getCoverMediaId());
         if (school.getPrograms() != null) {
             school.getPrograms().forEach(p -> {
                 p.setSchool(school);
