@@ -152,8 +152,11 @@ public class CourseController {
     @ApiResponse(responseCode = "404", description = "Course not found")
     public ResponseEntity<CourseDTO> delete(@Parameter(description = "ID of the course to delete") @PathVariable int id) {
         return courseService.findById(id).map(toDelete -> {
+            // Map to DTO BEFORE deleting: the entity's lazy collections cannot be
+            // resolved once it has been removed from the session.
+            CourseDTO dto = courseMapper.toDTO(toDelete);
             courseService.delete(toDelete.getId());
-            return new ResponseEntity<>(courseMapper.toDTO(toDelete), HttpStatus.OK);
+            return new ResponseEntity<>(dto, HttpStatus.OK);
         }).orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
 }

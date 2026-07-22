@@ -70,6 +70,18 @@ class ProgramControllerIntegrationTests {
     }
 
     @Test
+    void deleteProgramReturns200WithDeletedDto() throws Exception {
+        Program program = programService.save(programMapper.toEntity(TestDataUtil.createProgramDto()));
+
+        mockMvc.perform(MockMvcRequestBuilders.delete("/api/v1/programs/" + program.getId())
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.id").value(program.getId()));
+
+        org.junit.jupiter.api.Assertions.assertTrue(programService.findById(program.getId()).isEmpty());
+    }
+
+    @Test
     void putProgramWithPhotoMediaIdResolvesPhotoWithPublicUrl() throws Exception {
         Program saved = programService.save(programMapper.toEntity(TestDataUtil.createProgramDto()));
         var media = persistedProgramPhoto();

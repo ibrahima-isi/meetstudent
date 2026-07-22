@@ -81,6 +81,18 @@ class SchoolControllerIntegrationTests {
     }
 
     @Test
+    void deleteSchoolReturns200WithDeletedDto() throws Exception {
+        School school = schoolService.save(schoolMapper.toEntity(TestDataUtil.createSchoolDto()));
+
+        mockMvc.perform(MockMvcRequestBuilders.delete("/api/v1/schools/" + school.getId())
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.id").value(school.getId()));
+
+        org.junit.jupiter.api.Assertions.assertTrue(schoolService.getSchoolById(school.getId()).isEmpty());
+    }
+
+    @Test
     void deleteSchoolRemovesReferencedLogoMedia() {
         var media = persistedLogo();
         School saved = schoolMapper.toEntity(TestDataUtil.createSchoolDto());

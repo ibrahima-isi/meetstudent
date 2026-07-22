@@ -56,6 +56,19 @@ class CourseControllerIntegrationTests {
     }
 
     @Test
+    void deleteCourseReturns200WithDeletedDto() throws Exception {
+        com.bowe.meetstudent.entities.Course course =
+                courseService.save(courseMapper.toEntity(TestDataUtil.createCourseDto()));
+
+        mockMvc.perform(MockMvcRequestBuilders.delete("/api/v1/courses/" + course.getId())
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.id").value(course.getId()));
+
+        org.junit.jupiter.api.Assertions.assertTrue(courseService.findById(course.getId()).isEmpty());
+    }
+
+    @Test
     void putCourseWithPhotoMediaIdResolvesPhotoWithPublicUrl() throws Exception {
         com.bowe.meetstudent.entities.Course saved =
                 courseService.save(courseMapper.toEntity(TestDataUtil.createCourseDto()));
