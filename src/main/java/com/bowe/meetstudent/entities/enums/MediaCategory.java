@@ -9,6 +9,8 @@ public enum MediaCategory {
     PRESENTATION_VIDEO(MediaVisibility.PRIVATE, true, Set.of("ROLE_STUDENT", "ROLE_EXPERT", "ROLE_ADMIN")),
     SCHOOL_LOGO(MediaVisibility.PUBLIC, false, Set.of("ROLE_ADMIN")),
     SCHOOL_COVER(MediaVisibility.PUBLIC, false, Set.of("ROLE_ADMIN")),
+    COURSE_PHOTO(MediaVisibility.PUBLIC, false, Set.of("ROLE_ADMIN")),
+    PROGRAM_PHOTO(MediaVisibility.PUBLIC, false, Set.of("ROLE_ADMIN")),
     USER_PHOTO(MediaVisibility.PUBLIC, false, Set.of("ROLE_STUDENT", "ROLE_EXPERT", "ROLE_ADMIN"));
 
     private final MediaVisibility visibility;

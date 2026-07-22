@@ -40,4 +40,14 @@ class MediaCategoryTest {
                 java.util.Set.of("ROLE_STUDENT", "ROLE_EXPERT", "ROLE_ADMIN"),
                 MediaCategory.USER_PHOTO.getAllowedUploadRoles());
     }
+
+    @Test
+    void coursePhotoAndProgramPhotoArePublicNonModeratedAdminOnly() {
+        for (MediaCategory c : new MediaCategory[]{MediaCategory.COURSE_PHOTO, MediaCategory.PROGRAM_PHOTO}) {
+            assertEquals(MediaVisibility.PUBLIC, c.getVisibility(), c.name());
+            assertFalse(c.isModerated(), c.name());
+            assertFalse(c.isPersonalDocument(), c.name());
+            assertEquals(java.util.Set.of("ROLE_ADMIN"), c.getAllowedUploadRoles(), c.name());
+        }
+    }
 }
