@@ -19,8 +19,8 @@ import java.util.Objects;
 @ToString(callSuper = true, onlyExplicitlyIncluded = true)
 public class Course extends BaseEntity {
 
-    @Column(name = "photo_url")
-    private String photoUrl;
+    @Column(name = "photo_media_id")
+    private Integer photoMediaId;
 
     @ManyToOne
     @JoinColumn(name = "program_id")

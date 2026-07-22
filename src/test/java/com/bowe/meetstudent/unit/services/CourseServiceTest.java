@@ -41,7 +41,7 @@ class CourseServiceTest {
         course.setId(1);
         course.setName("Java Programming");
         course.setCode("JV101");
-        course.setPhotoUrl("courses/test.jpg");
+        course.setPhotoMediaId(10);
     }
 
     @Test
@@ -104,19 +104,30 @@ class CourseServiceTest {
         
         Mockito.verify(courseRepository, Mockito.times(1)).findById(1);
         Mockito.verify(courseRepository, Mockito.times(1)).deleteById(1);
-        Mockito.verify(mediaService, Mockito.times(1)).deleteMediaByUrl("courses/test.jpg");
+        Mockito.verify(mediaService, Mockito.times(1)).deleteById(10);
     }
 
     @Test
-    void testPatch() {
-        Course updates = Course.builder().name("New Java").photoUrl("courses/new.jpg").build();
+    void testPatchReplacesPhotoMediaAndDeletesOld() {
+        Course updates = Course.builder().name("New Java").photoMediaId(20).build();
         Mockito.when(courseRepository.findById(1)).thenReturn(Optional.of(course));
         Mockito.when(courseRepository.save(any(Course.class))).thenReturn(course);
 
         courseService.patch(1, updates);
 
         assertEquals("New Java", course.getName());
-        assertEquals("courses/new.jpg", course.getPhotoUrl());
-        Mockito.verify(mediaService).deleteOldMediaIfChanged("courses/test.jpg", "courses/new.jpg");
+        assertEquals(20, course.getPhotoMediaId());
+        Mockito.verify(mediaService).deleteById(10);
+    }
+
+    @Test
+    void testPatchWithSamePhotoMediaIdDoesNotDelete() {
+        Course updates = Course.builder().photoMediaId(10).build();
+        Mockito.when(courseRepository.findById(1)).thenReturn(Optional.of(course));
+        Mockito.when(courseRepository.save(any(Course.class))).thenReturn(course);
+
+        courseService.patch(1, updates);
+
+        Mockito.verify(mediaService, Mockito.never()).deleteById(any());
     }
 }
