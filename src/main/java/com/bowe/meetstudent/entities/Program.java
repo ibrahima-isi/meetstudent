@@ -21,8 +21,8 @@ public class Program extends BaseEntity{
 
     private Integer duration;
 
-    @Column(name = "photo_url")
-    private String photoUrl;
+    @Column(name = "photo_media_id")
+    private Integer photoMediaId;
 
     @ManyToOne
     @JoinColumn(name = "school_id")

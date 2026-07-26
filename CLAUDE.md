@@ -56,6 +56,18 @@ Dependency injection is by constructor via Lombok `@RequiredArgsConstructor`. Pr
 - **H2 compatibility:** never use `@Column(columnDefinition = "text[]")` — it breaks H2. Use `@JdbcTypeCode(java.sql.Types.ARRAY)` on `List<String>` fields instead.
 - Media files (logos, diplomas, videos) live in `uploads/`; `MediaService` deletes files from disk when the owning entity is deleted or the file is replaced.
 
+### Media & documents
+
+Personal documents (diplomas, certificates, bulletins, presentation videos) are modeled by the `Media` entity (one row per stored file) with category-derived visibility and a verification status — they are **not** stored as string fields on `UserEntity` anymore.
+
+- **Storage split:** public files (`SCHOOL_LOGO`, `SCHOOL_COVER`, `USER_PHOTO`) go under `uploads/public/` and are served statically (`/uploads/public/**`); private files (personal documents) go under `storage/private/` (`file.private-dir`), are **never** mapped statically, and are reachable only through `GET /api/v1/media/{id}` with an owner-or-admin check. Configure both via `file.upload-dir` / `file.private-dir`.
+- **Service split:** `MediaStorageService` does low-level file I/O (atomic write via `.tmp` + `ATOMIC_MOVE`, load, delete, anti-traversal); `MediaService` does orchestration — role-gated upload, idempotency (`Idempotency-Key` header, deduped on `(ownerId, idempotencyKey)`), download authorization, moderation, and delete.
+- **Categories & roles:** `MediaCategory` carries `getVisibility()`, `isModerated()`, `getAllowedUploadRoles()`, `isPersonalDocument()`. Personal documents are uploadable by `ROLE_STUDENT`/`ROLE_EXPERT`/`ROLE_ADMIN`; school media is `ROLE_ADMIN`-only; user photo is any authenticated role.
+- **Entity images:** `School` (`logoMediaId`, `coverMediaId`), `Course` (`photoMediaId`), and `Program` (`photoMediaId`) reference public `Media` rows by FK instead of URL strings. Upload flow: `POST /api/v1/media?category=SCHOOL_LOGO|SCHOOL_COVER|COURSE_PHOTO|PROGRAM_PHOTO` (ADMIN-only) → read `MediaDTO.publicUrl` (a relative `/uploads/public/...` URL, set only on public media) → `PUT`/`PATCH` the entity with the media id. Response DTOs expose the resolved media as `logo`/`cover`/`photo` objects. Replacing or deleting an entity deletes the orphaned media (`MediaService.deleteById`); `V16` adds the FK columns (`ON DELETE SET NULL`) and drops the legacy URL columns.
+- **Moderation:** moderated media starts `PENDING`; an admin sets `VERIFIED`/`REJECTED` (with optional reason) via `PATCH /api/v1/media/{id}/verification`. Status is informational — a `REJECTED` document is not functionally blocked.
+- **Endpoints:** `POST /api/v1/media?category=...` (upload), `GET /api/v1/media/{id}` (download), `GET /api/v1/media/mine` (own media), `GET /api/v1/media?status=PENDING` (admin queue), `PATCH /api/v1/media/{id}/verification` (admin), `DELETE /api/v1/media/{id}` (owner/admin). Downloads render inline only for a MIME allowlist, else force `attachment`, and always send `X-Content-Type-Options: nosniff` + a sandbox CSP.
+- **Migrations:** `V14`/`V15` create the `media` table and migrate legacy `users.diplomas`/`certificates`/`presentation_video_url` data; `MediaMigrationRunner` relocates pre-existing private files into `storage/private/` at startup. These run only against Postgres — the H2 test suite (Flyway disabled) generates the schema from the entity.
+
 ### Testing
 
 Tests live in `src/test/java/com/bowe/meetstudent/` split into `unit/` (Mockito) and `integration/` (MockMvc + H2).

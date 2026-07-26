@@ -36,37 +36,46 @@ class SchoolServiceTest {
         school = new School();
         school.setId(1);
         school.setName("Test School");
-        school.setLogoUrl("schools/logo.jpg");
-        school.setCoverPhotoUrl("schools/cover.jpg");
+        school.setLogoMediaId(10);
+        school.setCoverMediaId(11);
     }
 
     @Test
-    void testDelete() {
+    void testDeleteRemovesReferencedMedia() {
         Mockito.when(schoolRepository.findById(1)).thenReturn(Optional.of(school));
         Mockito.doNothing().when(schoolRepository).deleteById(1);
 
         schoolService.delete(1);
 
-        Mockito.verify(mediaService).deleteMediaByUrl("schools/logo.jpg");
-        Mockito.verify(mediaService).deleteMediaByUrl("schools/cover.jpg");
+        Mockito.verify(mediaService).deleteById(10);
+        Mockito.verify(mediaService).deleteById(11);
         Mockito.verify(schoolRepository).deleteById(1);
     }
 
     @Test
-    void testPatch() {
-        School updates = School.builder()
-                .name("Updated School")
-                .logoUrl("schools/new-logo.jpg")
-                .build();
-        
+    void testPatchReplacesLogoMediaAndDeletesOld() {
+        School updates = School.builder().name("Updated School").logoMediaId(20).build();
+
         Mockito.when(schoolRepository.findById(1)).thenReturn(Optional.of(school));
         Mockito.when(schoolRepository.save(any(School.class))).thenReturn(school);
 
         schoolService.patch(1, updates);
 
         assertEquals("Updated School", school.getName());
-        assertEquals("schools/new-logo.jpg", school.getLogoUrl());
-        Mockito.verify(mediaService).deleteOldMediaIfChanged("schools/logo.jpg", "schools/new-logo.jpg");
-        Mockito.verify(mediaService).deleteOldMediaIfChanged("schools/cover.jpg", null);
+        assertEquals(20, school.getLogoMediaId());
+        Mockito.verify(mediaService).deleteById(10); // old logo removed
+        Mockito.verify(mediaService, Mockito.never()).deleteById(11); // cover unchanged
+    }
+
+    @Test
+    void testPatchWithSameLogoMediaIdDoesNotDelete() {
+        School updates = School.builder().logoMediaId(10).build();
+
+        Mockito.when(schoolRepository.findById(1)).thenReturn(Optional.of(school));
+        Mockito.when(schoolRepository.save(any(School.class))).thenReturn(school);
+
+        schoolService.patch(1, updates);
+
+        Mockito.verify(mediaService, Mockito.never()).deleteById(any());
     }
 }

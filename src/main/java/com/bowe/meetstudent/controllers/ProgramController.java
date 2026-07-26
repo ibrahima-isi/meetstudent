@@ -221,8 +221,11 @@ public class ProgramController {
     @ApiResponse(responseCode = "404", description = "Program not found")
     public ResponseEntity<ProgramDTO> delete(@Parameter(description = "ID of the program to delete") @PathVariable int id) {
         return programService.findById(id).map(toDelete -> {
+            // Map to DTO BEFORE deleting: the entity's lazy collections cannot be
+            // resolved once it has been removed from the session.
+            ProgramDTO dto = programMapper.toDTO(toDelete);
             programService.delete(toDelete.getId());
-            return new ResponseEntity<>(programMapper.toDTO(toDelete), HttpStatus.OK);
+            return new ResponseEntity<>(dto, HttpStatus.OK);
         }).orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
 }

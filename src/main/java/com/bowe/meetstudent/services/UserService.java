@@ -74,17 +74,9 @@ public class UserService {
         Optional<UserEntity> toDeleteOpt = this.userRepository.findById(id);
         if (toDeleteOpt.isPresent()) {
             UserEntity toDelete = toDeleteOpt.get();
-            // Delete diploma files if they exist
-            if (toDelete.getDiplomas() != null) {
-                toDelete.getDiplomas().forEach(mediaService::deleteMediaByUrl);
-            }
-            // Delete certificates
-            if (toDelete.getCertificates() != null) {
-                toDelete.getCertificates().forEach(mediaService::deleteMediaByUrl);
-            }
-            // Delete video
-            mediaService.deleteMediaByUrl(toDelete.getPresentationVideoUrl());
-            
+            // Delete all media (diplomas, certificates, videos, photo) owned by this user
+            mediaService.deleteAllOwnedBy(id);
+
             this.userRepository.deleteById(id);
             return toDelete;
         }
@@ -115,30 +107,15 @@ public class UserService {
 
     private UserEntity patch(Integer id, UserEntity updates, PasswordEncoder encoder, boolean allowRoleUpdate) {
         return userRepository.findById(id).map(existing -> {
-            // Handle diploma changes
-            if (updates.getDiplomas() != null) {
-                mediaService.deleteRemovedMedia(existing.getDiplomas(), updates.getDiplomas());
-                existing.setDiplomas(updates.getDiplomas());
-            }
-            
-            // Handle certificate changes
-            if (updates.getCertificates() != null) {
-                mediaService.deleteRemovedMedia(existing.getCertificates(), updates.getCertificates());
-                existing.setCertificates(updates.getCertificates());
-            }
-
-            // Handle video change
-            mediaService.deleteOldMediaIfChanged(existing.getPresentationVideoUrl(), updates.getPresentationVideoUrl());
-            
-            // Map remaining fields
+            // Profile fields only. Media (diplomas, certificates, videos, photo) are managed
+            // through MediaController and owned via the media table, not through the user patch.
             if (updates.getFirstname() != null) existing.setFirstname(updates.getFirstname());
             if (updates.getLastname() != null) existing.setLastname(updates.getLastname());
             if (updates.getEmail() != null) existing.setEmail(updates.getEmail());
             if (updates.getBirthday() != null) existing.setBirthday(updates.getBirthday());
             if (updates.getQualification() != null) existing.setQualification(updates.getQualification());
             if (allowRoleUpdate && updates.getRole() != null) existing.setRole(updates.getRole());
-            if (updates.getPresentationVideoUrl() != null) existing.setPresentationVideoUrl(updates.getPresentationVideoUrl());
-            
+
             if (updates.getPassword() != null && !updates.getPassword().isEmpty()) {
                 existing.setPassword(encoder.encode(updates.getPassword()));
             }

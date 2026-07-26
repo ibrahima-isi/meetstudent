@@ -17,7 +17,8 @@ import java.util.List;
 @SuperBuilder
 public class ProgramDTO extends BaseDTO {
     private Integer duration;
-    private String photoUrl;
+    private Integer photoMediaId;
+    private MediaDTO photo;
     private Integer schoolId;
     private Double averageRate;
 

@@ -43,7 +43,7 @@ public class ProgramService {
     @Transactional
     public void delete(int id) {
         this.programRepository.findById(id).ifPresent(program -> {
-            mediaService.deleteMediaByUrl(program.getPhotoUrl());
+            mediaService.deleteById(program.getPhotoMediaId());
             this.programRepository.deleteById(id);
         });
     }
@@ -64,12 +64,15 @@ public class ProgramService {
     @Transactional
     public Program patch(Integer id, Program updates) {
         return programRepository.findById(id).map(existing -> {
-            mediaService.deleteOldMediaIfChanged(existing.getPhotoUrl(), updates.getPhotoUrl());
-            
+            if (updates.getPhotoMediaId() != null
+                    && !updates.getPhotoMediaId().equals(existing.getPhotoMediaId())) {
+                mediaService.deleteById(existing.getPhotoMediaId());
+            }
+
             if (updates.getName() != null) existing.setName(updates.getName());
             if (updates.getCode() != null) existing.setCode(updates.getCode());
             if (updates.getDuration() != null) existing.setDuration(updates.getDuration());
-            if (updates.getPhotoUrl() != null) existing.setPhotoUrl(updates.getPhotoUrl());
+            if (updates.getPhotoMediaId() != null) existing.setPhotoMediaId(updates.getPhotoMediaId());
             if (updates.getSchool() != null) existing.setSchool(updates.getSchool());
             
             return programRepository.save(existing);

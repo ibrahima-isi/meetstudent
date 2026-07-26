@@ -38,9 +38,9 @@ public class UserDTO extends AbstractDTO {
     private String confirmedPassword;
     private Role role;
     private String qualification;
-    private List<String> diplomas;
-    private List<String> certificates;
-    private String presentationVideoUrl;
+    private List<MediaDTO> diplomas;
+    private List<MediaDTO> certificates;
+    private MediaDTO presentationVideo;
     private List<SchoolDTO> wishlist;
     private String photoUrl;
 }

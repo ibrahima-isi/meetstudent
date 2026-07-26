@@ -15,8 +15,12 @@ import java.util.List;
 public class SchoolDTO extends BaseDTO {
 
     private Address address;
-    private String logoUrl;
-    private String coverPhotoUrl;
+    // input: ids of already-uploaded media
+    private Integer logoMediaId;
+    private Integer coverMediaId;
+    // output: resolved media objects (with publicUrl)
+    private MediaDTO logo;
+    private MediaDTO cover;
     private Double averageRate;
     private List<TagDTO> tags;
 

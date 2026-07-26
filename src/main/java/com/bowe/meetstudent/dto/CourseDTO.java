@@ -11,7 +11,8 @@ import java.util.Date;
 @NoArgsConstructor
 @SuperBuilder
 public class CourseDTO extends BaseDTO {
-    private String photoUrl;
+    private Integer photoMediaId;
+    private MediaDTO photo;
     private Integer programId;
     private Double averageRate;
 }
