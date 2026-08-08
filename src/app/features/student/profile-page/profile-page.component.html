@@ -171,6 +171,8 @@
     </div>
 
     @if (profile().role?.name === 'STUDENT') {
+      <app-user-documents />
+
       <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <h2 class="text-gray-900 mb-4 text-xl font-bold">Ma liste de souhaits</h2>
         @if (wishlist().length > 0) {

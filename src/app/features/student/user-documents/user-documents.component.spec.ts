@@ -120,4 +120,88 @@ describe('UserDocumentsComponent', () => {
     expect(component.error()).toBeTruthy();
     expect(component.loading()).toBeFalse();
   });
+
+  it('uploads the selected file with the chosen category and an idempotency key', () => {
+    const fixture = TestBed.createComponent(UserDocumentsComponent);
+    fixture.detectChanges();
+    httpMock.expectOne(`${environment.apiUrl}/media/mine`).flush([]);
+
+    const component = fixture.componentInstance;
+    component.selectedCategory.set('CERTIFICATE');
+
+    const file = new File([new ArrayBuffer(1024)], 'a.pdf', { type: 'application/pdf' });
+    const event = { target: { files: [file] } } as unknown as Event;
+    component.onFileSelected(event);
+
+    const req = httpMock.expectOne(
+      r => r.method === 'POST' && r.url === `${environment.apiUrl}/media`
+    );
+    expect(req.request.params.get('category')).toBe('CERTIFICATE');
+    expect(req.request.headers.get('Idempotency-Key')).toBeTruthy();
+    req.flush(media({ id: 9, category: 'CERTIFICATE' }));
+
+    httpMock.expectOne(`${environment.apiUrl}/media/mine`).flush([]);
+  });
+
+  it('rejects a file above the size limit without calling the API', () => {
+    const fixture = TestBed.createComponent(UserDocumentsComponent);
+    fixture.detectChanges();
+    httpMock.expectOne(`${environment.apiUrl}/media/mine`).flush([]);
+
+    const component = fixture.componentInstance;
+    const file = new File([new ArrayBuffer(10485761)], 'big.pdf', { type: 'application/pdf' });
+    const event = { target: { files: [file] } } as unknown as Event;
+    component.onFileSelected(event);
+
+    expect(component.error()).toBeTruthy();
+    httpMock.expectNone(`${environment.apiUrl}/media`);
+  });
+
+  it('rejects a disallowed extension without calling the API', () => {
+    const fixture = TestBed.createComponent(UserDocumentsComponent);
+    fixture.detectChanges();
+    httpMock.expectOne(`${environment.apiUrl}/media/mine`).flush([]);
+
+    const component = fixture.componentInstance;
+    const file = new File([new ArrayBuffer(1024)], 'evil.exe', { type: 'application/octet-stream' });
+    const event = { target: { files: [file] } } as unknown as Event;
+    component.onFileSelected(event);
+
+    expect(component.error()).toBeTruthy();
+    httpMock.expectNone(`${environment.apiUrl}/media`);
+  });
+
+  it('clears uploading and sets an error when the upload fails', () => {
+    const fixture = TestBed.createComponent(UserDocumentsComponent);
+    fixture.detectChanges();
+    httpMock.expectOne(`${environment.apiUrl}/media/mine`).flush([]);
+
+    const component = fixture.componentInstance;
+    const file = new File([new ArrayBuffer(1024)], 'a.pdf', { type: 'application/pdf' });
+    const event = { target: { files: [file] } } as unknown as Event;
+    component.onFileSelected(event);
+
+    const req = httpMock.expectOne(
+      r => r.method === 'POST' && r.url === `${environment.apiUrl}/media`
+    );
+    req.flush('server error', { status: 500, statusText: 'Internal Server Error' });
+
+    expect(component.error()).toBeTruthy();
+    expect(component.uploading()).toBeFalse();
+  });
+
+  it('deletes a document and reloads the list', () => {
+    const fixture = TestBed.createComponent(UserDocumentsComponent);
+    fixture.detectChanges();
+    httpMock.expectOne(`${environment.apiUrl}/media/mine`).flush([]);
+
+    const component = fixture.componentInstance;
+    component.remove(media({ id: 5 }));
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/media/5`);
+    expect(req.request.method).toBe('DELETE');
+    req.flush(null);
+
+    httpMock.expectOne(`${environment.apiUrl}/media/mine`).flush([]);
+  });
 });

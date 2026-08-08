@@ -4,10 +4,11 @@ import { FormsModule } from '@angular/forms';
 import { LucideAngularModule, ArrowLeft, User as UserIcon, Mail, Phone, MapPin, GraduationCap, Book, Save, Heart, Briefcase } from 'lucide-angular';
 import { TokenService } from '@services/token.service';
 import { User } from '@models/entities';
+import { UserDocumentsComponent } from '../user-documents/user-documents.component';
 
 @Component({
   selector: 'app-profile-page',
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule, UserDocumentsComponent],
   templateUrl: './profile-page.component.html'
 })
 export class ProfilePageComponent implements OnInit {
