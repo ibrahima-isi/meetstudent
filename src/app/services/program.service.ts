@@ -3,12 +3,14 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { Program, Page } from '@models/entities';
+import { MediaService } from './media.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ProgramService {
   private http = inject(HttpClient);
+  private mediaService = inject(MediaService);
   private apiUrl = `${environment.apiUrl}/programs`;
 
   private programsSignal = signal<Program[]>([]);
@@ -43,7 +45,8 @@ export class ProgramService {
       reviewCount: program.reviewCount || 0,
       level: program.level || 'Licence',
       description: program.description || 'Aucune description disponible',
-      accreditations: program.accreditations || []
+      accreditations: program.accreditations || [],
+      photoImageUrl: this.mediaService.resolveUrl(program.photo) ?? program.photoImageUrl
     };
   }
 

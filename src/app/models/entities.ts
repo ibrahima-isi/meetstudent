@@ -23,6 +23,42 @@ export interface Address {
   country: string;
 }
 
+export type MediaCategory =
+  | 'DIPLOMA'
+  | 'CERTIFICATE'
+  | 'BULLETIN'
+  | 'PRESENTATION_VIDEO'
+  | 'SCHOOL_LOGO'
+  | 'SCHOOL_COVER'
+  | 'COURSE_PHOTO'
+  | 'PROGRAM_PHOTO'
+  | 'USER_PHOTO';
+
+export type VerificationStatus = 'PENDING' | 'VERIFIED' | 'REJECTED';
+
+/**
+ * A stored file. Uploads return this; entities reference it by id.
+ *
+ * `publicUrl` is set ONLY for PUBLIC media and is relative to the server root
+ * (e.g. `/uploads/public/x.png`) — NOT to the `/api/v1` base. Resolve it with
+ * `MediaUrlService.publicUrl()` rather than prefixing `environment.apiUrl`.
+ *
+ * PRIVATE media has `publicUrl: null` and must be fetched as a blob from
+ * `GET /api/v1/media/{id}`; a plain `<img src>` sends no Authorization header
+ * and gets a 403.
+ */
+export interface Media {
+  id: number;
+  category: MediaCategory;
+  visibility: 'PUBLIC' | 'PRIVATE';
+  verificationStatus: VerificationStatus | null;
+  rejectionReason: string | null;
+  originalFilename: string;
+  contentType: string;
+  sizeBytes: number;
+  publicUrl: string | null;
+}
+
 export interface User extends AbstractEntity {
   firstname: string;
   lastname: string;
@@ -30,9 +66,12 @@ export interface User extends AbstractEntity {
   email: string;
   role: Role;
   qualification?: string;
-  diplomas?: string[];
-  certificates?: string[];
-  presentationVideoUrl?: string;
+  /** Private media — fetch content via MediaService.blobUrl(id), not <img src>. */
+  diplomas?: Media[];
+  certificates?: Media[];
+  presentationVideo?: Media | null;
+  /** Still a plain URL string on the backend; not migrated to the media FK model. */
+  photoUrl?: string;
   wishlist?: School[];
 }
 
@@ -50,8 +89,12 @@ export interface Accreditation extends AbstractEntity {
 export interface School extends BaseEntity {
   creation?: string;
   address: Address;
-  logoUrl?: string;
-  coverPhotoUrl?: string;
+  /** Write: id of an already-uploaded media (ADMIN-only upload). */
+  logoMediaId?: number;
+  coverMediaId?: number;
+  /** Read: resolved public media, carries `publicUrl`. */
+  logo?: Media | null;
+  cover?: Media | null;
   programs?: Program[];
   schoolRates?: SchoolRate[];
   tags?: Tag[];
@@ -61,11 +104,17 @@ export interface School extends BaseEntity {
   description?: string;
   rating?: number;
   reviewCount?: number;
+  /** Absolute image URLs resolved from `logo`/`cover` by the service layer. */
+  logoImageUrl?: string;
+  coverImageUrl?: string;
 }
 
 export interface Program extends BaseEntity {
   duration: number; // In years
-  photoUrl?: string;
+  /** Write: media id. Read: resolved `photo`. */
+  photoMediaId?: number;
+  photo?: Media | null;
+  schoolId?: number;
   school?: School;
   courses?: Course[];
   programRates?: ProgramRate[];
@@ -78,12 +127,19 @@ export interface Program extends BaseEntity {
   startDate?: string;
   capacity?: number;
   enrolled?: number;
+  /** Absolute image URL resolved from `photo` by the service layer. */
+  photoImageUrl?: string;
 }
 
 export interface Course extends BaseEntity {
-  photoUrl?: string;
+  /** Write: media id. Read: resolved `photo`. */
+  photoMediaId?: number;
+  photo?: Media | null;
+  programId?: number;
   program?: Program;
   courseRates?: CourseRate[];
+  /** Absolute image URL resolved from `photo` by the service layer. */
+  photoImageUrl?: string;
 }
 
 export interface Rate extends AbstractEntity {

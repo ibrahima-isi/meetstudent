@@ -3,12 +3,14 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, map, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { User } from '@models/entities';
+import { MediaService } from './media.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class UserService {
   private http = inject(HttpClient);
+  private mediaService = inject(MediaService);
   private apiUrl = `${environment.apiUrl}/users`;
 
   private usersSignal = signal<User[]>([]);
@@ -33,13 +35,16 @@ export class UserService {
   private mapUserFields(user: User): User {
     return {
       ...user,
-      // Ensure arrays are initialized if missing
+      // Media objects now, not URL strings. These are PRIVATE — render their
+      // content via MediaService.blobUrl(id), never a bare <img src>.
       diplomas: user.diplomas || [],
       certificates: user.certificates || [],
+      presentationVideo: user.presentationVideo ?? null,
       wishlist: (user.wishlist || []).map(school => ({
         ...school,
         rating: (school as any).averageRate || school.rating || 0,
-        type: school.type || 'Établissement'
+        type: school.type || 'Établissement',
+        coverImageUrl: this.mediaService.resolveUrl(school.cover) ?? school.coverImageUrl
       }))
     };
   }

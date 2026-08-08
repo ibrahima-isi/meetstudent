@@ -3,12 +3,14 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, map, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { Course } from '@models/entities';
+import { MediaService } from './media.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class CourseService {
   private http = inject(HttpClient);
+  private mediaService = inject(MediaService);
   private apiUrl = `${environment.apiUrl}/courses`;
 
   private coursesSignal = signal<Course[]>([]);
@@ -28,7 +30,7 @@ export class CourseService {
   private mapCourseFields(course: Course): Course {
     return {
       ...course,
-      // Add any mapping if needed later
+      photoImageUrl: this.mediaService.resolveUrl(course.photo) ?? course.photoImageUrl
     };
   }
 

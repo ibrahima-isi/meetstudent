@@ -3,12 +3,14 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { School, Page } from '@models/entities';
+import { MediaService } from './media.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class SchoolService {
   private http = inject(HttpClient);
+  private mediaService = inject(MediaService);
   private apiUrl = `${environment.apiUrl}/schools`;
 
   private schoolsSignal = signal<School[]>([]);
@@ -43,7 +45,11 @@ export class SchoolService {
       reviewCount: school.reviewCount || 0,
       type: school.type || 'Établissement',
       description: school.description || 'Aucune description disponible',
-      accreditations: school.accreditations || []
+      accreditations: school.accreditations || [],
+      // Resolve media FKs to absolute URLs so templates bind one plain field.
+      // `??` preserves any URL already set by seeded/mock data.
+      logoImageUrl: this.mediaService.resolveUrl(school.logo) ?? school.logoImageUrl,
+      coverImageUrl: this.mediaService.resolveUrl(school.cover) ?? school.coverImageUrl
     };
   }
 
