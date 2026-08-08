@@ -136,10 +136,18 @@ export class RegisterFormComponent {
     this.isLoading.set(true);
 
     const email = this.step1Form.value.email;
+    // Payload must match the backend RegisterRequest exactly:
+    // firstname, lastname, email, password, confirmedPassword, birthday, qualification.
+    // `role` is deliberately NOT sent — registration always creates a STUDENT, and
+    // role changes go through PATCH /users/{id}/role (admin-only).
+    // The step1 fields bacType / collegeLevel / specialty / town have no backend
+    // counterpart and are dropped rather than silently posted and ignored.
     const userData = {
-      ...this.step1Form.value,
+      firstname: this.step1Form.value.firstname,
+      lastname: this.step1Form.value.lastname,
+      email,
       password,
-      role: { name: this.userType().toUpperCase() }
+      confirmedPassword: confirmPassword
     };
 
     this.authService.register(userData).subscribe({
