@@ -109,7 +109,7 @@
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer flex flex-col">
           <div class="relative h-48" (click)="onSchoolClick.emit(school)">
             <app-image-with-fallback
-              [src]="school.coverPhotoUrl || ''"
+              [src]="school.coverImageUrl || ''"
               [alt]="school.name"
               class="w-full h-full object-cover block"
             ></app-image-with-fallback>
@@ -141,7 +141,7 @@
               <app-star-rating 
                 [itemId]="school.id || 0"
                 itemType="school"
-                [initialRating]="school.rating"
+                [initialRating]="school.rating ?? 0"
               ></app-star-rating>
             </div>
 
