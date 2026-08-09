@@ -1,0 +1,76 @@
+<div class="bg-white rounded-2xl shadow-xl p-8">
+  <div class="text-center mb-8">
+    <div class="inline-flex items-center justify-center w-16 h-16 bg-indigo-100 rounded-full mb-4">
+      <lucide-icon [img]="Mail" class="w-8 h-8 text-indigo-600"></lucide-icon>
+    </div>
+    <h1 class="text-gray-900 mb-2">Verify Your Email</h1>
+    <p class="text-gray-600">
+      We've sent a verification code to
+    </p>
+    <p class="text-gray-900 mt-1">{{ email() }}</p>
+  </div>
+
+  <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+    <p class="text-blue-900">
+      <span class="font-medium">Demo Mode:</span> Your verification code is
+      <span class="font-mono bg-blue-100 px-2 py-1 rounded">{{ verificationCode }}</span>
+    </p>
+  </div>
+
+  @if (error()) {
+    <div class="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3 mb-6">
+      <lucide-icon [img]="AlertCircle" class="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5"></lucide-icon>
+      <p class="text-red-800">{{ error() }}</p>
+    </div>
+  }
+
+  @if (isLoading() && !code().includes('')) {
+    <div class="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3 mb-6">
+      <lucide-icon [img]="CheckCircle" class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5"></lucide-icon>
+      <p class="text-green-800">Email verified successfully! Redirecting...</p>
+    </div>
+  }
+
+  <div class="mb-8">
+    <label class="block text-gray-700 mb-4 text-center">
+      Enter Verification Code
+    </label>
+    <div class="flex justify-center gap-3">
+      @for (digit of code(); track $index) {
+        <input
+          #codeInput
+          type="text"
+          inputmode="numeric"
+          maxlength="1"
+          [value]="digit"
+          (input)="handleCodeChange($index, $event)"
+          (keydown)="handleKeyDown($index, $event)"
+          (paste)="$index === 0 ? handlePaste($event) : null"
+          class="w-12 h-14 text-center border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:opacity-50"
+          [disabled]="isLoading()"
+        />
+      }
+    </div>
+  </div>
+
+  <button
+    (click)="handleResend()"
+    [disabled]="!canResend()"
+    class="w-full flex items-center justify-center gap-2 text-indigo-600 hover:text-indigo-700 disabled:text-gray-400 disabled:cursor-not-allowed mb-6"
+  >
+    <lucide-icon [img]="RefreshCw" class="w-4 h-4"></lucide-icon>
+    {{ canResend() ? 'Resend Code' : 'Resend in ' + countdown() + 's' }}
+  </button>
+
+  <div class="text-center">
+    <p class="text-gray-600">
+      Wrong email?
+      <button
+        (click)="onVerificationSuccess.emit()"
+        class="text-indigo-600 hover:text-indigo-700"
+      >
+        Go back
+      </button>
+    </p>
+  </div>
+</div>

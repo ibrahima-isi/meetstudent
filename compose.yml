@@ -1,57 +1,94 @@
+name: meetstudent
+
+# Full local stack: Postgres + Spring Boot API + Angular SSR front.
+# Fully isolated from the cloud database — the data here is disposable.
+#
+#   cp .env.example .env   # then fill in the two secrets
+#   docker compose up --build
+#
+#   front   http://localhost:4200
+#   api     http://localhost:8080/api/v1
+#   swagger http://localhost:8080/swagger-ui.html
+
 services:
-  # Production-like container (Builds and runs the final standalone JAR)
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-meetstudent}
+      POSTGRES_USER: ${POSTGRES_USER:-meetstudent}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
     ports:
-      - "8080:8080"
-    env_file:
-      - .env
+      - "5432:5432"
+    volumes:
+      # Postgres 18+ expects the mount at /var/lib/postgresql, not .../data:
+      # it stores data in a major-version subdirectory so pg_upgrade --link can
+      # work across a single mount point. Mounting .../data aborts at startup.
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test:
+        ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-meetstudent} -d ${POSTGRES_DB:-meetstudent}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks:
+      - meetstudent
+
+  api:
+    build:
+      context: ./apps/api
     environment:
       SPRING_PROFILES_ACTIVE: docker
-    networks:
-      - meetstudent-network
-    restart: no
-
-  # Development container with hot-reload (Maps local code to the container)
-  app-dev:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: build
-    working_dir: /app
-    command: ["./mvnw", "spring-boot:run", "-DskipTests"]
-    volumes:
-      - ./:/app
-      - ~/.m2:/root/.m2
+      # Takes precedence over the localhost fallback in application-docker.yml.
+      CUSTOM_DEV_DB_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-meetstudent}
+      POSTGRES_USER: ${POSTGRES_USER:-meetstudent}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?set JWT_SECRET_KEY in .env}
+      CORS_ALLOWED_ORIGINS: http://localhost:${WEB_PORT:-4200}
+      # Media lives on named volumes so a rebuild does not wipe uploads.
+      FILE_UPLOAD_DIR: /data/uploads
+      FILE_PRIVATE_DIR: /data/private
     ports:
       - "8080:8080"
-    env_file:
-      - .env
-    environment:
-      SPRING_PROFILES_ACTIVE: dev
-    networks:
-      - meetstudent-network
-    restart: no
-
-  # Test execution container (Runs all unit and integration tests)
-  test:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: build
-    working_dir: /app
-    command: ["./mvnw", "clean", "verify"]
     volumes:
-      - ./:/app
-      - ~/.m2:/root/.m2
-    environment:
-      SPRING_PROFILES_ACTIVE: test
+      - api-uploads:/data/uploads
+      - api-private:/data/private
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      # /actuator/health is not permitAll in WebSecurityConfig and would answer
+      # 401. This public endpoint goes through the DB, so a 200 means the schema
+      # is migrated and the app is genuinely serving.
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/api/v1/schools || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
     networks:
-      - meetstudent-network
-    restart: no
+      - meetstudent
+
+  web:
+    build:
+      context: ./apps/web
+    environment:
+      PORT: 4200
+      # Consumed by applyServerEnvironment() in src/server.ts: the SSR bundle
+      # must reach the API over the compose network, not via localhost.
+      API_URL: http://api:8080/api/v1
+      SERVER_URL: http://api:8080
+    ports:
+      - "${WEB_PORT:-4200}:4200"
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - meetstudent
+
+volumes:
+  pgdata:
+  api-uploads:
+  api-private:
 
 networks:
-  meetstudent-network:
+  meetstudent:
     driver: bridge

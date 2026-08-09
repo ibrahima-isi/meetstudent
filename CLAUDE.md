@@ -2,80 +2,95 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project Overview
+## Working agreement (non-negotiable)
 
-MeetStudent backend — a Spring Boot 3 (Java 21) REST API managing schools, programs, courses, accreditations, and a rating system, with JWT auth and role-based access control (PUBLIC / STUDENT / EXPERT / ADMIN).
+**Branching**
+- Never commit or work directly on local `main`. Never push to remote `main` or `dev`.
+- Every task starts with a new branch named `<type>/<short-kebab-description>`, where `<type>` is a Conventional Commits type: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `perf`, `ci` (e.g. `feat/media-upload-retry`). Commit messages use the same types.
+
+**Scope**
+- Do not touch code that already works without explicit approval. Do not modify any file that is not strictly required by the assigned task.
+- Ask permission before editing more than 3 files, and say which files and why.
+
+**Implementation**
+- Use TDD: write the failing test first, watch it fail, then write the minimum code to pass it, then refactor.
+- Review the completed work before reporting it done (re-read the diff, run the relevant tests, state the actual results).
+
+**After merging to local `main`**
+- Bring the full stack up locally with Docker and run live tests against it before considering the work finished: `docker compose up --build`, then exercise the API and the front (see Commands below).
+
+## Repository layout
+
+MeetStudent is a monorepo assembled with `git subtree`. Each app keeps its own build, dependencies, and agent instructions — there is no root package manager or build orchestration, so always work from inside the relevant app directory.
+
+- `apps/api/` — Spring Boot 3 / Java 21 REST API (Maven). **Read `apps/api/CLAUDE.md` before touching backend code** — it documents the layered architecture, media/storage split, Flyway rules, and test conventions in detail.
+- `apps/web/` — Angular 20 SSR frontend (npm). **Read `apps/web/.claude/CLAUDE.md`** for the mandatory Angular/TypeScript style rules (signals, `inject()`, native control flow, no `ngClass`/`ngStyle`, etc.).
+- `apps/backoffice/` — placeholder, empty.
+- `docs/MONOREPO.md` — subtree provenance, branch topology, CI and ruleset conventions. **Read it before touching branches, CI job names or subtree history.**
+- `infra/`, `shared/` — empty placeholders reserved for future cross-app content.
+- `compose.yml` / `compose.dev.yml` — full local stack, and the hot-reload override for the API.
+
+Because the apps arrived via subtree, keep changes scoped to a single `apps/<app>` subtree per commit where practical. There is **no upstream remote to pull the subtrees from** — the source repositories no longer exist, so never run `git subtree pull`.
 
 ## Commands
 
+Backend (`cd apps/api`):
+
 ```bash
-# Build and run all tests (unit + integration)
-./mvnw clean verify
-
-# Unit tests only (surefire: **/*Test.java)
-./mvnw test
-
-# Integration tests only (failsafe: **/*IntegrationTests.java)
-./mvnw failsafe:integration-test failsafe:verify
-
-# Run a single test class / method
-./mvnw test -Dtest=UserServiceTest
-./mvnw test -Dtest=UserServiceTest#methodName
-./mvnw verify -Dit.test=UserControllerIntegrationTests -Dtest=skip -DfailIfNoTests=false
-
-# Run the app locally (dev profile, hot reload via devtools)
-./mvnw spring-boot:run
-
-# Run with Docker (requires .env with JWT_SECRET_KEY)
-docker compose up app-dev    # dev container with hot reload
-docker compose up app        # production-like standalone JAR
-docker compose up test       # runs ./mvnw clean verify in a container
+./mvnw clean verify                 # unit + integration tests
+./mvnw test -Dtest=UserServiceTest  # single unit test class (append #method for one test)
+./mvnw spring-boot:run              # dev profile, hot reload
+docker compose up app-dev           # containerised dev; needs .env with JWT_SECRET_KEY
 ```
 
-Swagger UI is at `http://localhost:8080/swagger-ui.html`. All endpoints are versioned under `/api/v1/...`.
+Test-name conventions are enforced by the build: `*Test.java` runs under surefire, `*IntegrationTests.java` under failsafe. Anything else never runs.
 
-The test naming convention is enforced by the build: unit tests must end in `Test`, integration tests in `IntegrationTests`, or they won't run.
+Frontend (`cd apps/web`):
 
-## Architecture
+```bash
+npm install
+npm start                # ng serve on http://localhost:4200
+npm run build            # SSR build into dist/
+npm test                 # Karma + Jasmine
+npm test -- --include='**/media.service.spec.ts'   # single spec
+npm run serve:ssr:frontend
+```
 
-Standard layered architecture under `src/main/java/com/bowe/meetstudent/`:
+CI runs the web tests headless: `npm test -- --no-watch --browsers=ChromeHeadless`.
 
-- **controllers/** — `@RestController`s; validate input, call services, map entities to DTOs via mappers, return `ResponseEntity<DTO>` or `Page<DTO>`. Annotated with Swagger docs (`@Tag`, `@Operation`, `@ApiResponse`). List endpoints are paginated with `Pageable`.
-- **services/** — business logic, `@Transactional`. Services return entities; mapping to DTOs happens in the controller.
-- **repositories/** — Spring Data JPA interfaces.
-- **entities/** — JPA entities (subpackages `rates/`, `embedded/`).
-- **dto/**, **mappers/** — API contracts and Entity↔DTO conversion (ModelMapper plus manual mappers in `mappers/implementations/`).
-- **security/** — Spring Security + JWT (Auth0 java-jwt). Dual-token system: short-lived access tokens plus database-backed refresh tokens with rotation and revocation. Endpoints are secured by default; `WebSecurityConfig` holds the access rules. A custom `UserPrincipal` is the authenticated principal (also used by JPA auditing in `JpaAuditingConfig`).
+Full stack (repo root):
 
-Dependency injection is by constructor via Lombok `@RequiredArgsConstructor`. Prefer `var` for clearly inferred local variables.
+```bash
+cp .env.example .env             # JWT_SECRET_KEY + POSTGRES_PASSWORD, both required
+docker compose up --build        # Postgres 18 + api + web
+docker compose up -d api         # api + its Postgres only; naming a service skips the rest
 
-### Database & migrations
+# Hot-reloading API: recompile on the host (IDE or ./mvnw compile) and devtools
+# restarts the container in about a second.
+docker compose -f compose.yml -f compose.dev.yml up api
+```
 
-- PostgreSQL in dev/prod (profiles: `application.yml`, `application-docker.yml`, `application-prod.yml`); H2 in tests.
-- All schema changes go through Flyway SQL files in `src/main/resources/db/migration`, named `V<Version>__<Description>.sql`.
-- **H2 compatibility:** never use `@Column(columnDefinition = "text[]")` — it breaks H2. Use `@JdbcTypeCode(java.sql.Types.ARRAY)` on `List<String>` fields instead.
-- Media files (logos, diplomas, videos) live in `uploads/`; `MediaService` deletes files from disk when the owning entity is deleted or the file is replaced.
+Front on `http://localhost:4200`, API on `http://localhost:8080/api/v1`, Swagger at `/swagger-ui.html`. Postgres is published on 5432.
 
-### Media & documents
+The front is deliberately absent from the dev override: `ng serve` on the host has far better HMR than a container, and already targets `http://localhost:8080`.
 
-Personal documents (diplomas, certificates, bulletins, presentation videos) are modeled by the `Media` entity (one row per stored file) with category-derived visibility and a verification status — they are **not** stored as string fields on `UserEntity` anymore.
+## How the two apps fit together
 
-- **Storage split:** public files (`SCHOOL_LOGO`, `SCHOOL_COVER`, `USER_PHOTO`) go under `uploads/public/` and are served statically (`/uploads/public/**`); private files (personal documents) go under `storage/private/` (`file.private-dir`), are **never** mapped statically, and are reachable only through `GET /api/v1/media/{id}` with an owner-or-admin check. Configure both via `file.upload-dir` / `file.private-dir`.
-- **Service split:** `MediaStorageService` does low-level file I/O (atomic write via `.tmp` + `ATOMIC_MOVE`, load, delete, anti-traversal); `MediaService` does orchestration — role-gated upload, idempotency (`Idempotency-Key` header, deduped on `(ownerId, idempotencyKey)`), download authorization, moderation, and delete.
-- **Categories & roles:** `MediaCategory` carries `getVisibility()`, `isModerated()`, `getAllowedUploadRoles()`, `isPersonalDocument()`. Personal documents are uploadable by `ROLE_STUDENT`/`ROLE_EXPERT`/`ROLE_ADMIN`; school media is `ROLE_ADMIN`-only; user photo is any authenticated role.
-- **Entity images:** `School` (`logoMediaId`, `coverMediaId`), `Course` (`photoMediaId`), and `Program` (`photoMediaId`) reference public `Media` rows by FK instead of URL strings. Upload flow: `POST /api/v1/media?category=SCHOOL_LOGO|SCHOOL_COVER|COURSE_PHOTO|PROGRAM_PHOTO` (ADMIN-only) → read `MediaDTO.publicUrl` (a relative `/uploads/public/...` URL, set only on public media) → `PUT`/`PATCH` the entity with the media id. Response DTOs expose the resolved media as `logo`/`cover`/`photo` objects. Replacing or deleting an entity deletes the orphaned media (`MediaService.deleteById`); `V16` adds the FK columns (`ON DELETE SET NULL`) and drops the legacy URL columns.
-- **Moderation:** moderated media starts `PENDING`; an admin sets `VERIFIED`/`REJECTED` (with optional reason) via `PATCH /api/v1/media/{id}/verification`. Status is informational — a `REJECTED` document is not functionally blocked.
-- **Endpoints:** `POST /api/v1/media?category=...` (upload), `GET /api/v1/media/{id}` (download), `GET /api/v1/media/mine` (own media), `GET /api/v1/media?status=PENDING` (admin queue), `PATCH /api/v1/media/{id}/verification` (admin), `DELETE /api/v1/media/{id}` (owner/admin). Downloads render inline only for a MIME allowlist, else force `attachment`, and always send `X-Content-Type-Options: nosniff` + a sandbox CSP.
-- **Migrations:** `V14`/`V15` create the `media` table and migrate legacy `users.diplomas`/`certificates`/`presentation_video_url` data; `MediaMigrationRunner` relocates pre-existing private files into `storage/private/` at startup. These run only against Postgres — the H2 test suite (Flyway disabled) generates the schema from the entity.
+- The API is versioned under `/api/v1/...`; Swagger UI at `http://localhost:8080/swagger-ui.html`.
+- The frontend targets it via `src/environments/environment.ts`, which deliberately holds **two** URLs: `apiUrl` (`.../api/v1`) for REST calls and `serverUrl` (server root) for static media. `Media.publicUrl` is relative to the server root, *not* to `/api/v1` — resolving it against `apiUrl` produces broken images.
+- Those values are baked in at build time, which is wrong for SSR: inside the web container `localhost:8080` answers nothing. `src/server.ts` therefore calls `applyServerEnvironment(environment, process.env)` before bootstrap, so `API_URL` / `SERVER_URL` override them server-side only. Keep that call first if you touch `server.ts`, and prefer reading `environment.apiUrl` at injection time over caching it at module load.
+- Auth is a dual-token system (short-lived access token + DB-backed rotating refresh token). On the client, `TokenService` holds `token`/`refreshToken`/`user` as signals backed by `localStorage` (guarded for SSR, where `localStorage` is undefined), and `jwtInterceptor` attaches the bearer token.
+- Personal documents (diplomas, certificates, bulletins, videos) are **private** media: they cannot be loaded with a plain `<img src>` and must go through `GET /api/v1/media/{id}` with the auth header. Only public categories (school logo/cover, user photo, course/program photo) are servable statically.
+- `apps/web/docs/backend-api-integration.md` is the living handoff describing in-flight API contract changes and their frontend impact; check it before assuming a DTO shape.
 
-### Testing
+## Frontend structure notes
 
-Tests live in `src/test/java/com/bowe/meetstudent/` split into `unit/` (Mockito) and `integration/` (MockMvc + H2).
+- `src/app/features/<area>/<page>/` holds page components grouped by audience (`auth`, `public`, `student`); `src/app/services/` holds one service per backend resource; `src/app/shared/components/` holds reusable UI.
+- TS path aliases are configured: `@services/*`, `@models/*`, `@shared/*`, `@data/*`. Use them instead of deep relative imports.
+- The app is **zoneless** (`provideZonelessChangeDetection`) with client hydration and event replay — state must flow through signals; code relying on Zone.js change detection will not update the view.
+- `apps/web/meetstudent/` is a separate legacy React/Vite prototype (the design source for the Angular pages). Only modify it when a task explicitly targets it.
+- Angular styling is Tailwind v4 via `@tailwindcss/postcss` (`.postcssrc.json`), no `tailwind.config` file.
 
-- Test config (`src/test/resources/application.yml`) disables Flyway and uses `ddl-auto: create-drop` with H2 in `MODE=PostgreSQL`.
-- **Authentication in tests:** do NOT use `jwt().authorities(...)` from `SecurityMockMvcRequestPostProcessors` — the generic principal causes a `ClassCastException` against the custom `UserPrincipal`. Use `TestDataUtil.mockUser(String role)`, which builds a `UserPrincipalAuthenticationToken` with a valid `UserPrincipal`.
-- Integration tests must use the full versioned path (`/api/v1/schools`, not `/api/schools`).
+## Agent instruction files
 
-### Feature workflow
-
-When adding a feature: entity → repository → service → DTOs → mapper → controller (with Swagger annotations) → Flyway migration → unit/integration tests. Create a git branch for features and bug fixes.
+`apps/api/AGENTS.md` is a symlink to `apps/api/CLAUDE.md`. In `apps/web`, `.claude/CLAUDE.md`, `.gemini/GEMINI.md`, and `.github/copilot-instructions.md` carry near-identical Angular guidance — when updating those rules, update all three so the tools stay in sync.

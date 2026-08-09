@@ -2,13 +2,26 @@ name: CI
 
 on:
   push:
-    branches: [main, dev]
+    branches: [main, dev, stage]
   pull_request:
-    branches: [main, dev]
+    branches: [main, dev, stage]
+
+# Cancel superseded runs on the same branch/PR to save runner minutes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build-and-test:
+  # The published check name is the job's `name:`, not its id — branch
+  # protection matches on that string, so keep the two in sync with the
+  # required contexts configured on main/dev.
+  api:
+    name: api / build-and-test
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: apps/api
 
     steps:
       - name: Checkout
@@ -20,16 +33,48 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
+          cache-dependency-path: apps/api/pom.xml
 
-      - name: Build and run all tests
-        run: ./mvnw --batch-mode clean verify
+      - name: Build
+        run: ./mvnw --batch-mode clean compile
+
+      - name: Run unit and integration tests
+        run: ./mvnw --batch-mode verify
 
       - name: Upload test reports on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: test-reports
+          name: test-reports-api
           path: |
-            target/surefire-reports/
-            target/failsafe-reports/
+            apps/api/target/surefire-reports/
+            apps/api/target/failsafe-reports/
           retention-days: 7
+
+  web:
+    name: web / build-and-test
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: apps/web
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (production, SSR)
+        run: npm run build
+
+      - name: Run unit tests
+        run: npm test -- --no-watch --browsers=ChromeHeadless
