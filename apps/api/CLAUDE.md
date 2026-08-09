@@ -30,6 +30,10 @@ MeetStudent backend — a Spring Boot 3 (Java 21) REST API managing schools, pro
 # the whole stack (Postgres + API + Angular front). See ../../compose.yml.
 (cd ../.. && docker compose up --build)      # full stack
 (cd ../.. && docker compose up --build api)  # API + its Postgres only
+
+# Hot-reloading API in Docker (devtools). Recompile on the host — from your IDE
+# or `./mvnw compile` — and the container restarts in about a second.
+(cd ../.. && docker compose -f compose.yml -f compose.dev.yml up --build api)
 ```
 
 Swagger UI is at `http://localhost:8080/swagger-ui.html`. All endpoints are versioned under `/api/v1/...`.
