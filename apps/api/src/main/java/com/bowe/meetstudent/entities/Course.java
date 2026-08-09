@@ -1,0 +1,31 @@
+package com.bowe.meetstudent.entities;
+
+import com.bowe.meetstudent.entities.rates.CourseRate;
+import jakarta.persistence.*;
+import lombok.*;
+import lombok.experimental.SuperBuilder;
+import org.hibernate.proxy.HibernateProxy;
+
+import java.util.List;
+import java.util.Objects;
+
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@SuperBuilder
+@Entity
+@Table(name = "courses")
+@ToString(callSuper = true, onlyExplicitlyIncluded = true)
+public class Course extends BaseEntity {
+
+    @Column(name = "photo_media_id")
+    private Integer photoMediaId;
+
+    @ManyToOne
+    @JoinColumn(name = "program_id")
+    private Program program;
+
+    @OneToMany(mappedBy = "course")
+    private List<CourseRate> courseRates;
+}

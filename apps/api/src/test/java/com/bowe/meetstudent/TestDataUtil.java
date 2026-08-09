@@ -1,0 +1,115 @@
+package com.bowe.meetstudent;
+
+import com.bowe.meetstudent.dto.AccreditationDTO;
+import com.bowe.meetstudent.dto.CourseDTO;
+import com.bowe.meetstudent.dto.ProgramDTO;
+import com.bowe.meetstudent.dto.SchoolDTO;
+import com.bowe.meetstudent.dto.UserDTO;
+import com.bowe.meetstudent.entities.embedded.Address;
+import com.bowe.meetstudent.entities.Role;
+import net.datafaker.Faker;
+
+import java.time.ZoneId;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.Random;
+import java.util.List;
+
+public class TestDataUtil {
+
+    private static final Faker faker = new Faker();
+    private static final Random random = new Random();
+
+    private static final List<Role> ROLES = List.of(
+            Role.builder().id(1).name("ADMIN").build(),
+            Role.builder().id(2).name("USER").build(),
+            Role.builder().id(3).name("EXPERT").build(),
+            Role.builder().id(4).name("STUDENT").build()
+    );
+
+    public static Role getRandomRole(){
+        return ROLES.get(random.nextInt(ROLES.size()));
+    }
+
+    public static UserDTO createUserDto(){
+        String password = faker.regexify("[a-zA-Z0-9]{8,16}");
+        return UserDTO.builder()
+                .email(faker.internet().emailAddress())
+                .role(getRandomRole())
+                .lastname(faker.name().lastName())
+                .firstname(faker.name().firstName())
+                .password(password)
+                .confirmedPassword(password)
+                .birthday(Date.from(faker.timeAndDate().birthday().atStartOfDay(ZoneId.systemDefault()).toInstant()))
+                .qualification(faker.job().field())
+                .build();
+    }
+
+    public static SchoolDTO createSchoolDto(){
+        Address address = getAddress();
+        Calendar start = getStartDate();
+        Calendar end = getEndDate();
+
+        return SchoolDTO.builder()
+                .name(faker.educator().university())
+                .address(address)
+                .code(faker.random().hex(5))
+                .build();
+    }
+
+    public static ProgramDTO createProgramDto(){
+        return ProgramDTO.builder()
+                .name(faker.educator().course())
+                .code(faker.random().hex(5))
+                .duration(faker.number().numberBetween(1, 5))
+                .build();
+    }
+
+    public static CourseDTO createCourseDto(){
+        return CourseDTO.builder()
+                .name(faker.educator().course())
+                .code(faker.random().hex(5))
+                .build();
+    }
+
+    public static AccreditationDTO createAccreditationDto(){
+        return AccreditationDTO.builder()
+                .name(faker.company().name())
+                .code(faker.random().hex(5).toUpperCase())
+                .build();
+    }
+
+    public static Address getAddress(){
+        return Address.builder()
+                .location(faker.address().streetAddress())
+                .city(faker.address().city())
+                .country(faker.address().country())
+                .build();
+    }
+
+    public static Calendar getStartDate() {
+        Calendar start = Calendar.getInstance();
+        start.set(1990, Calendar.JANUARY, 1);
+        return start;
+    }
+
+    public static Calendar getEndDate(){
+        Calendar end = Calendar.getInstance();
+        end.set(2015, Calendar.DECEMBER, 31);
+        return end;
+    }
+
+    public static org.springframework.test.web.servlet.request.RequestPostProcessor mockUser(String role) {
+        return mockUser(1, role);
+    }
+
+    public static org.springframework.test.web.servlet.request.RequestPostProcessor mockUser(Integer userId, String role) {
+        com.bowe.meetstudent.security.UserPrincipal principal = com.bowe.meetstudent.security.UserPrincipal.builder()
+                .id(userId)
+                .username("testUser")
+                .authorities(List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority(role)))
+                .build();
+        com.bowe.meetstudent.security.UserPrincipalAuthenticationToken auth = new com.bowe.meetstudent.security.UserPrincipalAuthenticationToken(principal);
+        return org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication(auth);
+    }
+}

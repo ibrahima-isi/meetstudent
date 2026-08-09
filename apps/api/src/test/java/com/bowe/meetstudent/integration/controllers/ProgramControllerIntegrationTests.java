@@ -1,0 +1,308 @@
+package com.bowe.meetstudent.integration.controllers;
+
+import com.bowe.meetstudent.TestDataUtil;
+import com.bowe.meetstudent.dto.ProgramDTO;
+import com.bowe.meetstudent.entities.Accreditation;
+import com.bowe.meetstudent.entities.Program;
+import com.bowe.meetstudent.entities.School;
+import com.bowe.meetstudent.mappers.implementations.AccreditationMapper;
+import com.bowe.meetstudent.mappers.implementations.ProgramMapper;
+import com.bowe.meetstudent.services.AccreditationService;
+import com.bowe.meetstudent.services.ProgramAccreditationService;
+import com.bowe.meetstudent.services.ProgramService;
+import com.bowe.meetstudent.services.SchoolService;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
+
+@SpringBootTest
+@ExtendWith(SpringExtension.class)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@AutoConfigureMockMvc
+@ActiveProfiles("test")
+class ProgramControllerIntegrationTests {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @Autowired
+    private ProgramService programService;
+
+    @Autowired
+    private SchoolService schoolService;
+
+    @Autowired
+    private ProgramMapper programMapper;
+
+    @Autowired
+    private ProgramAccreditationService programAccreditationService;
+
+    @Autowired
+    private AccreditationService accreditationService;
+
+    @Autowired
+    private AccreditationMapper accreditationMapper;
+
+    @Autowired
+    private com.bowe.meetstudent.repositories.MediaRepository mediaRepository;
+
+    private com.bowe.meetstudent.entities.Media persistedProgramPhoto() {
+        var media = com.bowe.meetstudent.entities.Media.builder()
+                .storageKey("public/prog-it.png")
+                .originalFilename("p.png").contentType("image/png").sizeBytes(10L)
+                .category(com.bowe.meetstudent.entities.enums.MediaCategory.PROGRAM_PHOTO)
+                .visibility(com.bowe.meetstudent.entities.enums.MediaVisibility.PUBLIC)
+                .build();
+        return mediaRepository.save(media);
+    }
+
+    @Test
+    void deleteProgramReturns200WithDeletedDto() throws Exception {
+        Program program = programService.save(programMapper.toEntity(TestDataUtil.createProgramDto()));
+
+        mockMvc.perform(MockMvcRequestBuilders.delete("/api/v1/programs/" + program.getId())
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.id").value(program.getId()));
+
+        org.junit.jupiter.api.Assertions.assertTrue(programService.findById(program.getId()).isEmpty());
+    }
+
+    @Test
+    void putProgramWithPhotoMediaIdResolvesPhotoWithPublicUrl() throws Exception {
+        Program saved = programService.save(programMapper.toEntity(TestDataUtil.createProgramDto()));
+        var media = persistedProgramPhoto();
+
+        ProgramDTO body = TestDataUtil.createProgramDto();
+        body.setPhotoMediaId(media.getId());
+        String json = objectMapper.writeValueAsString(body);
+
+        mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/programs/" + saved.getId())
+                        .contentType(MediaType.APPLICATION_JSON).content(json)
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.photo.id").value(media.getId()))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.photo.publicUrl").value("/uploads/public/prog-it.png"));
+    }
+
+    @Test
+    void testThatCreateProgramReturnsHttpStatus201Created() throws Exception {
+        ProgramDTO programDTO = TestDataUtil.createProgramDto();
+
+        String json = objectMapper.writeValueAsString(programDTO);
+        mockMvc.perform(
+                MockMvcRequestBuilders.post("/api/v1/programs")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json)
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN"))
+        ).andExpect(
+                MockMvcResultMatchers.status().isCreated()
+        );
+    }
+
+    @Test
+    void testThatProgramCanBeCreatedSuccessfullyAndRecalled() throws Exception {
+        ProgramDTO programDTO = TestDataUtil.createProgramDto();
+
+        String json = objectMapper.writeValueAsString(programDTO);
+        mockMvc.perform(
+                MockMvcRequestBuilders.post("/api/v1/programs")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json)
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN"))
+        ).andExpect(
+                MockMvcResultMatchers.status().isCreated()
+        ).andExpect(
+                MockMvcResultMatchers.jsonPath("$.name").value(programDTO.getName())
+        );
+    }
+
+    @Test
+    void testThatCreateProgramWithSchoolReturnsHttpStatus201() throws Exception {
+        School school = new School();
+        school.setName("Test School");
+        school.setCode("TSCH1");
+        school = schoolService.save(school);
+
+        ProgramDTO programDTO = TestDataUtil.createProgramDto();
+        programDTO.setSchoolId(school.getId());
+
+        String json = objectMapper.writeValueAsString(programDTO);
+        mockMvc.perform(
+                MockMvcRequestBuilders.post("/api/v1/programs")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json)
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN"))
+        ).andExpect(
+                MockMvcResultMatchers.status().isCreated()
+        ).andExpect(
+                MockMvcResultMatchers.jsonPath("$.name").value(programDTO.getName())
+        );
+    }
+
+    @Test
+    void testThatGetAllProgramsReturnsHttpStatus200() throws Exception {
+        mockMvc.perform(
+                MockMvcRequestBuilders.get("/api/v1/programs")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN"))
+        ).andExpect(
+                MockMvcResultMatchers.status().isOk()
+        );
+    }
+
+    @Test
+    void testThatGetAllProgramsReturnsAListOfPrograms() throws Exception {
+        ProgramDTO programDTO0 = TestDataUtil.createProgramDto();
+        ProgramDTO programDTO1 = TestDataUtil.createProgramDto();
+        programDTO1.setCode("PRG01"); // avoid unique constraint violation if faker duplicates
+
+        this.programService.save(this.programMapper.toEntity(programDTO0));
+        this.programService.save(this.programMapper.toEntity(programDTO1));
+
+        mockMvc.perform(
+                MockMvcRequestBuilders.get("/api/v1/programs")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN"))
+        ).andExpect(
+                MockMvcResultMatchers.status().isOk()
+        ).andExpect(
+                MockMvcResultMatchers.jsonPath("$.content[0].id").isNumber()
+        ).andExpect(
+                MockMvcResultMatchers.jsonPath("$.content[1].id").isNumber()
+        );
+    }
+
+    @Test
+    void testThatLinkAccreditationReturnsHttpStatus201() throws Exception {
+        Program program = programService.save(programMapper.toEntity(TestDataUtil.createProgramDto()));
+        Accreditation acc = accreditationService.save(accreditationMapper.toEntity(TestDataUtil.createAccreditationDto()));
+
+        mockMvc.perform(
+                MockMvcRequestBuilders.post("/api/v1/programs/" + program.getId() + "/accreditations/" + acc.getId())
+                        .param("startsAt", "2020")
+                        .param("endsAt", "2025")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN"))
+        ).andExpect(
+                MockMvcResultMatchers.status().isCreated()
+        ).andExpect(
+                MockMvcResultMatchers.jsonPath("$.startsAt").value(2020)
+        );
+    }
+
+    @Test
+    void testThatGetProgramAccreditationReturnsHttpStatus200() throws Exception {
+        Program program = programService.save(programMapper.toEntity(TestDataUtil.createProgramDto()));
+        Accreditation acc = accreditationService.save(accreditationMapper.toEntity(TestDataUtil.createAccreditationDto()));
+        programAccreditationService.addAccreditationToProgram(program.getId(), acc.getId(), 2020, 2025);
+
+        mockMvc.perform(
+                MockMvcRequestBuilders.get("/api/v1/programs/" + program.getId() + "/accreditations/" + acc.getId())
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN"))
+        ).andExpect(
+                MockMvcResultMatchers.status().isOk()
+        ).andExpect(
+                MockMvcResultMatchers.jsonPath("$.startsAt").value(2020)
+        );
+    }
+
+    @Test
+    void testThatUpdateProgramAccreditationReturnsHttpStatus200() throws Exception {
+        Program program = programService.save(programMapper.toEntity(TestDataUtil.createProgramDto()));
+        Accreditation acc = accreditationService.save(accreditationMapper.toEntity(TestDataUtil.createAccreditationDto()));
+        programAccreditationService.addAccreditationToProgram(program.getId(), acc.getId(), 2020, 2025);
+
+        mockMvc.perform(
+                MockMvcRequestBuilders.put("/api/v1/programs/" + program.getId() + "/accreditations/" + acc.getId())
+                        .param("startsAt", "2021")
+                        .param("endsAt", "2026")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN"))
+        ).andExpect(
+                MockMvcResultMatchers.status().isOk()
+        ).andExpect(
+                MockMvcResultMatchers.jsonPath("$.startsAt").value(2021)
+        ).andExpect(
+                MockMvcResultMatchers.jsonPath("$.endsAt").value(2026)
+        );
+    }
+
+    @Test
+    void testThatGetProgramAccreditationsReturnsList() throws Exception {
+        Program program = programService.save(programMapper.toEntity(TestDataUtil.createProgramDto()));
+        Accreditation acc = accreditationService.save(accreditationMapper.toEntity(TestDataUtil.createAccreditationDto()));
+        
+        programAccreditationService.addAccreditationToProgram(program.getId(), acc.getId(), 2020, 2025);
+
+        mockMvc.perform(
+                MockMvcRequestBuilders.get("/api/v1/programs/" + program.getId() + "/accreditations")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN"))
+        ).andExpect(
+                MockMvcResultMatchers.status().isOk()
+        ).andExpect(
+                MockMvcResultMatchers.jsonPath("$[0].startsAt").value(2020)
+        );
+    }
+
+    @Test
+    void testThatUnlinkAccreditationReturnsHttpStatus204() throws Exception {
+        Program program = programService.save(programMapper.toEntity(TestDataUtil.createProgramDto()));
+        Accreditation acc = accreditationService.save(accreditationMapper.toEntity(TestDataUtil.createAccreditationDto()));
+        
+        programAccreditationService.addAccreditationToProgram(program.getId(), acc.getId(), 2020, 2025);
+
+        mockMvc.perform(
+                MockMvcRequestBuilders.delete("/api/v1/programs/" + program.getId() + "/accreditations/" + acc.getId())
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN"))
+        ).andExpect(
+                MockMvcResultMatchers.status().isNoContent()
+        );
+    }
+
+    @Test
+    void testThatGetProgramsSortedByRateReturnsCorrectOrder() throws Exception {
+        ProgramDTO p1 = TestDataUtil.createProgramDto();
+        p1.setName("Best Program");
+        p1.setCode("BP001");
+        Program program1 = programService.save(programMapper.toEntity(p1));
+
+        ProgramDTO p2 = TestDataUtil.createProgramDto();
+        p2.setName("Average Program");
+        p2.setCode("AP001");
+        Program program2 = programService.save(programMapper.toEntity(p2));
+        
+        // Rate program1 with 5.0, program2 with 3.0
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/program-rates")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"note\": 5.0, \"programId\": " + program1.getId() + ", \"userId\": 1}")
+                .with(TestDataUtil.mockUser("ROLE_STUDENT")));
+        
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/program-rates")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"note\": 3.0, \"programId\": " + program2.getId() + ", \"userId\": 1}")
+                .with(TestDataUtil.mockUser("ROLE_STUDENT")));
+
+        mockMvc.perform(
+                MockMvcRequestBuilders.get("/api/v1/programs?sortRate=most")
+                        .with(TestDataUtil.mockUser("ROLE_STUDENT"))
+        ).andExpect(
+                MockMvcResultMatchers.status().isOk()
+        ).andExpect(
+                MockMvcResultMatchers.jsonPath("$.content[0].id").value(program1.getId())
+        ).andExpect(
+                MockMvcResultMatchers.jsonPath("$.content[1].id").value(program2.getId())
+        );
+    }
+}
