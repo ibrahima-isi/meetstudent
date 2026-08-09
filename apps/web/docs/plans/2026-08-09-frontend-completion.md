@@ -55,14 +55,46 @@ yet.
    below, a prerequisite for the front's verification screen.
 2. ~~Admin features.~~ **Decided: out of scope for `apps/web`.** Moderation,
    CRUD on schools/programs/courses/accreditations/tags, role management and
-   media verification all move to `apps/backoffice` when that app starts.
-3. **EXPERT role.** Experts may rate programs and courses, students only
-   schools. Should this front serve both, or students only?
+   media verification all move to `apps/backoffice` when that app starts — a
+   deliberately light ADMIN-only CRUD surface.
+3. ~~EXPERT role.~~ **Decided: this front serves STUDENT and EXPERT.** See
+   Audience below.
 4. **i18n.** The UI is French, the code English, with no i18n setup. Single
    locale, or is a second one coming? This changes every template touched.
+   *Still open.*
 5. **The approval rule.** With empty bypass lists and one approval required, no
    PR in this plan can be merged solo. Settle it first — most likely
-   `required_approving_review_count: 0`, leaving CI as the gate.
+   `required_approving_review_count: 0`, leaving CI as the gate. *Still open.*
+
+## Audience and the backoffice split
+
+**`apps/web` serves STUDENT and EXPERT.** Both roles share the same screens; what
+differs is what they may rate:
+
+| Role | May rate |
+|---|---|
+| `ROLE_STUDENT` | schools |
+| `ROLE_EXPERT` | schools, programs, courses |
+
+So the rating UI is role-aware rather than role-gated: an expert sees rating
+controls on programs and courses where a student sees none. Only the shared
+authentication guard is needed at the route level — a `roleGuard` distinguishing
+the two is not, since neither role has screens the other cannot reach.
+
+**`apps/backoffice` serves ADMIN only, for CRUD, and stays deliberately light.**
+Nothing else moves there.
+
+Worth knowing before designing it: **there is no manager role.** `V2__data.sql`
+seeds exactly three — `ROLE_ADMIN` (id 1), `ROLE_EXPERT` (3), `ROLE_STUDENT` (4).
+Id 2 is an unexplained gap in the sequence, most likely a role that was removed.
+Introducing a manager means a new migration, new security rules across every
+admin endpoint, and a decision on what it may do that an admin may not — treat it
+as its own piece of work, not a detail of the backoffice.
+
+One more thing that belongs in the backoffice conversation rather than this plan:
+`V2__data.sql` also seeds a **default admin account whose bcrypt password is
+literally `password`**. Harmless while everything is local; a blocker the day
+anything is exposed.
 
 ## Phase 0 — backend prerequisite: email verification
 
@@ -143,7 +175,9 @@ The prerequisite for everything else. Do not start Phase 2 before this lands.
    *Done when:* an expired access token is invisible to the user, and specs
    cover the concurrent case.
 6. **`authGuard`** on student routes, redirecting to `/login` with a return URL.
-7. **`roleGuard`** if the EXPERT decision calls for it.
+7. **Role-aware rating controls** rather than a `roleGuard`: experts see rating
+   controls on programs and courses, students do not. Both roles reach the same
+   routes, so `authGuard` alone covers the routing layer.
 8. **Email verification** — wire the existing six-digit screen to the Phase 0
    endpoints, replacing the `localStorage` simulation, and route users there when
    login answers `403` for an unverified address.
@@ -165,8 +199,9 @@ The prerequisite for everything else. Do not start Phase 2 before this lands.
     *Done when:* a school can be added and removed, and the state survives a
     reload.
 13. **Rating flow** — submit a rating from the school detail page, show the
-    aggregate, prevent double submission, respect the role rules (students rate
-    schools; experts also rate programs and courses).
+    aggregate, prevent double submission, and drive the visible controls from the
+    role: students rate schools; experts also rate programs and courses. The
+    server enforces this too, so the UI is a convenience, not the guard.
 14. **Search and filters against the API.** `searchSchools` and
     `searchProgramsByName` exist and are unused by the filter UI, which filters
     the already-loaded page in memory — so it silently only searches the first

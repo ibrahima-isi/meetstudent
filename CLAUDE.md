@@ -26,7 +26,7 @@ MeetStudent is a monorepo assembled with `git subtree`. Each app keeps its own b
 
 - `apps/api/` — Spring Boot 3 / Java 21 REST API (Maven). **Read `apps/api/CLAUDE.md` before touching backend code** — it documents the layered architecture, media/storage split, Flyway rules, and test conventions in detail.
 - `apps/web/` — Angular 20 SSR frontend (npm). **Read `apps/web/.claude/CLAUDE.md`** for the mandatory Angular/TypeScript style rules (signals, `inject()`, native control flow, no `ngClass`/`ngStyle`, etc.).
-- `apps/backoffice/` — placeholder, empty.
+- `apps/backoffice/` — placeholder, empty. Planned as a deliberately light ADMIN-only CRUD surface; `apps/web` serves STUDENT and EXPERT. There is no manager role — `V2__data.sql` seeds only `ROLE_ADMIN`, `ROLE_EXPERT`, `ROLE_STUDENT`.
 - `docs/MONOREPO.md` — subtree provenance, branch topology, CI and ruleset conventions. **Read it before touching branches, CI job names or subtree history.**
 - `infra/`, `shared/` — empty placeholders reserved for future cross-app content.
 - `compose.yml` / `compose.dev.yml` — full local stack, and the hot-reload override for the API.
