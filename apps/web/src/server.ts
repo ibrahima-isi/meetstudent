@@ -6,6 +6,15 @@ import {
 } from '@angular/ssr/node';
 import express from 'express';
 import { join } from 'node:path';
+import { environment } from './environments/environment';
+import { applyServerEnvironment } from './environments/server-environment';
+
+/**
+ * Point the SSR bundle at the API's in-network address before anything renders.
+ * Must run before the first request is handled: services read `environment`
+ * when they are instantiated.
+ */
+applyServerEnvironment(environment, process.env);
 
 const browserDistFolder = join(import.meta.dirname, '../browser');
 
