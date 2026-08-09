@@ -17,7 +17,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Review the completed work before reporting it done (re-read the diff, run the relevant tests, state the actual results).
 
 **After merging to local `main`**
-- Bring the full stack up locally with Docker and run live tests against it before considering the work finished.
+- Bring the full stack up locally with Docker and run live tests against it before considering the work finished: `docker compose up --build`, then exercise the API and the front (see Commands below).
 
 ## Repository layout
 
@@ -26,9 +26,11 @@ MeetStudent is a monorepo assembled with `git subtree`. Each app keeps its own b
 - `apps/api/` — Spring Boot 3 / Java 21 REST API (Maven). **Read `apps/api/CLAUDE.md` before touching backend code** — it documents the layered architecture, media/storage split, Flyway rules, and test conventions in detail.
 - `apps/web/` — Angular 20 SSR frontend (npm). **Read `apps/web/.claude/CLAUDE.md`** for the mandatory Angular/TypeScript style rules (signals, `inject()`, native control flow, no `ngClass`/`ngStyle`, etc.).
 - `apps/backoffice/` — placeholder, empty.
-- `docs/`, `infra/`, `shared/` — empty placeholders reserved for future cross-app content.
+- `docs/MONOREPO.md` — subtree provenance, branch topology, CI and ruleset conventions. **Read it before touching branches, CI job names or subtree history.**
+- `infra/`, `shared/` — empty placeholders reserved for future cross-app content.
+- `compose.yml` / `compose.dev.yml` — full local stack, and the hot-reload override for the API.
 
-Because the apps arrived via subtree, keep changes scoped to a single `apps/<app>` subtree per commit where practical.
+Because the apps arrived via subtree, keep changes scoped to a single `apps/<app>` subtree per commit where practical. There is **no upstream remote to pull the subtrees from** — the source repositories no longer exist, so never run `git subtree pull`.
 
 ## Commands
 
@@ -54,10 +56,29 @@ npm test -- --include='**/media.service.spec.ts'   # single spec
 npm run serve:ssr:frontend
 ```
 
+CI runs the web tests headless: `npm test -- --no-watch --browsers=ChromeHeadless`.
+
+Full stack (repo root):
+
+```bash
+cp .env.example .env             # JWT_SECRET_KEY + POSTGRES_PASSWORD, both required
+docker compose up --build        # Postgres 18 + api + web
+docker compose up -d api         # api + its Postgres only; naming a service skips the rest
+
+# Hot-reloading API: recompile on the host (IDE or ./mvnw compile) and devtools
+# restarts the container in about a second.
+docker compose -f compose.yml -f compose.dev.yml up api
+```
+
+Front on `http://localhost:4200`, API on `http://localhost:8080/api/v1`, Swagger at `/swagger-ui.html`. Postgres is published on 5432.
+
+The front is deliberately absent from the dev override: `ng serve` on the host has far better HMR than a container, and already targets `http://localhost:8080`.
+
 ## How the two apps fit together
 
 - The API is versioned under `/api/v1/...`; Swagger UI at `http://localhost:8080/swagger-ui.html`.
 - The frontend targets it via `src/environments/environment.ts`, which deliberately holds **two** URLs: `apiUrl` (`.../api/v1`) for REST calls and `serverUrl` (server root) for static media. `Media.publicUrl` is relative to the server root, *not* to `/api/v1` — resolving it against `apiUrl` produces broken images.
+- Those values are baked in at build time, which is wrong for SSR: inside the web container `localhost:8080` answers nothing. `src/server.ts` therefore calls `applyServerEnvironment(environment, process.env)` before bootstrap, so `API_URL` / `SERVER_URL` override them server-side only. Keep that call first if you touch `server.ts`, and prefer reading `environment.apiUrl` at injection time over caching it at module load.
 - Auth is a dual-token system (short-lived access token + DB-backed rotating refresh token). On the client, `TokenService` holds `token`/`refreshToken`/`user` as signals backed by `localStorage` (guarded for SSR, where `localStorage` is undefined), and `jwtInterceptor` attaches the bearer token.
 - Personal documents (diplomas, certificates, bulletins, videos) are **private** media: they cannot be loaded with a plain `<img src>` and must go through `GET /api/v1/media/{id}` with the auth header. Only public categories (school logo/cover, user photo, course/program photo) are servable statically.
 - `apps/web/docs/backend-api-integration.md` is the living handoff describing in-flight API contract changes and their frontend impact; check it before assuming a DTO shape.
