@@ -4,15 +4,6 @@ spring:
     url: ${CUSTOM_DEV_DB_URL:jdbc:postgresql://localhost:5433/meetstudent}
     username: ${POSTGRES_USER:ibrahima}
     password: ${POSTGRES_PASSWORD:changeMeInProd!}
-  
-  jpa:
-    hibernate:
-      ddl-auto: validate
-
-file:
-  upload-dir: ${FILE_UPLOAD_DIR:uploads}
-  private-dir: ${FILE_PRIVATE_DIR:storage/private}
-  max-upload-bytes: 10485760
 
 security:
   jwt:
