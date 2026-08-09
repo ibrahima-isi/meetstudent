@@ -1,0 +1,54 @@
+# Development override — hot-reloading API.
+#
+#   docker compose -f compose.yml -f compose.dev.yml up api
+#
+# Or set COMPOSE_FILE=compose.yml:compose.dev.yml in your .env and just run
+# `docker compose up api`.
+#
+# Only `api` is redefined. `db` is inherited from compose.yml, so there is a
+# single Postgres container, a single volume and a single network whichever
+# combination of files you use.
+#
+# How the reload works: the API runs `mvnw spring-boot:run` in the JDK stage,
+# and spring-boot-devtools watches /app/target/classes. The whole apps/api
+# directory is bind-mounted, so when your IDE (or `./mvnw compile` in another
+# shell) recompiles on the host, devtools sees the new classes and restarts the
+# context — typically in a couple of seconds, without rebuilding the image.
+#
+# The front is deliberately absent: `ng serve` on the host gives far better HMR
+# than a container, and already targets http://localhost:8080.
+
+services:
+  api:
+    build:
+      # Stop at the JDK stage: it carries Maven and the wrapper. The default
+      # runtime stage is a JRE with only a packaged jar, which cannot rebuild.
+      target: build
+    # Distinct tag: sharing `meetstudent-api` with compose.yml would let each
+    # build silently overwrite the other's image.
+    image: meetstudent-api-dev
+    # The runtime stage sets `ENTRYPOINT ["java","-jar","app.jar"]`. Clearing it
+    # keeps a stale entrypoint from prefixing the command below.
+    entrypoint: []
+    command: ["./mvnw", "-B", "spring-boot:run"]
+    working_dir: /app
+    volumes:
+      # Source AND target/ from the host: the host compiles, the container runs.
+      - ./apps/api:/app
+      # Named volume, not ~/.m2: keeps the host repository untouched and avoids
+      # permission surprises across platforms.
+      - maven-cache:/root/.m2
+      - api-uploads:/data/uploads
+      - api-private:/data/private
+    environment:
+      SPRING_DEVTOOLS_RESTART_ENABLED: "true"
+    healthcheck:
+      # Maven resolves dependencies before Spring even starts, so the first boot
+      # is far slower than the packaged-jar one in compose.yml.
+      start_period: 180s
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  maven-cache:
