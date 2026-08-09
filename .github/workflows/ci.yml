@@ -12,10 +12,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Job id kept as `build-and-test` so the existing required status check
-  # on main/dev keeps matching after the monorepo migration.
-  build-and-test:
-    name: build-and-test (apps/api)
+  # The published check name is the job's `name:`, not its id — branch
+  # protection matches on that string, so keep the two in sync with the
+  # required contexts configured on main/dev.
+  api:
+    name: api / build-and-test
     runs-on: ubuntu-latest
 
     defaults:
@@ -50,8 +51,8 @@ jobs:
             apps/api/target/failsafe-reports/
           retention-days: 7
 
-  build-and-test-web:
-    name: build-and-test (apps/web)
+  web:
+    name: web / build-and-test
     runs-on: ubuntu-latest
 
     defaults:
