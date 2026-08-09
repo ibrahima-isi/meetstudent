@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.angular/
+.git/
+.gitignore
+.vscode/
+.idea/
+*.log
+
+# The nested React/Vite prototype is not part of the Angular build.
+meetstudent/

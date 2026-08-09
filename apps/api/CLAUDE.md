@@ -26,10 +26,10 @@ MeetStudent backend — a Spring Boot 3 (Java 21) REST API managing schools, pro
 # Run the app locally (dev profile, hot reload via devtools)
 ./mvnw spring-boot:run
 
-# Run with Docker (requires .env with JWT_SECRET_KEY)
-docker compose up app-dev    # dev container with hot reload
-docker compose up app        # production-like standalone JAR
-docker compose up test       # runs ./mvnw clean verify in a container
+# Run with Docker — the compose file now lives at the repo root and brings up
+# the whole stack (Postgres + API + Angular front). See ../../compose.yml.
+(cd ../.. && docker compose up --build)      # full stack
+(cd ../.. && docker compose up --build api)  # API + its Postgres only
 ```
 
 Swagger UI is at `http://localhost:8080/swagger-ui.html`. All endpoints are versioned under `/api/v1/...`.

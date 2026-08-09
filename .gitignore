@@ -1,4 +1,7 @@
 
+# IDE
+.idea/
+
 # Secrets — repo-wide safety net (each app also has its own rule)
 .env
 .env.*

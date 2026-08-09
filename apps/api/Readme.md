@@ -56,14 +56,17 @@ A robust Spring Boot REST API for a student meeting and collaboration platform. 
 ## 📦 Getting Started
 
 ### 1. Configuration
-Create a `.env` file in the root directory:
+Copy the example env file at the **repository root** and fill it in:
 ```bash
-JWT_SECRET_KEY=your_secure_random_key
+cp .env.example .env   # JWT_SECRET_KEY and POSTGRES_PASSWORD
 ```
 
 ### 2. Run with Docker
+The compose file lives at the repository root and starts Postgres, the API and
+the Angular front together:
 ```bash
-docker compose up app-dev
+docker compose up --build       # full stack
+docker compose up --build api   # API + Postgres only
 ```
 
 ### 3. API Documentation
