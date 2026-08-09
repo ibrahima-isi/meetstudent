@@ -100,13 +100,18 @@ This is a solo-developer project, and the branch model is deliberately small:
 are created from `main`, pushed, merged through a PR, then deleted on both
 sides. Nothing else is kept around.
 
-A third branch, `stage`, existed as a pre-production branch and is being
-retired: it never left the pre-migration layout, so it could not run CI, and a
-solo workflow does not need a third environment. Its three commits unique to
-`main` were merge commits with an empty diff against their merge base — no code
-was lost. Removing it requires taking `refs/heads/stage` out of the
-`protected-branches` ruleset first, because the `deletion` rule rejects the push
-otherwise.
+A third branch, `stage`, was deleted on 2026-08-09. It never left the
+pre-migration layout, so it could not run CI, and a solo workflow does not need a
+third environment. Its three commits unique to `main` were merge commits with an
+empty diff against their merge base — no code was lost.
+
+Deleting it took two steps, and the second is easy to miss: removing
+`refs/heads/stage` from the `protected-branches` ruleset was not enough, because
+a **legacy branch-protection object** still carried `allow_deletions: false`.
+The push then failed with `protected branch hook declined` instead of
+`repository rule violations` — the wording is the only clue that a legacy rule,
+not a ruleset, is refusing. `DELETE /repos/…/branches/stage/protection` cleared
+it. `main` and `dev` may still carry similar remnants.
 
 ### The lesson from `dev`
 
@@ -120,8 +125,7 @@ It was realigned by merging `main` into `dev` through PR #18 — a fast-forward,
 since `dev` was a strict ancestor of `main` — rather than by force-pushing, which
 `protected-branches` forbids. `dev` now carries the monorepo layout.
 
-**Still pending:** `required-ci` targets `main` only. Add the `dev` pattern to it
-so the two checks gate that branch too.
+`required-ci` now targets `dev` as well, so both checks gate it.
 
 Watch for this whenever a long-lived branch predates the migration: check
 `git merge-base --is-ancestor origin/<branch> origin/main` before opening a PR
@@ -137,9 +141,16 @@ check names are what branch protection matches:
 
 Protection is enforced through **rulesets**, not legacy branch protection rules:
 
-- `protected-branches` → `main`, `dev`, `releases/**/*` (and `stage` until it is
-  retired): no deletion, no force push, signed commits, PR with 1 approval
-- `required-ci` → `main`: both checks above must pass, branch must be up to date
+- `protected-branches` → `main`, `dev`: no deletion, no force push, signed
+  commits, PR with 1 approval
+- `required-ci` → `main`, `dev`: both checks above must pass, branch must be up
+  to date
+
+Both bypass lists are **empty**, so the rules apply to the repository owner too.
+One consequence to plan for on a solo project: with one approval required and no
+bypass, you cannot merge your own PR — nobody is there to approve it. Pick one
+of setting `required_approving_review_count` to `0` and letting CI be the gate,
+adding a temporary bypass, or merging with `gh pr merge --admin`.
 
 When renaming a job, remember the check name comes from the job's `name:` field,
 not its id — rename it in the rulesets at the same time or PRs block on a check
