@@ -20,6 +20,12 @@ compose.dev.yml   dev override: hot-reloading api
 .github/workflows/ci.yml   the only CI entry point
 ```
 
+Two Docker details that cost time once and will again otherwise: Postgres 18+
+must be mounted at `/var/lib/postgresql`, not `.../data`, or it aborts at
+startup; and the dev override needs `entrypoint: []` plus its own `image:` tag,
+because the runtime stage sets `ENTRYPOINT java -jar app.jar` and would
+otherwise both prefix the command and overwrite the production image.
+
 Each app keeps its own build, dependencies and agent instructions. There is no
 root package manager: always run build commands from inside `apps/<app>`.
 
@@ -100,6 +106,9 @@ Because `dev` was a strict ancestor of `main`, realigning it is a
 fast-forward: merge `main` into `dev` through a PR rather than force-pushing,
 which the `protected-branches` ruleset forbids. Once `dev` carries the monorepo
 layout, add the `dev` pattern to `required-ci` so the checks gate it too.
+
+**Status:** PR #18 (`main` → `dev`) is open and still pending. Until it lands,
+`dev` remains on the pre-migration tree and cannot run CI.
 
 Watch for this whenever a long-lived branch predates the migration: check
 `git merge-base --is-ancestor origin/<branch> origin/main` before opening a PR
