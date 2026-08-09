@@ -1,0 +1,124 @@
+# Monorepo — structure and subtree history
+
+This repository was assembled from two previously separate repositories using
+`git subtree add`. Both source histories were preserved: every commit that
+existed in the original repos is still reachable here, rewritten under its new
+prefix.
+
+## Structure
+
+```
+apps/
+  api/          Spring Boot 3 / Java 21 REST API (Maven)
+  web/          Angular 20 + SSR client (npm)
+  backoffice/   placeholder, no code yet
+docs/           cross-cutting documentation (this file)
+infra/          placeholder
+shared/         placeholder
+compose.yml       full local stack: Postgres 18 + api + web
+compose.dev.yml   dev override: hot-reloading api
+.github/workflows/ci.yml   the only CI entry point
+```
+
+Each app keeps its own build, dependencies and agent instructions. There is no
+root package manager: always run build commands from inside `apps/<app>`.
+
+## How each subtree was added
+
+Values below are read from the `git-subtree-*` trailers on the merge commits,
+not from memory.
+
+| Prefix | Merge commit | Source commit (`git-subtree-split`) | Content at the time |
+|---|---|---|---|
+| `apps/api` | `0c4622a` | `7899a12` | ex-`backend`, root-level `pom.xml`, `src/`, `mvnw` |
+| `apps/web` | `9d13c1a` | `c8cf8e9` | ex-`customer_frontend`, root-level `angular.json`, `src/` |
+
+The `apps/api` subtree was added first, onto mainline `66cdd57`; `apps/web`
+followed, onto mainline `0c4622a`.
+
+## Upstream remotes: none, deliberately
+
+**There is no live remote to pull either subtree from.** As of the migration:
+
+- `git remote -v` lists only `origin` → `git@github-isi:ibrahima-isi/meetstudent.git`
+- no repository named `backend` or `customer_frontend` exists under the
+  `ibrahima-isi` account
+- a GitHub-wide commit search for `c8cf8e9` returns only this repository
+
+In other words the two source repos are gone, or live somewhere not reachable
+from this account. The monorepo is now the single source of truth, and that is
+the intended end state — the subtrees are historical, not tracked.
+
+Practical consequence: **do not run `git subtree pull`.** There is nothing
+upstream to pull. Work directly in `apps/api` and `apps/web`.
+
+### If you ever re-attach an upstream
+
+Should an old repo resurface and you want to pull changes back in, the command
+shape is:
+
+```bash
+git remote add api-upstream <url-of-the-old-backend-repo>
+git fetch api-upstream
+git subtree pull --prefix=apps/api api-upstream <branch> --squash
+```
+
+`--squash` keeps the imported history collapsed into a single commit, which is
+what the original `subtree add` did not do — expect the first such pull to be
+noisy if you switch strategies mid-flight. Use the same shape for `apps/web`
+with `--prefix=apps/web`.
+
+### Adding a future app (e.g. the backoffice)
+
+If `apps/backoffice` is ever populated from an existing repository:
+
+```bash
+git remote add bo-upstream <url>
+git fetch bo-upstream
+git subtree add --prefix=apps/backoffice bo-upstream <branch> --squash
+```
+
+If it is started from scratch, no subtree is involved — just create the
+directory and add a job to `.github/workflows/ci.yml`.
+
+## Branches
+
+| Branch | Role |
+|---|---|
+| `main` | source of truth, carries the monorepo layout |
+| `dev` | integration branch |
+| `stage` | pre-production |
+
+`dev` stayed on the **pre-migration** layout after the migration: its head was
+`7899a12`, the very commit used as the `apps/api` subtree source, so it still had
+`pom.xml` and `src/` at the root. Any PR targeting it showed the whole monorepo
+restructuring (~342 files) instead of the actual change, which is why
+`required-ci` deliberately targets `main` only — the CI jobs cannot run on a tree
+that has no `apps/api`.
+
+Because `dev` was a strict ancestor of `main`, realigning it is a
+fast-forward: merge `main` into `dev` through a PR rather than force-pushing,
+which the `protected-branches` ruleset forbids. Once `dev` carries the monorepo
+layout, add the `dev` pattern to `required-ci` so the checks gate it too.
+
+Watch for this whenever a long-lived branch predates the migration: check
+`git merge-base --is-ancestor origin/<branch> origin/main` before opening a PR
+against it.
+
+## CI and branch protection
+
+A single workflow, `.github/workflows/ci.yml`, runs two jobs — the published
+check names are what branch protection matches:
+
+- `api / build-and-test`
+- `web / build-and-test`
+
+Protection is enforced through **rulesets**, not legacy branch protection rules:
+
+- `protected-branches` → `main`, `dev`, `stage`, `releases/**/*`: no deletion, no
+  force push, signed commits, PR with 1 approval
+- `required-ci` → `main`: both checks above must pass, branch must be up to date
+
+When renaming a job, remember the check name comes from the job's `name:` field,
+not its id — rename it in the rulesets at the same time or PRs block on a check
+nobody produces.
