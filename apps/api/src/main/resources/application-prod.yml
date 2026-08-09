@@ -3,20 +3,9 @@ spring:
     url: ${SPRING_DATASOURCE_URL}
     username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}
-    driver-class-name: org.postgresql.Driver
-  
-  jpa:
-    hibernate:
-      ddl-auto: validate
-    show-sql: false
-  
-  flyway:
-    enabled: true
 
-file:
-  upload-dir: ${FILE_UPLOAD_DIR:uploads}
-  private-dir: ${FILE_PRIVATE_DIR:storage/private}
-  max-upload-bytes: 10485760
+  jpa:
+    show-sql: false
 
 security:
   jwt:
