@@ -5,6 +5,20 @@ import { TokenService } from './token.service';
 import { User, LoginResponse } from '@models/entities';
 import { environment } from '../../environments/environment';
 
+/**
+ * Exactly the backend `RegisterRequest` fields (`UserController.saveUser`).
+ * `role` is deliberately absent — registration always creates a STUDENT.
+ */
+export interface RegisterPayload {
+  firstname: string;
+  lastname: string;
+  email: string;
+  password: string;
+  confirmedPassword: string;
+  birthday?: string;
+  qualification?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -30,7 +44,7 @@ export class AuthService {
     return this.http.get<User>(`${this.usersUrl}/email/${email}`);
   }
 
-  register(userData: any): Observable<User> {
+  register(userData: RegisterPayload): Observable<User> {
     // Registration endpoint is POST /api/v1/users according to UserController
     return this.http.post<User>(this.usersUrl, userData);
   }

@@ -4,6 +4,22 @@
 **Backend state:** `main` @ `f34ee3a` (PR #13 merged: media access control + school/course/program media FK reconciliation)
 **Frontend state:** `customer_frontend` @ `49cd873` (Angular 20 + SSR + Tailwind 4)
 
+> **Status (2026-08-09): this is the pre-work analysis, not a current-state
+> description.** It was written *before* `feat/backend-api-migration` and is
+> kept for historical context. Since then, on that branch:
+> - **§1 registration fix — DONE.** `register-form.component.ts` now sends
+>   `confirmedPassword` and no `role`; `AuthService.register()` is typed with a
+>   `RegisterPayload` interface instead of the payload described here.
+> - **§2's three "broken template bindings" — DONE.** All three now bind to
+>   the resolved `cover`/`logo`/`photo` media objects.
+> - **§2's `environment.prod.ts` instruction is wrong for this repo — there is
+>   only a single `src/environments/environment.ts` and no `fileReplacements`
+>   entry in `angular.json`.** `serverUrl` lives there only.
+>
+> Everything else below (§3 personal documents, §4 open questions, §5/§6
+> process notes) has not been re-verified since this was written — treat it as
+> a starting point, not a guarantee.
+
 The backend API contract changed. This document lists every verified break, the
 new contract, and a task-ordered plan. Every claim below was checked against
 real code — file:line references are included so you can re-verify rather than

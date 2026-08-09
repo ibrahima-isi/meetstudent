@@ -77,7 +77,12 @@ describe('UserDocumentsComponent', () => {
     expect(component.statusLabel(null)).toBe('');
   });
 
+  function fakeWindow(): Window {
+    return { location: { href: '' }, closed: false, close: () => {} } as unknown as Window;
+  }
+
   it('open() fetches the media as a blob and produces an object URL', () => {
+    spyOn(window, 'open').and.returnValue(fakeWindow());
     const fixture = TestBed.createComponent(UserDocumentsComponent);
     fixture.detectChanges();
 
@@ -91,7 +96,39 @@ describe('UserDocumentsComponent', () => {
     req.flush(new Blob(['x']));
   });
 
+  it('opens the window synchronously, before the HTTP response arrives (popup-blocker safe)', () => {
+    const win = fakeWindow();
+    const openSpy = spyOn(window, 'open').and.returnValue(win);
+    const fixture = TestBed.createComponent(UserDocumentsComponent);
+    fixture.detectChanges();
+    httpMock.expectOne(`${environment.apiUrl}/media/mine`).flush([]);
+
+    fixture.componentInstance.open(media({ id: 7 }));
+
+    // window.open must already have happened here — before the async HTTP
+    // response is flushed — or Safari/Chrome will treat it as blocked.
+    expect(openSpy).toHaveBeenCalledWith('', '_blank');
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/media/7`);
+    req.flush(new Blob(['x']));
+
+    expect(win.location.href).toContain('blob:');
+  });
+
+  it('sets a French error and issues no HTTP call when the popup is blocked', () => {
+    spyOn(window, 'open').and.returnValue(null);
+    const fixture = TestBed.createComponent(UserDocumentsComponent);
+    fixture.detectChanges();
+    httpMock.expectOne(`${environment.apiUrl}/media/mine`).flush([]);
+
+    fixture.componentInstance.open(media({ id: 7 }));
+
+    expect(fixture.componentInstance.error()).toBeTruthy();
+    httpMock.expectNone(`${environment.apiUrl}/media/7`);
+  });
+
   it('revokes every object URL it created on destroy', () => {
+    spyOn(window, 'open').and.returnValue(fakeWindow());
     spyOn(URL, 'revokeObjectURL');
     const fixture = TestBed.createComponent(UserDocumentsComponent);
     fixture.detectChanges();
@@ -190,18 +227,75 @@ describe('UserDocumentsComponent', () => {
     expect(component.uploading()).toBeFalse();
   });
 
-  it('deletes a document and reloads the list', () => {
+  it('confirming a pending delete sends the DELETE request and reloads', () => {
     const fixture = TestBed.createComponent(UserDocumentsComponent);
     fixture.detectChanges();
     httpMock.expectOne(`${environment.apiUrl}/media/mine`).flush([]);
 
     const component = fixture.componentInstance;
-    component.remove(media({ id: 5 }));
+    component.requestDelete(5);
+    expect(component.pendingDeleteId()).toBe(5);
+
+    component.confirmDelete();
 
     const req = httpMock.expectOne(`${environment.apiUrl}/media/5`);
     expect(req.request.method).toBe('DELETE');
     req.flush(null);
 
+    httpMock.expectOne(`${environment.apiUrl}/media/mine`).flush([]);
+    expect(component.pendingDeleteId()).toBeNull();
+  });
+
+  it('requesting a delete without confirming issues no HTTP call, and cancelling clears the pending state', () => {
+    const fixture = TestBed.createComponent(UserDocumentsComponent);
+    fixture.detectChanges();
+    httpMock.expectOne(`${environment.apiUrl}/media/mine`).flush([]);
+
+    const component = fixture.componentInstance;
+    component.requestDelete(5);
+    expect(component.pendingDeleteId()).toBe(5);
+    httpMock.expectNone(`${environment.apiUrl}/media/5`);
+
+    component.cancelDelete();
+
+    expect(component.pendingDeleteId()).toBeNull();
+    httpMock.expectNone(`${environment.apiUrl}/media/5`);
+  });
+
+  it('sets an error and clears the pending state when the delete fails', () => {
+    const fixture = TestBed.createComponent(UserDocumentsComponent);
+    fixture.detectChanges();
+    httpMock.expectOne(`${environment.apiUrl}/media/mine`).flush([]);
+
+    const component = fixture.componentInstance;
+    component.requestDelete(5);
+    component.confirmDelete();
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/media/5`);
+    req.flush('server error', { status: 500, statusText: 'Internal Server Error' });
+
+    expect(component.error()).toBeTruthy();
+    expect(component.pendingDeleteId()).toBeNull();
+  });
+
+  it('resets the file input value after handling a selection, so the same file can be re-picked', () => {
+    const fixture = TestBed.createComponent(UserDocumentsComponent);
+    fixture.detectChanges();
+    httpMock.expectOne(`${environment.apiUrl}/media/mine`).flush([]);
+
+    const component = fixture.componentInstance;
+    const file = new File([new ArrayBuffer(1024)], 'a.pdf', { type: 'application/pdf' });
+    const input = { value: 'C:\\fakepath\\a.pdf', files: [file] } as unknown as HTMLInputElement;
+    const event = { target: input } as unknown as Event;
+
+    component.onFileSelected(event);
+
+    expect(input.value).toBe('');
+
+    const req = httpMock.expectOne(
+      r => r.method === 'POST' && r.url === `${environment.apiUrl}/media`
+    );
+    req.flush(media({ id: 9 }));
     httpMock.expectOne(`${environment.apiUrl}/media/mine`).flush([]);
   });
 });

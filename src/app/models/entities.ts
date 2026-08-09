@@ -41,7 +41,7 @@ export type VerificationStatus = 'PENDING' | 'VERIFIED' | 'REJECTED';
  *
  * `publicUrl` is set ONLY for PUBLIC media and is relative to the server root
  * (e.g. `/uploads/public/x.png`) — NOT to the `/api/v1` base. Resolve it with
- * `MediaUrlService.publicUrl()` rather than prefixing `environment.apiUrl`.
+ * `MediaService.resolveUrl()` rather than prefixing `environment.apiUrl`.
  *
  * PRIVATE media has `publicUrl: null` and must be fetched as a blob from
  * `GET /api/v1/media/{id}`; a plain `<img src>` sends no Authorization header

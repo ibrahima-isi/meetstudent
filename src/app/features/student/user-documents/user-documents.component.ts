@@ -1,7 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { LucideAngularModule } from 'lucide-angular';
 import { MediaService } from '@services/media.service';
 import { Media, MediaCategory, VerificationStatus } from '@models/entities';
 
@@ -14,7 +13,7 @@ const PERSONAL_DOCUMENT_CATEGORIES: MediaCategory[] = [
 
 @Component({
   selector: 'app-user-documents',
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './user-documents.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -28,6 +27,7 @@ export class UserDocumentsComponent implements OnInit, OnDestroy {
 
   loading = signal(false);
   error = signal('');
+  pendingDeleteId = signal<number | null>(null);
 
   selectedCategory = signal<MediaCategory>('DIPLOMA');
   uploading = signal(false);
@@ -71,22 +71,41 @@ export class UserDocumentsComponent implements OnInit, OnDestroy {
   }
 
   open(media: Media): void {
+    // Must be opened synchronously, in direct response to the click — Safari
+    // blocks window.open unconditionally once we're past an async HTTP round
+    // trip, and Chrome blocks it once transient activation lapses. We open a
+    // blank window now and point it at the blob once it arrives.
+    const win = window.open('', '_blank');
+    if (!win) {
+      this.error.set(
+        "Votre navigateur a bloqué l'ouverture de ce document. Autorisez les fenêtres pop-up pour ce site puis réessayez."
+      );
+      return;
+    }
+
     this.mediaService.blobUrl(media.id).subscribe({
       next: url => {
         this.objectUrls.push(url);
-        window.open(url, '_blank');
+        win.location.href = url;
       },
       error: () => {
+        win.close();
         this.error.set("Impossible d'ouvrir ce document. Veuillez réessayer.");
       }
     });
   }
 
   onFileSelected(event: Event): void {
-    const file = (event.target as HTMLInputElement).files?.[0];
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
     if (!file) {
       return;
     }
+
+    // Reset immediately so a rejected or failed upload can be retried with
+    // the exact same file (the browser otherwise treats an unchanged value
+    // as "no change" and won't fire another `change` event).
+    input.value = '';
 
     if (file.size > this.MAX_UPLOAD_BYTES) {
       this.error.set('Le fichier dépasse la taille maximale autorisée de 10 Mo.');
@@ -114,12 +133,30 @@ export class UserDocumentsComponent implements OnInit, OnDestroy {
     });
   }
 
-  remove(media: Media): void {
-    this.mediaService.delete(media.id).subscribe({
+  /** Step 1 of the destructive delete: arm the inline confirmation for one row. */
+  requestDelete(mediaId: number): void {
+    this.pendingDeleteId.set(mediaId);
+  }
+
+  /** Backs out of a pending delete without calling the API. */
+  cancelDelete(): void {
+    this.pendingDeleteId.set(null);
+  }
+
+  /** Step 2: only called once the user has confirmed in the template. */
+  confirmDelete(): void {
+    const mediaId = this.pendingDeleteId();
+    if (mediaId === null) {
+      return;
+    }
+
+    this.mediaService.delete(mediaId).subscribe({
       next: () => {
+        this.pendingDeleteId.set(null);
         this.reload();
       },
       error: () => {
+        this.pendingDeleteId.set(null);
         this.error.set('Impossible de supprimer ce document. Veuillez réessayer.');
       }
     });

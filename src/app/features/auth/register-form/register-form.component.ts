@@ -2,7 +2,7 @@ import { Component, output, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { LucideAngularModule, Mail, Lock, User as UserIcon, AlertCircle, UserPlus, GraduationCap, MapPin, Users, BookOpen } from 'lucide-angular';
-import { AuthService } from '../../../services/auth.service';
+import { AuthService, RegisterPayload } from '../../../services/auth.service';
 
 const SENEGAL_SPECIALTIES = [
   'Mathématiques', 'Physique-Chimie', 'Sciences de la Vie et de la Terre (SVT)',
@@ -142,7 +142,7 @@ export class RegisterFormComponent {
     // role changes go through PATCH /users/{id}/role (admin-only).
     // The step1 fields bacType / collegeLevel / specialty / town have no backend
     // counterpart and are dropped rather than silently posted and ignored.
-    const userData = {
+    const userData: RegisterPayload = {
       firstname: this.step1Form.value.firstname,
       lastname: this.step1Form.value.lastname,
       email,
