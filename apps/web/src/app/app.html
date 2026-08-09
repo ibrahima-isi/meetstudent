@@ -1,0 +1,57 @@
+@if (view() === 'landing') {
+  <app-landing-page
+    (onSchoolClick)="handleSchoolClick($event)"
+    (onLoginClick)="view.set('login')"
+    (onRegisterClick)="view.set('register')"
+  ></app-landing-page>
+}
+
+@if (view() === 'home') {
+  <app-home-page
+    (onLogout)="handleLogout()"
+    (onSchoolClick)="handleSchoolClick($event)"
+    (onProfileClick)="handleProfileClick()"
+  ></app-home-page>
+}
+
+@if (view() === 'school-detail' && selectedSchool()) {
+  <app-school-detail-page
+    [school]="selectedSchool()!"
+    (onBack)="handleBackToHome()"
+    [isAuthenticated]="isAuthenticated()"
+    (onLoginPrompt)="view.set('login')"
+  ></app-school-detail-page>
+}
+
+@if (view() === 'profile') {
+  <app-profile-page
+    (onBack)="handleBackToHome()"
+  ></app-profile-page>
+}
+
+@if (['login', 'register', 'verify'].includes(view())) {
+  <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div class="w-full max-w-md">
+      @if (view() === 'login') {
+        <app-login-form
+          (onSwitchToRegister)="view.set('register')"
+          (onLoginSuccess)="handleLoginSuccess()"
+        ></app-login-form>
+      }
+      
+      @if (view() === 'register') {
+        <app-register-form
+          (onSwitchToLogin)="view.set('login')"
+          (onRegisterSuccess)="handleRegisterSuccess($event)"
+        ></app-register-form>
+      }
+
+      @if (view() === 'verify') {
+        <app-email-verification
+          [email]="userEmail()"
+          (onVerificationSuccess)="handleVerificationSuccess()"
+        ></app-email-verification>
+      }
+    </div>
+  </div>
+}

@@ -1,0 +1,200 @@
+<div class="min-h-screen bg-gray-50">
+  <!-- Header -->
+  <header class="bg-white border-b border-gray-200 sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-gray-900 font-bold text-xl">MeetStudent</h1>
+          <p class="text-gray-600 text-sm">Trouvez votre établissement idéal</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <button
+            (click)="onLoginClick.emit()"
+            class="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+          >
+            <lucide-icon [img]="LogIn" class="w-5 h-5"></lucide-icon>
+            <span class="hidden sm:inline">Connexion</span>
+          </button>
+          <button
+            (click)="onRegisterClick.emit()"
+            class="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors cursor-pointer"
+          >
+            <lucide-icon [img]="UserPlus" class="w-5 h-5"></lucide-icon>
+            <span class="hidden sm:inline">S'inscrire</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <div class="bg-gradient-to-br from-indigo-600 to-purple-700 text-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      <div class="text-center max-w-3xl mx-auto">
+        <h2 class="mb-4 text-3xl font-bold">
+          Découvrez les meilleurs établissements du Sénégal
+        </h2>
+        <p class="text-indigo-100 mb-8 text-lg">
+          Explorez notre catalogue d'écoles, lycées et universités. Comparez les formations et trouvez celle qui vous correspond.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search & Filters -->
+  <div class="bg-white border-b border-gray-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div class="space-y-4">
+        <!-- Search Bar -->
+        <div class="relative">
+          <lucide-icon [img]="Search" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"></lucide-icon>
+          <input
+            type="text"
+            [(ngModel)]="searchQuery"
+            placeholder="Rechercher un établissement..."
+            class="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          />
+        </div>
+
+        <!-- Filter and Sort Controls -->
+        <div class="flex items-center gap-3 flex-wrap">
+          <button
+            (click)="showFilters.set(!showFilters())"
+            class="flex items-center gap-2 px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+          >
+            <lucide-icon [img]="Filter" class="w-4 h-4"></lucide-icon>
+            <span>Filtres</span>
+            @if (activeFiltersCount() > 0) {
+              <span class="ml-2 px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold">
+                {{ activeFiltersCount() }}
+              </span>
+            }
+          </button>
+
+          <!-- Sort Dropdown -->
+          <div class="flex items-center gap-2">
+            <lucide-icon [img]="ArrowUpDown" class="w-4 h-4 text-gray-500"></lucide-icon>
+            <select
+              [(ngModel)]="sortBy"
+              class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-700"
+            >
+              <option value="name">Trier par A-Z</option>
+              <option value="city">Trier par Ville</option>
+              <option value="places">Trier par Places disponibles</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Filters -->
+        @if (showFilters()) {
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+            <div>
+              <label class="block text-gray-700 mb-2">Ville</label>
+              <select
+                [(ngModel)]="selectedCity"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              >
+                @for (city of CITIES; track city) {
+                  <option [value]="city">{{ city }}</option>
+                }
+              </select>
+            </div>
+            <div>
+              <label class="block text-gray-700 mb-2">Type d'établissement</label>
+              <select
+                [(ngModel)]="selectedType"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              >
+                @for (type of TYPES; track type) {
+                  <option [value]="type">{{ type }}</option>
+                }
+              </select>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="mb-6">
+      <p class="text-gray-600">
+        {{ sortedSchools().length }} établissement{{ sortedSchools().length !== 1 ? 's' : '' }} trouvé{{ sortedSchools().length !== 1 ? 's' : '' }}
+      </p>
+    </div>
+
+    <!-- School Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      @for (school of sortedSchools(); track school.id) {
+        <div
+          class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer flex flex-col"
+          (click)="onSchoolClick.emit(school)"
+        >
+          <div class="relative h-48">
+            <app-image-with-fallback
+              [src]="school.coverImageUrl || ''"
+              [alt]="school.name"
+              class="w-full h-full object-cover block"
+            ></app-image-with-fallback>
+            <div class="absolute top-3 right-3 flex flex-col items-end gap-2">
+              <div class="px-3 py-1 bg-white rounded-full shadow-sm">
+                <span class="text-indigo-600 text-sm font-bold">{{ school.type }}</span>
+              </div>
+              @if (school.tags && school.tags.length > 0) {
+                <div class="flex flex-wrap gap-1 justify-end max-w-[150px]">
+                  @for (tag of school.tags.slice(0, 2); track tag.id) {
+                    <span class="px-2 py-0.5 bg-indigo-600/90 text-white text-[10px] font-bold rounded-full backdrop-blur-sm">
+                      {{ tag.name }}
+                    </span>
+                  }
+                  @if (school.tags.length > 2) {
+                    <span class="px-2 py-0.5 bg-gray-800/80 text-white text-[10px] font-bold rounded-full backdrop-blur-sm">
+                      +{{ school.tags.length - 2 }}
+                    </span>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+          
+          <div class="p-5 flex-1 flex flex-col">
+            <h3 class="text-gray-900 mb-2 line-clamp-2 text-xl font-bold">{{ school.name }}</h3>
+            
+            <div class="flex items-center gap-1 mb-3 text-sm">
+              <div class="flex items-center gap-1">
+                <lucide-icon [img]="Star" class="w-4 h-4 fill-yellow-400 text-yellow-400"></lucide-icon>
+                <span class="text-gray-900 font-medium">{{ school.rating }}</span>
+              </div>
+              <span class="text-gray-500">({{ school.reviewCount }} avis)</span>
+            </div>
+
+            <div class="flex items-start gap-2 mb-3 text-sm">
+              <lucide-icon [img]="MapPin" class="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5"></lucide-icon>
+              <div class="text-gray-600">
+                <p>{{ school.address.location }}</p>
+                <p>{{ school.address.city }}</p>
+              </div>
+            </div>
+
+            <p class="text-gray-600 line-clamp-2 mb-4 text-sm flex-1">
+              {{ school.description }}
+            </p>
+
+            <button 
+              class="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors mt-auto font-medium"
+            >
+              Voir les détails
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+
+    @if (sortedSchools().length === 0) {
+      <div class="text-center py-12">
+        <p class="text-gray-600 text-lg">Aucun établissement trouvé avec ces critères</p>
+      </div>
+    }
+  </div>
+</div>
