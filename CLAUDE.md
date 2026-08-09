@@ -6,6 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Branching**
 - Never commit or work directly on local `main`. Never push to remote `main` or `dev`.
+- Solo-developer project: exactly two long-lived branches remotely (`main`, `dev`) and only `main` locally. Delete a feature branch on both sides once its PR is merged.
 - Every task starts with a new branch named `<type>/<short-kebab-description>`, where `<type>` is a Conventional Commits type: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `perf`, `ci` (e.g. `feat/media-upload-retry`). Commit messages use the same types.
 
 **Scope**

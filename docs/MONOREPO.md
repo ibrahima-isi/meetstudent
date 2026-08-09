@@ -89,26 +89,39 @@ directory and add a job to `.github/workflows/ci.yml`.
 
 ## Branches
 
+This is a solo-developer project, and the branch model is deliberately small:
+
 | Branch | Role |
 |---|---|
 | `main` | source of truth, carries the monorepo layout |
 | `dev` | integration branch |
-| `stage` | pre-production |
 
-`dev` stayed on the **pre-migration** layout after the migration: its head was
-`7899a12`, the very commit used as the `apps/api` subtree source, so it still had
-`pom.xml` and `src/` at the root. Any PR targeting it showed the whole monorepo
-restructuring (~342 files) instead of the actual change, which is why
-`required-ci` deliberately targets `main` only — the CI jobs cannot run on a tree
-that has no `apps/api`.
+**Two long-lived branches remotely, and only `main` locally.** Feature branches
+are created from `main`, pushed, merged through a PR, then deleted on both
+sides. Nothing else is kept around.
 
-Because `dev` was a strict ancestor of `main`, realigning it is a
-fast-forward: merge `main` into `dev` through a PR rather than force-pushing,
-which the `protected-branches` ruleset forbids. Once `dev` carries the monorepo
-layout, add the `dev` pattern to `required-ci` so the checks gate it too.
+A third branch, `stage`, existed as a pre-production branch and is being
+retired: it never left the pre-migration layout, so it could not run CI, and a
+solo workflow does not need a third environment. Its three commits unique to
+`main` were merge commits with an empty diff against their merge base — no code
+was lost. Removing it requires taking `refs/heads/stage` out of the
+`protected-branches` ruleset first, because the `deletion` rule rejects the push
+otherwise.
 
-**Status:** PR #18 (`main` → `dev`) is open and still pending. Until it lands,
-`dev` remains on the pre-migration tree and cannot run CI.
+### The lesson from `dev`
+
+`dev` stayed on the **pre-migration** layout long after the migration: its head
+was `7899a12`, the very commit used as the `apps/api` subtree source, so it still
+had `pom.xml` and `src/` at the root. Any PR targeting it showed the whole
+monorepo restructuring (~342 files) instead of the actual change, and the CI jobs
+could not run at all on a tree with no `apps/api`.
+
+It was realigned by merging `main` into `dev` through PR #18 — a fast-forward,
+since `dev` was a strict ancestor of `main` — rather than by force-pushing, which
+`protected-branches` forbids. `dev` now carries the monorepo layout.
+
+**Still pending:** `required-ci` targets `main` only. Add the `dev` pattern to it
+so the two checks gate that branch too.
 
 Watch for this whenever a long-lived branch predates the migration: check
 `git merge-base --is-ancestor origin/<branch> origin/main` before opening a PR
@@ -124,10 +137,22 @@ check names are what branch protection matches:
 
 Protection is enforced through **rulesets**, not legacy branch protection rules:
 
-- `protected-branches` → `main`, `dev`, `stage`, `releases/**/*`: no deletion, no
-  force push, signed commits, PR with 1 approval
+- `protected-branches` → `main`, `dev`, `releases/**/*` (and `stage` until it is
+  retired): no deletion, no force push, signed commits, PR with 1 approval
 - `required-ci` → `main`: both checks above must pass, branch must be up to date
 
 When renaming a job, remember the check name comes from the job's `name:` field,
 not its id — rename it in the rulesets at the same time or PRs block on a check
 nobody produces.
+
+Rulesets have to be edited **by hand in the GitHub UI**. A classic OAuth token
+with the `repo` scope can read them but not write: `PATCH /repos/…/rulesets/{id}`
+answers `404`, which is GitHub's way of reporting a missing Administration
+permission rather than a missing resource.
+
+Two habits worth keeping when editing a target list: enter **one pattern per
+`Include by pattern` dialog**, without quotes or commas — pasting
+`"main", "dev"` creates a single literal pattern that matches no branch and
+silently protects nothing — and pick check names from the autocomplete rather
+than typing them, since a stray space around the `/` produces a required check
+nobody ever reports.
