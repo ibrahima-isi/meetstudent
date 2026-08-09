@@ -22,7 +22,7 @@ Everything else in this plan is downstream of that.
 
 | Gap | Evidence |
 |---|---|
-| Email verification is fiction | The component injects nothing (`inject(` appears 0 times); it compares the typed code to `user.verificationCode` read from `localStorage` behind a `setTimeout`. `UserEntity` has no verification field at all — there is no backend for it. |
+| Email verification is fiction | The component injects nothing (`inject(` appears 0 times); it compares the typed code to `user.verificationCode` read from `localStorage` behind a `setTimeout`. `UserEntity` has no verification field at all — there is no backend for it. Addressed by Phase 0. |
 | Cannot add to a wishlist | `addToWishlist` exists in `user.service.ts` but is referenced by no component or template. Only `removeFromWishlist` is wired. |
 | Silent mock fallback | On any API error, `landing-page`, `home-page` and `school-detail-page` populate themselves from `@data/schools` / `@data/programmes`. The user sees plausible fake data with no indication anything failed. |
 | No route guards | Student screens are reachable purely through local state; nothing checks authentication before rendering them. |
@@ -45,16 +45,17 @@ this front. Decide that explicitly before scoping (see Decisions).
 
 A student-facing product where every screen has a URL, authentication survives a
 token expiry, failures are visible and honest, and every feature the backend
-supports for a STUDENT or EXPERT is reachable. Admin/moderation surfaces are out
-of scope — they belong to the backoffice.
+supports for a STUDENT or EXPERT is reachable. Admin and moderation surfaces are
+out of scope by decision — they belong to `apps/backoffice`, which does not exist
+yet.
 
 ## Decisions to confirm before starting
 
-1. **Email verification.** It has no backend. Either (a) drop the screen and let
-   registration log the user straight in, or (b) build it server-side first —
-   entity field, migration, token issuance, mail sending, endpoints. (a) is a
-   day; (b) is a project. **Recommended: (a) now, (b) as its own backlog item.**
-2. **Admin features.** Confirm they are out of scope for `apps/web`.
+1. ~~Email verification.~~ **Decided: build it server-side.** It becomes Phase 0
+   below, a prerequisite for the front's verification screen.
+2. ~~Admin features.~~ **Decided: out of scope for `apps/web`.** Moderation,
+   CRUD on schools/programs/courses/accreditations/tags, role management and
+   media verification all move to `apps/backoffice` when that app starts.
 3. **EXPERT role.** Experts may rate programs and courses, students only
    schools. Should this front serve both, or students only?
 4. **i18n.** The UI is French, the code English, with no i18n setup. Single
@@ -62,6 +63,54 @@ of scope — they belong to the backoffice.
 5. **The approval rule.** With empty bypass lists and one approval required, no
    PR in this plan can be merged solo. Settle it first — most likely
    `required_approving_review_count: 0`, leaving CI as the gate.
+
+## Phase 0 — backend prerequisite: email verification
+
+Front-end work cannot start on the verification screen until this exists. It
+lives in `apps/api` and is independent of every other phase, so it can proceed
+in parallel with Phase 1.
+
+Nothing is in place today: no `spring-boot-starter-mail` dependency, no mail
+configuration in any profile, and `UserEntity` has no verification field.
+
+**Model.** Mirror the existing `RefreshToken`: an `EmailVerificationToken`
+extending `AbstractEntity`, with a unique `token`, an `Instant expiryDate` and a
+`@ManyToOne` user. That pattern is already proven here — follow it rather than
+inventing a second shape.
+
+**Migration V17** (V16 is the last one):
+- `users.email_verified boolean not null default false`
+- `email_verification_tokens`, shaped like `refresh_tokens`
+- **backfill every existing user to `true`** — otherwise the change locks out
+  every account already created
+
+**Code format.** Six digits, to match the screen the front already has. 15-minute
+TTL, single use, deleted on success. Resend throttled to one per 60 seconds,
+which is exactly the countdown the component already displays.
+
+**Endpoints**, on `AuthController` — `/api/v1/auth/**` is already `permitAll` in
+`WebSecurityConfig`, so no security rule changes:
+- `POST /api/v1/auth/verify-email` — `{ email, code }`
+- `POST /api/v1/auth/resend-verification` — `{ email }`, always answers `202`
+  whether or not the address exists, so the endpoint cannot be used to
+  enumerate accounts
+
+**Login policy.** Reject authentication with `403` and a distinguishable error
+code until the address is verified, so the front can route the user to the
+verification screen rather than showing a generic failure.
+
+**Local mail.** Add a `mailpit` service to `compose.yml` (SMTP on 1025, web UI on
+8025) and point the `docker` profile at it. No real mail leaves the machine, and
+the code is readable in the UI during development.
+
+**Tests.** Unit: token generation, expiry, single use, resend throttling.
+Integration: verify with a good code, a wrong code, an expired code; login
+blocked while unverified and allowed after; resend on an unknown address still
+returning `202`.
+
+*Done when:* registering through the Docker stack produces a mail visible in
+Mailpit, the code verifies, login is refused before verification and accepted
+after — and the 93 existing API tests still pass.
 
 ## Phases
 
@@ -95,7 +144,9 @@ The prerequisite for everything else. Do not start Phase 2 before this lands.
    cover the concurrent case.
 6. **`authGuard`** on student routes, redirecting to `/login` with a return URL.
 7. **`roleGuard`** if the EXPERT decision calls for it.
-8. **Email verification**, per decision 1.
+8. **Email verification** — wire the existing six-digit screen to the Phase 0
+   endpoints, replacing the `localStorage` simulation, and route users there when
+   login answers `403` for an unverified address.
 
 ### Phase 3 — Honest data
 
