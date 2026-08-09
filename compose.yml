@@ -6,7 +6,7 @@ name: meetstudent
 #   cp .env.example .env   # then fill in the two secrets
 #   docker compose up --build
 #
-#   front   http://localhost:5000
+#   front   http://localhost:4200
 #   api     http://localhost:8080/api/v1
 #   swagger http://localhost:8080/swagger-ui.html
 
@@ -43,7 +43,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-meetstudent}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:?set JWT_SECRET_KEY in .env}
-      CORS_ALLOWED_ORIGINS: http://localhost:${WEB_PORT:-5000}
+      CORS_ALLOWED_ORIGINS: http://localhost:${WEB_PORT:-4200}
       # Media lives on named volumes so a rebuild does not wipe uploads.
       FILE_UPLOAD_DIR: /data/uploads
       FILE_PRIVATE_DIR: /data/private
@@ -71,13 +71,13 @@ services:
     build:
       context: ./apps/web
     environment:
-      PORT: 5000
+      PORT: 4200
       # Consumed by applyServerEnvironment() in src/server.ts: the SSR bundle
       # must reach the API over the compose network, not via localhost.
       API_URL: http://api:8080/api/v1
       SERVER_URL: http://api:8080
     ports:
-      - "${WEB_PORT:-5000}:5000"
+      - "${WEB_PORT:-4200}:4200"
     depends_on:
       api:
         condition: service_healthy

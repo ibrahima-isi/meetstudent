@@ -20,6 +20,6 @@ COPY --from=build /app/dist/frontend ./dist/frontend
 # Run unprivileged; the node image ships a `node` user for this.
 USER node
 
-ENV PORT=5000
-EXPOSE 5000
+ENV PORT=4200
+EXPOSE 4200
 CMD ["node", "dist/frontend/server/server.mjs"]
