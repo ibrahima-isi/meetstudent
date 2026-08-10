@@ -13,6 +13,12 @@ describe('translocoOptions', () => {
     expect(translocoOptions.loader).toBe(TranslationLoader);
   });
 
+  it('declares no prodMode — nothing in Transloco 8 reads it', () => {
+    // The missing-key warning is gated by the ambient `ngDevMode` global, not
+    // by this key. A field that looks live but is inert misleads the reader.
+    expect(Object.keys(translocoOptions.config)).not.toContain('prodMode');
+  });
+
   it('serves the bundled French translations when installed', async () => {
     TestBed.configureTestingModule({
       providers: [provideZonelessChangeDetection(), provideTransloco(translocoOptions)],

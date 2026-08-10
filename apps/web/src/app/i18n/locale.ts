@@ -34,11 +34,25 @@ export function readLocaleCookie(cookieHeader: string | null | undefined): Local
       continue;
     }
 
-    const value = decodeURIComponent(pair.slice(separator + 1).trim());
+    const value = decodeCookieValue(pair.slice(separator + 1).trim());
     return isLocale(value) ? value : null;
   }
 
   return null;
+}
+
+/**
+ * `decodeURIComponent` throws a `URIError` on a malformed escape — `%zz`, or a
+ * lone Latin-1 byte such as `%E9`. The cookie is client-writable, so a bad value
+ * must degrade to "nothing remembered" rather than break every render until the
+ * user thinks to clear their cookies.
+ */
+function decodeCookieValue(raw: string): string | null {
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return null;
+  }
 }
 
 /**

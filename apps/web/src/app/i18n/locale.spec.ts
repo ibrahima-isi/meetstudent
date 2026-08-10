@@ -46,6 +46,15 @@ describe('locale', () => {
     it('does not match a cookie whose name merely ends with the same text', () => {
       expect(readLocaleCookie('other_meetstudent_locale=en')).toBeNull();
     });
+
+    it('treats a malformed percent-escape exactly like an absent cookie', () => {
+      // Both of these make decodeURIComponent throw a URIError: `%zz` is not
+      // hex, and `%E9` is a lone Latin-1 byte that is not valid UTF-8. The
+      // cookie is attacker-writable, so this must degrade, never throw.
+      expect(readLocaleCookie('meetstudent_locale=%zz')).toBeNull();
+      expect(readLocaleCookie('meetstudent_locale=%E9')).toBeNull();
+      expect(readLocaleCookie('theme=dark; meetstudent_locale=%; sid=abc')).toBeNull();
+    });
   });
 
   describe('negotiateFromAcceptLanguage', () => {
