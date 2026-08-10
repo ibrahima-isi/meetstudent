@@ -1,0 +1,22 @@
+import { isDevMode } from '@angular/core';
+import { TranslocoOptions } from '@jsverse/transloco';
+import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from './locale';
+import { TranslationLoader } from './translation.loader';
+
+export const translocoOptions: TranslocoOptions = {
+  config: {
+    availableLangs: [...SUPPORTED_LOCALES],
+    defaultLang: DEFAULT_LOCALE,
+    // French is the source language, so a key missing from en.json falls back
+    // to real French copy rather than rendering the raw key.
+    fallbackLang: DEFAULT_LOCALE,
+    reRenderOnLangChange: true,
+    prodMode: !isDevMode(),
+    missingHandler: {
+      logMissingKey: true,
+      useFallbackTranslation: true,
+      allowEmpty: false,
+    },
+  },
+  loader: TranslationLoader,
+};
