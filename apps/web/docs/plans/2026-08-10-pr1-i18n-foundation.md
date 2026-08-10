@@ -346,7 +346,6 @@ Create `apps/web/src/app/i18n/fr.json`:
 ```json
 {
   "common": {
-    "appName": "MeetStudent",
     "retry": "Réessayer"
   },
   "language": {
@@ -361,7 +360,6 @@ Create `apps/web/src/app/i18n/en.json`:
 ```json
 {
   "common": {
-    "appName": "MeetStudent",
     "retry": "Retry"
   },
   "language": {
@@ -370,6 +368,11 @@ Create `apps/web/src/app/i18n/en.json`:
   }
 }
 ```
+
+Two namespaces, each earning its place: `common.retry` differs between the two
+files, which is what makes the loader test meaningful; `language` holds the
+endonyms PR 3's switcher needs, identical in both files by design. Nothing else
+is seeded — keys arrive with the screens that use them, in PRs 4 and 5.
 
 - [ ] **Step 6: Write the minimal implementation**
 
