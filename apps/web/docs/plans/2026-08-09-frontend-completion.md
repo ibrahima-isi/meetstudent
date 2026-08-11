@@ -59,12 +59,18 @@ yet.
    deliberately light ADMIN-only CRUD surface.
 3. ~~EXPERT role.~~ **Decided: this front serves STUDENT and EXPERT.** See
    Audience below.
-4. **i18n.** The UI is French, the code English, with no i18n setup. Single
-   locale, or is a second one coming? This changes every template touched.
-   *Still open.*
-5. **The approval rule.** With empty bypass lists and one approval required, no
-   PR in this plan can be merged solo. Settle it first — most likely
-   `required_approving_review_count: 0`, leaving CI as the gate. *Still open.*
+4. ~~i18n.~~ **Decided: two locales, `fr` (default and source language) and
+   `en`, with the locale in the URL.** That makes it inseparable from routing —
+   the locale is the first segment of every route — so Phase 1 below is
+   superseded by
+   [`2026-08-10-i18n-and-routing-design.md`](./2026-08-10-i18n-and-routing-design.md),
+   which folds the two together into a five-PR sequence. PR 1 of that sequence
+   is done and merged; the router itself is its PR 2.
+5. ~~The approval rule.~~ **Decided: `required_approving_review_count` is `0`,
+   leaving CI as the gate.** Already applied to the `protected-branches` ruleset
+   on 2026-08-09 and verified against the live configuration on 2026-08-10 —
+   PRs in this plan can be merged solo. `required-ci` is a separate ruleset and
+   is untouched, so both checks still gate every merge.
 
 ## Audience and the backoffice split
 

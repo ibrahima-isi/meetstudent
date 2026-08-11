@@ -155,10 +155,22 @@ Protection is enforced through **rulesets**, not legacy branch protection rules:
   to date
 
 Both bypass lists are **empty**, so the rules apply to the repository owner too.
-One consequence to plan for on a solo project: with one approval required and no
-bypass, you cannot merge your own PR — nobody is there to approve it. Pick one
-of setting `required_approving_review_count` to `0` and letting CI be the gate,
-adding a temporary bypass, or merging with `gh pr merge --admin`.
+
+That once made a solo merge impossible — one approval was required and nobody
+was there to give it. **Settled on 2026-08-09 by setting
+`required_approving_review_count` to `0`** (verified against the live ruleset,
+not remembered). A PR is still required and still gets a review surface; what is
+gone is the need for someone else to click approve.
+
+The reason that is safe rather than a hole is that **the two rulesets are
+independent**. Lowering the approval count in `protected-branches` leaves
+`required-ci` untouched, so both checks still have to pass and the branch still
+has to be up to date. CI is the real gate, and it cannot be waved through.
+
+Prefer this over the two alternatives that also unblock a solo merge: a bypass
+entry exempts the owner from the *whole* ruleset, and `gh pr merge --admin`
+overrides required status checks too — either one lets a red build reach `main`,
+which is exactly what the setup exists to prevent.
 
 When renaming a job, remember the check name comes from the job's `name:` field,
 not its id — rename it in the rulesets at the same time or PRs block on a check
