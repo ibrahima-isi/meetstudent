@@ -47,3 +47,22 @@ export function applyServerEnvironment(
 
   return target;
 }
+
+/**
+ * `@angular/ssr` refuses to render a request whose `Host` is not on this list,
+ * falling back to client-side rendering — which silently costs every page its
+ * server-rendered HTML. The default covers the two names the stack actually
+ * uses: `localhost` from the host machine, `web` from inside the compose
+ * network.
+ */
+export function readAllowedHosts(vars: Record<string, string | undefined>): string[] {
+  const raw = vars['ALLOWED_HOSTS']?.trim();
+  if (!raw) {
+    return ['localhost', 'web'];
+  }
+
+  return raw
+    .split(',')
+    .map((host) => host.trim())
+    .filter((host) => host !== '');
+}

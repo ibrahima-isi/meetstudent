@@ -7,7 +7,7 @@ import {
 import express from 'express';
 import { join } from 'node:path';
 import { environment } from './environments/environment';
-import { applyServerEnvironment } from './environments/server-environment';
+import { applyServerEnvironment, readAllowedHosts } from './environments/server-environment';
 
 /**
  * Point the SSR bundle at the API's in-network address before anything renders.
@@ -19,7 +19,9 @@ applyServerEnvironment(environment, process.env);
 const browserDistFolder = join(import.meta.dirname, '../browser');
 
 const app = express();
-const angularApp = new AngularNodeAppEngine();
+const angularApp = new AngularNodeAppEngine({
+  allowedHosts: readAllowedHosts(process.env),
+});
 
 /**
  * Example Express Rest API endpoints can be defined here.
