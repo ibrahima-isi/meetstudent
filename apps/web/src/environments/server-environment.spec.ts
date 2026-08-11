@@ -72,4 +72,10 @@ describe('readAllowedHosts', () => {
   it('drops empty entries rather than allowing an empty hostname', () => {
     expect(readAllowedHosts({ ALLOWED_HOSTS: 'a,,b,' })).toEqual(['a', 'b']);
   });
+
+  it('falls back to the default when the value parses to no hosts', () => {
+    expect(readAllowedHosts({ ALLOWED_HOSTS: ',' })).toEqual(['localhost', 'web']);
+    expect(readAllowedHosts({ ALLOWED_HOSTS: ' , ' })).toEqual(['localhost', 'web']);
+    expect(readAllowedHosts({ ALLOWED_HOSTS: ',,' })).toEqual(['localhost', 'web']);
+  });
 });
