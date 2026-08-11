@@ -8,6 +8,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Never commit or work directly on local `main`. Never push to remote `main` or `dev`.
 - Solo-developer project: exactly two long-lived branches remotely (`main`, `dev`) and only `main` locally. Delete a feature branch on both sides once its PR is merged.
 - Every task starts with a new branch named `<type>/<short-kebab-description>`, where `<type>` is a Conventional Commits type: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `perf`, `ci` (e.g. `feat/media-upload-retry`). Commit messages use the same types.
+- **Every task ends the same way: commit, push, open a PR.** Do not leave finished work sitting on a local branch — it is invisible to CI, and CI is the merge gate. Since `required_approving_review_count` is `0` (see `docs/MONOREPO.md`), the PR is yours to merge once both checks pass.
+- When a branch is cut from another unmerged branch, open its PR **against that branch**, not `main`, or the diff shows the parent's commits too. GitHub rebases the base automatically when the parent merges.
 
 **Scope**
 - Do not touch code that already works without explicit approval. Do not modify any file that is not strictly required by the assigned task.
@@ -19,6 +21,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **After merging to local `main`**
 - Bring the full stack up locally with Docker and run live tests against it before considering the work finished: `docker compose up --build`, then exercise the API and the front (see Commands below).
+
+**Docker resources**
+- **Always tear the stack down when the tests are done: `docker compose down`.** This applies to every stack you start, not just the post-merge check, and it is not optional — containers, the Postgres volume and the published ports (4200, 8080, 5432) otherwise stay held between tasks and collide with the next run.
+- Prefer `docker compose up -d` over a foreground run when you only need the stack to answer requests, so the teardown is never forgotten because a terminal is blocked.
 
 ## Repository layout
 
@@ -69,6 +75,9 @@ docker compose up -d api         # api + its Postgres only; naming a service ski
 # Hot-reloading API: recompile on the host (IDE or ./mvnw compile) and devtools
 # restarts the container in about a second.
 docker compose -f compose.yml -f compose.dev.yml up api
+
+docker compose down              # ALWAYS run this once the tests are done
+docker compose down -v           # same, plus the Postgres volume — resets the database
 ```
 
 Front on `http://localhost:4200`, API on `http://localhost:8080/api/v1`, Swagger at `/swagger-ui.html`. Postgres is published on 5432.
