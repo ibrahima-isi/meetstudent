@@ -26,6 +26,14 @@ startup; and the dev override needs `entrypoint: []` plus its own `image:` tag,
 because the runtime stage sets `ENTRYPOINT java -jar app.jar` and would
 otherwise both prefix the command and overwrite the production image.
 
+**Always run `docker compose down` once the tests are done.** Every stack that
+gets started gets torn down — this is a standing rule, not a tidiness
+preference. A stack left running holds the Postgres volume and ports 4200, 8080
+and 5432, so the next `docker compose up` collides with it, and the failure
+surfaces as a port bind error or a container that silently reuses stale data
+rather than as anything that names the real cause. Use `docker compose down -v`
+when the database itself should be reset.
+
 Each app keeps its own build, dependencies and agent instructions. There is no
 root package manager: always run build commands from inside `apps/<app>`.
 

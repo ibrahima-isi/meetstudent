@@ -20,6 +20,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **After merging to local `main`**
 - Bring the full stack up locally with Docker and run live tests against it before considering the work finished: `docker compose up --build`, then exercise the API and the front (see Commands below).
 
+**Docker resources**
+- **Always tear the stack down when the tests are done: `docker compose down`.** This applies to every stack you start, not just the post-merge check, and it is not optional — containers, the Postgres volume and the published ports (4200, 8080, 5432) otherwise stay held between tasks and collide with the next run.
+- Prefer `docker compose up -d` over a foreground run when you only need the stack to answer requests, so the teardown is never forgotten because a terminal is blocked.
+
 ## Repository layout
 
 MeetStudent is a monorepo assembled with `git subtree`. Each app keeps its own build, dependencies, and agent instructions — there is no root package manager or build orchestration, so always work from inside the relevant app directory.
@@ -69,6 +73,9 @@ docker compose up -d api         # api + its Postgres only; naming a service ski
 # Hot-reloading API: recompile on the host (IDE or ./mvnw compile) and devtools
 # restarts the container in about a second.
 docker compose -f compose.yml -f compose.dev.yml up api
+
+docker compose down              # ALWAYS run this once the tests are done
+docker compose down -v           # same, plus the Postgres volume — resets the database
 ```
 
 Front on `http://localhost:4200`, API on `http://localhost:8080/api/v1`, Swagger at `/swagger-ui.html`. Postgres is published on 5432.
