@@ -8,6 +8,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Never commit or work directly on local `main`. Never push to remote `main` or `dev`.
 - Solo-developer project: exactly two long-lived branches remotely (`main`, `dev`) and only `main` locally. Delete a feature branch on both sides once its PR is merged.
 - Every task starts with a new branch named `<type>/<short-kebab-description>`, where `<type>` is a Conventional Commits type: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `perf`, `ci` (e.g. `feat/media-upload-retry`). Commit messages use the same types.
+- **Every task ends the same way: commit, push, open a PR.** Do not leave finished work sitting on a local branch — it is invisible to CI, and CI is the merge gate. Since `required_approving_review_count` is `0` (see `docs/MONOREPO.md`), the PR is yours to merge once both checks pass.
+- When a branch is cut from another unmerged branch, open its PR **against that branch**, not `main`, or the diff shows the parent's commits too. GitHub rebases the base automatically when the parent merges.
 
 **Scope**
 - Do not touch code that already works without explicit approval. Do not modify any file that is not strictly required by the assigned task.
