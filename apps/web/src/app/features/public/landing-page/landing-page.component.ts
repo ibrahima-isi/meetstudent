@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { LucideAngularModule, Search, MapPin, Star, Filter, LogIn, UserPlus, ArrowUpDown } from 'lucide-angular';
 import { ImageWithFallbackComponent } from '@shared/components/image-with-fallback/image-with-fallback.component';
+import { LanguageSwitcherComponent } from '@shared/components/language-switcher/language-switcher.component';
 import { SCHOOLS as MOCK_SCHOOLS, CITIES, TYPES } from '@data/schools';
 import { PROGRAMMES } from '@data/programmes';
 import { School, Program } from '@models/entities';
@@ -12,7 +13,13 @@ import { LocaleService } from '@services/locale.service';
 
 @Component({
   selector: 'app-landing-page',
-  imports: [CommonModule, FormsModule, LucideAngularModule, ImageWithFallbackComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    LucideAngularModule,
+    ImageWithFallbackComponent,
+    LanguageSwitcherComponent,
+  ],
   templateUrl: './landing-page.component.html'
 })
 export class LandingPageComponent implements OnInit {
