@@ -5,9 +5,15 @@
  * web container itself and nothing answers on 8080 — server-side requests need
  * the API's in-network address instead.
  *
- * Rather than rebuild the image per environment, the server entry point
- * (`server.ts`) overrides the values from `process.env` before Angular
- * bootstraps. The browser bundle has its own module instance and is unaffected.
+ * Rather than rebuild the image per environment, the values are overridden from
+ * `process.env` before Angular bootstraps. The browser bundle has its own module
+ * instance and is unaffected.
+ *
+ * Applied in **two** places on purpose. The build emits this module's sibling
+ * `environment.ts` into two server chunks — one reachable from `server.ts`, one
+ * reachable from the application — and they are separate objects. The call that
+ * matters for HTTP is the one in `app.config.server.ts`, which shares an object
+ * with the services; `server.ts` covers its own copy.
  */
 export interface RuntimeEnvironment {
   apiUrl: string;
