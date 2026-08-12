@@ -6,6 +6,9 @@ import { of } from 'rxjs';
 import { signal } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { provideRouter } from '@angular/router';
+import { provideTransloco } from '@jsverse/transloco';
+import { translocoOptions } from '@i18n/transloco.config';
 
 describe('LandingPageComponent', () => {
   let component: LandingPageComponent;
@@ -23,6 +26,10 @@ describe('LandingPageComponent', () => {
         provideZonelessChangeDetection(),
         provideHttpClient(),
         provideHttpClientTesting(),
+        // The page navigates now instead of emitting, so it reaches Router and
+        // LocaleService — and LocaleService reaches Transloco.
+        provideRouter([]),
+        provideTransloco(translocoOptions),
         { provide: SchoolService, useValue: schoolServiceSpy }
       ]
     }).compileComponents();

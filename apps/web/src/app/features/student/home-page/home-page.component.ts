@@ -1,6 +1,7 @@
-import { Component, output, signal, computed, inject, OnInit } from '@angular/core';
+import { Component, signal, computed, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { LucideAngularModule, Search, MapPin, Star, Filter, LogOut, User, ArrowUpDown } from 'lucide-angular';
 import { ImageWithFallbackComponent } from '@shared/components/image-with-fallback/image-with-fallback.component';
 import { StarRatingComponent } from '@shared/components/star-rating/star-rating.component';
@@ -9,6 +10,8 @@ import { SCHOOLS as MOCK_SCHOOLS, CITIES, TYPES } from '@data/schools';
 import { PROGRAMMES } from '@data/programmes';
 import { School, Program } from '@models/entities';
 import { SchoolService } from '@services/school.service';
+import { LocaleService } from '@services/locale.service';
+import { TokenService } from '@services/token.service';
 
 @Component({
   selector: 'app-home-page',
@@ -16,11 +19,10 @@ import { SchoolService } from '@services/school.service';
   templateUrl: './home-page.component.html'
 })
 export class HomePageComponent implements OnInit {
-  onLogout = output<void>();
-  onSchoolClick = output<School>();
-  onProfileClick = output<void>();
-
   private schoolService = inject(SchoolService);
+  private readonly tokenService = inject(TokenService);
+  private readonly router = inject(Router);
+  private readonly locale = inject(LocaleService);
 
   readonly Search = Search;
   readonly MapPin = MapPin;
@@ -94,4 +96,25 @@ export class HomePageComponent implements OnInit {
       return 0;
     });
   });
+
+  protected logout(): void {
+    this.tokenService.clear();
+    this.goTo();
+  }
+
+  /**
+   * A school the API returned always carries an id; the type says otherwise
+   * because the same interface is used for writes. Without one there is no
+   * address to route to, so the click is dropped rather than sent to `/schools/`.
+   */
+  protected openSchool(school: School): void {
+    if (school.id !== undefined) {
+      this.goTo('schools', school.id);
+    }
+  }
+
+  /** Navigations stay in the language the visitor is reading. */
+  protected goTo(...segments: (string | number)[]): void {
+    void this.router.navigate(['/', this.locale.active(), ...segments]);
+  }
 }

@@ -1,10 +1,12 @@
-import { Component, input, output, signal, effect, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, computed, signal, effect, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { LucideAngularModule, ShoppingCart, X, GraduationCap } from 'lucide-angular';
 import { PROGRAMMES } from '@data/programmes';
 import { Program } from '@models/entities';
 import { UserService } from '@services/user.service';
 import { TokenService } from '@services/token.service';
+import { LocaleService } from '@services/locale.service';
 
 @Component({
   selector: 'app-wishlist-cart',
@@ -84,11 +86,16 @@ import { TokenService } from '@services/token.service';
   `
 })
 export class WishlistCartComponent implements OnInit, OnDestroy {
-  isAuthenticated = input.required<boolean>();
-  onLoginPrompt = output<void>();
-
   private userService = inject(UserService);
   private tokenService = inject(TokenService);
+  private readonly router = inject(Router);
+  private readonly locale = inject(LocaleService);
+
+  /**
+   * Read from the session rather than passed in: the cart sits in a header
+   * that has no reason to know, and the host had to hard-code `true` to say it.
+   */
+  readonly isAuthenticated = computed(() => this.tokenService.isAuthenticated());
 
   isOpen = signal(false);
   wishlist = signal<number[]>([]);
@@ -128,7 +135,8 @@ export class WishlistCartComponent implements OnInit, OnDestroy {
 
   handleCartClick() {
     if (!this.isAuthenticated()) {
-      this.onLoginPrompt.emit();
+      // Navigations stay in the language the visitor is reading.
+      void this.router.navigate(['/', this.locale.active(), 'login']);
       return;
     }
     this.isOpen.update(v => !v);

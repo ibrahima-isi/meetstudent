@@ -1,8 +1,11 @@
-import { Component, output, signal, inject } from '@angular/core';
+import { Component, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
 import { LucideAngularModule, Mail, Lock, User as UserIcon, AlertCircle, UserPlus, GraduationCap, MapPin, Users, BookOpen } from 'lucide-angular';
 import { AuthService, RegisterPayload } from '../../../services/auth.service';
+import { LocaleService } from '@services/locale.service';
+import { RegistrationFlowService } from '@services/registration-flow.service';
 
 const SENEGAL_SPECIALTIES = [
   'Mathématiques', 'Physique-Chimie', 'Sciences de la Vie et de la Terre (SVT)',
@@ -18,11 +21,11 @@ const SENEGAL_SPECIALTIES = [
   templateUrl: './register-form.component.html'
 })
 export class RegisterFormComponent {
-  onSwitchToLogin = output<void>();
-  onRegisterSuccess = output<string>();
-
   private fb = inject(FormBuilder);
   private authService = inject(AuthService);
+  private readonly registrationFlow = inject(RegistrationFlowService);
+  private readonly router = inject(Router);
+  private readonly locale = inject(LocaleService);
 
   readonly Mail = Mail;
   readonly Lock = Lock;
@@ -101,6 +104,11 @@ export class RegisterFormComponent {
     this.filteredSpecialties.set([]);
   }
 
+  /** Navigations stay in the language the visitor is reading. */
+  protected goTo(...segments: (string | number)[]): void {
+    void this.router.navigate(['/', this.locale.active(), ...segments]);
+  }
+
   handleNextStep() {
     this.error.set('');
 
@@ -153,7 +161,10 @@ export class RegisterFormComponent {
     this.authService.register(userData).subscribe({
       next: () => {
         this.isLoading.set(false);
-        this.onRegisterSuccess.emit(email);
+        // The address goes to the verify screen through the service, never
+        // through the URL: it is personal data, and URLs are shared and logged.
+        this.registrationFlow.remember(email);
+        this.goTo('verify');
       },
       error: (err) => {
         this.error.set(err.error?.message || 'Registration failed.');

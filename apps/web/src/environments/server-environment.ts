@@ -5,9 +5,15 @@
  * web container itself and nothing answers on 8080 — server-side requests need
  * the API's in-network address instead.
  *
- * Rather than rebuild the image per environment, the server entry point
- * (`server.ts`) overrides the values from `process.env` before Angular
- * bootstraps. The browser bundle has its own module instance and is unaffected.
+ * Rather than rebuild the image per environment, the values are overridden from
+ * `process.env` before Angular bootstraps. The browser bundle has its own module
+ * instance and is unaffected.
+ *
+ * Applied in **two** places on purpose. The build emits this module's sibling
+ * `environment.ts` into two server chunks — one reachable from `server.ts`, one
+ * reachable from the application — and they are separate objects. The call that
+ * matters for HTTP is the one in `app.config.server.ts`, which shares an object
+ * with the services; `server.ts` covers its own copy.
  */
 export interface RuntimeEnvironment {
   apiUrl: string;
@@ -46,4 +52,33 @@ export function applyServerEnvironment(
   }
 
   return target;
+}
+
+/**
+ * `@angular/ssr` refuses to render a request whose `Host` is not on this list,
+ * falling back to client-side rendering — which silently costs every page its
+ * server-rendered HTML. The default covers the two names the stack actually
+ * uses: `localhost` from the host machine, `web` from inside the compose
+ * network.
+ *
+ * An empty allowlist is worse than a missing one: `@angular/ssr` treats `[]`
+ * as "nothing is configured" and falls back to client-side rendering on
+ * every host mismatch, silently, via `console.error` only — the exact bug
+ * this function exists to prevent. A value that parses to no hosts (`","`,
+ * `" , "`, `",,"`) must therefore fall back to the same default as an unset
+ * variable, not to `[]`.
+ */
+export function readAllowedHosts(vars: Record<string, string | undefined>): string[] {
+  const defaults = ['localhost', 'web'];
+  const raw = vars['ALLOWED_HOSTS']?.trim();
+  if (!raw) {
+    return defaults;
+  }
+
+  const hosts = raw
+    .split(',')
+    .map((host) => host.trim())
+    .filter((host) => host !== '');
+
+  return hosts.length > 0 ? hosts : defaults;
 }
