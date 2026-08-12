@@ -2,7 +2,7 @@ import { DOCUMENT, isPlatformBrowser } from '@angular/common';
 import { Injectable, PLATFORM_ID, REQUEST, inject } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { filter } from 'rxjs';
-import { DEFAULT_LOCALE, Locale, SUPPORTED_LOCALES, isLocale } from './locale';
+import { DEFAULT_LOCALE, Locale, SUPPORTED_LOCALES, urlInLocale } from './locale';
 
 /**
  * Publishes the `<link rel="alternate" hreflang="...">` set that tells a
@@ -43,7 +43,6 @@ export class AlternateLinksService {
       return;
     }
 
-    const suffix = this.withoutLocale(url);
     const head = this.document.head;
 
     for (const link of Array.from(head.querySelectorAll('link[rel="alternate"]'))) {
@@ -51,10 +50,10 @@ export class AlternateLinksService {
     }
 
     for (const locale of SUPPORTED_LOCALES) {
-      head.appendChild(this.link(locale, `${origin}/${locale}${suffix}`));
+      head.appendChild(this.link(locale, `${origin}${urlInLocale(url, locale)}`));
     }
     head.appendChild(
-      this.link('x-default', `${origin}/${DEFAULT_LOCALE}${suffix}`),
+      this.link('x-default', `${origin}${urlInLocale(url, DEFAULT_LOCALE)}`),
     );
   }
 
@@ -64,25 +63,6 @@ export class AlternateLinksService {
     link.setAttribute('hreflang', hreflang);
     link.setAttribute('href', href);
     return link;
-  }
-
-  /**
-   * `/fr/schools/7?tab=x#y` → `/schools/7?tab=x#y`, so the same suffix can be
-   * hung off either locale. A first segment that is not a locale is a path that
-   * lost its prefix — the guard redirects those, but guessing wrong here would
-   * publish two URLs that 404.
-   */
-  private withoutLocale(url: string): string {
-    const [first, ...rest] = url.split('/').slice(1);
-    const head = first?.split(/[?#]/)[0];
-
-    if (!isLocale(head)) {
-      return url === '/' ? '' : url;
-    }
-
-    const remainder = first.slice(head.length);
-    const tail = rest.length > 0 ? `/${rest.join('/')}` : '';
-    return `${remainder}${tail}`;
   }
 
   private origin(): string | null {

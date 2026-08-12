@@ -3,6 +3,7 @@ import {
   isLocale,
   negotiateFromAcceptLanguage,
   readLocaleCookie,
+  urlInLocale,
 } from './locale';
 
 describe('locale', () => {
@@ -79,6 +80,35 @@ describe('locale', () => {
       expect(negotiateFromAcceptLanguage('de, es')).toBeNull();
       expect(negotiateFromAcceptLanguage('')).toBeNull();
       expect(negotiateFromAcceptLanguage(null)).toBeNull();
+    });
+  });
+
+  describe('urlInLocale', () => {
+    it('swaps the locale prefix, leaving the page alone', () => {
+      expect(urlInLocale('/fr/login', 'en')).toBe('/en/login');
+      expect(urlInLocale('/en/schools/7', 'fr')).toBe('/fr/schools/7');
+    });
+
+    it('keeps query parameters and the fragment', () => {
+      // They identify the page as much as the path does: switching language
+      // must not drop the tab you were on.
+      expect(urlInLocale('/fr/schools/7?tab=programs#rates', 'en')).toBe(
+        '/en/schools/7?tab=programs#rates',
+      );
+      expect(urlInLocale('/fr?sort=name', 'en')).toBe('/en?sort=name');
+    });
+
+    it('emits no trailing slash at a locale root', () => {
+      expect(urlInLocale('/fr', 'en')).toBe('/en');
+      expect(urlInLocale('/', 'en')).toBe('/en');
+    });
+
+    it('prefixes a path that never had a locale', () => {
+      expect(urlInLocale('/login', 'fr')).toBe('/fr/login');
+    });
+
+    it('is idempotent for the locale already in the URL', () => {
+      expect(urlInLocale('/fr/login', 'fr')).toBe('/fr/login');
     });
   });
 });
