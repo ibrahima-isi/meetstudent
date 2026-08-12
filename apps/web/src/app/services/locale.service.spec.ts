@@ -30,6 +30,7 @@ function fakeDocument(
   return {
     cookie: options.cookie ?? '',
     defaultView: navigator ? { navigator } : null,
+    documentElement: { lang: '' },
   };
 }
 
@@ -46,6 +47,7 @@ function ssrDocument() {
       throw new Error('NotYetImplemented');
     },
     defaultView: null,
+    documentElement: { lang: '' },
   };
 }
 
@@ -227,6 +229,33 @@ describe('LocaleService', () => {
 
       expect(transloco.getActiveLang()).toBe('en');
       expect(service.active()).toBe('en');
+    });
+
+    // Assistive technology and search engines both read this attribute, and
+    // `index.html` can only ever carry one value. `use()` is the single place
+    // the active locale moves, and `localeGuard` awaits it, so setting it here
+    // is what makes the server-rendered HTML state its own language.
+    it('states the language on the document element', () => {
+      const document = fakeDocument();
+      const service = configure([{ provide: DOCUMENT, useValue: document }]);
+
+      service.use('en');
+      expect(document.documentElement.lang).toBe('en');
+
+      service.use('fr');
+      expect(document.documentElement.lang).toBe('fr');
+    });
+
+    it('states the language on the server too, where SSR serialises it', () => {
+      const document = ssrDocument();
+      const service = configure([
+        serverPlatform,
+        { provide: DOCUMENT, useValue: document },
+      ]);
+
+      service.use('en');
+
+      expect(document.documentElement.lang).toBe('en');
     });
 
     it('returns the load, so a guard can wait for the translation to be in', async () => {
