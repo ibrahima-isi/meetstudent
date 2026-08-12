@@ -2,6 +2,9 @@ import { TestBed, ComponentFixture } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
+import { provideRouter } from '@angular/router';
+import { provideTransloco } from '@jsverse/transloco';
+import { translocoOptions } from '@i18n/transloco.config';
 import { RegisterFormComponent } from './register-form.component';
 import { environment } from '../../../../environments/environment';
 
@@ -21,7 +24,11 @@ describe('RegisterFormComponent registration payload', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        provideZonelessChangeDetection()
+        provideZonelessChangeDetection(),
+        // The form navigates to /verify now instead of emitting, so it reaches
+        // Router and LocaleService — and LocaleService reaches Transloco.
+        provideRouter([]),
+        provideTransloco(translocoOptions)
       ],
     });
     fixture = TestBed.createComponent(RegisterFormComponent);

@@ -7,16 +7,16 @@
           <p class="text-gray-600 text-sm">Trouvez votre établissement idéal</p>
         </div>
         <div class="flex items-center gap-2">
-          <app-wishlist-cart [isAuthenticated]="true"></app-wishlist-cart>
+          <app-wishlist-cart />
           <button
-            (click)="onProfileClick.emit()"
+            (click)="goTo('profile')"
             class="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
           >
             <lucide-icon [img]="UserIcon" class="w-5 h-5"></lucide-icon>
             <span class="hidden sm:inline">Profil</span>
           </button>
           <button
-            (click)="onLogout.emit()"
+            (click)="logout()"
             class="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
           >
             <lucide-icon [img]="LogOut" class="w-5 h-5"></lucide-icon>
@@ -107,7 +107,7 @@
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       @for (school of sortedSchools(); track school.id) {
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer flex flex-col">
-          <div class="relative h-48" (click)="onSchoolClick.emit(school)">
+          <div class="relative h-48" (click)="openSchool(school)">
             <app-image-with-fallback
               [src]="school.coverImageUrl || ''"
               [alt]="school.name"
@@ -135,7 +135,7 @@
           </div>
           
           <div class="p-5 flex-1 flex flex-col">
-            <h3 class="text-gray-900 mb-3 line-clamp-2 text-xl font-bold cursor-pointer" (click)="onSchoolClick.emit(school)">{{ school.name }}</h3>
+            <h3 class="text-gray-900 mb-3 line-clamp-2 text-xl font-bold cursor-pointer" (click)="openSchool(school)">{{ school.name }}</h3>
             
             <div class="mb-3">
               <app-star-rating 
@@ -158,7 +158,7 @@
             </p>
 
             <button 
-              (click)="onSchoolClick.emit(school)"
+              (click)="openSchool(school)"
               class="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors mt-auto font-medium"
             >
               Voir les détails

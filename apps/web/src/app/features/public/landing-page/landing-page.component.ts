@@ -1,12 +1,14 @@
-import { Component, output, signal, computed, inject, OnInit } from '@angular/core';
+import { Component, signal, computed, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { LucideAngularModule, Search, MapPin, Star, Filter, LogIn, UserPlus, ArrowUpDown } from 'lucide-angular';
 import { ImageWithFallbackComponent } from '@shared/components/image-with-fallback/image-with-fallback.component';
 import { SCHOOLS as MOCK_SCHOOLS, CITIES, TYPES } from '@data/schools';
 import { PROGRAMMES } from '@data/programmes';
 import { School, Program } from '@models/entities';
 import { SchoolService } from '@services/school.service';
+import { LocaleService } from '@services/locale.service';
 
 @Component({
   selector: 'app-landing-page',
@@ -14,11 +16,9 @@ import { SchoolService } from '@services/school.service';
   templateUrl: './landing-page.component.html'
 })
 export class LandingPageComponent implements OnInit {
-  onSchoolClick = output<School>();
-  onLoginClick = output<void>();
-  onRegisterClick = output<void>();
-
   private schoolService = inject(SchoolService);
+  private readonly router = inject(Router);
+  private readonly locale = inject(LocaleService);
 
   readonly Search = Search;
   readonly MapPin = MapPin;
@@ -94,4 +94,20 @@ export class LandingPageComponent implements OnInit {
       return 0;
     });
   });
+
+  /**
+   * A school the API returned always carries an id; the type says otherwise
+   * because the same interface is used for writes. Without one there is no
+   * address to route to, so the click is dropped rather than sent to `/schools/`.
+   */
+  protected openSchool(school: School): void {
+    if (school.id !== undefined) {
+      this.goTo('schools', school.id);
+    }
+  }
+
+  /** Navigations stay in the language the visitor is reading. */
+  protected goTo(...segments: (string | number)[]): void {
+    void this.router.navigate(['/', this.locale.active(), ...segments]);
+  }
 }
