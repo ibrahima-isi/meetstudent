@@ -95,3 +95,25 @@ export function negotiateFromAcceptLanguage(
 
   return null;
 }
+
+/**
+ * Rewrites a URL so it addresses the same page in another locale:
+ * `/fr/schools/7?tab=x#y` → `/en/schools/7?tab=x#y`.
+ *
+ * The query string and the fragment travel with it — they identify the page as
+ * much as the path does, and dropping them would make switching language a
+ * silent way to lose your place. A first segment that is not a locale is a path
+ * that never had a prefix, so it gains one rather than losing its first
+ * directory.
+ */
+export function urlInLocale(url: string, locale: Locale): string {
+  const [first = '', ...rest] = url.split('/').slice(1);
+  const head = first.split(/[?#]/)[0];
+  const suffix = isLocale(head)
+    ? `${first.slice(head.length)}${rest.length > 0 ? `/${rest.join('/')}` : ''}`
+    : url === '/'
+      ? ''
+      : url;
+
+  return `/${locale}${suffix}`;
+}

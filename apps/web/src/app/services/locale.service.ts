@@ -67,6 +67,11 @@ export class LocaleService {
     this.transloco.setActiveLang(locale);
     this.activeLocale.set(locale);
 
+    // Unlike the cookie, this is safe on the server — it is the document being
+    // serialised, so SSR emits <html lang="..."> rather than the one value
+    // index.html could carry. Screen readers and search engines both read it.
+    this.document.documentElement.lang = locale;
+
     return this.transloco.load(locale);
   }
 
