@@ -7,19 +7,25 @@ import {
 import express from 'express';
 import { join } from 'node:path';
 import { environment } from './environments/environment';
-import { applyServerEnvironment } from './environments/server-environment';
+import { applyServerEnvironment, readAllowedHosts } from './environments/server-environment';
 
 /**
- * Point the SSR bundle at the API's in-network address before anything renders.
- * Must run before the first request is handled: services read `environment`
- * when they are instantiated.
+ * Applies the override to *this* bundle's copy of `environment`, for anything
+ * read here rather than inside the application.
+ *
+ * It is not what makes the application's services see it: the build emits
+ * `environment.ts` into two chunks, so `app.config.server.ts` applies the same
+ * override to the copy they actually import. Changing one without the other
+ * leaves server-side requests pointing at `localhost`.
  */
 applyServerEnvironment(environment, process.env);
 
 const browserDistFolder = join(import.meta.dirname, '../browser');
 
 const app = express();
-const angularApp = new AngularNodeAppEngine();
+const angularApp = new AngularNodeAppEngine({
+  allowedHosts: readAllowedHosts(process.env),
+});
 
 /**
  * Example Express Rest API endpoints can be defined here.

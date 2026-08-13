@@ -8,15 +8,16 @@
           <p class="text-gray-600 text-sm">Trouvez votre établissement idéal</p>
         </div>
         <div class="flex items-center gap-3">
+          <app-language-switcher />
           <button
-            (click)="onLoginClick.emit()"
+            (click)="goTo('login')"
             class="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
           >
             <lucide-icon [img]="LogIn" class="w-5 h-5"></lucide-icon>
             <span class="hidden sm:inline">Connexion</span>
           </button>
           <button
-            (click)="onRegisterClick.emit()"
+            (click)="goTo('register')"
             class="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors cursor-pointer"
           >
             <lucide-icon [img]="UserPlus" class="w-5 h-5"></lucide-icon>
@@ -129,7 +130,7 @@
       @for (school of sortedSchools(); track school.id) {
         <div
           class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer flex flex-col"
-          (click)="onSchoolClick.emit(school)"
+          (click)="openSchool(school)"
         >
           <div class="relative h-48">
             <app-image-with-fallback

@@ -1,0 +1,14 @@
+{
+  "common": {
+    "retry": "Retry"
+  },
+  "language": {
+    "fr": "Français",
+    "en": "English"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "message": "This page does not exist, or it has moved.",
+    "backHome": "Back to home"
+  }
+}

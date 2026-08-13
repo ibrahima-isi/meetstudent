@@ -1,4 +1,4 @@
-import { applyServerEnvironment, RuntimeEnvironment } from './server-environment';
+import { applyServerEnvironment, readAllowedHosts, RuntimeEnvironment } from './server-environment';
 
 describe('applyServerEnvironment', () => {
   let env: RuntimeEnvironment;
@@ -52,5 +52,30 @@ describe('applyServerEnvironment', () => {
     applyServerEnvironment(env, { API_URL: 'http://api:8080/api/v1' });
 
     expect(held.apiUrl).toBe('http://api:8080/api/v1');
+  });
+});
+
+describe('readAllowedHosts', () => {
+  it('splits a comma-separated list and trims each entry', () => {
+    expect(readAllowedHosts({ ALLOWED_HOSTS: 'localhost, meetstudent.app ,web' }))
+      .toEqual(['localhost', 'meetstudent.app', 'web']);
+  });
+
+  it('defaults to localhost and the compose service name when unset', () => {
+    expect(readAllowedHosts({})).toEqual(['localhost', 'web']);
+  });
+
+  it('treats an empty or blank value as unset', () => {
+    expect(readAllowedHosts({ ALLOWED_HOSTS: '   ' })).toEqual(['localhost', 'web']);
+  });
+
+  it('drops empty entries rather than allowing an empty hostname', () => {
+    expect(readAllowedHosts({ ALLOWED_HOSTS: 'a,,b,' })).toEqual(['a', 'b']);
+  });
+
+  it('falls back to the default when the value parses to no hosts', () => {
+    expect(readAllowedHosts({ ALLOWED_HOSTS: ',' })).toEqual(['localhost', 'web']);
+    expect(readAllowedHosts({ ALLOWED_HOSTS: ' , ' })).toEqual(['localhost', 'web']);
+    expect(readAllowedHosts({ ALLOWED_HOSTS: ',,' })).toEqual(['localhost', 'web']);
   });
 });

@@ -6,7 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Branching**
 - Never commit or work directly on local `main`. Never push to remote `main` or `dev`.
+- Solo-developer project: exactly two long-lived branches remotely (`main`, `dev`) and only `main` locally. Delete a feature branch on both sides once its PR is merged.
 - Every task starts with a new branch named `<type>/<short-kebab-description>`, where `<type>` is a Conventional Commits type: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `perf`, `ci` (e.g. `feat/media-upload-retry`). Commit messages use the same types.
+- **Every task ends the same way: commit, push, open a PR.** Do not leave finished work sitting on a local branch — it is invisible to CI, and CI is the merge gate. Since `required_approving_review_count` is `0` (see `docs/MONOREPO.md`), the PR is yours to merge once both checks pass.
+- When a branch is cut from another unmerged branch, open its PR **against that branch**, not `main`, or the diff shows the parent's commits too. GitHub rebases the base automatically when the parent merges.
 
 **Scope**
 - Do not touch code that already works without explicit approval. Do not modify any file that is not strictly required by the assigned task.
@@ -19,13 +22,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **After merging to local `main`**
 - Bring the full stack up locally with Docker and run live tests against it before considering the work finished: `docker compose up --build`, then exercise the API and the front (see Commands below).
 
+**Docker resources**
+- **Always tear the stack down when the tests are done: `docker compose down`.** This applies to every stack you start, not just the post-merge check, and it is not optional — containers, the Postgres volume and the published ports (4200, 8080, 5432) otherwise stay held between tasks and collide with the next run.
+- Prefer `docker compose up -d` over a foreground run when you only need the stack to answer requests, so the teardown is never forgotten because a terminal is blocked.
+
 ## Repository layout
 
 MeetStudent is a monorepo assembled with `git subtree`. Each app keeps its own build, dependencies, and agent instructions — there is no root package manager or build orchestration, so always work from inside the relevant app directory.
 
 - `apps/api/` — Spring Boot 3 / Java 21 REST API (Maven). **Read `apps/api/CLAUDE.md` before touching backend code** — it documents the layered architecture, media/storage split, Flyway rules, and test conventions in detail.
 - `apps/web/` — Angular 20 SSR frontend (npm). **Read `apps/web/.claude/CLAUDE.md`** for the mandatory Angular/TypeScript style rules (signals, `inject()`, native control flow, no `ngClass`/`ngStyle`, etc.).
-- `apps/backoffice/` — placeholder, empty.
+- `apps/backoffice/` — placeholder, empty. Planned as a deliberately light ADMIN-only CRUD surface; `apps/web` serves STUDENT and EXPERT. There is no manager role — `V2__data.sql` seeds only `ROLE_ADMIN`, `ROLE_EXPERT`, `ROLE_STUDENT`.
 - `docs/MONOREPO.md` — subtree provenance, branch topology, CI and ruleset conventions. **Read it before touching branches, CI job names or subtree history.**
 - `infra/`, `shared/` — empty placeholders reserved for future cross-app content.
 - `compose.yml` / `compose.dev.yml` — full local stack, and the hot-reload override for the API.
@@ -68,6 +75,9 @@ docker compose up -d api         # api + its Postgres only; naming a service ski
 # Hot-reloading API: recompile on the host (IDE or ./mvnw compile) and devtools
 # restarts the container in about a second.
 docker compose -f compose.yml -f compose.dev.yml up api
+
+docker compose down              # ALWAYS run this once the tests are done
+docker compose down -v           # same, plus the Postgres volume — resets the database
 ```
 
 Front on `http://localhost:4200`, API on `http://localhost:8080/api/v1`, Swagger at `/swagger-ui.html`. Postgres is published on 5432.
@@ -78,12 +88,14 @@ The front is deliberately absent from the dev override: `ng serve` on the host h
 
 - The API is versioned under `/api/v1/...`; Swagger UI at `http://localhost:8080/swagger-ui.html`.
 - The frontend targets it via `src/environments/environment.ts`, which deliberately holds **two** URLs: `apiUrl` (`.../api/v1`) for REST calls and `serverUrl` (server root) for static media. `Media.publicUrl` is relative to the server root, *not* to `/api/v1` — resolving it against `apiUrl` produces broken images.
-- Those values are baked in at build time, which is wrong for SSR: inside the web container `localhost:8080` answers nothing. `src/server.ts` therefore calls `applyServerEnvironment(environment, process.env)` before bootstrap, so `API_URL` / `SERVER_URL` override them server-side only. Keep that call first if you touch `server.ts`, and prefer reading `environment.apiUrl` at injection time over caching it at module load.
+- Those values are baked in at build time, which is wrong for SSR: inside the web container `localhost:8080` answers nothing. `applyServerEnvironment(environment, process.env)` therefore applies `API_URL` / `SERVER_URL` server-side only — **in two places, and both are needed**. The build emits `environment.ts` into two server chunks, one reachable from `src/server.ts` and one reachable from the application, so they are separate objects. The call that makes the *services* see the override is the environment initializer in `src/app/app.config.server.ts`, which shares an object with them; `server.ts` covers its own copy. Keep both if you touch either. This path is live, not theoretical: pages fetch in `ngOnInit` and therefore run during SSR — and when it breaks, it breaks quietly, because the pages still render with `ng-server-context="ssr"` and HTTP 200, just with mock or empty data.
 - Auth is a dual-token system (short-lived access token + DB-backed rotating refresh token). On the client, `TokenService` holds `token`/`refreshToken`/`user` as signals backed by `localStorage` (guarded for SSR, where `localStorage` is undefined), and `jwtInterceptor` attaches the bearer token.
 - Personal documents (diplomas, certificates, bulletins, videos) are **private** media: they cannot be loaded with a plain `<img src>` and must go through `GET /api/v1/media/{id}` with the auth header. Only public categories (school logo/cover, user photo, course/program photo) are servable statically.
 - `apps/web/docs/backend-api-integration.md` is the living handoff describing in-flight API contract changes and their frontend impact; check it before assuming a DTO shape.
 
 ## Frontend structure notes
+
+- **The app does not use the router.** `app.routes.ts` is an empty array; navigation is a signal-based state machine in `app.ts` (`view()` over `'landing' | 'login' | 'register' | 'verify' | 'home' | 'school-detail' | 'profile'`), with `app.html` switching on it via `@if`. There is no `<router-outlet>`, so there are no URLs per screen, no deep links and no browser history. Introducing the router means rewriting that switch — do not assume routes exist.
 
 - `src/app/features/<area>/<page>/` holds page components grouped by audience (`auth`, `public`, `student`); `src/app/services/` holds one service per backend resource; `src/app/shared/components/` holds reusable UI.
 - TS path aliases are configured: `@services/*`, `@models/*`, `@shared/*`, `@data/*`. Use them instead of deep relative imports.

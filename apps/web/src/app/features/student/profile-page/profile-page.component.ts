@@ -1,7 +1,9 @@
-import { Component, output, signal, effect, OnInit, inject, computed } from '@angular/core';
+import { Component, signal, effect, OnInit, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { LucideAngularModule, ArrowLeft, User as UserIcon, Mail, Phone, MapPin, GraduationCap, Book, Save, Heart, Briefcase } from 'lucide-angular';
+import { LocaleService } from '@services/locale.service';
 import { TokenService } from '@services/token.service';
 import { User } from '@models/entities';
 import { UserDocumentsComponent } from '../user-documents/user-documents.component';
@@ -12,9 +14,9 @@ import { UserDocumentsComponent } from '../user-documents/user-documents.compone
   templateUrl: './profile-page.component.html'
 })
 export class ProfilePageComponent implements OnInit {
-  onBack = output<void>();
-
   private tokenService = inject(TokenService);
+  private readonly router = inject(Router);
+  private readonly locale = inject(LocaleService);
 
   readonly ArrowLeft = ArrowLeft;
   readonly UserIcon = UserIcon;
@@ -62,6 +64,11 @@ export class ProfilePageComponent implements OnInit {
   handleCancel() {
     this.editedProfile.set({ ...this.profile() });
     this.isEditing.set(false);
+  }
+
+  /** Navigations stay in the language the visitor is reading. */
+  protected goTo(...segments: (string | number)[]): void {
+    void this.router.navigate(['/', this.locale.active(), ...segments]);
   }
 
   removeFromWishlist(programmeId: number) {

@@ -1,7 +1,10 @@
-import { Component, input, output, signal, OnDestroy, ElementRef, ViewChildren, QueryList } from '@angular/core';
+import { Component, computed, signal, inject, OnDestroy, ElementRef, ViewChildren, QueryList } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { LucideAngularModule, Mail, CheckCircle, AlertCircle, RefreshCw } from 'lucide-angular';
+import { LocaleService } from '@services/locale.service';
+import { RegistrationFlowService } from '@services/registration-flow.service';
 
 @Component({
   selector: 'app-email-verification',
@@ -9,8 +12,18 @@ import { LucideAngularModule, Mail, CheckCircle, AlertCircle, RefreshCw } from '
   templateUrl: './email-verification.component.html'
 })
 export class EmailVerificationComponent implements OnDestroy {
-  email = input.required<string>();
-  onVerificationSuccess = output<void>();
+  private readonly registrationFlow = inject(RegistrationFlowService);
+  private readonly router = inject(Router);
+  private readonly locale = inject(LocaleService);
+
+  /**
+   * The address comes from the register step, which is in memory only. A reload
+   * or a direct hit on /verify therefore arrives with nothing, and the screen
+   * asks for the address instead of verifying a blank one.
+   */
+  readonly needsEmail = computed(() => this.registrationFlow.pendingEmail() === '');
+  typedEmail = signal('');
+  readonly email = computed(() => this.registrationFlow.pendingEmail() || this.typedEmail());
 
   code = signal<string[]>(['', '', '', '', '', '']);
   error = signal('');
@@ -124,7 +137,7 @@ export class EmailVerificationComponent implements OnDestroy {
         this.isLoading.set(false);
         
         setTimeout(() => {
-          this.onVerificationSuccess.emit();
+          this.backToLogin();
         }, 1500);
       } else {
         this.error.set('Invalid verification code. Please try again.');
@@ -133,6 +146,16 @@ export class EmailVerificationComponent implements OnDestroy {
         this.codeInputs.get(0)?.nativeElement?.focus();
       }
     }, 1000);
+  }
+
+  /**
+   * Both exits lead here: a verified address and an abandoned one. Either way
+   * the pending address is spent, so it is cleared before leaving — otherwise
+   * a later visit to /verify would silently reuse it.
+   */
+  protected backToLogin(): void {
+    this.registrationFlow.clear();
+    void this.router.navigate(['/', this.locale.active(), 'login']);
   }
 
   handleResend() {

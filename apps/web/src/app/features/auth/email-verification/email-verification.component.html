@@ -4,10 +4,27 @@
       <lucide-icon [img]="Mail" class="w-8 h-8 text-indigo-600"></lucide-icon>
     </div>
     <h1 class="text-gray-900 mb-2">Verify Your Email</h1>
-    <p class="text-gray-600">
-      We've sent a verification code to
-    </p>
-    <p class="text-gray-900 mt-1">{{ email() }}</p>
+    @if (needsEmail()) {
+      <!--
+        Reached by reload or by a direct link: the address lives in memory only,
+        so there is nothing to display and it has to be asked for.
+      -->
+      <p class="text-gray-600">
+        Enter the address you registered with
+      </p>
+      <input
+        type="email"
+        autocomplete="email"
+        [value]="typedEmail()"
+        (input)="typedEmail.set($any($event.target).value)"
+        class="w-full mt-3 px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+      />
+    } @else {
+      <p class="text-gray-600">
+        We've sent a verification code to
+      </p>
+      <p class="text-gray-900 mt-1">{{ email() }}</p>
+    }
   </div>
 
   <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
@@ -66,7 +83,7 @@
     <p class="text-gray-600">
       Wrong email?
       <button
-        (click)="onVerificationSuccess.emit()"
+        (click)="backToLogin()"
         class="text-indigo-600 hover:text-indigo-700"
       >
         Go back

@@ -1,6 +1,7 @@
-import { Component, input, output, signal, computed, effect, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, input, signal, computed, effect, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { LucideAngularModule, ArrowLeft, MapPin, Heart, GraduationCap, Clock, Calendar, Users, ArrowUpDown, Book, Star, X } from 'lucide-angular';
 import { ImageWithFallbackComponent } from '@shared/components/image-with-fallback/image-with-fallback.component';
 import { StarRatingComponent } from '@shared/components/star-rating/star-rating.component';
@@ -8,6 +9,9 @@ import { PROGRAMMES as MOCK_PROGRAMMES } from '@data/programmes';
 import { School, Program, Tag, Course } from '@models/entities';
 import { ProgramService } from '@services/program.service';
 import { CourseService } from '@services/course.service';
+import { SchoolService } from '@services/school.service';
+import { TokenService } from '@services/token.service';
+import { LocaleService } from '@services/locale.service';
 
 @Component({
   selector: 'app-school-detail-page',
@@ -15,14 +19,25 @@ import { CourseService } from '@services/course.service';
   templateUrl: './school-detail-page.component.html'
 })
 export class SchoolDetailPageComponent implements OnInit, OnDestroy {
-  school = input.required<School>();
-  isAuthenticated = input<boolean>(false);
-  
-  onBack = output<void>();
-  onLoginPrompt = output<void>();
+  /**
+   * Bound from `/:lang/schools/:id` by `withComponentInputBinding()`, so it is
+   * the raw URL segment — a string, never a number.
+   */
+  id = input.required<string>();
 
   private programService = inject(ProgramService);
   private courseService = inject(CourseService);
+  private readonly schoolService = inject(SchoolService);
+  private readonly tokenService = inject(TokenService);
+  private readonly router = inject(Router);
+  private readonly locale = inject(LocaleService);
+
+  /**
+   * Null until the API answers. The page used to receive a whole `School` from
+   * its parent; it is reachable by URL now, so it fetches its own.
+   */
+  school = signal<School | null>(null);
+  readonly isAuthenticated = computed(() => this.tokenService.isAuthenticated());
 
   readonly ArrowLeft = ArrowLeft;
   readonly MapPin = MapPin;
@@ -53,10 +68,27 @@ export class SchoolDetailPageComponent implements OnInit, OnDestroy {
     effect(() => {
       this.updateWishlist();
     });
+
+    // Re-runs when the id changes, so /schools/7 → /schools/8 reloads even
+    // though the router reuses the component instance.
+    effect(() => {
+      const id = Number(this.id());
+      if (!Number.isInteger(id)) {
+        this.school.set(null);
+        return;
+      }
+
+      this.schoolService.getSchool(id).subscribe({
+        next: (school) => {
+          this.school.set(school);
+          this.loadPrograms();
+        },
+        error: () => this.school.set(null),
+      });
+    });
   }
 
   ngOnInit() {
-    this.loadPrograms();
     if (typeof window !== 'undefined') {
       window.addEventListener('wishlistUpdated', this.listener);
     }
@@ -88,13 +120,18 @@ export class SchoolDetailPageComponent implements OnInit, OnDestroy {
   }
 
   loadPrograms() {
-    const schoolId = this.school().id;
-    // Since ProgramController doesn't have schoolId filter directly, 
-    // we use the programs field in the School object if populated, 
+    const school = this.school();
+    if (!school) {
+      return;
+    }
+
+    const schoolId = school.id;
+    // Since ProgramController doesn't have schoolId filter directly,
+    // we use the programs field in the School object if populated,
     // or fetch all programs and filter them (less efficient but works for now).
-    
-    if (this.school().programs && this.school().programs!.length > 0) {
-      this.programs.set(this.school().programs!);
+
+    if (school.programs && school.programs.length > 0) {
+      this.programs.set(school.programs);
       return;
     }
 
@@ -169,6 +206,24 @@ export class SchoolDetailPageComponent implements OnInit, OnDestroy {
 
   handleLoginClick() {
     this.showLoginPrompt.set(false);
-    this.onLoginPrompt.emit();
+    this.goTo('login');
+  }
+
+  /**
+   * The page is reachable from both the public landing and the student home,
+   * so "back" follows the visitor's status rather than browser history — the
+   * same rule the old view state machine applied.
+   */
+  goBack(): void {
+    if (this.isAuthenticated()) {
+      this.goTo('home');
+      return;
+    }
+    this.goTo();
+  }
+
+  /** Navigations stay in the language the visitor is reading. */
+  private goTo(...segments: (string | number)[]): void {
+    void this.router.navigate(['/', this.locale.active(), ...segments]);
   }
 }
