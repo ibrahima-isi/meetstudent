@@ -6,6 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 MeetStudent backend — a Spring Boot 3 (Java 21) REST API managing schools, programs, courses, accreditations, and a rating system, with JWT auth and role-based access control (PUBLIC / STUDENT / EXPERT / ADMIN).
 
+## Repository workflow
+
+Follow the repo-level branch policy in `../../CLAUDE.md`: start backend work from an up-to-date `dev`, create a short-lived working branch, and open its PR against `dev`. Do not open backend feature, fix, docs, chore, refactor, test, perf or CI PRs directly against `main`; `main` is updated only by a separate `dev` → `main` promotion PR.
+
 ## Commands
 
 ```bash
@@ -82,4 +86,4 @@ Tests live in `src/test/java/com/bowe/meetstudent/` split into `unit/` (Mockito)
 
 ### Feature workflow
 
-When adding a feature: entity → repository → service → DTOs → mapper → controller (with Swagger annotations) → Flyway migration → unit/integration tests. Create a git branch for features and bug fixes.
+When adding a feature: entity → repository → service → DTOs → mapper → controller (with Swagger annotations) → Flyway migration → unit/integration tests. Create a working branch from `dev` for features and bug fixes, then open the PR back to `dev`.

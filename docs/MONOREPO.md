@@ -101,12 +101,31 @@ This is a solo-developer project, and the branch model is deliberately small:
 
 | Branch | Role |
 |---|---|
-| `main` | source of truth, carries the monorepo layout |
-| `dev` | integration branch |
+| `main` | release/source-of-truth branch; receives only promotion PRs from `dev` |
+| `dev` | integration branch; all working branches merge here first |
 
-**Two long-lived branches remotely, and only `main` locally.** Feature branches
-are created from `main`, pushed, merged through a PR, then deleted on both
-sides. Nothing else is kept around.
+**Two long-lived branches remotely: `main` and `dev`.** Keep local tracking
+branches for them when needed, but never commit directly on either branch and
+never push directly to either remote branch. Short-lived working branches are
+created from an up-to-date `dev`, pushed, merged through a PR **into `dev`**,
+then deleted on both sides. `main` is updated only by a separate promotion PR
+from `dev` to `main` after `dev` is green. No feature, fix, docs, chore,
+refactor, test, perf or CI branch opens directly against `main`.
+
+The normal flow is:
+
+```bash
+git fetch origin
+git switch dev
+git pull --ff-only origin dev
+git switch -c <type>/<short-kebab-description>
+# commit, push, open PR: <working-branch> -> dev
+# after dev is ready, open PR: dev -> main
+```
+
+If a working branch is stacked on another unmerged branch, target the parent
+branch first so the diff stays reviewable. Once the parent lands, retarget or
+merge onward to `dev`. `main` remains reserved for `dev` promotion PRs.
 
 A third branch, `stage`, was deleted on 2026-08-09. It never left the
 pre-migration layout, so it could not run CI, and a solo workflow does not need a
@@ -131,13 +150,16 @@ could not run at all on a tree with no `apps/api`.
 
 It was realigned by merging `main` into `dev` through PR #18 — a fast-forward,
 since `dev` was a strict ancestor of `main` — rather than by force-pushing, which
-`protected-branches` forbids. `dev` now carries the monorepo layout.
+`protected-branches` forbids. `dev` now carries the monorepo layout. That was a
+one-time repair; normal work now flows from working branches into `dev`, then
+from `dev` into `main`.
 
 `required-ci` now targets `dev` as well, so both checks gate it.
 
-Watch for this whenever a long-lived branch predates the migration: check
-`git merge-base --is-ancestor origin/<branch> origin/main` before opening a PR
-against it.
+Watch for this whenever a long-lived branch predates the migration or appears
+stale: check the merge base before opening a PR against it. A working-branch PR
+should compare cleanly against `origin/dev`, and a promotion PR should compare
+cleanly from `origin/dev` to `origin/main`.
 
 ## CI and branch protection
 
@@ -150,7 +172,7 @@ check names are what branch protection matches:
 Protection is enforced through **rulesets**, not legacy branch protection rules:
 
 - `protected-branches` → `main`, `dev`: no deletion, no force push, signed
-  commits, PR with 1 approval
+  commits, PR required, `required_approving_review_count: 0`
 - `required-ci` → `main`, `dev`: both checks above must pass, branch must be up
   to date
 

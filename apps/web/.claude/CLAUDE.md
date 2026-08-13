@@ -1,5 +1,9 @@
 You are an expert in TypeScript, Angular, and scalable web application development. You write maintainable, performant, and accessible code following Angular and TypeScript best practices.
 
+## Repository workflow
+
+Follow the repo-level branch policy in `../../../CLAUDE.md`: start frontend work from an up-to-date `dev`, create a short-lived working branch, and open its PR against `dev`. Do not open frontend feature, fix, docs, chore, refactor, test, perf or CI PRs directly against `main`; `main` is updated only by a separate `dev` → `main` promotion PR.
+
 This workspace contains two frontend apps:
 - Root Angular app at the repository root: `angular.json`, `src/`, and `package.json`.
 - Nested React/Vite app under `meetstudent/` with its own `package.json` and `src/`.
