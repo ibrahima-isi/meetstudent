@@ -105,4 +105,4 @@ The front is deliberately absent from the dev override: `ng serve` on the host h
 
 ## Agent instruction files
 
-`apps/api/AGENTS.md` is a symlink to `apps/api/CLAUDE.md`. In `apps/web`, `.claude/CLAUDE.md`, `.gemini/GEMINI.md`, and `.github/copilot-instructions.md` carry near-identical Angular guidance — when updating those rules, update all three so the tools stay in sync.
+`apps/api/AGENTS.md` is a symlink to `apps/api/CLAUDE.md`. In `apps/web`, `.claude/CLAUDE.md` is the single frontend agent guide.
