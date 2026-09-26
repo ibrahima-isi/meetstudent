@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { LucideAngularModule, Mail, Lock, User as UserIcon, AlertCircle, UserPlus, GraduationCap, MapPin, Users, BookOpen } from 'lucide-angular';
+import { TranslocoDirective } from '@jsverse/transloco';
 import { AuthService, RegisterPayload } from '../../../services/auth.service';
 import { LocaleService } from '@services/locale.service';
 import { RegistrationFlowService } from '@services/registration-flow.service';
@@ -17,7 +18,7 @@ const SENEGAL_SPECIALTIES = [
 
 @Component({
   selector: 'app-register-form',
-  imports: [CommonModule, ReactiveFormsModule, LucideAngularModule],
+  imports: [CommonModule, ReactiveFormsModule, LucideAngularModule, TranslocoDirective],
   templateUrl: './register-form.component.html'
 })
 export class RegisterFormComponent {
@@ -41,6 +42,7 @@ export class RegisterFormComponent {
   userType = signal<'student' | 'teacher' | ''>('');
   filteredSpecialties = signal<string[]>([]);
   showSuggestions = signal(false);
+  /** A translation key, not a sentence, so a language switch re-renders it. */
   error = signal('');
   isLoading = signal(false);
 
@@ -113,13 +115,13 @@ export class RegisterFormComponent {
     this.error.set('');
 
     if (!this.userType()) {
-      this.error.set('Please select a user type.');
+      this.error.set('auth.register.userTypeRequired');
       return;
     }
 
     if (this.step1Form.invalid) {
       this.step1Form.markAllAsTouched();
-      this.error.set('Please complete all required fields.');
+      this.error.set('auth.register.incomplete');
       return;
     }
 
@@ -137,7 +139,7 @@ export class RegisterFormComponent {
     const { password, confirmPassword } = this.step2Form.value;
 
     if (password !== confirmPassword) {
-      this.error.set('Passwords do not match.');
+      this.error.set('auth.register.passwordMismatch');
       return;
     }
 
@@ -166,8 +168,9 @@ export class RegisterFormComponent {
         this.registrationFlow.remember(email);
         this.goTo('verify');
       },
-      error: (err) => {
-        this.error.set(err.error?.message || 'Registration failed.');
+      // The API's message is for logs only; the user reads the front's own text.
+      error: () => {
+        this.error.set('auth.register.failed');
         this.isLoading.set(false);
       }
     });
