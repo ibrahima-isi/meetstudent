@@ -3,12 +3,13 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { LucideAngularModule, Mail, CheckCircle, AlertCircle, RefreshCw } from 'lucide-angular';
+import { TranslocoDirective } from '@jsverse/transloco';
 import { LocaleService } from '@services/locale.service';
 import { RegistrationFlowService } from '@services/registration-flow.service';
 
 @Component({
   selector: 'app-email-verification',
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule, TranslocoDirective],
   templateUrl: './email-verification.component.html'
 })
 export class EmailVerificationComponent implements OnDestroy {
@@ -26,6 +27,7 @@ export class EmailVerificationComponent implements OnDestroy {
   readonly email = computed(() => this.registrationFlow.pendingEmail() || this.typedEmail());
 
   code = signal<string[]>(['', '', '', '', '', '']);
+  /** A translation key, not a sentence, so a language switch re-renders it. */
   error = signal('');
   isLoading = signal(false);
   canResend = signal(false);
@@ -124,7 +126,7 @@ export class EmailVerificationComponent implements OnDestroy {
     setTimeout(() => {
       const userData = localStorage.getItem(`user_${this.email()}`);
       if (!userData) {
-        this.error.set('User not found. Please try registering again.');
+        this.error.set('auth.verify.userNotFound');
         this.isLoading.set(false);
         return;
       }
@@ -140,7 +142,7 @@ export class EmailVerificationComponent implements OnDestroy {
           this.backToLogin();
         }, 1500);
       } else {
-        this.error.set('Invalid verification code. Please try again.');
+        this.error.set('auth.verify.invalidCode');
         this.code.set(['', '', '', '', '', '']);
         this.isLoading.set(false);
         this.codeInputs.get(0)?.nativeElement?.focus();
