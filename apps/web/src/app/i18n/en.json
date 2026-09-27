@@ -83,5 +83,93 @@
       "userNotFound": "User not found. Please try registering again.",
       "invalidCode": "Invalid verification code. Please try again."
     }
+  },
+  "schools": {
+    "tagline": "Find the school that suits you",
+    "searchPlaceholder": "Search for a school...",
+    "filters": "Filters",
+    "sortName": "Sort A–Z",
+    "sortCity": "Sort by city",
+    "sortPlaces": "Sort by available places",
+    "city": "City",
+    "allCities": "All cities",
+    "type": "School type",
+    "allTypes": "All types",
+    "found": {
+      "one": "{{ count }} school found",
+      "other": "{{ count }} schools found"
+    },
+    "reviews": {
+      "one": "({{ count }} review)",
+      "other": "({{ count }} reviews)"
+    },
+    "viewDetails": "View details",
+    "noResults": "No school matches these criteria"
+  },
+  "landing": {
+    "login": "Log in",
+    "register": "Sign up",
+    "heroTitle": "Discover the best schools in Senegal",
+    "heroText": "Explore our catalogue of schools, high schools and universities. Compare programmes and find the one that suits you."
+  },
+  "home": {
+    "profile": "Profile",
+    "logout": "Log out"
+  },
+  "schoolDetail": {
+    "loginRequired": "Sign-in required",
+    "loginRequiredText": "You need to be signed in to do this.",
+    "signIn": "Sign in",
+    "cancel": "Cancel",
+    "back": "Back",
+    "about": "About",
+    "accreditations": "Accreditations",
+    "expertise": "Areas of expertise",
+    "programmes": "Available programmes ({{ count }})",
+    "years": {
+      "one": "{{ count }} year",
+      "other": "{{ count }} years"
+    },
+    "intake": "Intake: {{ date }}",
+    "rateProgramme": "Rate this programme",
+    "placesLeft": {
+      "one": "{{ count }} place available",
+      "other": "{{ count }} places available"
+    },
+    "full": "Full",
+    "apply": "Apply now",
+    "waitlist": "Waiting list",
+    "viewCourses": "View courses",
+    "reviewsTitle": "School reviews",
+    "verifiedReviews": {
+      "one": "{{ count }} verified review",
+      "other": "{{ count }} verified reviews"
+    },
+    "yourExperience": "Your experience",
+    "signInToRate": "Sign in to leave a rating",
+    "information": "Information",
+    "address": "Address",
+    "courseList": "Available courses",
+    "loadingCourses": "Loading courses...",
+    "noCourses": "No courses found for this programme.",
+    "rateCourse": "Rate this course",
+    "close": "Close",
+    "loading": "Loading school…"
+  },
+  "wishlist": {
+    "button": "Wishlist",
+    "title": "My wishlist",
+    "count": {
+      "one": "{{ count }} programme",
+      "other": "{{ count }} programmes"
+    },
+    "empty": "Your wishlist is empty",
+    "emptyHint": "Add programmes to find them again easily",
+    "compare": "Compare programmes"
+  },
+  "rating": {
+    "commentPlaceholder": "Add a comment (optional)...",
+    "submit": "Post my review",
+    "submitting": "Sending..."
   }
 }
