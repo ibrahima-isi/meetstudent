@@ -12,10 +12,12 @@ import { CourseService } from '@services/course.service';
 import { SchoolService } from '@services/school.service';
 import { TokenService } from '@services/token.service';
 import { LocaleService } from '@services/locale.service';
+import { TranslocoDirective } from '@jsverse/transloco';
+import { pluralKey } from '@i18n/plural';
 
 @Component({
   selector: 'app-school-detail-page',
-  imports: [CommonModule, FormsModule, LucideAngularModule, ImageWithFallbackComponent, StarRatingComponent],
+  imports: [CommonModule, FormsModule, LucideAngularModule, ImageWithFallbackComponent, StarRatingComponent, TranslocoDirective],
   templateUrl: './school-detail-page.component.html'
 })
 export class SchoolDetailPageComponent implements OnInit, OnDestroy {
@@ -173,10 +175,11 @@ export class SchoolDetailPageComponent implements OnInit, OnDestroy {
   sortedProgrammes = computed(() => {
     const progs = [...this.programs()];
     const sortType = this.sortBy();
+    const locale = this.locale.active();
 
     return progs.sort((a, b) => {
       if (sortType === 'name') {
-        return (a.name || '').localeCompare(b.name || '', 'fr');
+        return (a.name || '').localeCompare(b.name || '', locale);
       } else if (sortType === 'places') {
         const aPlaces = (a.capacity || 0) - (a.enrolled || 0);
         const bPlaces = (b.capacity || 0) - (b.enrolled || 0);
@@ -185,6 +188,16 @@ export class SchoolDetailPageComponent implements OnInit, OnDestroy {
       return 0;
     });
   });
+
+  /** The key for a count, by the plural rule of the language being read. */
+  protected plural(base: string, count: number): string {
+    return pluralKey(base, count, this.locale.active());
+  }
+
+  /** Seats left in a programme; never negative. */
+  protected placesLeft(programme: Program): number {
+    return Math.max((programme.capacity || 0) - (programme.enrolled || 0), 0);
+  }
 
   toggleWishlist(programmeId: number) {
     if (!this.isAuthenticated()) {
