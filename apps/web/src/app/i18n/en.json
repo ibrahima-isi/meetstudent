@@ -171,5 +171,61 @@
     "commentPlaceholder": "Add a comment (optional)...",
     "submit": "Post my review",
     "submitting": "Sending..."
+  },
+  "profile": {
+    "back": "Back",
+    "title": "My Profile",
+    "personalInfo": "Personal information",
+    "edit": "Edit",
+    "cancel": "Cancel",
+    "save": "Save",
+    "firstname": "First Name",
+    "firstnamePlaceholder": "First name",
+    "lastname": "Last Name",
+    "lastnamePlaceholder": "Last name",
+    "email": "Email",
+    "emailPlaceholder": "your@email.com",
+    "notProvided": "Not provided",
+    "profileType": "Profile type",
+    "roleStudent": "Student",
+    "roleExpert": "Expert / Teacher",
+    "bacType": "BAC type",
+    "bacPlaceholder": "Select your BAC",
+    "specialty": "Specialty",
+    "specialtyPlaceholder": "Mathematics, Physics, etc.",
+    "wishlistTitle": "My wishlist",
+    "programmeNumber": "Programme #{{ id }}",
+    "remove": "Remove",
+    "wishlistEmpty": "No programmes in your wishlist"
+  },
+  "documents": {
+    "title": "My documents",
+    "loading": "Loading your documents...",
+    "confirmDelete": "Delete permanently?",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "open": "Open",
+    "delete": "Delete",
+    "empty": "No documents",
+    "status": {
+      "PENDING": "Pending",
+      "VERIFIED": "Verified",
+      "REJECTED": "Rejected"
+    },
+    "category": {
+      "DIPLOMA": "Diploma",
+      "CERTIFICATE": "Certificate",
+      "BULLETIN": "School report",
+      "PRESENTATION_VIDEO": "Presentation video"
+    },
+    "errors": {
+      "loadFailed": "Your documents could not be loaded. Please try again.",
+      "popupBlocked": "Your browser blocked this document from opening. Allow pop-ups for this site, then try again.",
+      "openFailed": "This document could not be opened. Please try again.",
+      "tooLarge": "The file exceeds the 10 MB size limit.",
+      "typeNotAllowed": "This file type is not allowed.",
+      "uploadFailed": "This document could not be uploaded. Please try again.",
+      "deleteFailed": "This document could not be deleted. Please try again."
+    }
   }
 }

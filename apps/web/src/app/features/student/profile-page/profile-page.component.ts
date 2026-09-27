@@ -7,10 +7,11 @@ import { LocaleService } from '@services/locale.service';
 import { TokenService } from '@services/token.service';
 import { User } from '@models/entities';
 import { UserDocumentsComponent } from '../user-documents/user-documents.component';
+import { TranslocoDirective } from '@jsverse/transloco';
 
 @Component({
   selector: 'app-profile-page',
-  imports: [CommonModule, FormsModule, LucideAngularModule, UserDocumentsComponent],
+  imports: [CommonModule, FormsModule, LucideAngularModule, UserDocumentsComponent, TranslocoDirective],
   templateUrl: './profile-page.component.html'
 })
 export class ProfilePageComponent implements OnInit {
