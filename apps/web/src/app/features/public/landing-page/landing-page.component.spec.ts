@@ -2,7 +2,9 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { LandingPageComponent } from './landing-page.component';
 import { SchoolService } from '@services/school.service';
-import { of } from 'rxjs';
+import { firstValueFrom, of } from 'rxjs';
+import { LocaleService } from '@services/locale.service';
+import { School } from '@models/entities';
 import { signal } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
@@ -69,5 +71,85 @@ describe('LandingPageComponent', () => {
     
     expect(component.sortedSchools().length).toBe(1);
     expect(component.sortedSchools()[0].name).toBe('Stanford');
+  });
+});
+
+describe('LandingPageComponent translations', () => {
+  let fixture: ComponentFixture<LandingPageComponent>;
+
+  function text(): string {
+    return (fixture.nativeElement as HTMLElement).textContent ?? '';
+  }
+
+  async function render(lang: 'fr' | 'en') {
+    // The same call the locale guard makes: it moves the active locale and
+    // loads its bundle, so *transloco has something to render.
+    await firstValueFrom(TestBed.inject(LocaleService).use(lang));
+    fixture = TestBed.createComponent(LandingPageComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+  }
+
+  beforeEach(() => {
+    const schoolService = jasmine.createSpyObj('SchoolService', ['getSchools', 'schools']);
+    schoolService.getSchools.and.returnValue(of({ content: [] }));
+    schoolService.schools.and.returnValue([]);
+
+    TestBed.configureTestingModule({
+      imports: [LandingPageComponent],
+      providers: [
+        provideZonelessChangeDetection(),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        provideTransloco(translocoOptions),
+        { provide: SchoolService, useValue: schoolService },
+      ],
+    });
+  });
+
+  it('renders in French, the source language', async () => {
+    await render('fr');
+
+    expect(text()).toContain('Découvrez les meilleurs établissements du Sénégal');
+    // French puts zero with one.
+    expect(text()).toContain('0 établissement trouvé');
+  });
+
+  it('renders in English when English is active', async () => {
+    await render('en');
+
+    expect(text()).toContain('Discover the best schools in Senegal');
+    // English puts zero with many.
+    expect(text()).toContain('0 schools found');
+  });
+
+  it('labels the no-filter choice in the active language, not in the data', async () => {
+    await render('en');
+    fixture.componentInstance.showFilters.set(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const options = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('option'),
+    ).map((o) => o.textContent?.trim());
+    expect(options).toContain('All cities');
+    expect(options).toContain('All types');
+    expect(options).not.toContain('Toutes les villes');
+    expect(fixture.componentInstance.activeFiltersCount()).toBe(0);
+  });
+
+  it('sorts names with the collation of the active language', async () => {
+    await render('en');
+    const compare = spyOn(String.prototype, 'localeCompare').and.callThrough();
+    fixture.componentInstance.schools.set([
+      { id: 1, name: 'Zeta', address: { city: 'Dakar' } },
+      { id: 2, name: 'Alpha', address: { city: 'Thiès' } },
+    ] as School[]);
+
+    fixture.componentInstance.sortedSchools();
+
+    expect(compare).toHaveBeenCalledWith(jasmine.any(String), 'en');
+    expect(compare).not.toHaveBeenCalledWith(jasmine.any(String), 'fr');
   });
 });

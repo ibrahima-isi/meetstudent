@@ -33,8 +33,9 @@ export const SCHOOLS: School[] = [
   }
 ];
 
+// No "all" entry: that choice is chrome, labelled by the template in the
+// active language, and its value is ''.
 export const CITIES = [
-  'Toutes les villes',
   'Dakar',
   'Saint-Louis',
   'Thiès',
@@ -44,7 +45,6 @@ export const CITIES = [
 ];
 
 export const TYPES = [
-  'Tous les types',
   'Université Publique',
   'Université Privée',
   'Grande École',
