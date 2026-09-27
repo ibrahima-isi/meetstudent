@@ -1,11 +1,11 @@
-<div class="min-h-screen bg-gray-50">
+<div class="min-h-screen bg-gray-50" *transloco="let t">
   <!-- Header -->
   <header class="bg-white border-b border-gray-200 sticky top-0 z-50">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
       <div class="flex items-center justify-between">
         <div>
           <h1 class="text-gray-900 font-bold text-xl">MeetStudent</h1>
-          <p class="text-gray-600 text-sm">Trouvez votre établissement idéal</p>
+          <p class="text-gray-600 text-sm">{{ t('schools.tagline') }}</p>
         </div>
         <div class="flex items-center gap-3">
           <app-language-switcher />
@@ -14,14 +14,14 @@
             class="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
           >
             <lucide-icon [img]="LogIn" class="w-5 h-5"></lucide-icon>
-            <span class="hidden sm:inline">Connexion</span>
+            <span class="hidden sm:inline">{{ t('landing.login') }}</span>
           </button>
           <button
             (click)="goTo('register')"
             class="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors cursor-pointer"
           >
             <lucide-icon [img]="UserPlus" class="w-5 h-5"></lucide-icon>
-            <span class="hidden sm:inline">S'inscrire</span>
+            <span class="hidden sm:inline">{{ t('landing.register') }}</span>
           </button>
         </div>
       </div>
@@ -33,10 +33,10 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
       <div class="text-center max-w-3xl mx-auto">
         <h2 class="mb-4 text-3xl font-bold">
-          Découvrez les meilleurs établissements du Sénégal
+          {{ t('landing.heroTitle') }}
         </h2>
         <p class="text-indigo-100 mb-8 text-lg">
-          Explorez notre catalogue d'écoles, lycées et universités. Comparez les formations et trouvez celle qui vous correspond.
+          {{ t('landing.heroText') }}
         </p>
       </div>
     </div>
@@ -52,7 +52,7 @@
           <input
             type="text"
             [(ngModel)]="searchQuery"
-            placeholder="Rechercher un établissement..."
+            [placeholder]="t('schools.searchPlaceholder')"
             class="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           />
         </div>
@@ -64,7 +64,7 @@
             class="flex items-center gap-2 px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
           >
             <lucide-icon [img]="Filter" class="w-4 h-4"></lucide-icon>
-            <span>Filtres</span>
+            <span>{{ t('schools.filters') }}</span>
             @if (activeFiltersCount() > 0) {
               <span class="ml-2 px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold">
                 {{ activeFiltersCount() }}
@@ -79,9 +79,9 @@
               [(ngModel)]="sortBy"
               class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-700"
             >
-              <option value="name">Trier par A-Z</option>
-              <option value="city">Trier par Ville</option>
-              <option value="places">Trier par Places disponibles</option>
+              <option value="name">{{ t('schools.sortName') }}</option>
+              <option value="city">{{ t('schools.sortCity') }}</option>
+              <option value="places">{{ t('schools.sortPlaces') }}</option>
             </select>
           </div>
         </div>
@@ -90,22 +90,24 @@
         @if (showFilters()) {
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
             <div>
-              <label class="block text-gray-700 mb-2">Ville</label>
+              <label class="block text-gray-700 mb-2">{{ t('schools.city') }}</label>
               <select
                 [(ngModel)]="selectedCity"
                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               >
+                <option value="">{{ t('schools.allCities') }}</option>
                 @for (city of CITIES; track city) {
                   <option [value]="city">{{ city }}</option>
                 }
               </select>
             </div>
             <div>
-              <label class="block text-gray-700 mb-2">Type d'établissement</label>
+              <label class="block text-gray-700 mb-2">{{ t('schools.type') }}</label>
               <select
                 [(ngModel)]="selectedType"
                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               >
+                <option value="">{{ t('schools.allTypes') }}</option>
                 @for (type of TYPES; track type) {
                   <option [value]="type">{{ type }}</option>
                 }
@@ -121,7 +123,7 @@
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <div class="mb-6">
       <p class="text-gray-600">
-        {{ sortedSchools().length }} établissement{{ sortedSchools().length !== 1 ? 's' : '' }} trouvé{{ sortedSchools().length !== 1 ? 's' : '' }}
+        {{ t(plural('schools.found', sortedSchools().length), { count: sortedSchools().length }) }}
       </p>
     </div>
 
@@ -167,7 +169,7 @@
                 <lucide-icon [img]="Star" class="w-4 h-4 fill-yellow-400 text-yellow-400"></lucide-icon>
                 <span class="text-gray-900 font-medium">{{ school.rating }}</span>
               </div>
-              <span class="text-gray-500">({{ school.reviewCount }} avis)</span>
+              <span class="text-gray-500">{{ t(plural('schools.reviews', school.reviewCount ?? 0), { count: school.reviewCount ?? 0 }) }}</span>
             </div>
 
             <div class="flex items-start gap-2 mb-3 text-sm">
@@ -185,7 +187,7 @@
             <button 
               class="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors mt-auto font-medium"
             >
-              Voir les détails
+              {{ t('schools.viewDetails') }}
             </button>
           </div>
         </div>
@@ -194,7 +196,7 @@
 
     @if (sortedSchools().length === 0) {
       <div class="text-center py-12">
-        <p class="text-gray-600 text-lg">Aucun établissement trouvé avec ces critères</p>
+        <p class="text-gray-600 text-lg">{{ t('schools.noResults') }}</p>
       </div>
     }
   </div>

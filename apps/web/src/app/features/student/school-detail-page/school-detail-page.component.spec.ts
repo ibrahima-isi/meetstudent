@@ -4,7 +4,9 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter, withComponentInputBinding, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { of } from 'rxjs';
+import { firstValueFrom, of } from 'rxjs';
+import { provideTransloco, TranslocoService } from '@jsverse/transloco';
+import { translocoOptions } from '@i18n/transloco.config';
 import { School, Program, Course, Page } from '@models/entities';
 import { ProgramService } from '@services/program.service';
 import { CourseService } from '@services/course.service';
@@ -20,6 +22,8 @@ describe('SchoolDetailPageComponent', () => {
   let schoolServiceSpy: jasmine.SpyObj<SchoolService>;
   let ratingServiceSpy: jasmine.SpyObj<RatingService>;
   let authenticated: ReturnType<typeof signal<boolean>>;
+  let locale: ReturnType<typeof signal<'fr' | 'en'>>;
+  let harness: RouterTestingHarness;
 
   const mockSchool: School = {
     id: 7,
@@ -41,7 +45,7 @@ describe('SchoolDetailPageComponent', () => {
    * arrive through `withComponentInputBinding()` the way it does in the app.
    */
   async function renderAt(url: string): Promise<SchoolDetailPageComponent> {
-    const harness = await RouterTestingHarness.create();
+    harness = await RouterTestingHarness.create();
     return harness.navigateByUrl(url, SchoolDetailPageComponent);
   }
 
@@ -55,6 +59,7 @@ describe('SchoolDetailPageComponent', () => {
       'rateCourse',
     ]);
     authenticated = signal(true);
+    locale = signal<'fr' | 'en'>('fr');
 
     programServiceSpy.getPrograms.and.returnValue(of(pageOf<Program>([])));
     schoolServiceSpy.getSchool.and.returnValue(of(mockSchool));
@@ -73,7 +78,8 @@ describe('SchoolDetailPageComponent', () => {
         { provide: SchoolService, useValue: schoolServiceSpy },
         { provide: RatingService, useValue: ratingServiceSpy },
         { provide: TokenService, useValue: { isAuthenticated: authenticated } },
-        { provide: LocaleService, useValue: { active: signal('fr' as const) } },
+        { provide: LocaleService, useValue: { active: locale } },
+        provideTransloco(translocoOptions),
       ],
     });
   });
@@ -146,5 +152,48 @@ describe('SchoolDetailPageComponent', () => {
 
     expect(component.showCoursesModal()).toBeFalse();
     expect(component.selectedProgram()).toBeNull();
+  });
+
+  describe('translations', () => {
+    const programs = [
+      { id: 1, name: 'Prog A', duration: 3, capacity: 10, enrolled: 5, school: { id: 7 } },
+      { id: 2, name: 'Prog B', duration: 1, capacity: 1, enrolled: 0, school: { id: 7 } },
+    ] as Program[];
+
+    async function renderIn(lang: 'fr' | 'en'): Promise<string> {
+      locale.set(lang);
+      const transloco = TestBed.inject(TranslocoService);
+      await firstValueFrom(transloco.load(lang));
+      transloco.setActiveLang(lang);
+      programServiceSpy.getPrograms.and.returnValue(of(pageOf(programs)));
+
+      const component = await renderAt('/schools/7');
+      component.loadPrograms();
+      harness.detectChanges();
+      await harness.fixture.whenStable();
+      return harness.routeNativeElement?.textContent ?? '';
+    }
+
+    it('renders in French, with French plurals', async () => {
+      const text = await renderIn('fr');
+
+      expect(text).toContain('Retour');
+      expect(text).toContain('Formations disponibles (2)');
+      expect(text).toContain('3 ans');
+      expect(text).toContain('1 an');
+      expect(text).toContain('5 places disponibles');
+      expect(text).toContain('1 place disponible');
+    });
+
+    it('renders in English, with English plurals', async () => {
+      const text = await renderIn('en');
+
+      expect(text).toContain('Back');
+      expect(text).toContain('Available programmes (2)');
+      expect(text).toContain('3 years');
+      expect(text).toContain('1 year');
+      expect(text).toContain('5 places available');
+      expect(text).toContain('1 place available');
+    });
   });
 });

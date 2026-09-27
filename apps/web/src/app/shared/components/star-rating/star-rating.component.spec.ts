@@ -3,7 +3,9 @@ import { provideZonelessChangeDetection } from '@angular/core';
 import { StarRatingComponent } from './star-rating.component';
 import { RatingService } from '@services/rating.service';
 import { TokenService } from '@services/token.service';
-import { of } from 'rxjs';
+import { firstValueFrom, of } from 'rxjs';
+import { provideTransloco, TranslocoService } from '@jsverse/transloco';
+import { translocoOptions } from '@i18n/transloco.config';
 import { signal } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
@@ -26,7 +28,8 @@ describe('StarRatingComponent', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: RatingService, useValue: ratingServiceSpy },
-        { provide: TokenService, useValue: tokenServiceSpy }
+        { provide: TokenService, useValue: tokenServiceSpy },
+        provideTransloco(translocoOptions),
       ]
     }).compileComponents();
 
@@ -76,5 +79,21 @@ describe('StarRatingComponent', () => {
     
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('textarea')).toBeFalsy();
+  });
+
+  it('offers the review button in the active language', async () => {
+    const transloco = TestBed.inject(TranslocoService);
+    await firstValueFrom(transloco.load('en'));
+    transloco.setActiveLang('en');
+    fixture.componentRef.setInput('itemId', 1);
+    fixture.componentRef.setInput('itemType', 'school');
+    component.handleRate(4);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.textContent).toContain('Post my review');
+    expect(root.querySelector('textarea')?.getAttribute('placeholder'))
+      .toBe('Add a comment (optional)...');
   });
 });

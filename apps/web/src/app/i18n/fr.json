@@ -83,5 +83,93 @@
       "userNotFound": "Utilisateur introuvable. Veuillez vous réinscrire.",
       "invalidCode": "Code de vérification invalide. Veuillez réessayer."
     }
+  },
+  "schools": {
+    "tagline": "Trouvez votre établissement idéal",
+    "searchPlaceholder": "Rechercher un établissement...",
+    "filters": "Filtres",
+    "sortName": "Trier par A-Z",
+    "sortCity": "Trier par Ville",
+    "sortPlaces": "Trier par Places disponibles",
+    "city": "Ville",
+    "allCities": "Toutes les villes",
+    "type": "Type d'établissement",
+    "allTypes": "Tous les types",
+    "found": {
+      "one": "{{ count }} établissement trouvé",
+      "other": "{{ count }} établissements trouvés"
+    },
+    "reviews": {
+      "one": "({{ count }} avis)",
+      "other": "({{ count }} avis)"
+    },
+    "viewDetails": "Voir les détails",
+    "noResults": "Aucun établissement trouvé avec ces critères"
+  },
+  "landing": {
+    "login": "Connexion",
+    "register": "S'inscrire",
+    "heroTitle": "Découvrez les meilleurs établissements du Sénégal",
+    "heroText": "Explorez notre catalogue d'écoles, lycées et universités. Comparez les formations et trouvez celle qui vous correspond."
+  },
+  "home": {
+    "profile": "Profil",
+    "logout": "Déconnexion"
+  },
+  "schoolDetail": {
+    "loginRequired": "Connexion requise",
+    "loginRequiredText": "Vous devez être connecté pour effectuer cette action.",
+    "signIn": "Se connecter",
+    "cancel": "Annuler",
+    "back": "Retour",
+    "about": "À propos",
+    "accreditations": "Accréditations",
+    "expertise": "Domaines d'expertise",
+    "programmes": "Formations disponibles ({{ count }})",
+    "years": {
+      "one": "{{ count }} an",
+      "other": "{{ count }} ans"
+    },
+    "intake": "Rentrée: {{ date }}",
+    "rateProgramme": "Évaluer cette formation",
+    "placesLeft": {
+      "one": "{{ count }} place disponible",
+      "other": "{{ count }} places disponibles"
+    },
+    "full": "Complet",
+    "apply": "Postuler maintenant",
+    "waitlist": "Liste d'attente",
+    "viewCourses": "Voir cours",
+    "reviewsTitle": "Avis sur l'établissement",
+    "verifiedReviews": {
+      "one": "{{ count }} avis vérifié",
+      "other": "{{ count }} avis vérifiés"
+    },
+    "yourExperience": "Votre expérience",
+    "signInToRate": "Connectez-vous pour noter",
+    "information": "Informations",
+    "address": "Adresse",
+    "courseList": "Liste des cours disponibles",
+    "loadingCourses": "Chargement des cours...",
+    "noCourses": "Aucun cours trouvé pour ce programme.",
+    "rateCourse": "Évaluer ce cours",
+    "close": "Fermer",
+    "loading": "Chargement de l'établissement…"
+  },
+  "wishlist": {
+    "button": "Souhaits",
+    "title": "Mes formations souhaitées",
+    "count": {
+      "one": "{{ count }} formation",
+      "other": "{{ count }} formations"
+    },
+    "empty": "Aucune formation dans vos souhaits",
+    "emptyHint": "Ajoutez des formations pour les retrouver facilement",
+    "compare": "Comparer les formations"
+  },
+  "rating": {
+    "commentPlaceholder": "Ajouter un commentaire (optionnel)...",
+    "submit": "Publier mon avis",
+    "submitting": "Envoi..."
   }
 }

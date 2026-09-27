@@ -5,11 +5,16 @@ import { LucideAngularModule, Star, MessageSquare } from 'lucide-angular';
 import { RatingService } from '@services/rating.service';
 import { TokenService } from '@services/token.service';
 import { Observable } from 'rxjs';
+import { TranslocoPipe } from '@jsverse/transloco';
 
 @Component({
   selector: 'app-star-rating',
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule, TranslocoPipe],
   template: `
+    <!--
+      The pipe, not *transloco: a structural directive would hide the stars
+      until the bundle loads, and this widget sits inside other pages.
+    -->
     <div class="flex flex-col gap-3">
       <div class="flex items-center gap-1">
         @for (value of [1, 2, 3, 4, 5]; track value) {
@@ -38,7 +43,7 @@ import { Observable } from 'rxjs';
         <div class="flex flex-col gap-2 animate-in fade-in slide-in-from-top-1">
           <textarea
             [(ngModel)]="comment"
-            placeholder="Ajouter un commentaire (optionnel)..."
+            [placeholder]="'rating.commentPlaceholder' | transloco"
             class="w-full p-3 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none resize-none"
             rows="3"
           ></textarea>
@@ -47,7 +52,7 @@ import { Observable } from 'rxjs';
             [disabled]="isSubmitting()"
             class="self-end px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 transition-colors"
           >
-            {{ isSubmitting() ? 'Envoi...' : 'Publier mon avis' }}
+            {{ (isSubmitting() ? 'rating.submitting' : 'rating.submit') | transloco }}
           </button>
         </div>
       }
