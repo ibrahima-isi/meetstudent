@@ -3,7 +3,8 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
-import { provideTransloco } from '@jsverse/transloco';
+import { provideTransloco, TranslocoService } from '@jsverse/transloco';
+import { firstValueFrom } from 'rxjs';
 import { translocoOptions } from '@i18n/transloco.config';
 import { RegisterFormComponent } from './register-form.component';
 import { environment } from '../../../../environments/environment';
@@ -93,5 +94,89 @@ describe('RegisterFormComponent registration payload', () => {
 
     httpMock.expectNone(`${environment.apiUrl}/users`);
     expect(component.error()).toBeTruthy();
+  });
+});
+
+describe('RegisterFormComponent translations', () => {
+  let fixture: ComponentFixture<RegisterFormComponent>;
+  let httpMock: HttpTestingController;
+
+  function text(): string {
+    return (fixture.nativeElement as HTMLElement).textContent ?? '';
+  }
+
+  async function render(lang: 'fr' | 'en') {
+    const transloco = TestBed.inject(TranslocoService);
+    // *transloco renders nothing until the dynamic import resolves.
+    await firstValueFrom(transloco.load(lang));
+    transloco.setActiveLang(lang);
+    fixture = TestBed.createComponent(RegisterFormComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+  }
+
+  async function settle() {
+    fixture.detectChanges();
+    await fixture.whenStable();
+  }
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [RegisterFormComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideZonelessChangeDetection(),
+        provideRouter([]),
+        provideTransloco(translocoOptions),
+      ],
+    });
+    httpMock = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => httpMock.verify());
+
+  it('renders in French, the source language', async () => {
+    await render('fr');
+
+    expect(fixture.nativeElement.querySelector('h1').textContent.trim()).toBe('Créer un compte');
+    expect(text()).toContain('Étape 1 sur 2 : informations de base');
+  });
+
+  it('renders in English when English is active', async () => {
+    await render('en');
+
+    expect(fixture.nativeElement.querySelector('h1').textContent.trim()).toBe('Create Account');
+    expect(text()).toContain('Step 1 of 2: Basic Information');
+  });
+
+  it('explains a password mismatch in the active language', async () => {
+    await render('fr');
+    const component = fixture.componentInstance;
+    component.step.set(2);
+    component.step2Form.setValue({ password: 'sup3rsecret', confirmPassword: 'other', terms: true });
+
+    component.handleSubmit();
+    await settle();
+
+    expect(text()).toContain('Les mots de passe ne correspondent pas.');
+  });
+
+  // Decision 5: ErrorResponse.message is for logs, never for the user.
+  it('shows its own failure text, never the API message', async () => {
+    await render('en');
+    const component = fixture.componentInstance;
+    component.step1Form.patchValue({ firstname: 'Awa', lastname: 'Diop', email: 'awa@example.com', town: 'Dakar' });
+    component.step.set(2);
+    component.step2Form.setValue({ password: 'sup3rsecret', confirmPassword: 'sup3rsecret', terms: true });
+
+    component.handleSubmit();
+    httpMock
+      .expectOne(`${environment.apiUrl}/users`)
+      .flush({ message: 'Email already used (constraint uk_users_email)' }, { status: 409, statusText: 'Conflict' });
+    await settle();
+
+    expect(text()).toContain('Registration failed.');
+    expect(text()).not.toContain('uk_users_email');
   });
 });

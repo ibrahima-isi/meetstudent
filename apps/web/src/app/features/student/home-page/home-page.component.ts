@@ -11,11 +11,13 @@ import { PROGRAMMES } from '@data/programmes';
 import { School, Program } from '@models/entities';
 import { SchoolService } from '@services/school.service';
 import { LocaleService } from '@services/locale.service';
+import { TranslocoDirective } from '@jsverse/transloco';
+import { pluralKey } from '@i18n/plural';
 import { TokenService } from '@services/token.service';
 
 @Component({
   selector: 'app-home-page',
-  imports: [CommonModule, FormsModule, LucideAngularModule, ImageWithFallbackComponent, StarRatingComponent, WishlistCartComponent],
+  imports: [CommonModule, FormsModule, LucideAngularModule, ImageWithFallbackComponent, StarRatingComponent, WishlistCartComponent, TranslocoDirective],
   templateUrl: './home-page.component.html'
 })
 export class HomePageComponent implements OnInit {
@@ -34,8 +36,9 @@ export class HomePageComponent implements OnInit {
 
   schools = signal<School[]>(this.schoolService.schools());
   searchQuery = signal('');
-  selectedCity = signal('Toutes les villes');
-  selectedType = signal('Tous les types');
+  /** '' means no filter; the template labels that choice in the active language. */
+  selectedCity = signal('');
+  selectedType = signal('');
   showFilters = signal(false);
   sortBy = signal<'name' | 'city' | 'places'>('name');
 
@@ -60,8 +63,8 @@ export class HomePageComponent implements OnInit {
 
   activeFiltersCount = computed(() => {
     let count = 0;
-    if (this.selectedCity() !== 'Toutes les villes') count++;
-    if (this.selectedType() !== 'Tous les types') count++;
+    if (this.selectedCity() !== '') count++;
+    if (this.selectedType() !== '') count++;
     return count;
   });
 
@@ -73,17 +76,18 @@ export class HomePageComponent implements OnInit {
     const filtered = this.schools().filter((school: School) => {
       const matchesSearch = (school.name || '').toLowerCase().includes(query) ||
                             (school.description || '').toLowerCase().includes(query);
-      const matchesCity = city === 'Toutes les villes' || school.address.city === city;
-      const matchesType = type === 'Tous les types' || school.type === type;
+      const matchesCity = city === '' || school.address.city === city;
+      const matchesType = type === '' || school.type === type;
       return matchesSearch && matchesCity && matchesType;
     });
 
     const sortType = this.sortBy();
+    const locale = this.locale.active();
     return filtered.sort((a: School, b: School) => {
       if (sortType === 'name') {
-        return (a.name || '').localeCompare(b.name || '', 'fr');
+        return (a.name || '').localeCompare(b.name || '', locale);
       } else if (sortType === 'city') {
-        return (a.address.city || '').localeCompare(b.address.city || '', 'fr');
+        return (a.address.city || '').localeCompare(b.address.city || '', locale);
       } else if (sortType === 'places') {
         const aId = a.id || 0;
         const bId = b.id || 0;
@@ -111,6 +115,11 @@ export class HomePageComponent implements OnInit {
     if (school.id !== undefined) {
       this.goTo('schools', school.id);
     }
+  }
+
+  /** The key for a count, by the plural rule of the language being read. */
+  protected plural(base: string, count: number): string {
+    return pluralKey(base, count, this.locale.active());
   }
 
   /** Navigations stay in the language the visitor is reading. */

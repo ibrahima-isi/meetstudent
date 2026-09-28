@@ -1,23 +1,23 @@
-<div class="min-h-screen bg-gray-50">
+<div class="min-h-screen bg-gray-50" *transloco="let t">
   @if (showLoginPrompt()) {
     <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-        <h3 class="text-gray-900 mb-2 font-bold text-lg">Connexion requise</h3>
+        <h3 class="text-gray-900 mb-2 font-bold text-lg">{{ t('schoolDetail.loginRequired') }}</h3>
         <p class="text-gray-600 mb-6">
-          Vous devez être connecté pour effectuer cette action.
+          {{ t('schoolDetail.loginRequiredText') }}
         </p>
         <div class="flex gap-3">
           <button
             (click)="handleLoginClick()"
             class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors cursor-pointer font-bold"
           >
-            Se connecter
+            {{ t('schoolDetail.signIn') }}
           </button>
           <button
             (click)="showLoginPrompt.set(false)"
             class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
           >
-            Annuler
+            {{ t('schoolDetail.cancel') }}
           </button>
         </div>
       </div>
@@ -39,7 +39,7 @@
       class="absolute top-4 left-4 flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow-md hover:bg-gray-50 transition-colors cursor-pointer z-10"
     >
       <lucide-icon [img]="ArrowLeft" class="w-5 h-5"></lucide-icon>
-      <span class="font-medium">Retour</span>
+      <span class="font-medium">{{ t('schoolDetail.back') }}</span>
     </button>
 
     <!-- Tags at Top Right -->
@@ -72,14 +72,14 @@
       <!-- Main Content -->
       <div class="lg:col-span-2 space-y-6">
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h2 class="text-gray-900 mb-3 text-xl font-bold">À propos</h2>
+          <h2 class="text-gray-900 mb-3 text-xl font-bold">{{ t('schoolDetail.about') }}</h2>
           <p class="text-gray-600 leading-relaxed">{{ detail.description }}</p>
 
           <!-- Accreditations and Tags as Buttons -->
           <div class="mt-6 space-y-4">
             @if (detail.accreditations && detail.accreditations!.length > 0) {
               <div>
-                <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">Accréditations</h3>
+                <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">{{ t('schoolDetail.accreditations') }}</h3>
                 <div class="flex flex-wrap gap-2">
                   @for (acc of detail.accreditations; track acc.id) {
                     <button class="px-4 py-2 bg-emerald-50 text-emerald-700 text-sm font-semibold rounded-lg border border-emerald-100 hover:bg-emerald-100 transition-colors cursor-pointer">
@@ -92,7 +92,7 @@
 
             @if (detail.tags && detail.tags!.length > 0) {
               <div>
-                <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">Domaines d'expertise</h3>
+                <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">{{ t('schoolDetail.expertise') }}</h3>
                 <div class="flex flex-wrap gap-2">
                   @for (tag of detail.tags; track tag.id) {
                     <button class="px-4 py-2 bg-indigo-50 text-indigo-700 text-sm font-semibold rounded-lg border border-indigo-100 hover:bg-indigo-100 transition-colors cursor-pointer">
@@ -107,7 +107,7 @@
 
         <div class="space-y-4">
           <div class="flex items-center justify-between mb-4">
-            <h2 class="text-gray-900 text-xl font-bold">Formations disponibles ({{ programs().length }})</h2>
+            <h2 class="text-gray-900 text-xl font-bold">{{ t('schoolDetail.programmes', { count: programs().length }) }}</h2>
             
             <div class="flex items-center gap-2">
               <lucide-icon [img]="ArrowUpDown" class="w-4 h-4 text-gray-500"></lucide-icon>
@@ -115,8 +115,8 @@
                 [(ngModel)]="sortBy"
                 class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-700"
               >
-                <option value="name">Trier par A-Z</option>
-                <option value="places">Trier par Places disponibles</option>
+                <option value="name">{{ t('schools.sortName') }}</option>
+                <option value="places">{{ t('schools.sortPlaces') }}</option>
               </select>
             </div>
           </div>
@@ -145,11 +145,11 @@
                     </div>
                     <div class="flex items-center gap-2">
                       <lucide-icon [img]="Clock" class="w-4 h-4 text-indigo-500"></lucide-icon>
-                      <span>{{ programme.duration }} ans</span>
+                      <span>{{ t(plural('schoolDetail.years', programme.duration), { count: programme.duration }) }}</span>
                     </div>
                     <div class="flex items-center gap-2">
                       <lucide-icon [img]="Calendar" class="w-4 h-4 text-indigo-500"></lucide-icon>
-                      <span>Rentrée: {{ programme.startDate }}</span>
+                      <span>{{ t('schoolDetail.intake', { date: programme.startDate }) }}</span>
                     </div>
                   </div>
                   
@@ -158,7 +158,7 @@
                   <!-- Program Rating with comments -->
                   @if (isAuthenticated() && programme.id !== undefined) {
                     <div class="mb-4 bg-gray-50 p-4 rounded-lg border border-gray-100">
-                      <h4 class="text-sm font-bold text-gray-700 mb-2">Évaluer cette formation</h4>
+                      <h4 class="text-sm font-bold text-gray-700 mb-2">{{ t('schoolDetail.rateProgramme') }}</h4>
                       <app-star-rating 
                         [itemId]="programme.id"
                         itemType="program"
@@ -171,10 +171,10 @@
                   <div class="flex items-center gap-2 text-sm font-medium mt-4">
                     <lucide-icon [img]="Users" class="w-4 h-4 text-gray-600"></lucide-icon>
                     <span>
-                      @if ((programme.capacity || 0) - (programme.enrolled || 0) > 0) {
-                        <span class="text-gray-600">{{ (programme.capacity || 0) - (programme.enrolled || 0) }} places disponibles</span>
+                      @if (placesLeft(programme) > 0) {
+                        <span class="text-gray-600">{{ t(plural('schoolDetail.placesLeft', placesLeft(programme)), { count: placesLeft(programme) }) }}</span>
                       } @else {
-                        <span class="text-red-600 font-bold">Complet</span>
+                        <span class="text-red-600 font-bold">{{ t('schoolDetail.full') }}</span>
                       }
                     </span>
                   </div>
@@ -187,13 +187,13 @@
                   [ngClass]="(programme.capacity || 0) - (programme.enrolled || 0) > 0 ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-gray-300 cursor-not-allowed text-gray-500'"
                   [disabled]="(programme.capacity || 0) - (programme.enrolled || 0) === 0"
                 >
-                  {{ (programme.capacity || 0) - (programme.enrolled || 0) > 0 ? 'Postuler maintenant' : 'Liste d\'attente' }}
+                  {{ t(placesLeft(programme) > 0 ? 'schoolDetail.apply' : 'schoolDetail.waitlist') }}
                 </button>
                 <button 
                   (click)="openCoursesModal(programme)"
                   class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer font-medium"
                 >
-                  Voir cours
+                  {{ t('schoolDetail.viewCourses') }}
                 </button>
               </div>
             </div>
@@ -205,7 +205,7 @@
       <div class="space-y-6">
         <!-- School Rating Sidebar Section -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h2 class="text-gray-900 mb-4 text-xl font-bold">Avis sur l'établissement</h2>
+          <h2 class="text-gray-900 mb-4 text-xl font-bold">{{ t('schoolDetail.reviewsTitle') }}</h2>
           <div class="flex items-center gap-3 mb-4">
             <span class="text-4xl font-bold text-gray-900">{{ detail.rating || '0.0' }}</span>
             <div class="flex flex-col">
@@ -216,13 +216,13 @@
                 <lucide-icon [img]="Star" class="w-4 h-4 fill-current"></lucide-icon>
                 <lucide-icon [img]="Star" class="w-4 h-4 fill-current opacity-30"></lucide-icon>
               </div>
-              <span class="text-xs text-gray-500 font-medium">{{ detail.reviewCount || 0 }} avis vérifiés</span>
+              <span class="text-xs text-gray-500 font-medium">{{ t(plural('schoolDetail.verifiedReviews', detail.reviewCount || 0), { count: detail.reviewCount || 0 }) }}</span>
             </div>
           </div>
 
           @if (isAuthenticated()) {
             <div class="pt-4 border-t border-gray-100">
-              <p class="text-sm font-bold text-gray-700 mb-3">Votre expérience</p>
+              <p class="text-sm font-bold text-gray-700 mb-3">{{ t('schoolDetail.yourExperience') }}</p>
               <app-star-rating 
                 [itemId]="detail.id || 0"
                 itemType="school"
@@ -235,19 +235,19 @@
               (click)="handleLoginClick()"
               class="w-full px-4 py-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg text-sm font-bold transition-colors cursor-pointer"
             >
-              Connectez-vous pour noter
+              {{ t('schoolDetail.signInToRate') }}
             </button>
           }
         </div>
 
         <!-- Contact/Info Section -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h3 class="text-gray-900 mb-4 font-bold">Informations</h3>
+          <h3 class="text-gray-900 mb-4 font-bold">{{ t('schoolDetail.information') }}</h3>
           <div class="space-y-4 text-sm">
             <div class="flex items-start gap-3">
               <lucide-icon [img]="MapPin" class="w-5 h-5 text-gray-400 shrink-0"></lucide-icon>
               <div>
-                <p class="text-gray-900 font-medium">Adresse</p>
+                <p class="text-gray-900 font-medium">{{ t('schoolDetail.address') }}</p>
                 <p class="text-gray-600">{{ detail.address.location }}</p>
                 <p class="text-gray-600">{{ detail.address.city }}, {{ detail.address.country }}</p>
               </div>
@@ -266,7 +266,7 @@
         <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-white sticky top-0">
           <div>
             <h3 class="text-gray-900 font-bold text-xl">{{ selectedProgram()?.name }}</h3>
-            <p class="text-gray-500 text-sm">Liste des cours disponibles</p>
+            <p class="text-gray-500 text-sm">{{ t('schoolDetail.courseList') }}</p>
           </div>
           <button (click)="closeCoursesModal()" class="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer">
             <lucide-icon [img]="X" class="w-6 h-6 text-gray-500"></lucide-icon>
@@ -278,12 +278,12 @@
           @if (isLoadingCourses()) {
             <div class="flex flex-col items-center justify-center py-12">
               <div class="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-              <p class="mt-4 text-gray-500 font-medium">Chargement des cours...</p>
+              <p class="mt-4 text-gray-500 font-medium">{{ t('schoolDetail.loadingCourses') }}</p>
             </div>
           } @else if (courses().length === 0) {
             <div class="text-center py-12">
               <lucide-icon [img]="Book" class="w-12 h-12 text-gray-300 mx-auto mb-3"></lucide-icon>
-              <p class="text-gray-500 font-medium">Aucun cours trouvé pour ce programme.</p>
+              <p class="text-gray-500 font-medium">{{ t('schoolDetail.noCourses') }}</p>
             </div>
           } @else {
             <div class="grid grid-cols-1 gap-4">
@@ -298,7 +298,7 @@
 
                   @if (isAuthenticated() && course.id !== undefined) {
                     <div class="mt-4 pt-4 border-t border-gray-100">
-                      <h5 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Évaluer ce cours</h5>
+                      <h5 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{{ t('schoolDetail.rateCourse') }}</h5>
                       <app-star-rating 
                         [itemId]="course.id"
                         itemType="course"
@@ -319,7 +319,7 @@
             (click)="closeCoursesModal()"
             class="px-6 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition-colors cursor-pointer"
           >
-            Fermer
+            {{ t('schoolDetail.close') }}
           </button>
         </div>
       </div>
@@ -332,7 +332,7 @@
       error state with a retry; until then it must not pretend.
     -->
     <div class="max-w-6xl mx-auto px-4 py-16 text-center text-gray-600">
-      Chargement de l'établissement…
+      {{ t('schoolDetail.loading') }}
     </div>
   }
 </div>
