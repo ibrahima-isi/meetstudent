@@ -62,4 +62,18 @@ describe('HomePageComponent translations', () => {
     expect(text()).toContain('Wishlist');
     expect(text()).toContain('0 schools found');
   });
+
+  it('names an untyped, undescribed school in the active language', async () => {
+    await render('en');
+    fixture.componentInstance.schools.set([
+      { id: 1, name: 'Bare', address: { location: 'Loc', city: 'Dakar', country: 'Senegal' } },
+    ]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const badge = (fixture.nativeElement as HTMLElement).querySelector('span.text-indigo-600.text-sm.font-bold');
+    expect(badge?.textContent?.trim()).toBe('School');
+    expect(text()).toContain('No description available');
+    expect(text()).not.toContain('Établissement');
+  });
 });
