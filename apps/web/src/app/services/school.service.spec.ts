@@ -54,7 +54,9 @@ describe('SchoolService', () => {
 
     service.getSchools().subscribe(page => {
       expect(page.content.length).toBe(1);
-      expect(page.content[0].type).toBe('Établissement');
+      // The service stays locale-free: no French default; the template supplies one.
+      expect(page.content[0].type).toBeUndefined();
+      expect(page.content[0].description).toBeUndefined();
       expect(page.content[0].rating).toBe(0);
       expect(service.schools().length).toBe(1);
     });
@@ -75,11 +77,29 @@ describe('SchoolService', () => {
 
     service.getSchool(1).subscribe(school => {
       expect(school.id).toBe(1);
-      expect(school.type).toBe('Établissement');
+      expect(school.type).toBeUndefined();
     });
 
     const req = httpMock.expectOne(`${environment.apiUrl}/schools/1`);
     expect(req.request.method).toBe('GET');
     req.flush(mockSchool);
+  });
+
+  // Opposite of the rule: a value the API does send is passed through untouched.
+  it('keeps the type and description the API sends', () => {
+    const mockSchool = {
+      id: 2,
+      name: 'UCAD',
+      type: 'Université Publique',
+      description: 'Fondée en 1957',
+      address: { location: 'Loc', city: 'Dakar', country: 'Senegal' },
+    } as School;
+
+    service.getSchool(2).subscribe((school) => {
+      expect(school.type).toBe('Université Publique');
+      expect(school.description).toBe('Fondée en 1957');
+    });
+
+    httpMock.expectOne((request) => request.url.endsWith('/schools/2')).flush(mockSchool);
   });
 });

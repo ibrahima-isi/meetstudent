@@ -142,7 +142,7 @@
             ></app-image-with-fallback>
             <div class="absolute top-3 right-3 flex flex-col items-end gap-2">
               <div class="px-3 py-1 bg-white rounded-full shadow-sm">
-                <span class="text-indigo-600 text-sm font-bold">{{ school.type }}</span>
+                <span class="text-indigo-600 text-sm font-bold">{{ school.type || t('common.defaultSchoolType') }}</span>
               </div>
               @if (school.tags && school.tags.length > 0) {
                 <div class="flex flex-wrap gap-1 justify-end max-w-[150px]">
@@ -181,7 +181,7 @@
             </div>
 
             <p class="text-gray-600 line-clamp-2 mb-4 text-sm flex-1">
-              {{ school.description }}
+              {{ school.description || t('common.noDescription') }}
             </p>
 
             <button 
