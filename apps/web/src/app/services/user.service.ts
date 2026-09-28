@@ -43,7 +43,6 @@ export class UserService {
       wishlist: (user.wishlist || []).map(school => ({
         ...school,
         rating: (school as any).averageRate || school.rating || 0,
-        type: school.type || 'Établissement',
         coverImageUrl: this.mediaService.resolveUrl(school.cover) ?? school.coverImageUrl
       }))
     };
