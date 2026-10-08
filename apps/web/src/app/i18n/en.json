@@ -1,6 +1,8 @@
 {
   "common": {
-    "retry": "Retry"
+    "retry": "Retry",
+    "defaultSchoolType": "School",
+    "noDescription": "No description available"
   },
   "language": {
     "fr": "Français",

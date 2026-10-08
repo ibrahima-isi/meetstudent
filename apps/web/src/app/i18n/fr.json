@@ -1,6 +1,8 @@
 {
   "common": {
-    "retry": "Réessayer"
+    "retry": "Réessayer",
+    "defaultSchoolType": "Établissement",
+    "noDescription": "Aucune description disponible"
   },
   "language": {
     "fr": "Français",

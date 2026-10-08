@@ -43,8 +43,8 @@ export class SchoolService {
       ...school,
       rating: (school as any).averageRate || school.rating || 0,
       reviewCount: school.reviewCount || 0,
-      type: school.type || 'Établissement',
-      description: school.description || 'Aucune description disponible',
+      // No default for type or description: the service stays locale-free and
+      // the template shows a fallback in the active language.
       accreditations: school.accreditations || [],
       // Resolve media FKs to absolute URLs so templates bind one plain field.
       // `??` preserves any URL already set by seeded/mock data.
