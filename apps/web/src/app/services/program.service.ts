@@ -44,7 +44,7 @@ export class ProgramService {
       rating: (program as any).averageRate || program.rating || 0,
       reviewCount: program.reviewCount || 0,
       level: program.level || 'Licence',
-      description: program.description || 'Aucune description disponible',
+      // No default description: the template shows one in the active language.
       accreditations: program.accreditations || [],
       photoImageUrl: this.mediaService.resolveUrl(program.photo) ?? program.photoImageUrl
     };

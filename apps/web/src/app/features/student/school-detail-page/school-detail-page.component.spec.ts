@@ -195,5 +195,17 @@ describe('SchoolDetailPageComponent', () => {
       expect(text).toContain('5 places available');
       expect(text).toContain('1 place available');
     });
+
+    it('falls back to translated copy when the API sends no type or description', async () => {
+      schoolServiceSpy.getSchool.and.returnValue(
+        of({ id: 7, name: 'Bare', address: { location: 'Loc', city: 'City', country: 'Country' } }),
+      );
+      const text = await renderIn('en');
+
+      const badge = harness.routeNativeElement?.querySelector('span.inline-block');
+      expect(badge?.textContent?.trim()).toBe('School');
+      expect(text).toContain('No description available');
+      expect(text).not.toContain('Établissement');
+    });
   });
 });

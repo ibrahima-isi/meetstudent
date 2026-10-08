@@ -55,6 +55,8 @@ describe('ProgramService', () => {
     service.getPrograms().subscribe(page => {
       expect(page.content.length).toBe(1);
       expect(page.content[0].level).toBe('Licence');
+      // No French default: the template supplies one in the active language.
+      expect(page.content[0].description).toBeUndefined();
       expect(page.content[0].rating).toBe(0);
       expect(service.programs().length).toBe(1);
     });

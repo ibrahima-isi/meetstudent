@@ -44,7 +44,8 @@ describe('UserService', () => {
     service.getUser(1).subscribe(user => {
       expect(user.id).toBe(1);
       expect(user.wishlist?.length).toBe(1);
-      expect(user.wishlist?.[0].type).toBe('Établissement');
+      // No French default: the template supplies one in the active language.
+      expect(user.wishlist?.[0].type).toBeUndefined();
       expect(service.users().length).toBe(1);
     });
 
