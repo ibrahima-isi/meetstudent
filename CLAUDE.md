@@ -9,6 +9,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Solo-developer project: exactly two long-lived branches remotely (`main`, `dev`). `dev` is the integration branch; `main` receives only release/promotion PRs from `dev`. Delete short-lived working branches locally and remotely once their PRs are merged.
 - Every task starts from an up-to-date `dev` and uses a new working branch named `<type>/<short-kebab-description>`, where `<type>` is a Conventional Commits type: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `perf`, `ci` (e.g. `feat/media-upload-retry`). Commit messages use the same types.
 - **Every task ends the same way: commit, push, open a PR from the working branch to `dev`.** Do not open feature, fix, docs, chore, refactor, test, perf or CI PRs directly against `main`; `main` is updated only by a separate `dev` → `main` promotion PR after `dev` is green. Since `required_approving_review_count` is `0` (see `docs/MONOREPO.md`), the PR is yours to merge once both checks pass.
+- **"Merge" means squash merge.** Working-branch PRs into `dev` are always merged with *Squash and merge* — never a merge commit, never rebase-and-merge.
+- **`main` must stay identical to `dev`.** A PR merge commit on `main` would be missing from `dev`, and syncing it back creates yet another one, forever. So never merge `main` back into `dev`; promote by fast-forwarding `main` to `dev` (`git push origin dev:main`, which needs the ruleset bypass), and never with a merge commit, squash or rebase.
 - When a branch is cut from another unmerged branch, open its PR **against that branch**, not `dev` or `main`, or the diff shows the parent's commits too. Retarget or merge onward to `dev` only after the parent branch lands.
 
 **Scope**
