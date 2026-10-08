@@ -5,6 +5,9 @@ import { provideZonelessChangeDetection } from '@angular/core';
 import { UserDocumentsComponent } from './user-documents.component';
 import { environment } from '../../../../environments/environment';
 import { Media } from '@models/entities';
+import { provideTransloco, TranslocoService } from '@jsverse/transloco';
+import { firstValueFrom } from 'rxjs';
+import { translocoOptions } from '@i18n/transloco.config';
 
 function media(partial: Partial<Media>): Media {
   return {
@@ -29,7 +32,8 @@ describe('UserDocumentsComponent', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        provideZonelessChangeDetection()
+        provideZonelessChangeDetection(),
+        provideTransloco(translocoOptions)
       ]
     });
     httpMock = TestBed.inject(HttpTestingController);
@@ -63,7 +67,8 @@ describe('UserDocumentsComponent', () => {
     expect(fixture.componentInstance.documents()).toEqual([]);
   });
 
-  it('exposes the French label for each verification status', () => {
+  // A key, not French: the template translates it, so a language switch re-renders it.
+  it('names each verification status by its translation key', () => {
     const fixture = TestBed.createComponent(UserDocumentsComponent);
     fixture.detectChanges();
 
@@ -71,9 +76,9 @@ describe('UserDocumentsComponent', () => {
     req.flush([]);
 
     const component = fixture.componentInstance;
-    expect(component.statusLabel('PENDING')).toBe('En attente');
-    expect(component.statusLabel('VERIFIED')).toBe('Vérifié');
-    expect(component.statusLabel('REJECTED')).toBe('Rejeté');
+    expect(component.statusLabel('PENDING')).toBe('documents.status.PENDING');
+    expect(component.statusLabel('VERIFIED')).toBe('documents.status.VERIFIED');
+    expect(component.statusLabel('REJECTED')).toBe('documents.status.REJECTED');
     expect(component.statusLabel(null)).toBe('');
   });
 
@@ -297,5 +302,51 @@ describe('UserDocumentsComponent', () => {
     );
     req.flush(media({ id: 9 }));
     httpMock.expectOne(`${environment.apiUrl}/media/mine`).flush([]);
+  });
+
+  describe('translations', () => {
+    async function renderIn(lang: 'fr' | 'en', docs: Media[]): Promise<HTMLElement> {
+      const transloco = TestBed.inject(TranslocoService);
+      await firstValueFrom(transloco.load(lang));
+      transloco.setActiveLang(lang);
+      const fixture = TestBed.createComponent(UserDocumentsComponent);
+      fixture.detectChanges();
+      httpMock.expectOne(`${environment.apiUrl}/media/mine`).flush(docs);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      return fixture.nativeElement as HTMLElement;
+    }
+
+    it('renders in French, the source language', async () => {
+      const root = await renderIn('fr', [media({ category: 'DIPLOMA', verificationStatus: 'PENDING' })]);
+
+      expect(root.querySelector('h2')?.textContent?.trim()).toBe('Mes documents');
+      expect(root.textContent).toContain('Diplôme');
+      expect(root.textContent).toContain('En attente');
+    });
+
+    it('renders in English when English is active', async () => {
+      const root = await renderIn('en', [media({ category: 'CERTIFICATE', verificationStatus: 'VERIFIED' })]);
+
+      expect(root.querySelector('h2')?.textContent?.trim()).toBe('My documents');
+      expect(root.textContent).toContain('Certificate');
+      expect(root.textContent).toContain('Verified');
+    });
+
+    it('shows a failure in the active language', async () => {
+      const transloco = TestBed.inject(TranslocoService);
+      await firstValueFrom(transloco.load('en'));
+      transloco.setActiveLang('en');
+      const fixture = TestBed.createComponent(UserDocumentsComponent);
+      fixture.detectChanges();
+      httpMock
+        .expectOne(`${environment.apiUrl}/media/mine`)
+        .flush('boom', { status: 500, statusText: 'Internal Server Error' });
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect((fixture.nativeElement as HTMLElement).textContent)
+        .toContain('Your documents could not be loaded. Please try again.');
+    });
   });
 });

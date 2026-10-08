@@ -7,18 +7,20 @@ import { Program } from '@models/entities';
 import { UserService } from '@services/user.service';
 import { TokenService } from '@services/token.service';
 import { LocaleService } from '@services/locale.service';
+import { TranslocoDirective } from '@jsverse/transloco';
+import { pluralKey } from '@i18n/plural';
 
 @Component({
   selector: 'app-wishlist-cart',
-  imports: [CommonModule, LucideAngularModule],
+  imports: [CommonModule, LucideAngularModule, TranslocoDirective],
   template: `
-    <div class="relative">
+    <div class="relative" *transloco="let t">
       <button
         (click)="handleCartClick()"
         class="relative flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
       >
         <lucide-icon [img]="ShoppingCart" class="w-5 h-5"></lucide-icon>
-        <span>Souhaits</span>
+        <span>{{ t('wishlist.button') }}</span>
         @if (isAuthenticated() && wishlist().length > 0) {
           <span class="absolute -top-1 -right-1 w-5 h-5 bg-indigo-600 text-white rounded-full flex items-center justify-center text-xs">
             {{ wishlist().length }}
@@ -32,7 +34,7 @@ import { LocaleService } from '@services/locale.service';
         <div class="absolute left-0 top-full mt-2 w-96 bg-white rounded-xl shadow-xl border border-gray-200 z-50 max-h-[80vh] overflow-hidden flex flex-col">
           <div class="p-4 border-b border-gray-200">
             <div class="flex items-center justify-between">
-              <h3 class="text-gray-900 font-bold">Mes formations souhaitées</h3>
+              <h3 class="text-gray-900 font-bold">{{ t('wishlist.title') }}</h3>
               <button
                 (click)="isOpen.set(false)"
                 class="p-1 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
@@ -41,7 +43,7 @@ import { LocaleService } from '@services/locale.service';
               </button>
             </div>
             <p class="text-gray-600 mt-1 text-sm">
-              {{ wishlist().length }} formation{{ wishlist().length !== 1 ? 's' : '' }}
+              {{ t(plural('wishlist.count', wishlist().length), { count: wishlist().length }) }}
             </p>
           </div>
 
@@ -49,8 +51,8 @@ import { LocaleService } from '@services/locale.service';
             @if (wishlistProgrammes().length === 0) {
               <div class="p-8 text-center">
                 <lucide-icon [img]="GraduationCap" class="w-12 h-12 text-gray-300 mx-auto mb-3"></lucide-icon>
-                <p class="text-gray-600">Aucune formation dans vos souhaits</p>
-                <p class="text-gray-500 mt-1 text-sm">Ajoutez des formations pour les retrouver facilement</p>
+                <p class="text-gray-600">{{ t('wishlist.empty') }}</p>
+                <p class="text-gray-500 mt-1 text-sm">{{ t('wishlist.emptyHint') }}</p>
               </div>
             } @else {
               <div class="p-4 space-y-3">
@@ -76,7 +78,7 @@ import { LocaleService } from '@services/locale.service';
           @if (wishlistProgrammes().length > 0) {
             <div class="p-4 border-t border-gray-200 bg-gray-50">
               <button class="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium text-sm cursor-pointer">
-                Comparer les formations
+                {{ t('wishlist.compare') }}
               </button>
             </div>
           }
@@ -98,6 +100,11 @@ export class WishlistCartComponent implements OnInit, OnDestroy {
   readonly isAuthenticated = computed(() => this.tokenService.isAuthenticated());
 
   isOpen = signal(false);
+
+  /** The key for a count, by the plural rule of the language being read. */
+  protected plural(base: string, count: number): string {
+    return pluralKey(base, count, this.locale.active());
+  }
   wishlist = signal<number[]>([]);
 
   readonly ShoppingCart = ShoppingCart;

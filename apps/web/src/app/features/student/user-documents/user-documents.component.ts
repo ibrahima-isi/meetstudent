@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MediaService } from '@services/media.service';
 import { Media, MediaCategory, VerificationStatus } from '@models/entities';
+import { TranslocoPipe } from '@jsverse/transloco';
 
 const PERSONAL_DOCUMENT_CATEGORIES: MediaCategory[] = [
   'DIPLOMA',
@@ -13,7 +14,9 @@ const PERSONAL_DOCUMENT_CATEGORIES: MediaCategory[] = [
 
 @Component({
   selector: 'app-user-documents',
-  imports: [CommonModule, FormsModule],
+  // The pipe, not *transloco: the structural directive would hide the upload
+  // controls until the bundle loads, inside a page that is already showing.
+  imports: [CommonModule, FormsModule, TranslocoPipe],
   templateUrl: './user-documents.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -26,6 +29,7 @@ export class UserDocumentsComponent implements OnInit, OnDestroy {
   );
 
   loading = signal(false);
+  /** A translation key, not a sentence, so a language switch re-renders it. */
   error = signal('');
   pendingDeleteId = signal<number | null>(null);
 
@@ -64,7 +68,7 @@ export class UserDocumentsComponent implements OnInit, OnDestroy {
         this.loading.set(false);
       },
       error: () => {
-        this.error.set('Impossible de charger vos documents. Veuillez réessayer.');
+        this.error.set('documents.errors.loadFailed');
         this.loading.set(false);
       }
     });
@@ -77,9 +81,7 @@ export class UserDocumentsComponent implements OnInit, OnDestroy {
     // blank window now and point it at the blob once it arrives.
     const win = window.open('', '_blank');
     if (!win) {
-      this.error.set(
-        "Votre navigateur a bloqué l'ouverture de ce document. Autorisez les fenêtres pop-up pour ce site puis réessayez."
-      );
+      this.error.set('documents.errors.popupBlocked');
       return;
     }
 
@@ -90,7 +92,7 @@ export class UserDocumentsComponent implements OnInit, OnDestroy {
       },
       error: () => {
         win.close();
-        this.error.set("Impossible d'ouvrir ce document. Veuillez réessayer.");
+        this.error.set('documents.errors.openFailed');
       }
     });
   }
@@ -108,13 +110,13 @@ export class UserDocumentsComponent implements OnInit, OnDestroy {
     input.value = '';
 
     if (file.size > this.MAX_UPLOAD_BYTES) {
-      this.error.set('Le fichier dépasse la taille maximale autorisée de 10 Mo.');
+      this.error.set('documents.errors.tooLarge');
       return;
     }
 
     const extension = file.name.split('.').pop()?.toLowerCase() ?? '';
     if (!this.ALLOWED_EXTENSIONS.includes(extension)) {
-      this.error.set("Ce type de fichier n'est pas autorisé.");
+      this.error.set('documents.errors.typeNotAllowed');
       return;
     }
 
@@ -127,7 +129,7 @@ export class UserDocumentsComponent implements OnInit, OnDestroy {
         this.reload();
       },
       error: () => {
-        this.error.set("Impossible d'envoyer ce document. Veuillez réessayer.");
+        this.error.set('documents.errors.uploadFailed');
         this.uploading.set(false);
       }
     });
@@ -157,36 +159,23 @@ export class UserDocumentsComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.pendingDeleteId.set(null);
-        this.error.set('Impossible de supprimer ce document. Veuillez réessayer.');
+        this.error.set('documents.errors.deleteFailed');
       }
     });
   }
 
+  /** The translation key for a status; '' when the document has none yet. */
   statusLabel(status: VerificationStatus | null): string {
-    switch (status) {
-      case 'PENDING':
-        return 'En attente';
-      case 'VERIFIED':
-        return 'Vérifié';
-      case 'REJECTED':
-        return 'Rejeté';
-      default:
-        return '';
-    }
+    return status ? `documents.status.${status}` : '';
   }
 
+  /**
+   * The translation key for a personal-document category. Any other category
+   * comes back as-is: it has no copy, and its raw name beats a missing key.
+   */
   categoryLabel(category: MediaCategory): string {
-    switch (category) {
-      case 'DIPLOMA':
-        return 'Diplôme';
-      case 'CERTIFICATE':
-        return 'Certificat';
-      case 'BULLETIN':
-        return 'Bulletin';
-      case 'PRESENTATION_VIDEO':
-        return 'Vidéo de présentation';
-      default:
-        return category;
-    }
+    return PERSONAL_DOCUMENT_CATEGORIES.includes(category)
+      ? `documents.category.${category}`
+      : category;
   }
 }
