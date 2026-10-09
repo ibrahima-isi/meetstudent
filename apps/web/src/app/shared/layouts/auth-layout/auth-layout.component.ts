@@ -4,8 +4,8 @@ import { LanguageSwitcherComponent } from '@shared/components/language-switcher/
 import { ThemeToggleComponent } from '@shared/components/theme-toggle/theme-toggle.component';
 
 /**
- * The gradient shell around login, register and verify. It was the same block
- * written three times in `app.html`; as a layout route it is written once and
+ * The gradient shell around login and register. It was the same block
+ * written twice in `app.html`; as a layout route it is written once and
  * the child route decides what fills it.
  */
 @Component({

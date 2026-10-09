@@ -43,10 +43,10 @@ describe('MediaService', () => {
   describe('resolveUrl', () => {
     // publicUrl is relative to the SERVER ROOT, not to /api/v1 — prefixing
     // apiUrl would produce a broken .../api/v1/uploads/... path.
-    it('prefixes a relative publicUrl with serverUrl, not apiUrl', () => {
+    it('prefixes a relative publicUrl with mediaBaseUrl, not apiUrl', () => {
       const url = service.resolveUrl(media({ publicUrl: '/uploads/public/logo.png' }));
 
-      expect(url).toBe(`${environment.serverUrl}/uploads/public/logo.png`);
+      expect(url).toBe(`${environment.mediaBaseUrl}/uploads/public/logo.png`);
       expect(url).not.toContain('/api/v1');
     });
 

@@ -27,14 +27,16 @@ export class MediaService {
   private apiUrl = `${environment.apiUrl}/media`;
 
   /**
-   * Absolute URL for a public media, or null when there is nothing to show.
+   * Browser-facing URL for a public media, or null when there is nothing to
+   * show. Same-origin by default (the proxy serves `/uploads/public/*`), and
+   * never the API's in-network address, even during SSR.
    * Absolute inputs are passed through so seeded/mock data keeps working.
    */
   resolveUrl(media?: Media | null): string | null {
     const path = media?.publicUrl;
     if (!path) return null;
     if (/^https?:\/\//i.test(path)) return path;
-    return `${environment.serverUrl}${path.startsWith('/') ? '' : '/'}${path}`;
+    return `${environment.mediaBaseUrl}${path.startsWith('/') ? '' : '/'}${path}`;
   }
 
   /** Upload a file. `idempotencyKey` makes retries safe (deduped per owner). */
