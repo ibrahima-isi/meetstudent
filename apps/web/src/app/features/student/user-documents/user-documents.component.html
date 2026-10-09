@@ -19,6 +19,15 @@
     />
   </div>
 
+  @if (uploadProgress() !== null) {
+    <div class="mb-4" role="progressbar" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="uploadProgress()">
+      <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+        <div class="h-full bg-indigo-600 transition-all" [style.width.%]="uploadProgress()"></div>
+      </div>
+      <p class="text-sm text-gray-600 mt-1">{{ 'documents.uploading' | transloco }} {{ uploadProgress() }}%</p>
+    </div>
+  }
+
   @if (loading()) {
     <div class="text-center py-8 text-gray-500">
       <p>{{ 'documents.loading' | transloco }}</p>
@@ -39,9 +48,20 @@
             <div>
               <div class="flex items-center gap-2">
                 <span class="text-gray-900 font-medium">{{ categoryLabel(doc.category) | transloco }}</span>
-                <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700">
-                  {{ statusLabel(doc.verificationStatus) | transloco }}
-                </span>
+                @if (doc.verificationStatus) {
+                  <span
+                    class="px-2 py-0.5 text-xs rounded-full"
+                    [attr.data-status]="doc.verificationStatus"
+                    [class.bg-amber-100]="doc.verificationStatus === 'PENDING'"
+                    [class.text-amber-800]="doc.verificationStatus === 'PENDING'"
+                    [class.bg-green-100]="doc.verificationStatus === 'VERIFIED'"
+                    [class.text-green-800]="doc.verificationStatus === 'VERIFIED'"
+                    [class.bg-red-100]="doc.verificationStatus === 'REJECTED'"
+                    [class.text-red-800]="doc.verificationStatus === 'REJECTED'"
+                  >
+                    {{ statusLabel(doc.verificationStatus) | transloco }}
+                  </span>
+                }
               </div>
               <p class="text-sm text-gray-500">{{ doc.originalFilename }}</p>
               @if (doc.verificationStatus === 'REJECTED') {

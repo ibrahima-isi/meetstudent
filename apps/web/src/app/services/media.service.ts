@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpEvent } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { Media, MediaCategory } from '@models/entities';
@@ -45,6 +45,23 @@ export class MediaService {
     return this.http.post<Media>(this.apiUrl, form, {
       params: { category },
       headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}
+    });
+  }
+
+  /** Same as `upload`, but emits progress events before the final response. */
+  uploadWithProgress(
+    file: File,
+    category: MediaCategory,
+    idempotencyKey?: string
+  ): Observable<HttpEvent<Media>> {
+    const form = new FormData();
+    form.append('file', file);
+
+    return this.http.post<Media>(this.apiUrl, form, {
+      params: { category },
+      headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {},
+      reportProgress: true,
+      observe: 'events'
     });
   }
 
