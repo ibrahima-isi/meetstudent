@@ -71,6 +71,12 @@ describe('routes', () => {
     expect(harness.routeNativeElement?.textContent).toContain('404');
   });
 
+  it('has no /verify screen: registration goes straight to login', async () => {
+    await harness.navigateByUrl('/fr/verify');
+
+    expect(harness.routeNativeElement?.textContent).toContain('404');
+  });
+
   it('keeps both locales addressable for the same screen', async () => {
     await harness.navigateByUrl('/en/login');
     expect(TestBed.inject(Router).url).toBe('/en/login');

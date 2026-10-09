@@ -7,6 +7,7 @@ import { provideTransloco, TranslocoService } from '@jsverse/transloco';
 import { firstValueFrom } from 'rxjs';
 import { translocoOptions } from '@i18n/transloco.config';
 import { RegisterFormComponent } from './register-form.component';
+import { Router } from '@angular/router';
 import { environment } from '../../../../environments/environment';
 
 /**
@@ -72,6 +73,22 @@ describe('RegisterFormComponent registration payload', () => {
     expect(req.request.body.lastname).toBe('Diop');
     expect(req.request.body.email).toBe('awa@example.com');
     req.flush({});
+  });
+
+  // Launch scope: the backend has no email verification, so a successful
+  // signup goes straight to login, carrying a flag for the success notice.
+  it('goes straight to login after a successful registration', () => {
+    const navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    fillValidForm();
+    component.handleSubmit();
+
+    httpMock.expectOne(`${environment.apiUrl}/users`).flush({});
+
+    expect(navigate).toHaveBeenCalledTimes(1);
+    const [commands, extras] = navigate.calls.mostRecent().args;
+    expect((commands as string[]).at(-1)).toBe('login');
+    expect(commands).not.toContain('verify');
+    expect(extras).toEqual({ queryParams: { registered: '1' } });
   });
 
   // Opposite of the rule: role must NOT be client-controlled. Registration

@@ -12,6 +12,19 @@ ng serve
 
 Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
 
+The browser bundle calls the API with relative URLs (`/api/v1/...`, `/uploads/...`). Under `ng serve`, `proxy.conf.json` forwards `/api` and `/uploads` to the API on `http://localhost:8080`, so start the API first. In production a reverse proxy does the same on a single origin.
+
+## Production runtime (SSR container)
+
+Server-side rendering has no page origin, so the container needs the API's in-network address:
+
+| Variable | Example | Purpose |
+| --- | --- | --- |
+| `API_URL` | `http://api:8080/api/v1` | REST base used while rendering on the server |
+| `SERVER_URL` | `http://api:8080` | API server root used while rendering on the server |
+| `ALLOWED_HOSTS` | `meetstudent.example.com` | Comma-separated hostnames SSR will render for (default `localhost,web`) |
+| `PORT` | `4200` | Listening port |
+
 ## Code scaffolding
 
 Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
