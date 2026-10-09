@@ -10,8 +10,8 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import org.springframework.http.MediaType;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -68,5 +68,89 @@ class ErrorMappingIntegrationTests {
         mockMvc.perform(get("/api/v1/does-not-exist").with(TestDataUtil.mockUser("ROLE_STUDENT")))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404));
+    }
+
+    private MockMultipartFile pdf() {
+        return new MockMultipartFile("file", "d.pdf", "application/pdf",
+                new byte[]{'%', 'P', 'D', 'F', '-', '1', '.', '4', '\n', ' '});
+    }
+
+    @Test
+    void invalidCategoryIs400NamingAllowedValues() throws Exception {
+        mockMvc.perform(multipart("/api/v1/media").file(pdf()).param("category", "NOPE")
+                        .with(TestDataUtil.mockUser(7, "ROLE_STUDENT")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("DIPLOMA")))
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("SCHOOL_LOGO")));
+    }
+
+    @Test
+    void missingFilePartIs400() throws Exception {
+        mockMvc.perform(multipart("/api/v1/media").param("category", "DIPLOMA")
+                        .with(TestDataUtil.mockUser(7, "ROLE_STUDENT")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("file")));
+    }
+
+    @Test
+    void missingCategoryIs400() throws Exception {
+        mockMvc.perform(multipart("/api/v1/media").file(pdf())
+                        .with(TestDataUtil.mockUser(7, "ROLE_STUDENT")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("category")));
+    }
+
+    @Test
+    void jsonBodyOnUploadIs415() throws Exception {
+        mockMvc.perform(post("/api/v1/media?category=DIPLOMA").contentType(MediaType.APPLICATION_JSON)
+                        .content("{}").with(TestDataUtil.mockUser(7, "ROLE_STUDENT")))
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(jsonPath("$.status").value(415));
+    }
+
+    @Test
+    void nonNumericSchoolIdIs400() throws Exception {
+        mockMvc.perform(get("/api/v1/schools/abc"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("id")));
+    }
+
+    @Test
+    void malformedJsonIs400() throws Exception {
+        mockMvc.perform(post("/api/v1/schools").contentType(MediaType.APPLICATION_JSON)
+                        .content("{not json").with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
+    void emptyBodyIs400() throws Exception {
+        mockMvc.perform(post("/api/v1/schools").contentType(MediaType.APPLICATION_JSON)
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void textPlainBodyIs415() throws Exception {
+        mockMvc.perform(post("/api/v1/schools").contentType(MediaType.TEXT_PLAIN)
+                        .content("hello").with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(jsonPath("$.status").value(415));
+    }
+
+    @Test
+    void putOnAuthIs405() throws Exception {
+        mockMvc.perform(put("/api/v1/auth"))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(jsonPath("$.status").value(405));
+    }
+
+    @Test
+    void deleteOnSchoolsCollectionIs405() throws Exception {
+        mockMvc.perform(delete("/api/v1/schools").with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(jsonPath("$.status").value(405));
     }
 }

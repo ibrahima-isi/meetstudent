@@ -1,6 +1,15 @@
 package com.bowe.meetstudent.exceptions;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -14,6 +23,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -105,6 +115,63 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.NOT_FOUND, "Resource not found", request);
     }
 
+    /**
+     * Unauthenticated access to a resource that requires authentication (401).
+     */
+    @ExceptionHandler(org.springframework.security.core.AuthenticationException.class)
+    public ResponseEntity<ErrorResponse> handleAuthenticationException(
+            org.springframework.security.core.AuthenticationException ex, WebRequest request) {
+        return build(HttpStatus.UNAUTHORIZED, "Authentication required", request);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatch(
+            MethodArgumentTypeMismatchException ex, WebRequest request) {
+        Class<?> required = ex.getRequiredType();
+        String message;
+        if (required != null && required.isEnum()) {
+            String allowed = Arrays.stream(required.getEnumConstants())
+                    .map(c -> ((Enum<?>) c).name()).collect(Collectors.joining(", "));
+            message = "Invalid value '" + ex.getValue() + "' for parameter '" + ex.getName()
+                    + "'. Allowed values: " + allowed;
+        } else {
+            message = "Invalid value '" + ex.getValue() + "' for parameter '" + ex.getName() + "'"
+                    + (required != null ? ": expected " + required.getSimpleName() : "");
+        }
+        return build(HttpStatus.BAD_REQUEST, message, request);
+    }
+
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    public ResponseEntity<ErrorResponse> handleMissingPart(
+            MissingServletRequestPartException ex, WebRequest request) {
+        return build(HttpStatus.BAD_REQUEST, "Required part '" + ex.getRequestPartName() + "' is missing", request);
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ErrorResponse> handleMissingParameter(
+            MissingServletRequestParameterException ex, WebRequest request) {
+        return build(HttpStatus.BAD_REQUEST, "Required parameter '" + ex.getParameterName() + "' is missing", request);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleNotReadable(
+            HttpMessageNotReadableException ex, WebRequest request) {
+        return build(HttpStatus.BAD_REQUEST, "Request body is missing or malformed", request);
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMediaTypeNotSupported(
+            HttpMediaTypeNotSupportedException ex, WebRequest request) {
+        return build(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "Content type '" + ex.getContentType()
+                + "' is not supported. Supported: " + ex.getSupportedMediaTypes(), request);
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMethodNotSupported(
+            HttpRequestMethodNotSupportedException ex, WebRequest request) {
+        return build(HttpStatus.METHOD_NOT_ALLOWED, "Method '" + ex.getMethod() + "' is not supported for this endpoint", request);
+    }
+
     private ResponseEntity<ErrorResponse> build(HttpStatus status, String message, WebRequest request) {
         ErrorResponse errorResponse = new ErrorResponse(
                 LocalDateTime.now(),
@@ -122,6 +189,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGlobalException(
             Exception ex, WebRequest request) {
+        log.error("Unexpected error on {}", request.getDescription(false), ex);
         ErrorResponse errorResponse = new ErrorResponse(
                 LocalDateTime.now(),
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),

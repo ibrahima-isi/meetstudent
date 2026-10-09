@@ -224,15 +224,30 @@ public class MediaService {
         }
     }
 
+    /**
+     * Resolves a media row the caller may read. Existence is not leaked: an anonymous caller gets
+     * 401 for anything that is not public media (private or unknown), and an authenticated
+     * non-admin gets 403 for private media they do not own and for unknown ids alike.
+     */
     public Media getAccessibleMedia(Integer mediaId, UserPrincipal principal) {
-        Media media = mediaRepository.findById(mediaId)
-                .orElseThrow(() -> new ResourceNotFoundException("Media not found"));
+        Optional<Media> found = mediaRepository.findById(mediaId);
 
-        if (media.getVisibility() == com.bowe.meetstudent.entities.enums.MediaVisibility.PUBLIC) {
-            return media;
+        if (found.isPresent()
+                && found.get().getVisibility() == com.bowe.meetstudent.entities.enums.MediaVisibility.PUBLIC) {
+            return found.get();
         }
-        boolean owner = principal != null && principal.getId() != null
-                && principal.getId().equals(media.getOwnerId());
+        if (principal == null) {
+            throw new org.springframework.security.authentication.InsufficientAuthenticationException(
+                    "Authentication required.");
+        }
+        if (found.isEmpty()) {
+            if (isAdmin(principal)) {
+                throw new ResourceNotFoundException("Media not found");
+            }
+            throw new AccessDeniedException("You cannot access this document.");
+        }
+        Media media = found.get();
+        boolean owner = principal.getId() != null && principal.getId().equals(media.getOwnerId());
         if (owner || isAdmin(principal)) {
             return media;
         }

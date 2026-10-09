@@ -19,6 +19,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.validation.annotation.Validated;
+import com.bowe.meetstudent.dto.validation.OnCreate;
+import jakarta.validation.groups.Default;
+
 
 import java.util.Optional;
 
@@ -38,7 +42,7 @@ public class CourseController {
     @Operation(summary = "Create a new course", description = "Adds a new course to the system, optionally linking it to a program.")
     @ApiResponse(responseCode = "201", description = "Course created successfully")
     @ApiResponse(responseCode = "400", description = "Invalid Program ID or input data")
-    public ResponseEntity<CourseDTO> create(@RequestBody CourseDTO courseDTO) {
+    public ResponseEntity<CourseDTO> create(@RequestBody @Validated({Default.class, OnCreate.class}) CourseDTO courseDTO) {
         Course course = courseMapper.toEntity(courseDTO);
         
         if (courseDTO.getProgramId() != null) {
@@ -113,7 +117,7 @@ public class CourseController {
     @ApiResponse(responseCode = "404", description = "Course not found")
     @ApiResponse(responseCode = "400", description = "Invalid Program ID")
     public ResponseEntity<CourseDTO> update(
-            @RequestBody CourseDTO newCourseDTO,
+            @RequestBody @Validated CourseDTO newCourseDTO,
             @Parameter(description = "ID of the course to update") @PathVariable int id) {
         
         Course updates = courseMapper.toEntity(newCourseDTO);
@@ -133,7 +137,7 @@ public class CourseController {
     @ApiResponse(responseCode = "404", description = "Course not found")
     @ApiResponse(responseCode = "400", description = "Invalid Program ID")
     public ResponseEntity<CourseDTO> patch(
-            @RequestBody CourseDTO courseDTO,
+            @RequestBody @Validated CourseDTO courseDTO,
             @Parameter(description = "ID of the course to patch") @PathVariable int id) {
         
         Course updates = courseMapper.toEntity(courseDTO);

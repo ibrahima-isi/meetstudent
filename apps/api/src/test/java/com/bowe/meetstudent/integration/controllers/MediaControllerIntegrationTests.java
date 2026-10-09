@@ -85,6 +85,36 @@ class MediaControllerIntegrationTests {
     }
 
     @Test
+    void anonymousCanDownloadPublicMedia() throws Exception {
+        String body = mockMvc.perform(multipart("/api/v1/media")
+                        .file(new MockMultipartFile("file", "logo.png", "image/png", PNG))
+                        .param("category", "SCHOOL_LOGO")
+                        .with(TestDataUtil.mockUser(99, "ROLE_ADMIN")))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        int id = objectMapper.readTree(body).get("id").asInt();
+
+        mockMvc.perform(get("/api/v1/media/" + id)).andExpect(status().isOk());
+    }
+
+    @Test
+    void anonymousGetOfPrivateMediaIs401() throws Exception {
+        int id = uploadDiplomaAs(7);
+        mockMvc.perform(get("/api/v1/media/" + id)).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void anonymousGetOfUnknownMediaIs401LikePrivate() throws Exception {
+        mockMvc.perform(get("/api/v1/media/987654")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void studentGetOfUnknownMediaIs403LikeForbidden() throws Exception {
+        mockMvc.perform(get("/api/v1/media/987654").with(TestDataUtil.mockUser(8, "ROLE_STUDENT")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void adminCanDownloadPrivateDocument() throws Exception {
         int id = uploadDiplomaAs(7);
         mockMvc.perform(get("/api/v1/media/" + id).with(TestDataUtil.mockUser(99, "ROLE_ADMIN")))

@@ -15,12 +15,17 @@ public class ProgramMapper implements Mapper<Program, ProgramDTO> {
     private final ModelMapper modelMapper;
     private final MediaService mediaService;
     private final MediaMapper mediaMapper;
+    private final CourseMapper courseMapper;
 
     @Override
     public ProgramDTO toDTO(Program program) {
         ProgramDTO dto = modelMapper.map(program, ProgramDTO.class);
         dto.setPhotoMediaId(program.getPhotoMediaId());
         dto.setPhoto(mediaService.findById(program.getPhotoMediaId()).map(mediaMapper::toDTO).orElse(null));
+        // ModelMapper only builds a stub photo (id) for nested courses; map them fully.
+        if (program.getCourses() != null) {
+            dto.setCourses(program.getCourses().stream().map(courseMapper::toDTO).toList());
+        }
         return dto;
     }
 
