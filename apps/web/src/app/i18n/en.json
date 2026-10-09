@@ -184,7 +184,9 @@
   "rating": {
     "commentPlaceholder": "Add a comment (optional)...",
     "submit": "Post my review",
-    "submitting": "Sending..."
+    "submitting": "Sending...",
+    "thanks": "Thanks, your rating was saved.",
+    "error": "Your rating could not be saved. Please try again."
   },
   "profile": {
     "back": "Back",

@@ -1,4 +1,4 @@
-import { Component, input, output, signal, inject } from '@angular/core';
+import { Component, input, output, signal, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule, Star, MessageSquare } from 'lucide-angular';
@@ -23,9 +23,9 @@ import { TranslocoPipe } from '@jsverse/transloco';
             (click)="handleRate(value)"
             (mouseenter)="handleMouseEnter(value)"
             (mouseleave)="handleMouseLeave()"
-            [disabled]="readonly()"
+            [disabled]="locked()"
             class="transition-transform outline-none"
-            [class]="readonly() ? 'cursor-default' : 'cursor-pointer hover:scale-110 focus:scale-110'"
+            [class]="locked() ? 'cursor-default' : 'cursor-pointer hover:scale-110 focus:scale-110'"
           >
             <lucide-icon
               [img]="Star"
@@ -39,7 +39,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
         }
       </div>
 
-      @if (!readonly() && showCommentInput() && rating() > 0) {
+      @if (!readonly() && !submitted() && showCommentInput() && rating() > 0) {
         <div class="flex flex-col gap-2 animate-in fade-in slide-in-from-top-1">
           <textarea
             [(ngModel)]="comment"
@@ -55,6 +55,14 @@ import { TranslocoPipe } from '@jsverse/transloco';
             {{ (isSubmitting() ? 'rating.submitting' : 'rating.submit') | transloco }}
           </button>
         </div>
+      }
+
+      @if (submitted()) {
+        <p data-testid="rating-done" role="status" class="text-sm font-medium text-green-700">{{ 'rating.thanks' | transloco }}</p>
+      }
+
+      @if (failed()) {
+        <p data-testid="rating-error" role="alert" class="text-sm font-medium text-red-700">{{ 'rating.error' | transloco }}</p>
       }
     </div>
   `
@@ -76,6 +84,11 @@ export class StarRatingComponent {
   hoverRating = signal<number>(0);
   comment = signal<string>('');
   isSubmitting = signal(false);
+  /** True once the API accepted the rating: the widget then stays read-only. */
+  submitted = signal(false);
+  /** True after a failed request, until the next attempt. */
+  failed = signal(false);
+  protected locked = computed(() => this.readonly() || this.submitted());
 
   readonly Star = Star;
   readonly MessageSquare = MessageSquare;
@@ -87,7 +100,7 @@ export class StarRatingComponent {
   }
 
   handleRate(value: number) {
-    if (this.readonly()) return;
+    if (this.locked()) return;
     this.rating.set(value);
     if (!this.showCommentInput()) {
       this.submitRating();
@@ -96,7 +109,7 @@ export class StarRatingComponent {
 
   submitRating() {
     const note = this.rating();
-    if (note === 0) return;
+    if (note === 0 || this.isSubmitting() || this.submitted()) return;
 
     const user = this.tokenService.user();
     if (!user || !user.id) {
@@ -104,6 +117,7 @@ export class StarRatingComponent {
       return;
     }
 
+    this.failed.set(false);
     this.isSubmitting.set(true);
     const userId = user.id;
     const commentText = this.comment();
@@ -117,24 +131,25 @@ export class StarRatingComponent {
     obs.subscribe({
       next: () => {
         this.isSubmitting.set(false);
+        this.submitted.set(true);
         this.onRate.emit({ note, comment: commentText });
       },
       error: () => {
+        // Not reported to the parent: the rating was not saved.
         this.isSubmitting.set(false);
-        // Fallback or error handling
-        this.onRate.emit({ note, comment: commentText });
+        this.failed.set(true);
       }
     });
   }
 
   handleMouseEnter(value: number) {
-    if (!this.readonly()) {
+    if (!this.locked()) {
       this.hoverRating.set(value);
     }
   }
 
   handleMouseLeave() {
-    if (!this.readonly()) {
+    if (!this.locked()) {
       this.hoverRating.set(0);
     }
   }

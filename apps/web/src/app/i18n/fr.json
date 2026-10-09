@@ -184,7 +184,9 @@
   "rating": {
     "commentPlaceholder": "Ajouter un commentaire (optionnel)...",
     "submit": "Publier mon avis",
-    "submitting": "Envoi..."
+    "submitting": "Envoi...",
+    "thanks": "Merci, votre avis a été enregistré.",
+    "error": "Votre avis n'a pas pu être enregistré. Veuillez réessayer."
   },
   "profile": {
     "back": "Retour",
