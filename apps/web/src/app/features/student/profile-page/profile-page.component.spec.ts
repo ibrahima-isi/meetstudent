@@ -18,6 +18,7 @@ describe('ProfilePageComponent translations', () => {
   let user: ReturnType<typeof signal<Partial<User> | null>>;
   let saved: ReturnType<typeof signal<unknown[]>>;
   let toggle: jasmine.Spy;
+  let setUser: jasmine.Spy;
 
   function text(): string {
     return (fixture.nativeElement as HTMLElement).textContent ?? '';
@@ -38,6 +39,7 @@ describe('ProfilePageComponent translations', () => {
   beforeEach(() => {
     saved = signal<unknown[]>([]);
     toggle = jasmine.createSpy('toggle');
+    setUser = jasmine.createSpy('setUser');
     user = signal<Partial<User> | null>({ firstname: 'Awa', lastname: '', email: '', role: { name: 'ROLE_STUDENT' } });
 
     TestBed.configureTestingModule({
@@ -48,7 +50,7 @@ describe('ProfilePageComponent translations', () => {
         provideHttpClientTesting(),
         provideRouter([]),
         provideTransloco(translocoOptions),
-        { provide: TokenService, useValue: { user } },
+        { provide: TokenService, useValue: { user, setUser } },
         { provide: WishlistService, useValue: { schools: saved, load: () => {}, toggle } },
       ],
     });
@@ -172,5 +174,175 @@ describe('ProfilePageComponent translations', () => {
     await render('en');
 
     expect(readOnlyBac()).toBe('Licence 2');
+  });
+
+  describe('saving', () => {
+    const url = `${environment.apiUrl}/users/5`;
+    let http: HttpTestingController;
+
+    function field(selector: string): HTMLInputElement {
+      return fixture.nativeElement.querySelector(selector) as HTMLInputElement;
+    }
+
+    function type(selector: string, value: string): void {
+      const input = field(selector);
+      input.value = value;
+      input.dispatchEvent(new Event('input'));
+    }
+
+    async function settle() {
+      fixture.detectChanges();
+      await fixture.whenStable();
+    }
+
+    async function edit(role = 'ROLE_STUDENT'): Promise<void> {
+      user.set({ id: 5, firstname: 'Awa', lastname: 'Diop', email: 'awa@example.com', role: { name: role } });
+      await render('en');
+      http = TestBed.inject(HttpTestingController);
+      fixture.componentInstance.isEditing.set(true);
+      await settle();
+    }
+
+    function save(): void {
+      (fixture.nativeElement.querySelector('[data-testid="profile-save"]') as HTMLButtonElement).click();
+    }
+
+    it('PATCHes the edited fields to the API, without a password when it is left empty', async () => {
+      await edit();
+      type('[data-testid="profile-firstname"]', 'Awa Marie');
+
+      save();
+
+      const req = http.expectOne(url);
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body).toEqual({
+        firstname: 'Awa Marie',
+        lastname: 'Diop',
+        email: 'awa@example.com',
+        qualification: '',
+      });
+      req.flush({ id: 5, firstname: 'Awa Marie', lastname: 'Diop', email: 'awa@example.com', role: { name: 'ROLE_STUDENT' } });
+    });
+
+    it('stores the saved user, leaves edit mode and says so', async () => {
+      await edit();
+      type('[data-testid="profile-firstname"]', 'Awa Marie');
+      save();
+
+      http.expectOne(url).flush({ id: 5, firstname: 'Awa Marie', lastname: 'Diop', email: 'awa@example.com', role: { name: 'ROLE_STUDENT' } });
+      await settle();
+
+      expect(setUser).toHaveBeenCalledWith(jasmine.objectContaining({ id: 5, firstname: 'Awa Marie' }));
+      expect(fixture.componentInstance.isEditing()).toBeFalse();
+      expect(text()).toContain('Awa Marie');
+      expect(text()).toContain('Profile updated.');
+    });
+
+    it('sends a new password when one is typed', async () => {
+      await edit();
+      type('[data-testid="profile-password"]', 'n3wpassword');
+
+      save();
+
+      const req = http.expectOne(url);
+      expect(req.request.body.password).toBe('n3wpassword');
+      req.flush({ id: 5, firstname: 'Awa', lastname: 'Diop', email: 'awa@example.com', role: { name: 'ROLE_STUDENT' } });
+    });
+
+    it('does not call the API for a password under 8 characters, and says why', async () => {
+      await edit();
+      type('[data-testid="profile-password"]', 'short');
+
+      save();
+      await settle();
+
+      http.expectNone(url);
+      expect(text()).toContain('at least 8 characters');
+      expect(fixture.componentInstance.isEditing()).toBeTrue();
+    });
+
+    it('does not call the API when a required field is empty', async () => {
+      await edit();
+      type('[data-testid="profile-firstname"]', '');
+
+      save();
+      await settle();
+
+      http.expectNone(url);
+      expect(text()).toContain('This field is required.');
+    });
+
+    it('shows the API message under the field it names and stays in edit mode', async () => {
+      await edit();
+      save();
+
+      http.expectOne(url).flush({ email: 'Cet email est déjà utilisé' }, { status: 400, statusText: 'Bad Request' });
+      await settle();
+
+      const message = fixture.nativeElement.querySelector('[data-testid="profile-error-email"]') as HTMLElement;
+      expect(message.textContent).toContain('Cet email est déjà utilisé');
+      expect(text()).toContain('Please correct the highlighted fields.');
+      expect(setUser).not.toHaveBeenCalled();
+      expect(fixture.componentInstance.isEditing()).toBeTrue();
+    });
+
+    it('drops the API message when the field is edited', async () => {
+      await edit();
+      save();
+      http.expectOne(url).flush({ email: 'Cet email est déjà utilisé' }, { status: 400, statusText: 'Bad Request' });
+      await settle();
+
+      type('[data-testid="profile-email"]', 'other@example.com');
+      await settle();
+
+      expect(fixture.nativeElement.querySelector('[data-testid="profile-error-email"]')).toBeNull();
+    });
+
+    it('shows a translated failure for any other error, keeping the edits', async () => {
+      await edit();
+      save();
+
+      http.expectOne(url).flush({ message: 'boom' }, { status: 500, statusText: 'Server Error' });
+      await settle();
+
+      expect(text()).toContain('Could not save your profile. Please try again.');
+      expect(text()).not.toContain('boom');
+      expect(fixture.componentInstance.isEditing()).toBeTrue();
+      expect(field('[data-testid="profile-firstname"]').value).toBe('Awa');
+    });
+
+    it('disables the save button while the request is in flight', async () => {
+      await edit();
+      save();
+      await settle();
+
+      const button = fixture.nativeElement.querySelector('[data-testid="profile-save"]') as HTMLButtonElement;
+      expect(button.disabled).toBeTrue();
+      expect(button.textContent).toContain('Saving...');
+
+      http.expectOne(url).flush({ id: 5, firstname: 'Awa', lastname: 'Diop', email: 'awa@example.com', role: { name: 'ROLE_STUDENT' } });
+    });
+
+    it('saves an expert specialty as the qualification', async () => {
+      await edit('ROLE_EXPERT');
+      type('[data-testid="profile-qualification"]', 'Physics');
+
+      save();
+
+      const req = http.expectOne(url);
+      expect(req.request.body.qualification).toBe('Physics');
+      req.flush({ id: 5, firstname: 'Awa', lastname: 'Diop', email: 'awa@example.com', qualification: 'Physics', role: { name: 'ROLE_EXPERT' } });
+    });
+
+    it('puts the saved values back when the edit is cancelled', async () => {
+      await edit();
+      type('[data-testid="profile-firstname"]', 'Changed');
+
+      (fixture.nativeElement.querySelector('[data-testid="profile-cancel"]') as HTMLButtonElement).click();
+      fixture.componentInstance.isEditing.set(true);
+      await settle();
+
+      expect(field('[data-testid="profile-firstname"]').value).toBe('Awa');
+    });
   });
 });

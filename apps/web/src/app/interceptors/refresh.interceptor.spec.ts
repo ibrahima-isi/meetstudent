@@ -1,5 +1,7 @@
 import { TestBed } from '@angular/core/testing';
-import { provideZonelessChangeDetection } from '@angular/core';
+import { provideZonelessChangeDetection, signal } from '@angular/core';
+import { Router, provideRouter } from '@angular/router';
+import { LocaleService } from '@services/locale.service';
 import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { AuthService } from '@services/auth.service';
@@ -13,14 +15,20 @@ describe('refreshInterceptor', () => {
   let backend: HttpTestingController;
   let tokens: TokenService;
   let auth: AuthService;
+  let router: Router;
+  let navigate: jasmine.Spy;
+  let activeLocale: ReturnType<typeof signal<'fr' | 'en'>>;
 
   const refreshUrl = `${environment.apiUrl}/auth/refresh`;
 
   beforeEach(() => {
     localStorage.clear();
+    activeLocale = signal<'fr' | 'en'>('fr');
     TestBed.configureTestingModule({
       providers: [
         provideZonelessChangeDetection(),
+        provideRouter([]),
+        { provide: LocaleService, useValue: { active: activeLocale } },
         provideHttpClient(withInterceptors([jwtInterceptor, refreshInterceptor])),
         provideHttpClientTesting(),
       ],
@@ -29,6 +37,8 @@ describe('refreshInterceptor', () => {
     backend = TestBed.inject(HttpTestingController);
     tokens = TestBed.inject(TokenService);
     auth = TestBed.inject(AuthService);
+    router = TestBed.inject(Router);
+    navigate = spyOn(router, 'navigate').and.resolveTo(true);
     tokens.setTokens('old-access', 'old-refresh');
   });
 
@@ -125,5 +135,70 @@ describe('refreshInterceptor', () => {
     backend.expectOne('/api/data').flush(null, { status: 500, statusText: 'Server Error' });
 
     expect(status).toBe(500);
+  });
+
+  describe('after a failed refresh', () => {
+    function failRefresh(): void {
+      http.get('/api/data').subscribe({ error: () => undefined });
+      backend.expectOne('/api/data').flush(null, { status: 401, statusText: 'Unauthorized' });
+      backend.expectOne(refreshUrl).flush(null, { status: 401, statusText: 'Unauthorized' });
+    }
+
+    it('sends the visitor to the login of the active locale, remembering the page', () => {
+      spyOnProperty(router, 'url').and.returnValue('/fr/schools/7');
+
+      failRefresh();
+
+      expect(tokens.token()).toBeNull();
+      expect(navigate).toHaveBeenCalledOnceWith(['/', 'fr', 'login'], {
+        queryParams: { returnUrl: '/fr/schools/7' },
+      });
+    });
+
+    it('uses the locale being read', () => {
+      activeLocale.set('en');
+      spyOnProperty(router, 'url').and.returnValue('/en/profile');
+
+      failRefresh();
+
+      expect(navigate.calls.mostRecent().args[0]).toEqual(['/', 'en', 'login']);
+    });
+
+    it('does not remember the login screen itself as the page to return to', () => {
+      spyOnProperty(router, 'url').and.returnValue('/fr/login?registered=1');
+
+      failRefresh();
+
+      expect(navigate).toHaveBeenCalledOnceWith(['/', 'fr', 'login'], undefined);
+    });
+
+    it('navigates once for a burst of concurrent 401s', () => {
+      http.get('/api/a').subscribe({ error: () => undefined });
+      http.get('/api/b').subscribe({ error: () => undefined });
+      backend.expectOne('/api/a').flush(null, { status: 401, statusText: 'Unauthorized' });
+      backend.expectOne('/api/b').flush(null, { status: 401, statusText: 'Unauthorized' });
+
+      backend.expectOne(refreshUrl).flush(null, { status: 401, statusText: 'Unauthorized' });
+
+      expect(navigate).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not navigate when the refresh succeeds', () => {
+      http.get('/api/data').subscribe();
+      backend.expectOne('/api/data').flush(null, { status: 401, statusText: 'Unauthorized' });
+      backend.expectOne(refreshUrl).flush({ accessToken: 'n', refreshToken: 'r' });
+      backend.expectOne('/api/data').flush({});
+
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('does not navigate for a visitor who was never signed in', () => {
+      tokens.clear();
+      http.get('/api/data').subscribe({ error: () => undefined });
+
+      backend.expectOne('/api/data').flush(null, { status: 401, statusText: 'Unauthorized' });
+
+      expect(navigate).not.toHaveBeenCalled();
+    });
   });
 });

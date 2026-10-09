@@ -79,7 +79,7 @@
         <span class="inline-block px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full mb-2 text-sm font-medium">
           {{ detail.type || t('common.defaultSchoolType') }}
         </span>
-        <h1 class="text-white mb-3 text-3xl md:text-4xl font-bold">{{ detail.name }}</h1>
+        <h1 class="text-white mb-3 text-2xl sm:text-3xl md:text-4xl font-bold line-clamp-2 break-words">{{ detail.name }}</h1>
         <div class="flex items-center gap-4 flex-wrap">
           <div class="flex items-center gap-2">
             <lucide-icon [img]="MapPin" class="w-5 h-5 text-indigo-300"></lucide-icon>
@@ -131,17 +131,6 @@
         <div class="space-y-4">
           <div class="flex items-center justify-between mb-4">
             <h2 class="text-foreground text-xl font-bold">{{ t('schoolDetail.programmes', { count: programs().length }) }}</h2>
-            
-            <div class="flex items-center gap-2">
-              <lucide-icon [img]="ArrowUpDown" class="w-4 h-4 text-muted-foreground"></lucide-icon>
-              <select
-                [(ngModel)]="sortBy"
-                class="bg-card text-foreground placeholder:text-muted-foreground px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              >
-                <option value="name">{{ t('schools.sortName') }}</option>
-                <option value="places">{{ t('schools.sortPlaces') }}</option>
-              </select>
-            </div>
           </div>
           
           @if (programsStatus() === 'loading') {

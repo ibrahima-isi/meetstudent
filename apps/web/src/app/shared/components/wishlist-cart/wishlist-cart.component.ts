@@ -13,13 +13,14 @@ import { pluralKey } from '@i18n/plural';
   selector: 'app-wishlist-cart',
   imports: [CommonModule, LucideAngularModule, TranslocoDirective, ErrorStateComponent],
   template: `
-    <div class="relative" *transloco="let t">
+    <div class="sm:relative" *transloco="let t">
       <button
         (click)="handleCartClick()"
-        class="relative flex items-center gap-2 px-4 py-2 text-foreground hover:bg-accent rounded-lg transition-colors cursor-pointer"
+        [attr.aria-label]="t('wishlist.button')"
+        class="relative flex items-center gap-2 px-3 sm:px-4 py-2 text-foreground hover:bg-accent rounded-lg transition-colors cursor-pointer"
       >
         <lucide-icon [img]="ShoppingCart" class="w-5 h-5"></lucide-icon>
-        <span>{{ t('wishlist.button') }}</span>
+        <span class="hidden sm:inline">{{ t('wishlist.button') }}</span>
         @if (isAuthenticated() && wishlist.schools().length > 0) {
           <span class="absolute -top-1 -right-1 w-5 h-5 bg-indigo-600 text-white rounded-full flex items-center justify-center text-xs">
             {{ wishlist.schools().length }}
@@ -30,7 +31,7 @@ import { pluralKey } from '@i18n/plural';
       @if (isOpen() && isAuthenticated()) {
         <div class="fixed inset-0 z-40" (click)="isOpen.set(false)"></div>
         
-        <div class="absolute left-0 top-full mt-2 w-96 bg-card rounded-xl shadow-xl border border-border z-50 max-h-[80vh] overflow-hidden flex flex-col">
+        <div class="absolute inset-x-4 top-full mt-2 sm:inset-x-auto sm:left-0 sm:w-96 bg-card rounded-xl shadow-xl border border-border z-50 max-h-[80vh] overflow-hidden flex flex-col">
           <div class="p-4 border-b border-border">
             <div class="flex items-center justify-between">
               <h3 class="text-foreground font-bold">{{ t('wishlist.title') }}</h3>
