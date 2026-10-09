@@ -96,7 +96,7 @@ const STATUS_CLASSES: Record<VerificationStatus, string> = {
                     <p class="mt-1 text-sm text-red-700">Motif : {{ item.rejectionReason }}</p>
                   }
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex flex-wrap items-center gap-2">
                   @if (item.verificationStatus; as s) {
                     <span class="rounded-full px-2.5 py-0.5 text-xs font-medium" [class]="statusClass(s)">
                       {{ statusLabel(s) }}
