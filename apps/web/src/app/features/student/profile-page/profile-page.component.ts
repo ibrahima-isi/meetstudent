@@ -7,6 +7,7 @@ import { LocaleService } from '@services/locale.service';
 import { TokenService } from '@services/token.service';
 import { WishlistService } from '@services/wishlist.service';
 import { User } from '@models/entities';
+import { ROLE_EXPERT, ROLE_STUDENT } from '@models/roles';
 import { ThemeToggleComponent } from '@shared/components/theme-toggle/theme-toggle.component';
 import { UserDocumentsComponent } from '../user-documents/user-documents.component';
 import { TranslocoDirective } from '@jsverse/transloco';
@@ -37,8 +38,11 @@ export class ProfilePageComponent implements OnInit {
     firstname: '',
     lastname: '',
     email: '',
-    role: { name: 'STUDENT' },
+    role: { name: ROLE_STUDENT },
   });
+
+  protected readonly isStudent = computed(() => this.profile().role?.name === ROLE_STUDENT);
+  protected readonly isExpert = computed(() => this.profile().role?.name === ROLE_EXPERT);
 
   editedProfile = signal<Partial<User>>({ ...this.profile() });
   isEditing = signal(false);

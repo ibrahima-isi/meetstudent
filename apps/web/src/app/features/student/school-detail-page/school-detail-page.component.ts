@@ -7,6 +7,7 @@ import { ImageWithFallbackComponent } from '@shared/components/image-with-fallba
 import { StarRatingComponent } from '@shared/components/star-rating/star-rating.component';
 import { ThemeToggleComponent } from '@shared/components/theme-toggle/theme-toggle.component';
 import { ErrorStateComponent } from '@shared/components/error-state/error-state.component';
+import { ROLE_EXPERT, ROLE_STUDENT } from '@models/roles';
 import { School, Program, Tag, Course } from '@models/entities';
 import { ProgramService } from '@services/program.service';
 import { SchoolService } from '@services/school.service';
@@ -49,9 +50,9 @@ export class SchoolDetailPageComponent {
   readonly isAuthenticated = computed(() => this.tokenService.isAuthenticated());
   private readonly roleName = computed(() => this.tokenService.user()?.role?.name);
   /** Mirrors the API: students and experts rate schools. */
-  readonly canRateSchool = computed(() => this.roleName() === 'ROLE_STUDENT' || this.roleName() === 'ROLE_EXPERT');
+  readonly canRateSchool = computed(() => this.roleName() === ROLE_STUDENT || this.roleName() === ROLE_EXPERT);
   /** Mirrors the API: only experts rate programmes and courses. */
-  readonly canRateProgramAndCourse = computed(() => this.roleName() === 'ROLE_EXPERT');
+  readonly canRateProgramAndCourse = computed(() => this.roleName() === ROLE_EXPERT);
 
   readonly ArrowLeft = ArrowLeft;
   readonly MapPin = MapPin;
