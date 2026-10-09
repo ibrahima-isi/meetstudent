@@ -1,6 +1,7 @@
 import { Component, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { LucideAngularModule, Mail, Lock, User as UserIcon, AlertCircle, UserPlus, GraduationCap, MapPin, Users, BookOpen } from 'lucide-angular';
 import { TranslocoDirective } from '@jsverse/transloco';
@@ -14,6 +15,19 @@ const SENEGAL_SPECIALTIES = [
   'Informatique', 'Arts Plastiques', 'Musique', 'Arabe', 'Espagnol', 'Allemand',
   'Sciences Physiques', 'Biologie', 'Chimie', 'Lettres Modernes', 'Lettres Classiques',
 ];
+
+/**
+ * Where each field of the API's 400 body (`{ field: message }`) shows up.
+ * The confirmation control is named `confirmPassword`, the API calls it
+ * `confirmedPassword`.
+ */
+const API_FIELDS: Record<string, { step: 1 | 2; control: string }> = {
+  firstname: { step: 1, control: 'firstname' },
+  lastname: { step: 1, control: 'lastname' },
+  email: { step: 1, control: 'email' },
+  password: { step: 2, control: 'password' },
+  confirmedPassword: { step: 2, control: 'confirmPassword' },
+};
 
 @Component({
   selector: 'app-register-form',
@@ -43,6 +57,8 @@ export class RegisterFormComponent {
   /** A translation key, not a sentence, so a language switch re-renders it. */
   error = signal('');
   isLoading = signal(false);
+  /** Messages from the API's 400 body, by API field name. */
+  protected readonly serverErrors = signal<Record<string, string>>({});
 
   step1Form: FormGroup;
   step2Form: FormGroup;
@@ -67,6 +83,55 @@ export class RegisterFormComponent {
     this.step1Form.get('specialty')?.valueChanges.subscribe(value => {
       this.handleSpecialtyChange(value || '');
     });
+    this.clearServerErrorOnEdit();
+  }
+
+  /** The message the API attached to a field, if any. */
+  protected fieldError(field: string): string | null {
+    return this.serverErrors()[field] ?? null;
+  }
+
+  /**
+   * Keeps the API's per-field messages in a signal rather than on the controls:
+   * a control's errors are recomputed when its input is re-created (going back
+   * to step 1 rebuilds the inputs), which would silently drop them. Returns
+   * whether any landed: unknown keys (or a body that is not a field map) fall
+   * back to the generic failure text.
+   */
+  private applyFieldErrors(body: unknown): boolean {
+    if (!body || typeof body !== 'object') {
+      return false;
+    }
+
+    const messages: Record<string, string> = {};
+    let firstStep: 1 | 2 | null = null;
+    for (const [field, message] of Object.entries(body)) {
+      const target = API_FIELDS[field];
+      if (!target || typeof message !== 'string') {
+        continue;
+      }
+      messages[field] = message;
+      firstStep = firstStep === null ? target.step : (Math.min(firstStep, target.step) as 1 | 2);
+    }
+
+    if (firstStep === null) {
+      return false;
+    }
+    this.serverErrors.set(messages);
+    this.step.set(firstStep);
+    return true;
+  }
+
+  /** Editing a field drops the message the API attached to it. */
+  private clearServerErrorOnEdit(): void {
+    for (const [field, { step, control }] of Object.entries(API_FIELDS)) {
+      const form = step === 1 ? this.step1Form : this.step2Form;
+      form.get(control)?.valueChanges.subscribe(() => {
+        if (this.serverErrors()[field] !== undefined) {
+          this.serverErrors.update(({ [field]: _dropped, ...rest }) => rest);
+        }
+      });
+    }
   }
 
   setUserType(type: 'student' | 'teacher') {
@@ -141,6 +206,7 @@ export class RegisterFormComponent {
       return;
     }
 
+    this.serverErrors.set({});
     this.isLoading.set(true);
 
     const email = this.step1Form.value.email;
@@ -167,9 +233,11 @@ export class RegisterFormComponent {
           queryParams: { registered: '1' },
         });
       },
-      // The API's message is for logs only; the user reads the front's own text.
-      error: () => {
-        this.error.set('auth.register.failed');
+      // Field messages from a 400 are shown under their fields; anything else
+      // gets the front's own text, never the API's raw message.
+      error: (err: unknown) => {
+        const fieldErrors = err instanceof HttpErrorResponse && err.status === 400 && this.applyFieldErrors(err.error);
+        this.error.set(fieldErrors ? 'auth.register.fieldErrors' : 'auth.register.failed');
         this.isLoading.set(false);
       }
     });

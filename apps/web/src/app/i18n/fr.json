@@ -94,6 +94,7 @@
       "userTypeRequired": "Veuillez choisir un type de profil.",
       "incomplete": "Veuillez remplir tous les champs obligatoires.",
       "passwordMismatch": "Les mots de passe ne correspondent pas.",
+      "fieldErrors": "Veuillez corriger les champs signalés.",
       "failed": "L'inscription a échoué. Veuillez réessayer."
     }
   },

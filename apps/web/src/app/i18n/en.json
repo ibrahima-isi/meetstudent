@@ -94,6 +94,7 @@
       "userTypeRequired": "Please select a user type.",
       "incomplete": "Please complete all required fields.",
       "passwordMismatch": "Passwords do not match.",
+      "fieldErrors": "Please correct the highlighted fields.",
       "failed": "Registration failed."
     }
   },

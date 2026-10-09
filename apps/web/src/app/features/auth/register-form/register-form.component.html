@@ -38,6 +38,9 @@
               [placeholder]="t('auth.register.firstnamePlaceholder')"
             />
           </div>
+          @if (fieldError('firstname'); as message) {
+            <p class="text-red-600 dark:text-red-400 mt-1" role="alert" data-testid="error-firstname">{{ message }}</p>
+          }
         </div>
         <div>
           <label for="lastname" class="block text-foreground mb-2">{{ t('auth.register.lastname') }}</label>
@@ -51,6 +54,9 @@
               [placeholder]="t('auth.register.lastnamePlaceholder')"
             />
           </div>
+          @if (fieldError('lastname'); as message) {
+            <p class="text-red-600 dark:text-red-400 mt-1" role="alert" data-testid="error-lastname">{{ message }}</p>
+          }
         </div>
       </div>
 
@@ -66,6 +72,9 @@
             [placeholder]="t('auth.fields.emailPlaceholder')"
           />
         </div>
+        @if (fieldError('email'); as message) {
+          <p class="text-red-600 dark:text-red-400 mt-1" role="alert" data-testid="error-email">{{ message }}</p>
+        }
       </div>
 
       <div class="grid grid-cols-2 gap-3">
@@ -192,6 +201,9 @@
           />
         </div>
         <p class="text-muted-foreground mt-1">{{ t('auth.register.passwordHint') }}</p>
+        @if (fieldError('password'); as message) {
+          <p class="text-red-600 dark:text-red-400 mt-1" role="alert" data-testid="error-password">{{ message }}</p>
+        }
       </div>
 
       <div>
@@ -206,6 +218,9 @@
             placeholder="••••••••"
           />
         </div>
+        @if (fieldError('confirmedPassword'); as message) {
+          <p class="text-red-600 dark:text-red-400 mt-1" role="alert" data-testid="error-confirmedPassword">{{ message }}</p>
+        }
       </div>
 
       <div class="flex items-start">
