@@ -158,11 +158,37 @@ class MediaServiceTest {
     }
 
     @Test
-    void missingMediaThrowsNotFound() {
+    void missingMediaThrowsNotFoundForAdmin() {
         when(mediaRepository.findById(5)).thenReturn(Optional.empty());
 
         assertThrows(com.bowe.meetstudent.exceptions.ResourceNotFoundException.class,
+                () -> mediaService.getAccessibleMedia(5, principal(99, "ROLE_ADMIN")));
+    }
+
+    @Test
+    void missingMediaIsIndistinguishableFromForbiddenForNonAdmin() {
+        when(mediaRepository.findById(5)).thenReturn(Optional.empty());
+
+        assertThrows(AccessDeniedException.class,
                 () -> mediaService.getAccessibleMedia(5, principal(7, "ROLE_STUDENT")));
+    }
+
+    @Test
+    void privateMediaRequiresAuthenticationForAnonymous() {
+        Media m = Media.builder().visibility(MediaVisibility.PRIVATE)
+                .category(MediaCategory.DIPLOMA).ownerId(7).build();
+        when(mediaRepository.findById(5)).thenReturn(Optional.of(m));
+
+        assertThrows(org.springframework.security.core.AuthenticationException.class,
+                () -> mediaService.getAccessibleMedia(5, null));
+    }
+
+    @Test
+    void missingMediaRequiresAuthenticationForAnonymous() {
+        when(mediaRepository.findById(5)).thenReturn(Optional.empty());
+
+        assertThrows(org.springframework.security.core.AuthenticationException.class,
+                () -> mediaService.getAccessibleMedia(5, null));
     }
 
     // --- Task 6: moderation, delete ---
