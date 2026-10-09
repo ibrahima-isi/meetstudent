@@ -43,6 +43,10 @@ export class LoginFormComponent {
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required]]
     });
+
+    if (this.route.snapshot.queryParamMap.get('registered') === '1') {
+      this.success.set({ key: 'auth.login.registered' });
+    }
   }
 
   handleSubmit() {
