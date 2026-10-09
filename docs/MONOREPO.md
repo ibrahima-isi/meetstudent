@@ -17,6 +17,7 @@ infra/          placeholder
 shared/         placeholder
 compose.yml       full local stack: Postgres 18 + api + web
 compose.dev.yml   dev override: hot-reloading api
+compose.prod.yml  production stack for one VPS (Traefik + TLS); see docs/DEPLOY.md
 .github/workflows/ci.yml   the only CI entry point
 ```
 
