@@ -22,6 +22,8 @@ If `ng serve` of `apps/web` is also running, pass another port: `npm start -- --
 { "apiUrl": "https://api.example.com/api/v1" }
 ```
 
+Static media (`Media.publicUrl`, e.g. school logos) is relative to the **server root**, not to `/api/v1`. The `SERVER_URL` token is derived from the API URL by dropping `/api/v1` (a relative `/api/v1` means same origin); set `"serverUrl"` in `config.json` to override it. Inject `SERVER_URL` (or use `MediaService.publicUrl()`) to build image URLs.
+
 It is fetched at bootstrap; if it is missing or invalid the build-time default applies. In `ng serve`, put it in `public/config.json` (do not commit it).
 
 ## Deploying
