@@ -2,7 +2,7 @@ import { Component, signal, computed, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { LucideAngularModule, Search, MapPin, Star, Filter, LogOut, User, ArrowUpDown } from 'lucide-angular';
+import { LucideAngularModule, Search, MapPin, Star, Filter, LogOut, User, ArrowUpDown, Heart } from 'lucide-angular';
 import { ImageWithFallbackComponent } from '@shared/components/image-with-fallback/image-with-fallback.component';
 import { StarRatingComponent } from '@shared/components/star-rating/star-rating.component';
 import { WishlistCartComponent } from '@shared/components/wishlist-cart/wishlist-cart.component';
@@ -13,6 +13,7 @@ import { LocaleService } from '@services/locale.service';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { pluralKey } from '@i18n/plural';
 import { TokenService } from '@services/token.service';
+import { WishlistService } from '@services/wishlist.service';
 
 @Component({
   selector: 'app-home-page',
@@ -24,6 +25,8 @@ export class HomePageComponent implements OnInit {
   private readonly tokenService = inject(TokenService);
   private readonly router = inject(Router);
   private readonly locale = inject(LocaleService);
+  /** Loaded by the header cart on init; the cards only read and toggle it. */
+  protected readonly wishlist = inject(WishlistService);
 
   readonly Search = Search;
   readonly MapPin = MapPin;
@@ -32,6 +35,7 @@ export class HomePageComponent implements OnInit {
   readonly LogOut = LogOut;
   readonly UserIcon = User;
   readonly ArrowUpDown = ArrowUpDown;
+  readonly Heart = Heart;
 
   schools = signal<School[]>([]);
   searchQuery = signal('');

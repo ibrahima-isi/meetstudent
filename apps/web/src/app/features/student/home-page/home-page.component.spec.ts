@@ -2,13 +2,14 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { provideTransloco } from '@jsverse/transloco';
 import { firstValueFrom, Observable, of, Subject, throwError } from 'rxjs';
 import { translocoOptions } from '@i18n/transloco.config';
 import { LocaleService } from '@services/locale.service';
 import { SchoolService } from '@services/school.service';
 import { TokenService } from '@services/token.service';
+import { WishlistService } from '@services/wishlist.service';
 import { HomePageComponent } from './home-page.component';
 
 describe('HomePageComponent translations', () => {
@@ -161,5 +162,85 @@ describe('HomePageComponent data states', () => {
     );
     expect(options.filter((o) => o === 'Thiès').length).toBe(1);
     expect(options).not.toContain('Dakar');
+  });
+});
+
+
+describe('HomePageComponent wishlist', () => {
+  let fixture: ComponentFixture<HomePageComponent>;
+  const school = { id: 4, name: 'Real School', address: { location: 'L', city: 'Dakar', country: 'SN' } };
+  let saved: ReturnType<typeof signal<unknown[]>>;
+  let error: ReturnType<typeof signal<boolean>>;
+  let toggle: jasmine.Spy;
+  const q = (sel: string) => (fixture.nativeElement as HTMLElement).querySelector(sel);
+
+  beforeEach(async () => {
+    saved = signal<unknown[]>([]);
+    error = signal(false);
+    toggle = jasmine.createSpy('toggle');
+    TestBed.configureTestingModule({
+      imports: [HomePageComponent],
+      providers: [
+        provideZonelessChangeDetection(),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        provideTransloco(translocoOptions),
+        { provide: SchoolService, useValue: { getSchools: () => of({ content: [school] }), schools: () => [] } },
+        { provide: TokenService, useValue: { isAuthenticated: signal(true), user: signal(null), clear: () => {} } },
+        {
+          provide: WishlistService,
+          useValue: {
+            schools: saved,
+            error,
+            status: signal('loaded'),
+            load: () => {},
+            toggle,
+            has: (id: number) => (saved() as { id: number }[]).some((s) => s.id === id),
+            isPending: () => false,
+            dismissError: () => {},
+          },
+        },
+      ],
+    });
+    await firstValueFrom(TestBed.inject(LocaleService).use('en'));
+    fixture = TestBed.createComponent(HomePageComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+  });
+
+  it('puts an unpressed add-to-wishlist button on each card and toggles on click', () => {
+    const button = q('[data-testid="wishlist-toggle"]') as HTMLButtonElement;
+
+    expect(button.getAttribute('aria-pressed')).toBe('false');
+    expect(button.getAttribute('aria-label')).toBe('Add to wishlist');
+    button.click();
+
+    expect(toggle).toHaveBeenCalledWith(jasmine.objectContaining({ id: 4 }));
+  });
+
+  it('shows the pressed, remove state for a wishlisted school', async () => {
+    saved.set([school]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const button = q('[data-testid="wishlist-toggle"]') as HTMLButtonElement;
+
+    expect(button.getAttribute('aria-pressed')).toBe('true');
+    expect(button.getAttribute('aria-label')).toBe('Remove from wishlist');
+  });
+
+  it('does not open the school when the heart is clicked', () => {
+    const navigate = spyOn(TestBed.inject(Router), 'navigate');
+    (q('[data-testid="wishlist-toggle"]') as HTMLButtonElement).click();
+
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('announces a failed update', async () => {
+    error.set(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(q('[data-testid="wishlist-error"]')?.textContent).toContain('could not be updated');
   });
 });

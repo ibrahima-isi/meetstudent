@@ -127,6 +127,13 @@
       </p>
     </div>
 
+    @if (wishlist.error()) {
+      <div role="alert" data-testid="wishlist-error" class="mb-6 flex items-center justify-between gap-3 px-4 py-3 bg-red-50 text-red-700 rounded-lg text-sm">
+        <span>{{ t('wishlist.updateError') }}</span>
+        <button type="button" (click)="wishlist.dismissError()" class="font-medium underline cursor-pointer">{{ t('wishlist.dismiss') }}</button>
+      </div>
+    }
+
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       @for (school of sortedSchools(); track school.id) {
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer flex flex-col">
@@ -136,6 +143,21 @@
               [alt]="school.name"
               class="w-full h-full object-cover block"
             ></app-image-with-fallback>
+            <button
+              type="button"
+              data-testid="wishlist-toggle"
+              [attr.aria-pressed]="wishlist.has(school.id)"
+              [attr.aria-label]="t(wishlist.has(school.id) ? 'wishlist.removeAction' : 'wishlist.addAction')"
+              [disabled]="wishlist.isPending(school.id)"
+              (click)="$event.stopPropagation(); wishlist.toggle(school)"
+              class="absolute top-3 left-3 p-2 rounded-full shadow-sm transition-colors cursor-pointer disabled:opacity-60"
+              [class.bg-red-50]="wishlist.has(school.id)"
+              [class.text-red-600]="wishlist.has(school.id)"
+              [class.bg-white]="!wishlist.has(school.id)"
+              [class.text-gray-400]="!wishlist.has(school.id)"
+            >
+              <lucide-icon [img]="Heart" class="w-5 h-5" [class.fill-current]="wishlist.has(school.id)"></lucide-icon>
+            </button>
             <div class="absolute top-3 right-3 flex flex-col items-end gap-2">
               <div class="px-3 py-1 bg-white rounded-full shadow-sm">
                 <span class="text-indigo-600 text-sm font-bold">{{ school.type || t('common.defaultSchoolType') }}</span>

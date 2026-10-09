@@ -7,7 +7,7 @@ import { TokenService } from '@services/token.service';
 import { LocaleService } from '@services/locale.service';
 import { provideTransloco, TranslocoService } from '@jsverse/transloco';
 import { firstValueFrom, of, throwError } from 'rxjs';
-import { ProgramService } from '@services/program.service';
+import { WishlistService } from '@services/wishlist.service';
 import { translocoOptions } from '@i18n/transloco.config';
 import { WishlistCartComponent } from './wishlist-cart.component';
 
@@ -68,7 +68,7 @@ describe('WishlistCartComponent', () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
-  it('counts programmes by the plural rule of the active language', async () => {
+  it('counts schools by the plural rule of the active language', async () => {
     locale.set('en');
     const transloco = TestBed.inject(TranslocoService);
     await firstValueFrom(transloco.load('en'));
@@ -81,28 +81,36 @@ describe('WishlistCartComponent', () => {
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
     expect(text).toContain('Wishlist');
     expect(text).toContain('My wishlist');
-    // English puts zero with many; French would read "0 formation".
-    expect(text).toContain('0 programmes');
+    // English puts zero with many; French would read "0 établissement".
+    expect(text).toContain('0 schools');
   });
 });
 
 describe('WishlistCartComponent data states', () => {
   let fixture: ComponentFixture<WishlistCartComponent>;
-  let getPrograms: jasmine.Spy;
+  let saved: ReturnType<typeof signal<unknown[]>>;
+  let status: ReturnType<typeof signal<'idle' | 'loading' | 'loaded' | 'error'>>;
+  let load: jasmine.Spy;
+  let toggle: jasmine.Spy;
   const text = () => (fixture.nativeElement as HTMLElement).textContent ?? '';
   const q = (sel: string) => (fixture.nativeElement as HTMLElement).querySelector(sel);
 
-  async function open(response: unknown) {
-    localStorage.setItem('wishlist', JSON.stringify([101, 5]));
-    getPrograms = jasmine.createSpy('getPrograms').and.returnValue(response);
+  async function open() {
+    saved = signal<unknown[]>([]);
+    status = signal('loaded');
+    load = jasmine.createSpy('load');
+    toggle = jasmine.createSpy('toggle');
     TestBed.configureTestingModule({
       providers: [
         provideZonelessChangeDetection(),
         provideHttpClient(),
         provideHttpClientTesting(),
         provideRouter([]),
-        { provide: TokenService, useValue: { isAuthenticated: signal(true), user: signal(null) } },
-        { provide: ProgramService, useValue: { getPrograms } },
+        { provide: TokenService, useValue: { isAuthenticated: signal(true), user: signal({ id: 9 }) } },
+        {
+          provide: WishlistService,
+          useValue: { schools: saved, status, load, toggle, error: signal(false), has: () => true, isPending: () => false },
+        },
         provideTransloco(translocoOptions),
       ],
     });
@@ -114,26 +122,45 @@ describe('WishlistCartComponent data states', () => {
     await fixture.whenStable();
   }
 
-  afterEach(() => localStorage.removeItem('wishlist'));
+  it('loads the wishlist from the API when the header mounts', async () => {
+    await open();
 
-  it('resolves saved ids from the API, never from bundled mock programmes', async () => {
-    await open(of({ content: [{ id: 5, name: 'Real Prog', level: 'Master', duration: 2 }] }));
-
-    expect(text()).toContain('Real Prog');
-    expect(text()).not.toContain('Licence en Mathématiques');
+    expect(load).toHaveBeenCalled();
   });
 
-  it('shows the shared error state with retry when programmes cannot be loaded', async () => {
-    await open(throwError(() => new Error('down')));
-    expect(q('app-error-state')).not.toBeNull();
-
-    getPrograms.and.returnValue(of({ content: [{ id: 5, name: 'Real Prog', duration: 2 }] }));
-    (q('app-error-state button') as HTMLButtonElement).click();
+  it('lists the wishlisted schools the API returned, with a matching count', async () => {
+    await open();
+    saved.set([{ id: 5, name: 'Real School', address: { city: 'Dakar' } }]);
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(getPrograms).toHaveBeenCalledTimes(2);
-    expect(q('app-error-state')).toBeNull();
-    expect(text()).toContain('Real Prog');
+    expect(text()).toContain('Real School');
+    expect(text()).toContain('1 school');
+    expect(text()).not.toContain('Licence en Mathématiques');
+  });
+
+  it('removes a school through the shared service', async () => {
+    await open();
+    const school = { id: 5, name: 'Real School', address: { city: 'Dakar' } };
+    saved.set([school]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    (q('[data-testid="wishlist-remove"]') as HTMLButtonElement).click();
+
+    expect(toggle).toHaveBeenCalledWith(school);
+  });
+
+  it('shows the shared error state with retry when the wishlist cannot be loaded', async () => {
+    await open();
+    status.set('error');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(q('app-error-state')).not.toBeNull();
+
+    load.calls.reset();
+    (q('app-error-state button') as HTMLButtonElement).click();
+
+    expect(load).toHaveBeenCalledTimes(1);
   });
 });

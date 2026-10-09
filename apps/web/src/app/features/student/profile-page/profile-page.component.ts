@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { LucideAngularModule, ArrowLeft, User as UserIcon, Mail, Phone, MapPin, GraduationCap, Book, Save, Heart, Briefcase } from 'lucide-angular';
 import { LocaleService } from '@services/locale.service';
 import { TokenService } from '@services/token.service';
+import { WishlistService } from '@services/wishlist.service';
 import { User } from '@models/entities';
 import { UserDocumentsComponent } from '../user-documents/user-documents.component';
 import { TranslocoDirective } from '@jsverse/transloco';
@@ -18,6 +19,7 @@ export class ProfilePageComponent implements OnInit {
   private tokenService = inject(TokenService);
   private readonly router = inject(Router);
   private readonly locale = inject(LocaleService);
+  protected readonly wishlist = inject(WishlistService);
 
   readonly ArrowLeft = ArrowLeft;
   readonly UserIcon = UserIcon;
@@ -39,7 +41,6 @@ export class ProfilePageComponent implements OnInit {
 
   editedProfile = signal<Partial<User>>({ ...this.profile() });
   isEditing = signal(false);
-  wishlist = signal<number[]>([]);
 
   ngOnInit() {
     const currentUser = this.tokenService.user();
@@ -48,12 +49,7 @@ export class ProfilePageComponent implements OnInit {
       this.editedProfile.set({ ...currentUser });
     }
 
-    if (typeof localStorage !== 'undefined') {
-      const savedWishlist = localStorage.getItem('wishlist');
-      if (savedWishlist) {
-        this.wishlist.set(JSON.parse(savedWishlist));
-      }
-    }
+    this.wishlist.load();
   }
 
   handleSave() {
@@ -70,14 +66,5 @@ export class ProfilePageComponent implements OnInit {
   /** Navigations stay in the language the visitor is reading. */
   protected goTo(...segments: (string | number)[]): void {
     void this.router.navigate(['/', this.locale.active(), ...segments]);
-  }
-
-  removeFromWishlist(programmeId: number) {
-    const newWishlist = this.wishlist().filter(id => id !== programmeId);
-    this.wishlist.set(newWishlist);
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('wishlist', JSON.stringify(newWishlist));
-      window.dispatchEvent(new Event('wishlistUpdated'));
-    }
   }
 }

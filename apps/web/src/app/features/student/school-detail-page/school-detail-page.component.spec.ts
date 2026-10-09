@@ -14,6 +14,7 @@ import { SchoolService } from '@services/school.service';
 import { TokenService } from '@services/token.service';
 import { RatingService } from '@services/rating.service';
 import { LocaleService } from '@services/locale.service';
+import { WishlistService } from '@services/wishlist.service';
 import { SchoolDetailPageComponent } from './school-detail-page.component';
 
 describe('SchoolDetailPageComponent', () => {
@@ -24,6 +25,15 @@ describe('SchoolDetailPageComponent', () => {
   let authenticated: ReturnType<typeof signal<boolean>>;
   let locale: ReturnType<typeof signal<'fr' | 'en'>>;
   let harness: RouterTestingHarness;
+  let wishlist: {
+    schools: ReturnType<typeof signal<School[]>>;
+    error: ReturnType<typeof signal<boolean>>;
+    load: jasmine.Spy;
+    toggle: jasmine.Spy;
+    has: (id: number) => boolean;
+    isPending: (id: number) => boolean;
+    dismissError: jasmine.Spy;
+  };
 
   const mockSchool: School = {
     id: 7,
@@ -59,6 +69,16 @@ describe('SchoolDetailPageComponent', () => {
       'rateCourse',
     ]);
     authenticated = signal(true);
+    const saved = signal<School[]>([]);
+    wishlist = {
+      schools: saved,
+      error: signal(false),
+      load: jasmine.createSpy('load'),
+      toggle: jasmine.createSpy('toggle'),
+      has: (id: number) => saved().some((s) => s.id === id),
+      isPending: () => false,
+      dismissError: jasmine.createSpy('dismissError'),
+    };
     locale = signal<'fr' | 'en'>('fr');
 
     programServiceSpy.getPrograms.and.returnValue(of(pageOf<Program>([])));
@@ -77,7 +97,8 @@ describe('SchoolDetailPageComponent', () => {
         { provide: CourseService, useValue: courseServiceSpy },
         { provide: SchoolService, useValue: schoolServiceSpy },
         { provide: RatingService, useValue: ratingServiceSpy },
-        { provide: TokenService, useValue: { isAuthenticated: authenticated } },
+        { provide: TokenService, useValue: { isAuthenticated: authenticated, user: signal(null) } },
+        { provide: WishlistService, useValue: wishlist },
         { provide: LocaleService, useValue: { active: locale } },
         provideTransloco(translocoOptions),
       ],
@@ -152,6 +173,63 @@ describe('SchoolDetailPageComponent', () => {
 
     expect(component.showCoursesModal()).toBeFalse();
     expect(component.selectedProgram()).toBeNull();
+  });
+
+  describe('wishlist', () => {
+    const button = () => harness.routeNativeElement?.querySelector('[data-testid="wishlist-toggle"]') as HTMLButtonElement | null;
+    async function settle() {
+      harness.detectChanges();
+      await harness.fixture.whenStable();
+    }
+    beforeEach(async () => {
+      locale.set('en');
+      const transloco = TestBed.inject(TranslocoService);
+      await firstValueFrom(transloco.load('en'));
+      transloco.setActiveLang('en');
+    });
+
+    it('loads the wishlist from the API when an authenticated visitor opens the page', async () => {
+      await renderAt('/schools/7');
+
+      expect(wishlist.load).toHaveBeenCalled();
+    });
+
+    it('offers to add a school that is not wishlisted, and toggles it on click', async () => {
+      await renderAt('/schools/7');
+      await settle();
+
+      expect(button()?.getAttribute('aria-pressed')).toBe('false');
+      button()?.click();
+
+      expect(wishlist.toggle).toHaveBeenCalledWith(jasmine.objectContaining({ id: 7 }));
+    });
+
+    it('shows the pressed state for a school already wishlisted', async () => {
+      wishlist.schools.set([mockSchool]);
+      await renderAt('/schools/7');
+      await settle();
+
+      expect(button()?.getAttribute('aria-pressed')).toBe('true');
+    });
+
+    it('asks an anonymous visitor to sign in instead of toggling', async () => {
+      authenticated.set(false);
+      const component = await renderAt('/schools/7');
+      await settle();
+
+      button()?.click();
+
+      expect(wishlist.toggle).not.toHaveBeenCalled();
+      expect(component.showLoginPrompt()).toBeTrue();
+    });
+
+    it('tells the visitor when the update failed (the service has rolled it back)', async () => {
+      wishlist.error.set(true);
+      await renderAt('/schools/7');
+      await settle();
+
+      expect(harness.routeNativeElement?.querySelector('[role="alert"][data-testid="wishlist-error"]')).not.toBeNull();
+    });
   });
 
   describe('translations', () => {

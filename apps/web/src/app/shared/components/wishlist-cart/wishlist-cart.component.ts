@@ -1,11 +1,9 @@
-import { Component, computed, signal, effect, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, computed, signal, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { LucideAngularModule, ShoppingCart, X, GraduationCap } from 'lucide-angular';
 import { ErrorStateComponent } from '@shared/components/error-state/error-state.component';
-import { Program } from '@models/entities';
-import { ProgramService } from '@services/program.service';
-import { UserService } from '@services/user.service';
+import { WishlistService } from '@services/wishlist.service';
 import { TokenService } from '@services/token.service';
 import { LocaleService } from '@services/locale.service';
 import { TranslocoDirective } from '@jsverse/transloco';
@@ -22,9 +20,9 @@ import { pluralKey } from '@i18n/plural';
       >
         <lucide-icon [img]="ShoppingCart" class="w-5 h-5"></lucide-icon>
         <span>{{ t('wishlist.button') }}</span>
-        @if (isAuthenticated() && wishlist().length > 0) {
+        @if (isAuthenticated() && wishlist.schools().length > 0) {
           <span class="absolute -top-1 -right-1 w-5 h-5 bg-indigo-600 text-white rounded-full flex items-center justify-center text-xs">
-            {{ wishlist().length }}
+            {{ wishlist.schools().length }}
           </span>
         }
       </button>
@@ -44,16 +42,16 @@ import { pluralKey } from '@i18n/plural';
               </button>
             </div>
             <p class="text-gray-600 mt-1 text-sm">
-              {{ t(plural('wishlist.count', wishlist().length), { count: wishlist().length }) }}
+              {{ t(plural('wishlist.count', wishlist.schools().length), { count: wishlist.schools().length }) }}
             </p>
           </div>
 
           <div class="flex-1 overflow-y-auto">
-            @if (status() === 'loading') {
+            @if (wishlist.status() === 'loading') {
               <p role="status" aria-busy="true" class="p-8 text-center text-gray-500 animate-pulse">{{ t('common.loading') }}</p>
-            } @else if (status() === 'error') {
-              <app-error-state [message]="t('wishlist.loadError')" (retry)="loadProgrammes()" />
-            } @else if (wishlistProgrammes().length === 0) {
+            } @else if (wishlist.status() === 'error') {
+              <app-error-state [message]="t('wishlist.loadError')" (retry)="wishlist.load()" />
+            } @else if (wishlist.schools().length === 0) {
               <div class="p-8 text-center">
                 <lucide-icon [img]="GraduationCap" class="w-12 h-12 text-gray-300 mx-auto mb-3"></lucide-icon>
                 <p class="text-gray-600">{{ t('wishlist.empty') }}</p>
@@ -61,15 +59,18 @@ import { pluralKey } from '@i18n/plural';
               </div>
             } @else {
               <div class="p-4 space-y-3">
-                @for (programme of wishlistProgrammes(); track programme.id) {
+                @for (school of wishlist.schools(); track school.id) {
                   <div class="flex items-start gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                     <lucide-icon [img]="GraduationCap" class="w-5 h-5 text-indigo-600 flex-shrink-0 mt-1"></lucide-icon>
                     <div class="flex-1 min-w-0">
-                      <h4 class="text-gray-900 line-clamp-2 mb-1 text-sm font-medium">{{ programme.name }}</h4>
-                      <p class="text-gray-600 text-xs font-semibold">{{ programme.level }} • {{ programme.duration }}</p>
+                      <h4 class="text-gray-900 line-clamp-2 mb-1 text-sm font-medium">{{ school.name }}</h4>
+                      <p class="text-gray-600 text-xs font-semibold">{{ school.address.city }}</p>
                     </div>
                     <button
-                      (click)="programme.id !== undefined && removeFromWishlist(programme.id)"
+                      data-testid="wishlist-remove"
+                      [attr.aria-label]="t('wishlist.removeAction')"
+                      [disabled]="wishlist.isPending(school.id)"
+                      (click)="wishlist.toggle(school)"
                       class="p-1 hover:bg-white rounded-lg transition-colors flex-shrink-0 cursor-pointer"
                     >
                       <lucide-icon [img]="X" class="w-4 h-4 text-gray-500 hover:text-red-600"></lucide-icon>
@@ -80,7 +81,7 @@ import { pluralKey } from '@i18n/plural';
             }
           </div>
 
-          @if (wishlistProgrammes().length > 0) {
+          @if (wishlist.schools().length > 0) {
             <div class="p-4 border-t border-gray-200 bg-gray-50">
               <button class="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium text-sm cursor-pointer">
                 {{ t('wishlist.compare') }}
@@ -92,9 +93,8 @@ import { pluralKey } from '@i18n/plural';
     </div>
   `
 })
-export class WishlistCartComponent implements OnInit, OnDestroy {
-  private userService = inject(UserService);
-  private readonly programService = inject(ProgramService);
+export class WishlistCartComponent implements OnInit {
+  protected readonly wishlist = inject(WishlistService);
   private tokenService = inject(TokenService);
   private readonly router = inject(Router);
   private readonly locale = inject(LocaleService);
@@ -106,46 +106,20 @@ export class WishlistCartComponent implements OnInit, OnDestroy {
   readonly isAuthenticated = computed(() => this.tokenService.isAuthenticated());
 
   isOpen = signal(false);
-  /** The saved ids are only ids; the programmes behind them come from the API. */
-  private programmes = signal<Program[]>([]);
-  status = signal<'idle' | 'loading' | 'loaded' | 'error'>('idle');
 
   /** The key for a count, by the plural rule of the language being read. */
   protected plural(base: string, count: number): string {
     return pluralKey(base, count, this.locale.active());
   }
-  wishlist = signal<number[]>([]);
 
   readonly ShoppingCart = ShoppingCart;
   readonly X = X;
   readonly GraduationCap = GraduationCap;
 
-  private listener = () => this.updateWishlist();
-
-  constructor() {
-    effect(() => {
-      this.updateWishlist();
-    });
-  }
-
+  /** The server holds the wishlist; the header loads it once for the whole app. */
   ngOnInit() {
-    if (typeof window !== 'undefined') {
-      window.addEventListener('wishlistUpdated', this.listener);
-    }
-  }
-
-  ngOnDestroy() {
-    if (typeof window !== 'undefined') {
-      window.removeEventListener('wishlistUpdated', this.listener);
-    }
-  }
-
-  updateWishlist() {
-    if (this.isAuthenticated() && typeof localStorage !== 'undefined') {
-      const saved = localStorage.getItem('wishlist');
-      this.wishlist.set(saved ? JSON.parse(saved) : []);
-    } else {
-      this.wishlist.set([]);
+    if (this.isAuthenticated()) {
+      this.wishlist.load();
     }
   }
 
@@ -156,49 +130,5 @@ export class WishlistCartComponent implements OnInit, OnDestroy {
       return;
     }
     this.isOpen.update(v => !v);
-    if (this.isOpen()) {
-      this.loadProgrammes();
-    }
   }
-
-  /** Resolves the saved ids to programmes; also the retry action of the error state. */
-  loadProgrammes(): void {
-    if (this.wishlist().length === 0) {
-      this.status.set('loaded');
-      return;
-    }
-    this.status.set('loading');
-    this.programService.getPrograms(0, 100).subscribe({
-      next: (page) => {
-        this.programmes.set(page?.content ?? []);
-        this.status.set('loaded');
-      },
-      error: () => {
-        this.programmes.set([]);
-        this.status.set('error');
-      },
-    });
-  }
-
-  removeFromWishlist(programmeId: number) {
-    const user = this.tokenService.user();
-    if (user && user.id) {
-      const prog = this.programmes().find(p => p.id === programmeId);
-      // Backend expects schoolId for wishlist
-      if (prog && prog.school && prog.school.id) {
-        this.userService.removeFromWishlist(user.id, prog.school.id).subscribe();
-      }
-    }
-
-    const newWishlist = this.wishlist().filter(id => id !== programmeId);
-    this.wishlist.set(newWishlist);
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('wishlist', JSON.stringify(newWishlist));
-      window.dispatchEvent(new Event('wishlistUpdated'));
-    }
-  }
-
-  readonly wishlistProgrammes = computed(() =>
-    this.programmes().filter(p => p.id !== undefined && this.wishlist().includes(p.id)),
-  );
 }

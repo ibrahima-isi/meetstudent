@@ -169,12 +169,16 @@
     "button": "Wishlist",
     "title": "My wishlist",
     "count": {
-      "one": "{{ count }} programme",
-      "other": "{{ count }} programmes"
+      "one": "{{ count }} school",
+      "other": "{{ count }} schools"
     },
     "empty": "Your wishlist is empty",
-    "emptyHint": "Add programmes to find them again easily",
+    "emptyHint": "Add schools to find them again easily",
     "compare": "Compare programmes",
+    "addAction": "Add to wishlist",
+    "removeAction": "Remove from wishlist",
+    "updateError": "Your wishlist could not be updated. Please try again.",
+    "dismiss": "Dismiss",
     "loadError": "Your wishlist could not be loaded."
   },
   "rating": {
@@ -204,9 +208,8 @@
     "specialty": "Specialty",
     "specialtyPlaceholder": "Mathematics, Physics, etc.",
     "wishlistTitle": "My wishlist",
-    "programmeNumber": "Programme #{{ id }}",
     "remove": "Remove",
-    "wishlistEmpty": "No programmes in your wishlist"
+    "wishlistEmpty": "No schools in your wishlist"
   },
   "documents": {
     "title": "My documents",

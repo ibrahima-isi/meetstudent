@@ -1,4 +1,4 @@
-import { Component, input, signal, computed, effect, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, input, signal, computed, effect, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -12,6 +12,7 @@ import { CourseService } from '@services/course.service';
 import { SchoolService } from '@services/school.service';
 import { TokenService } from '@services/token.service';
 import { LocaleService } from '@services/locale.service';
+import { WishlistService } from '@services/wishlist.service';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { pluralKey } from '@i18n/plural';
 
@@ -20,7 +21,7 @@ import { pluralKey } from '@i18n/plural';
   imports: [CommonModule, FormsModule, LucideAngularModule, ImageWithFallbackComponent, StarRatingComponent, TranslocoDirective, ErrorStateComponent],
   templateUrl: './school-detail-page.component.html'
 })
-export class SchoolDetailPageComponent implements OnInit, OnDestroy {
+export class SchoolDetailPageComponent {
   /**
    * Bound from `/:lang/schools/:id` by `withComponentInputBinding()`, so it is
    * the raw URL segment — a string, never a number.
@@ -33,6 +34,7 @@ export class SchoolDetailPageComponent implements OnInit, OnDestroy {
   private readonly tokenService = inject(TokenService);
   private readonly router = inject(Router);
   private readonly locale = inject(LocaleService);
+  protected readonly wishlist = inject(WishlistService);
 
   /**
    * Null until the API answers. The page used to receive a whole `School` from
@@ -60,7 +62,6 @@ export class SchoolDetailPageComponent implements OnInit, OnDestroy {
   readonly X = X;
 
   programs = signal<Program[]>([]);
-  wishlist = signal<number[]>([]);
   showLoginPrompt = signal(false);
   sortBy = signal<'name' | 'places'>('name');
 
@@ -70,12 +71,11 @@ export class SchoolDetailPageComponent implements OnInit, OnDestroy {
   showCoursesModal = signal(false);
   isLoadingCourses = signal(false);
 
-  private listener = () => this.updateWishlist();
-
   constructor() {
-    effect(() => {
-      this.updateWishlist();
-    });
+    // The wishlist lives on the server: fetch it so the heart reflects it after a reload.
+    if (this.isAuthenticated()) {
+      this.wishlist.load();
+    }
 
     // Re-runs when the id changes, so /schools/7 → /schools/8 reloads even
     // though the router reuses the component instance.
@@ -108,12 +108,6 @@ export class SchoolDetailPageComponent implements OnInit, OnDestroy {
         this.schoolStatus.set('error');
       },
     });
-  }
-
-  ngOnInit() {
-    if (typeof window !== 'undefined') {
-      window.addEventListener('wishlistUpdated', this.listener);
-    }
   }
 
   openCoursesModal(program: Program) {
@@ -176,19 +170,6 @@ export class SchoolDetailPageComponent implements OnInit, OnDestroy {
     });
   }
 
-  ngOnDestroy() {
-    if (typeof window !== 'undefined') {
-      window.removeEventListener('wishlistUpdated', this.listener);
-    }
-  }
-
-  updateWishlist() {
-    if (typeof localStorage !== 'undefined') {
-      const saved = localStorage.getItem('wishlist');
-      this.wishlist.set(saved ? JSON.parse(saved) : []);
-    }
-  }
-
   sortedProgrammes = computed(() => {
     const progs = [...this.programs()];
     const sortType = this.sortBy();
@@ -216,22 +197,12 @@ export class SchoolDetailPageComponent implements OnInit, OnDestroy {
     return Math.max((programme.capacity || 0) - (programme.enrolled || 0), 0);
   }
 
-  toggleWishlist(programmeId: number) {
+  toggleWishlist(school: School) {
     if (!this.isAuthenticated()) {
       this.showLoginPrompt.set(true);
       return;
     }
-
-    const currentList = this.wishlist();
-    const newWishlist = currentList.includes(programmeId)
-      ? currentList.filter(id => id !== programmeId)
-      : [...currentList, programmeId];
-    
-    this.wishlist.set(newWishlist);
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('wishlist', JSON.stringify(newWishlist));
-      window.dispatchEvent(new Event('wishlistUpdated'));
-    }
+    this.wishlist.toggle(school);
   }
 
   handleLoginClick() {

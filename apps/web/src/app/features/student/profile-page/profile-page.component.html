@@ -175,16 +175,17 @@
 
       <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <h2 class="text-gray-900 mb-4 text-xl font-bold">{{ t('profile.wishlistTitle') }}</h2>
-        @if (wishlist().length > 0) {
+        @if (wishlist.schools().length > 0) {
           <div class="space-y-3">
-            @for (id of wishlist(); track id) {
+            @for (school of wishlist.schools(); track school.id) {
               <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
                 <div class="flex items-center gap-3">
                   <lucide-icon [img]="Heart" class="w-5 h-5 text-red-600 fill-current"></lucide-icon>
-                  <span class="text-gray-900 font-medium">{{ t('profile.programmeNumber', { id: id }) }}</span>
+                  <span class="text-gray-900 font-medium">{{ school.name }}</span>
                 </div>
                 <button
-                  (click)="removeFromWishlist(id)"
+                  data-testid="wishlist-remove"
+                  (click)="wishlist.toggle(school)"
                   class="px-3 py-1 text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                 >
                   {{ t('profile.remove') }}
