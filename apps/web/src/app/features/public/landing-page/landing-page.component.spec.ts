@@ -117,6 +117,13 @@ describe('LandingPageComponent translations', () => {
     expect(text()).toContain('0 établissement trouvé');
   });
 
+  it('offers no sort by available places, since no capacity data exists', async () => {
+    await render('en');
+
+    expect(fixture.nativeElement.querySelector('option[value="places"]')).toBeNull();
+    expect(text()).not.toContain('available places');
+  });
+
   it('renders in English when English is active', async () => {
     await render('en');
 

@@ -373,6 +373,13 @@ describe('HomePageComponent API search', () => {
     expect(options).toContain('Dakar');
   });
 
+  it('offers no sort by available places, since no capacity data exists', async () => {
+    await create();
+
+    const options = Array.from(el().querySelectorAll<HTMLOptionElement>('[data-testid="sort-select"] option'));
+    expect(options.map((o) => o.value)).toEqual(['name', 'city']);
+  });
+
   it('sorting by city is sent to the API as a sort param', async () => {
     await create();
 

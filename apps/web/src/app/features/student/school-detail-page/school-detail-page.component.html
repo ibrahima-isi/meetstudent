@@ -131,17 +131,6 @@
         <div class="space-y-4">
           <div class="flex items-center justify-between mb-4">
             <h2 class="text-foreground text-xl font-bold">{{ t('schoolDetail.programmes', { count: programs().length }) }}</h2>
-            
-            <div class="flex items-center gap-2">
-              <lucide-icon [img]="ArrowUpDown" class="w-4 h-4 text-muted-foreground"></lucide-icon>
-              <select
-                [(ngModel)]="sortBy"
-                class="bg-card text-foreground placeholder:text-muted-foreground px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              >
-                <option value="name">{{ t('schools.sortName') }}</option>
-                <option value="places">{{ t('schools.sortPlaces') }}</option>
-              </select>
-            </div>
           </div>
           
           @if (programsStatus() === 'loading') {

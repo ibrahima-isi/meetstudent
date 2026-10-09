@@ -47,7 +47,7 @@ export class LandingPageComponent implements OnInit {
   selectedCity = signal('');
   selectedType = signal('');
   showFilters = signal(false);
-  sortBy = signal<'name' | 'city' | 'places'>('name');
+  sortBy = signal<'name' | 'city'>('name');
 
   /** 'loading' until the first answer; 'error' shows the retry surface, never placeholder data. */
   status = signal<'loading' | 'loaded' | 'error'>('loading');
@@ -109,20 +109,10 @@ export class LandingPageComponent implements OnInit {
         return (a.name || '').localeCompare(b.name || '', locale);
       } else if (sortType === 'city') {
         return (a.address.city || '').localeCompare(b.address.city || '', locale);
-      } else if (sortType === 'places') {
-        return this.placesLeft(b) - this.placesLeft(a);
       }
       return 0;
     });
   });
-
-  /** Seats left across the programmes the API attached to a school. */
-  private placesLeft(school: School): number {
-    return (school.programs ?? []).reduce(
-      (sum, p) => sum + Math.max((p.capacity || 0) - (p.enrolled || 0), 0),
-      0,
-    );
-  }
 
   /**
    * A school the API returned always carries an id; the type says otherwise

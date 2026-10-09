@@ -51,7 +51,7 @@ export class HomePageComponent {
   selectedCity = signal('');
   selectedType = signal('');
   showFilters = signal(false);
-  sortBy = signal<'name' | 'city' | 'places'>('name');
+  sortBy = signal<'name' | 'city'>('name');
 
   /** 'loading' until the first answer; 'error' shows the retry surface, never placeholder data. */
   status = signal<'loading' | 'loaded' | 'error'>('loading');
@@ -114,8 +114,7 @@ export class HomePageComponent {
     this.pageRequests$.next(this.pageNumber() + 1);
   }
 
-  /** Sorts the API can do. Seats left is derived from nested programmes, so it stays client-side. */
-  private serverSort(sort: 'name' | 'city' | 'places'): string {
+  private serverSort(sort: 'name' | 'city'): string {
     return sort === 'city' ? 'address.city,asc' : 'name,asc';
   }
 
@@ -185,19 +184,17 @@ export class HomePageComponent {
   /**
    * The API already searched and sorted. What it cannot do stays here, on the
    * pages loaded so far: the type (not a server field), the city when a name
-   * search is active (the name endpoint takes no city), and the seats-left sort.
+   * search is active (the name endpoint takes no city).
    */
   sortedSchools = computed(() => {
     const city = this.selectedCity();
     const type = this.selectedType();
     const cityOnClient = city !== '' && this.term() !== '';
 
-    const filtered = this.schools().filter(
+    return this.schools().filter(
       (school: School) =>
         (!cityOnClient || school.address?.city === city) && (type === '' || school.type === type),
     );
-
-    return this.sortBy() === 'places' ? filtered.sort((a, b) => this.placesLeft(b) - this.placesLeft(a)) : filtered;
   });
 
   /** The server's total while nothing is narrowed on the client; otherwise what is visible. */
@@ -209,14 +206,6 @@ export class HomePageComponent {
   protected logout(): void {
     this.tokenService.clear();
     this.goTo();
-  }
-
-  /** Seats left across the programmes the API attached to a school. */
-  private placesLeft(school: School): number {
-    return (school.programs ?? []).reduce(
-      (sum, p) => sum + Math.max((p.capacity || 0) - (p.enrolled || 0), 0),
-      0,
-    );
   }
 
   /**
