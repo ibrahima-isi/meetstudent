@@ -515,6 +515,37 @@ describe('SchoolDetailPageComponent', () => {
       expect(text()).not.toContain('verified reviews');
     });
 
+    describe('the aggregate stars', () => {
+      const filledStars = () =>
+        Array.from(
+          harness.routeNativeElement!.querySelectorAll('[data-testid="school-aggregate-stars"] lucide-icon') as NodeListOf<HTMLElement>,
+        ).map((icon) => !icon.classList.contains('opacity-30'));
+
+      it('are all dimmed for a school nobody has rated', async () => {
+        await renderWith({ ...mockSchool, rating: 0 }, []);
+
+        expect(filledStars()).toEqual([false, false, false, false, false]);
+      });
+
+      it('fill as many stars as the rounded average', async () => {
+        await renderWith({ ...mockSchool, rating: 3.4 }, []);
+
+        expect(filledStars()).toEqual([true, true, true, false, false]);
+      });
+
+      it('round up from the half star', async () => {
+        await renderWith({ ...mockSchool, rating: 3.6 }, []);
+
+        expect(filledStars()).toEqual([true, true, true, true, false]);
+      });
+
+      it('fill all five for a perfect average', async () => {
+        await renderWith({ ...mockSchool, rating: 5 }, []);
+
+        expect(filledStars()).toEqual([true, true, true, true, true]);
+      });
+    });
+
     it('shows the review count when the API sends one', async () => {
       await renderWith({ ...mockSchool, rating: 4, reviewCount: 3 }, []);
 
