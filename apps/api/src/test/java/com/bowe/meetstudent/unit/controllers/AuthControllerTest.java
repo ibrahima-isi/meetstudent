@@ -40,6 +40,17 @@ class AuthControllerTest {
     private AuthController authController;
 
     @Test
+    void refreshToken_throwsInvalidRefreshToken_whenTokenUnknown() {
+        when(refreshTokenService.findByToken("nope")).thenReturn(java.util.Optional.empty());
+        var request = new com.bowe.meetstudent.models.TokenRefreshRequest();
+        request.setRefreshToken("nope");
+
+        org.junit.jupiter.api.Assertions.assertThrows(
+                com.bowe.meetstudent.exceptions.InvalidRefreshTokenException.class,
+                () -> authController.refreshToken(request));
+    }
+
+    @Test
     void login_shouldReturnAccessToken_whenCredentialsAreValid() {
         // Arrange
         String email = "test@example.com";
