@@ -78,3 +78,31 @@ jobs:
 
       - name: Run unit tests
         run: npm test -- --no-watch --browsers=ChromeHeadless
+
+  backoffice:
+    name: backoffice / build-and-test
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: apps/backoffice
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/backoffice/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (production)
+        run: npm run build
+
+      - name: Run unit tests
+        run: npm test -- --no-watch --browsers=ChromeHeadless
