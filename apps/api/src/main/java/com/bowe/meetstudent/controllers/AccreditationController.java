@@ -48,12 +48,12 @@ public class AccreditationController {
 
     @GetMapping(path = "/{id}")
     @Operation(summary = "Get an accreditation by ID", description = "Retrieves details of a specific accreditation using its unique ID.")
-    @ApiResponse(responseCode = "302", description = "Accreditation found")
+    @ApiResponse(responseCode = "200", description = "Accreditation found")
     @ApiResponse(responseCode = "404", description = "Accreditation not found")
     public ResponseEntity<AccreditationDTO> getAccreditationById(
             @Parameter(description = "ID of the accreditation to retrieve") @PathVariable int id) {
         return accreditationService.findById(id)
-                .map(acc -> new ResponseEntity<>(accreditationMapper.toDTO(acc), HttpStatus.FOUND))
+                .map(acc -> new ResponseEntity<>(accreditationMapper.toDTO(acc), HttpStatus.OK))
                 .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
 

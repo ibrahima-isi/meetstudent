@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
@@ -41,7 +42,7 @@ public class SchoolRateController {
     @PreAuthorize("hasRole('EXPERT') or hasRole('STUDENT')")
     public ResponseEntity<SchoolRateDTO> create(
             @AuthenticationPrincipal UserPrincipal principal,
-            @RequestBody SchoolRateDTO dto) {
+            @RequestBody @Valid SchoolRateDTO dto) {
         SchoolRate rate = mapper.toEntity(dto);
         
         if (dto.getSchoolId() != null) {
