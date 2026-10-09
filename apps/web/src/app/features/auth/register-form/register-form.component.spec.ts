@@ -197,6 +197,50 @@ describe('RegisterFormComponent translations', () => {
     expect(text()).not.toContain('uk_users_email');
   });
 
+  async function submitWith(body: Record<string, string>) {
+    const component = fixture.componentInstance;
+    component.step1Form.patchValue({ firstname: 'Awa', lastname: 'Diop', email: 'awa@example.com', town: 'Dakar' });
+    component.step.set(2);
+    await settle();
+    component.step2Form.setValue({ password: 'sup3rsecret', confirmPassword: 'sup3rsecret', terms: true });
+    component.handleSubmit();
+    httpMock.expectOne(`${environment.apiUrl}/users`).flush(body, { status: 400, statusText: 'Bad Request' });
+  }
+
+  it('shows the API email message under the email field, back on step 1', async () => {
+    await render('fr');
+    await submitWith({ email: 'Cet email est déjà utilisé' });
+    await settle();
+
+    const component = fixture.componentInstance;
+    expect(component.step()).toBe(1);
+    const message = fixture.nativeElement.querySelector('[data-testid="error-email"]') as HTMLElement;
+    expect(message.textContent).toContain('Cet email est déjà utilisé');
+    expect(text()).not.toContain("L'inscription a échoué");
+  });
+
+  it('shows the API confirmedPassword message under the confirmation field', async () => {
+    await render('fr');
+    await submitWith({ confirmedPassword: 'Les mots de passe ne correspondent pas' });
+    await settle();
+
+    const component = fixture.componentInstance;
+    expect(component.step()).toBe(2);
+    const message = fixture.nativeElement.querySelector('[data-testid="error-confirmedPassword"]') as HTMLElement;
+    expect(message.textContent).toContain('Les mots de passe ne correspondent pas');
+  });
+
+  it('clears a field error as soon as the visitor edits that field', async () => {
+    await render('fr');
+    await submitWith({ email: 'Cet email est déjà utilisé' });
+    await settle();
+
+    fixture.componentInstance.step1Form.get('email')?.setValue('awa2@example.com');
+    await settle();
+
+    expect(fixture.nativeElement.querySelector('[data-testid="error-email"]')).toBeNull();
+  });
+
   function bacOptions(): { value: string; label: string }[] {
     const select = fixture.nativeElement.querySelector('select#bacType') as HTMLSelectElement;
     return Array.from(select.options)

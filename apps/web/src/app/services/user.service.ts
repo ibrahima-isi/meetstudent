@@ -5,6 +5,21 @@ import { environment } from '../../environments/environment';
 import { User } from '@models/entities';
 import { MediaService } from './media.service';
 
+/**
+ * The backend `UpdateProfileRequest`. Every field is optional: an omitted (null)
+ * field is left unchanged, and so is an empty `password`, which otherwise must
+ * be 8 characters or more. The role is deliberately absent — it only changes
+ * through the admin-only `PATCH /users/{id}/role`.
+ */
+export interface ProfileUpdate {
+  firstname?: string;
+  lastname?: string;
+  email?: string;
+  birthday?: string;
+  password?: string;
+  qualification?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -46,6 +61,11 @@ export class UserService {
         coverImageUrl: this.mediaService.resolveUrl(school.cover) ?? school.coverImageUrl
       }))
     };
+  }
+
+  /** Self-service profile save: `PATCH /users/{id}` (the owner or an admin). */
+  updateProfile(id: number, changes: ProfileUpdate): Observable<User> {
+    return this.http.patch<User>(`${this.apiUrl}/${id}`, changes);
   }
 
   addToWishlist(userId: number, schoolId: number): Observable<User> {

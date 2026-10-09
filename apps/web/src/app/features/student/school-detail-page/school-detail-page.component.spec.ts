@@ -275,6 +275,13 @@ describe('SchoolDetailPageComponent', () => {
       expect(text).toContain('1 place disponible');
     });
 
+    it('offers no sort by available places, since no capacity data exists', async () => {
+      await renderIn('en');
+
+      expect(harness.routeNativeElement?.querySelector('option[value="places"]')).toBeNull();
+      expect(harness.routeNativeElement?.textContent).not.toContain('Sort by available places');
+    });
+
     it('renders in English, with English plurals', async () => {
       const text = await renderIn('en');
 

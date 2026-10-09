@@ -122,7 +122,6 @@ describe('dark mode: no light-only palette classes', () => {
     spyOn(TestBed.inject(SchoolService), 'getSchools').and.returnValue(answer as never);
   const profileAs = (role: typeof student | typeof expert) => (c: any) => {
     c.profile.set(role);
-    c.editedProfile.set({ ...role });
   };
 
   beforeEach(async () => {

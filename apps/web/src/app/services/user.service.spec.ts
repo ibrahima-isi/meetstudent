@@ -60,4 +60,17 @@ describe('UserService', () => {
     expect(req.request.method).toBe('POST');
     req.flush({});
   });
+
+  it('PATCHes the profile fields to /users/{id} and returns the saved user', () => {
+    const saved = { id: 5, firstname: 'Awa', lastname: 'Diop', email: 'a@b.sn', role: { name: 'ROLE_STUDENT' } } as User;
+    let result: User | undefined;
+
+    service.updateProfile(5, { firstname: 'Awa', password: 'n3wpassword' }).subscribe((u) => (result = u));
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/users/5`);
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.body).toEqual({ firstname: 'Awa', password: 'n3wpassword' });
+    req.flush(saved);
+    expect(result).toEqual(saved);
+  });
 });
