@@ -1,13 +1,17 @@
 import {
   mergeApplicationConfig,
   ApplicationConfig,
+  inject,
   provideEnvironmentInitializer,
+  REQUEST,
 } from '@angular/core';
+import { HTTP_TRANSFER_CACHE_ORIGIN_MAP } from '@angular/common/http';
 import { provideServerRendering, withRoutes } from '@angular/ssr';
 import { appConfig } from './app.config';
 import { serverRoutes } from './app.routes.server';
 import { environment } from '../environments/environment';
 import { applyServerEnvironment } from '../environments/server-environment';
+import { transferCacheOriginMap } from './http-transfer-origin';
 
 /**
  * The `API_URL` override has to be applied *here*, not only in `server.ts`.
@@ -30,6 +34,11 @@ const serverConfig: ApplicationConfig = {
         applyServerEnvironment(environment, process.env);
       }
     }),
+    {
+      // Read lazily, on the first request, so it sees the API_URL override.
+      provide: HTTP_TRANSFER_CACHE_ORIGIN_MAP,
+      useFactory: () => transferCacheOriginMap(environment.apiUrl, inject(REQUEST, { optional: true })),
+    },
     provideServerRendering(withRoutes(serverRoutes)),
   ],
 };
