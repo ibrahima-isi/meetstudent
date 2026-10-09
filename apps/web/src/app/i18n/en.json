@@ -219,6 +219,17 @@
     "bacPlaceholder": "Select your BAC",
     "specialty": "Specialty",
     "specialtyPlaceholder": "Mathematics, Physics, etc.",
+    "saving": "Saving...",
+    "saved": "Profile updated.",
+    "saveFailed": "Could not save your profile. Please try again.",
+    "fieldErrors": "Please correct the highlighted fields.",
+    "newPassword": "New password",
+    "newPasswordHint": "Leave empty to keep your current password. At least 8 characters.",
+    "errors": {
+      "required": "This field is required.",
+      "email": "Please enter a valid email address.",
+      "passwordMin": "The password must contain at least 8 characters."
+    },
     "wishlistTitle": "My wishlist",
     "remove": "Remove",
     "wishlistEmpty": "No schools in your wishlist"
