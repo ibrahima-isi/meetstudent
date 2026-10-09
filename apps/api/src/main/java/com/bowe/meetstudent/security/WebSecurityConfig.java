@@ -31,6 +31,7 @@ public class WebSecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CustomUserDetailsService customUserDetailsService;
     private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
+    private final CustomAccessDeniedHandler customAccessDeniedHandler;
 
     @Value("${app.cors.allowed-origins:http://localhost:4200}")
     private List<String> corsAllowedOrigins;
@@ -44,12 +45,17 @@ public class WebSecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .formLogin(AbstractHttpConfigurer::disable)
-                .exceptionHandling(h -> h.authenticationEntryPoint(customAuthenticationEntryPoint))
+                .exceptionHandling(h -> h
+                        .authenticationEntryPoint(customAuthenticationEntryPoint)
+                        .accessDeniedHandler(customAccessDeniedHandler))
                 .securityMatcher("/**")
                 .authorizeHttpRequests(registry ->
                         registry
                                 // Public endpoints
                                 .requestMatchers("/").permitAll()
+                                // Container error dispatch target: must stay reachable or every
+                                // sendError() (403, 404, ...) is rewritten into a 401.
+                                .requestMatchers("/error").permitAll()
                                 .requestMatchers("/api/v1/auth/**").permitAll()
                                 .requestMatchers("/uploads/public/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/v1/media/mine").authenticated()
@@ -72,12 +78,15 @@ public class WebSecurityConfig {
                                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                                 .requestMatchers(HttpMethod.POST, "/api/v1/schools/**").hasRole("ADMIN")
                                 .requestMatchers(HttpMethod.PUT, "/api/v1/schools/**").hasRole("ADMIN")
+                                .requestMatchers(HttpMethod.PATCH, "/api/v1/schools/**").hasRole("ADMIN")
                                 .requestMatchers(HttpMethod.DELETE, "/api/v1/schools/**").hasRole("ADMIN")
                                 .requestMatchers(HttpMethod.POST, "/api/v1/programs/**").hasRole("ADMIN")
                                 .requestMatchers(HttpMethod.PUT, "/api/v1/programs/**").hasRole("ADMIN")
+                                .requestMatchers(HttpMethod.PATCH, "/api/v1/programs/**").hasRole("ADMIN")
                                 .requestMatchers(HttpMethod.DELETE, "/api/v1/programs/**").hasRole("ADMIN")
                                 .requestMatchers(HttpMethod.POST, "/api/v1/courses/**").hasRole("ADMIN")
                                 .requestMatchers(HttpMethod.PUT, "/api/v1/courses/**").hasRole("ADMIN")
+                                .requestMatchers(HttpMethod.PATCH, "/api/v1/courses/**").hasRole("ADMIN")
                                 .requestMatchers(HttpMethod.DELETE, "/api/v1/courses/**").hasRole("ADMIN")
                                 .requestMatchers("/api/v1/accreditations/**").hasRole("ADMIN")
                                 .requestMatchers("/api/v1/tags/**").hasRole("ADMIN")

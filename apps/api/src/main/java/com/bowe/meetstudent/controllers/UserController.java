@@ -66,8 +66,10 @@ public class UserController {
     }
 
     @GetMapping
-    @Operation(summary = "Get all users (paginated)", description = "Retrieves a paginated list of all users registered on the platform.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Get all users (paginated, admin only)", description = "Retrieves a paginated list of all users registered on the platform. Restricted to administrators.")
     @ApiResponse(responseCode = "200", description = "List of users retrieved")
+    @ApiResponse(responseCode = "403", description = "Caller is not an administrator")
     public Page<UserDTO> findAll(@ParameterObject Pageable pageable) {
         Page<UserEntity> userEntities = this.userService.findAll(pageable);
         return userEntities.map(userMapper::toDTO);
@@ -105,7 +107,9 @@ public class UserController {
     }
 
     @GetMapping(path = "/role/{role}")
-    @Operation(summary = "Get users by role name", description = "Retrieves a list of all users assigned to a specific role (e.g., STUDENT).")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Get users by role name (admin only)", description = "Retrieves a list of all users assigned to a specific role (e.g., STUDENT). Restricted to administrators.")
+    @ApiResponse(responseCode = "403", description = "Caller is not an administrator")
     public ResponseEntity<List<UserDTO>> findByRole(
             @Parameter(description = "Name of the role (e.g., STUDENT)") @PathVariable String role) {
         Optional<Role> roleOptional = roleService.findRoleByName(role.toUpperCase());
