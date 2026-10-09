@@ -1,3 +1,7 @@
+server:
+  # TLS terminates at a reverse proxy: honour X-Forwarded-* so redirects/links use https.
+  forward-headers-strategy: framework
+
 spring:
   datasource:
     url: ${SPRING_DATASOURCE_URL}
