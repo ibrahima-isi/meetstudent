@@ -6,6 +6,19 @@
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <!-- Sets the theme class before first paint (no flash). Keep in sync with ThemeService: key "theme", values light|dark|system. -->
+  <script>
+    (function () {
+      var dark = false;
+      try {
+        var stored = localStorage.getItem('theme');
+        dark = stored === 'dark' || ((stored !== 'light') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      } catch (e) {}
+      var root = document.documentElement;
+      if (dark) root.classList.add('dark');
+      root.style.colorScheme = dark ? 'dark' : 'light';
+    })();
+  </script>
 </head>
 <body>
   <app-root></app-root>
