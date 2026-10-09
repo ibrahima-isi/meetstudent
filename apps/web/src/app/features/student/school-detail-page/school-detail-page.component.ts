@@ -1,4 +1,4 @@
-import { Component, input, signal, computed, effect, inject } from '@angular/core';
+import { Component, input, signal, computed, effect, inject, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -48,6 +48,11 @@ export class SchoolDetailPageComponent {
   /** Placeholder rows shown while the programmes load. */
   protected readonly skeletons = [0, 1];
   readonly isAuthenticated = computed(() => this.tokenService.isAuthenticated());
+  private readonly roleName = computed(() => this.tokenService.user()?.role?.name);
+  /** Mirrors the API: students and experts rate schools. */
+  readonly canRateSchool = computed(() => this.roleName() === 'ROLE_STUDENT' || this.roleName() === 'ROLE_EXPERT');
+  /** Mirrors the API: only experts rate programmes and courses. */
+  readonly canRateProgramAndCourse = computed(() => this.roleName() === 'ROLE_EXPERT');
 
   readonly ArrowLeft = ArrowLeft;
   readonly MapPin = MapPin;
@@ -79,8 +84,26 @@ export class SchoolDetailPageComponent {
 
     // Re-runs when the id changes, so /schools/7 → /schools/8 reloads even
     // though the router reuses the component instance.
+    // untracked: only the id may re-trigger a load, not the signals read inside it.
     effect(() => {
-      this.load(Number(this.id()));
+      const id = Number(this.id());
+      untracked(() => this.load(id));
+    });
+  }
+
+  /**
+   * After a school rating is saved, re-reads the school for the server's
+   * aggregate. Only the rating is patched, so programmes are not reloaded.
+   */
+  protected refreshAggregate(): void {
+    const id = this.school()?.id;
+    if (id === undefined) {
+      return;
+    }
+    this.schoolService.getSchool(id).subscribe({
+      next: (fresh) => this.school.update((current) => (current ? { ...current, rating: fresh.rating } : current)),
+      // The rating itself was saved; a stale aggregate is acceptable.
+      error: () => undefined,
     });
   }
 

@@ -23,6 +23,7 @@ describe('SchoolDetailPageComponent', () => {
   let schoolServiceSpy: jasmine.SpyObj<SchoolService>;
   let ratingServiceSpy: jasmine.SpyObj<RatingService>;
   let authenticated: ReturnType<typeof signal<boolean>>;
+  let currentUser: ReturnType<typeof signal<{ id: number; role: { name: string } } | null>>;
   let locale: ReturnType<typeof signal<'fr' | 'en'>>;
   let harness: RouterTestingHarness;
   let wishlist: {
@@ -69,6 +70,7 @@ describe('SchoolDetailPageComponent', () => {
       'rateCourse',
     ]);
     authenticated = signal(true);
+    currentUser = signal<{ id: number; role: { name: string } } | null>({ id: 3, role: { name: 'ROLE_STUDENT' } });
     const saved = signal<School[]>([]);
     wishlist = {
       schools: saved,
@@ -97,7 +99,7 @@ describe('SchoolDetailPageComponent', () => {
         { provide: CourseService, useValue: courseServiceSpy },
         { provide: SchoolService, useValue: schoolServiceSpy },
         { provide: RatingService, useValue: ratingServiceSpy },
-        { provide: TokenService, useValue: { isAuthenticated: authenticated, user: signal(null) } },
+        { provide: TokenService, useValue: { isAuthenticated: authenticated, user: currentUser } },
         { provide: WishlistService, useValue: wishlist },
         { provide: LocaleService, useValue: { active: locale } },
         provideTransloco(translocoOptions),
@@ -359,6 +361,93 @@ describe('SchoolDetailPageComponent', () => {
 
       expect(q('app-error-state')).toBeNull();
       expect(text()).toContain('No programmes are listed for this school yet');
+    });
+  });
+
+  describe('rating', () => {
+    const q = (sel: string) => harness.routeNativeElement?.querySelector(sel) ?? null;
+    const qa = (sel: string) => harness.routeNativeElement?.querySelectorAll(sel) ?? [];
+    const progs = [{ id: 5, name: 'Prog', duration: 3, school: { id: 7 } }] as Program[];
+    async function settle() {
+      harness.detectChanges();
+      await harness.fixture.whenStable();
+    }
+    async function render() {
+      programServiceSpy.getPrograms.and.returnValue(of(pageOf(progs)));
+      const component = await renderAt('/schools/7');
+      await settle();
+      return component;
+    }
+    /** Stars of the school widget, in the sidebar. */
+    const schoolStars = () => qa('[data-testid="school-rating"] app-star-rating button');
+
+    beforeEach(async () => {
+      const transloco = TestBed.inject(TranslocoService);
+      await firstValueFrom(transloco.load('en'));
+      transloco.setActiveLang('en');
+      locale.set('en');
+    });
+
+    it('lets a student rate the school but shows no programme rating controls', async () => {
+      await render();
+
+      expect(q('[data-testid="school-rating"] app-star-rating')).not.toBeNull();
+      expect(q('[data-testid="programme-rating"]')).toBeNull();
+    });
+
+    it('lets an expert rate the school and its programmes', async () => {
+      currentUser.set({ id: 4, role: { name: 'ROLE_EXPERT' } });
+      await render();
+
+      expect(q('[data-testid="school-rating"] app-star-rating')).not.toBeNull();
+      expect(q('[data-testid="programme-rating"] app-star-rating')).not.toBeNull();
+    });
+
+    it('offers expert-only course rating controls in the courses modal', async () => {
+      courseServiceSpy.getCoursesByProgram.and.returnValue(of([{ id: 9, name: 'C' } as Course]));
+      currentUser.set({ id: 4, role: { name: 'ROLE_EXPERT' } });
+      const component = await render();
+      component.openCoursesModal(progs[0]);
+      await settle();
+      expect(q('[data-testid="course-rating"] app-star-rating')).not.toBeNull();
+
+      component.closeCoursesModal();
+      currentUser.set({ id: 3, role: { name: 'ROLE_STUDENT' } });
+      component.openCoursesModal(progs[0]);
+      await settle();
+      expect(q('[data-testid="course-rating"]')).toBeNull();
+    });
+
+    it('shows an anonymous visitor a sign-in prompt instead of any rating control', async () => {
+      authenticated.set(false);
+      currentUser.set(null);
+      await render();
+
+      expect(q('app-star-rating')).toBeNull();
+      expect(q('[data-testid="school-rating"]')?.textContent).toContain('Sign in to leave a rating');
+    });
+
+    it('shows no rating controls to an admin, who cannot rate', async () => {
+      currentUser.set({ id: 1, role: { name: 'ROLE_ADMIN' } });
+      await render();
+
+      expect(q('app-star-rating')).toBeNull();
+    });
+
+    it('submits the school rating and refreshes the aggregate from the API', async () => {
+      ratingServiceSpy.rateSchool.and.returnValue(of({} as any));
+      const component = await render();
+      schoolServiceSpy.getSchool.and.returnValue(of({ ...mockSchool, rating: 4.5 }));
+
+      (schoolStars()[3] as HTMLButtonElement).click();
+      await settle();
+      (q('[data-testid="school-rating"] textarea + button') as HTMLButtonElement).click();
+      await settle();
+
+      expect(ratingServiceSpy.rateSchool).toHaveBeenCalledWith(7, 3, 4, '');
+      expect(component.school()?.rating).toBe(4.5);
+      expect(q('[data-testid="school-aggregate"]')?.textContent).toContain('4.5');
+      expect(programServiceSpy.getPrograms).toHaveBeenCalledTimes(1);
     });
   });
 });

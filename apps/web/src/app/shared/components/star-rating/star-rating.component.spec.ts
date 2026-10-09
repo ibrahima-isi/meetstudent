@@ -3,7 +3,7 @@ import { provideZonelessChangeDetection } from '@angular/core';
 import { StarRatingComponent } from './star-rating.component';
 import { RatingService } from '@services/rating.service';
 import { TokenService } from '@services/token.service';
-import { firstValueFrom, of } from 'rxjs';
+import { firstValueFrom, of, Subject, throwError } from 'rxjs';
 import { provideTransloco, TranslocoService } from '@jsverse/transloco';
 import { translocoOptions } from '@i18n/transloco.config';
 import { signal } from '@angular/core';
@@ -95,5 +95,72 @@ describe('StarRatingComponent', () => {
     expect(root.textContent).toContain('Post my review');
     expect(root.querySelector('textarea')?.getAttribute('placeholder'))
       .toBe('Add a comment (optional)...');
+  });
+
+  describe('submission', () => {
+    const q = (sel: string) => (fixture.nativeElement as HTMLElement).querySelector(sel);
+
+    it('does not send a second request while the first is pending', () => {
+      ratingServiceSpy.rateSchool.and.returnValue(new Subject<any>());
+      component.rating.set(4);
+
+      component.submitRating();
+      component.submitRating();
+
+      expect(ratingServiceSpy.rateSchool).toHaveBeenCalledTimes(1);
+      expect(component.isSubmitting()).toBeTrue();
+    });
+
+    it('locks after a successful submission and tells the parent once', () => {
+      ratingServiceSpy.rateSchool.and.returnValue(of({} as any));
+      const emitted: unknown[] = [];
+      component.onRate.subscribe((e) => emitted.push(e));
+      component.rating.set(4);
+
+      component.submitRating();
+      component.submitRating();
+      fixture.detectChanges();
+
+      expect(ratingServiceSpy.rateSchool).toHaveBeenCalledTimes(1);
+      expect(emitted.length).toBe(1);
+      expect(q('textarea')).toBeNull();
+      expect(q('[data-testid="rating-done"]')).not.toBeNull();
+      component.handleRate(2);
+      expect(component.rating()).toBe(4);
+    });
+
+    it('shows an inline alert and does not report success when the API refuses', () => {
+      ratingServiceSpy.rateSchool.and.returnValue(throwError(() => new Error('403')));
+      const emitted: unknown[] = [];
+      component.onRate.subscribe((e) => emitted.push(e));
+      component.rating.set(4);
+
+      component.submitRating();
+      fixture.detectChanges();
+
+      expect(emitted).toEqual([]);
+      expect(q('[role="alert"][data-testid="rating-error"]')).not.toBeNull();
+      expect(component.isSubmitting()).toBeFalse();
+    });
+
+    it('lets the visitor retry after a failure', () => {
+      ratingServiceSpy.rateSchool.and.returnValues(throwError(() => new Error('500')), of({} as any));
+      component.rating.set(4);
+
+      component.submitRating();
+      component.submitRating();
+      fixture.detectChanges();
+
+      expect(ratingServiceSpy.rateSchool).toHaveBeenCalledTimes(2);
+      expect(q('[data-testid="rating-error"]')).toBeNull();
+    });
+
+    it('uses the program and course endpoints for those targets', () => {
+      ratingServiceSpy.rateProgram.and.returnValue(of({} as any));
+      fixture.componentRef.setInput('itemType', 'program');
+      component.rating.set(3);
+      component.submitRating();
+      expect(ratingServiceSpy.rateProgram).toHaveBeenCalledWith(1, 1, 3, '');
+    });
   });
 });
