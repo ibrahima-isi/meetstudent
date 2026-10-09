@@ -5,9 +5,8 @@ import { Router } from '@angular/router';
 import { LucideAngularModule, Search, MapPin, Star, Filter, LogIn, UserPlus, ArrowUpDown } from 'lucide-angular';
 import { ImageWithFallbackComponent } from '@shared/components/image-with-fallback/image-with-fallback.component';
 import { LanguageSwitcherComponent } from '@shared/components/language-switcher/language-switcher.component';
-import { SCHOOLS as MOCK_SCHOOLS, CITIES, TYPES } from '@data/schools';
-import { PROGRAMMES } from '@data/programmes';
-import { School, Program } from '@models/entities';
+import { ErrorStateComponent } from '@shared/components/error-state/error-state.component';
+import { School } from '@models/entities';
 import { SchoolService } from '@services/school.service';
 import { LocaleService } from '@services/locale.service';
 import { TranslocoDirective } from '@jsverse/transloco';
@@ -22,6 +21,7 @@ import { pluralKey } from '@i18n/plural';
     ImageWithFallbackComponent,
     LanguageSwitcherComponent,
     TranslocoDirective,
+    ErrorStateComponent,
   ],
   templateUrl: './landing-page.component.html'
 })
@@ -38,7 +38,7 @@ export class LandingPageComponent implements OnInit {
   readonly UserPlus = UserPlus;
   readonly ArrowUpDown = ArrowUpDown;
 
-  schools = signal<School[]>(this.schoolService.schools());
+  schools = signal<School[]>([]);
   searchQuery = signal('');
   /** '' means no filter; the template labels that choice in the active language. */
   selectedCity = signal('');
@@ -46,25 +46,37 @@ export class LandingPageComponent implements OnInit {
   showFilters = signal(false);
   sortBy = signal<'name' | 'city' | 'places'>('name');
 
-  CITIES = CITIES;
-  TYPES = TYPES;
+  /** 'loading' until the first answer; 'error' shows the retry surface, never placeholder data. */
+  status = signal<'loading' | 'loaded' | 'error'>('loading');
+  /** Placeholder cards shown while loading. */
+  protected readonly skeletons = [0, 1, 2];
 
   ngOnInit() {
-    // If we have no schools, or every time we enter (for fresh data), fetch from API
-    // The tap in the service will update the signal for future navigations
+    this.load();
+  }
+
+  /** Fetches the first page of schools; also the retry action of the error state. */
+  protected load(): void {
+    this.status.set('loading');
     this.schoolService.getSchools(0, 50).subscribe({
       next: (page) => {
-        if (page && page.content) {
-          this.schools.set(page.content);
-        }
+        this.schools.set(page?.content ?? []);
+        this.status.set('loaded');
       },
-      error: (err) => {
-        console.error('API Error:', err);
-        if (this.schools().length === 0) {
-          this.schools.set(MOCK_SCHOOLS);
-        }
-      }
+      error: () => {
+        this.schools.set([]);
+        this.status.set('error');
+      },
     });
+  }
+
+  /** Filter choices come from the schools actually loaded, not a bundled list. */
+  cities = computed(() => this.distinct((school) => school.address?.city));
+  types = computed(() => this.distinct((school) => school.type));
+
+  private distinct(pick: (school: School) => string | undefined): string[] {
+    const values = this.schools().map(pick).filter((v): v is string => !!v);
+    return [...new Set(values)].sort((a, b) => a.localeCompare(b, this.locale.active()));
   }
 
   activeFiltersCount = computed(() => {
@@ -95,17 +107,19 @@ export class LandingPageComponent implements OnInit {
       } else if (sortType === 'city') {
         return (a.address.city || '').localeCompare(b.address.city || '', locale);
       } else if (sortType === 'places') {
-        const aId = a.id || 0;
-        const bId = b.id || 0;
-        const aPrograms = PROGRAMMES[aId] || [];
-        const bPrograms = PROGRAMMES[bId] || [];
-        const aPlaces = aPrograms.reduce((sum: number, p: Program) => sum + ((p.capacity || 0) - (p.enrolled || 0)), 0);
-        const bPlaces = bPrograms.reduce((sum: number, p: Program) => sum + ((p.capacity || 0) - (p.enrolled || 0)), 0);
-        return bPlaces - aPlaces;
+        return this.placesLeft(b) - this.placesLeft(a);
       }
       return 0;
     });
   });
+
+  /** Seats left across the programmes the API attached to a school. */
+  private placesLeft(school: School): number {
+    return (school.programs ?? []).reduce(
+      (sum, p) => sum + Math.max((p.capacity || 0) - (p.enrolled || 0), 0),
+      0,
+    );
+  }
 
   /**
    * A school the API returned always carries an id; the type says otherwise

@@ -2,8 +2,9 @@ import { Component, computed, signal, effect, OnInit, OnDestroy, inject } from '
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { LucideAngularModule, ShoppingCart, X, GraduationCap } from 'lucide-angular';
-import { PROGRAMMES } from '@data/programmes';
+import { ErrorStateComponent } from '@shared/components/error-state/error-state.component';
 import { Program } from '@models/entities';
+import { ProgramService } from '@services/program.service';
 import { UserService } from '@services/user.service';
 import { TokenService } from '@services/token.service';
 import { LocaleService } from '@services/locale.service';
@@ -12,7 +13,7 @@ import { pluralKey } from '@i18n/plural';
 
 @Component({
   selector: 'app-wishlist-cart',
-  imports: [CommonModule, LucideAngularModule, TranslocoDirective],
+  imports: [CommonModule, LucideAngularModule, TranslocoDirective, ErrorStateComponent],
   template: `
     <div class="relative" *transloco="let t">
       <button
@@ -48,7 +49,11 @@ import { pluralKey } from '@i18n/plural';
           </div>
 
           <div class="flex-1 overflow-y-auto">
-            @if (wishlistProgrammes().length === 0) {
+            @if (status() === 'loading') {
+              <p role="status" aria-busy="true" class="p-8 text-center text-gray-500 animate-pulse">{{ t('common.loading') }}</p>
+            } @else if (status() === 'error') {
+              <app-error-state [message]="t('wishlist.loadError')" (retry)="loadProgrammes()" />
+            } @else if (wishlistProgrammes().length === 0) {
               <div class="p-8 text-center">
                 <lucide-icon [img]="GraduationCap" class="w-12 h-12 text-gray-300 mx-auto mb-3"></lucide-icon>
                 <p class="text-gray-600">{{ t('wishlist.empty') }}</p>
@@ -89,6 +94,7 @@ import { pluralKey } from '@i18n/plural';
 })
 export class WishlistCartComponent implements OnInit, OnDestroy {
   private userService = inject(UserService);
+  private readonly programService = inject(ProgramService);
   private tokenService = inject(TokenService);
   private readonly router = inject(Router);
   private readonly locale = inject(LocaleService);
@@ -100,6 +106,9 @@ export class WishlistCartComponent implements OnInit, OnDestroy {
   readonly isAuthenticated = computed(() => this.tokenService.isAuthenticated());
 
   isOpen = signal(false);
+  /** The saved ids are only ids; the programmes behind them come from the API. */
+  private programmes = signal<Program[]>([]);
+  status = signal<'idle' | 'loading' | 'loaded' | 'error'>('idle');
 
   /** The key for a count, by the plural rule of the language being read. */
   protected plural(base: string, count: number): string {
@@ -147,13 +156,34 @@ export class WishlistCartComponent implements OnInit, OnDestroy {
       return;
     }
     this.isOpen.update(v => !v);
+    if (this.isOpen()) {
+      this.loadProgrammes();
+    }
+  }
+
+  /** Resolves the saved ids to programmes; also the retry action of the error state. */
+  loadProgrammes(): void {
+    if (this.wishlist().length === 0) {
+      this.status.set('loaded');
+      return;
+    }
+    this.status.set('loading');
+    this.programService.getPrograms(0, 100).subscribe({
+      next: (page) => {
+        this.programmes.set(page?.content ?? []);
+        this.status.set('loaded');
+      },
+      error: () => {
+        this.programmes.set([]);
+        this.status.set('error');
+      },
+    });
   }
 
   removeFromWishlist(programmeId: number) {
     const user = this.tokenService.user();
     if (user && user.id) {
-      const allProgrammes = Object.values(PROGRAMMES).flat();
-      const prog = allProgrammes.find(p => p.id === programmeId);
+      const prog = this.programmes().find(p => p.id === programmeId);
       // Backend expects schoolId for wishlist
       if (prog && prog.school && prog.school.id) {
         this.userService.removeFromWishlist(user.id, prog.school.id).subscribe();
@@ -168,10 +198,7 @@ export class WishlistCartComponent implements OnInit, OnDestroy {
     }
   }
 
-  get wishlistProgrammes(): () => Program[] {
-    return () => {
-      const allProgrammes = Object.values(PROGRAMMES).flat();
-      return allProgrammes.filter(p => p.id !== undefined && this.wishlist().includes(p.id));
-    };
-  }
+  readonly wishlistProgrammes = computed(() =>
+    this.programmes().filter(p => p.id !== undefined && this.wishlist().includes(p.id)),
+  );
 }

@@ -20,7 +20,6 @@
       "@services/*": ["src/app/services/*"],
       "@models/*": ["src/app/models/*"],
       "@shared/*": ["src/app/shared/*"],
-      "@data/*": ["src/app/data/*"],
       "@i18n/*": ["src/app/i18n/*"]
     }
   },

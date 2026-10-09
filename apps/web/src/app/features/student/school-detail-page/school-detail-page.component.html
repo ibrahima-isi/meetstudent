@@ -121,6 +121,21 @@
             </div>
           </div>
           
+          @if (programsStatus() === 'loading') {
+            <div role="status" aria-busy="true" class="space-y-4">
+              <span class="sr-only">{{ t('common.loading') }}</span>
+              @for (placeholder of skeletons; track placeholder) {
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 animate-pulse space-y-3" aria-hidden="true">
+                  <div class="h-5 bg-gray-200 rounded w-1/2"></div>
+                  <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+                </div>
+              }
+            </div>
+          } @else if (programsStatus() === 'error') {
+            <app-error-state [message]="t('schoolDetail.programmesLoadError')" (retry)="loadPrograms()" />
+          } @else if (programs().length === 0) {
+            <p class="text-center text-gray-600 py-8">{{ t('schoolDetail.noProgrammes') }}</p>
+          }
           @for (programme of sortedProgrammes(); track programme.id) {
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
               <div class="flex items-start justify-between mb-4">
@@ -325,14 +340,16 @@
       </div>
     </div>
   }
+  } @else if (schoolStatus() === 'error') {
+    <div class="max-w-6xl mx-auto px-4 py-16">
+      <app-error-state [message]="t('schoolDetail.loadError')" (retry)="retry()" />
+    </div>
   } @else {
-    <!--
-      Nothing to render until the API answers, and nothing at all if the id
-      is unknown. Phase 3 replaces this with a real loading state and an
-      error state with a retry; until then it must not pretend.
-    -->
-    <div class="max-w-6xl mx-auto px-4 py-16 text-center text-gray-600">
+    <div
+      role="status"
+      aria-busy="true"
+      class="max-w-6xl mx-auto px-4 py-16 text-center text-gray-600 animate-pulse"
+    >
       {{ t('schoolDetail.loading') }}
     </div>
   }
-</div>
