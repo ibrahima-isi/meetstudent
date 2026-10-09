@@ -8,6 +8,7 @@ import { firstValueFrom } from 'rxjs';
 import { translocoOptions } from '@i18n/transloco.config';
 import { LocaleService } from '@services/locale.service';
 import { TokenService } from '@services/token.service';
+import { WishlistService } from '@services/wishlist.service';
 import { User } from '@models/entities';
 import { environment } from '../../../../environments/environment';
 import { ProfilePageComponent } from './profile-page.component';
@@ -15,6 +16,8 @@ import { ProfilePageComponent } from './profile-page.component';
 describe('ProfilePageComponent translations', () => {
   let fixture: ComponentFixture<ProfilePageComponent>;
   let user: ReturnType<typeof signal<Partial<User> | null>>;
+  let saved: ReturnType<typeof signal<unknown[]>>;
+  let toggle: jasmine.Spy;
 
   function text(): string {
     return (fixture.nativeElement as HTMLElement).textContent ?? '';
@@ -33,6 +36,8 @@ describe('ProfilePageComponent translations', () => {
   }
 
   beforeEach(() => {
+    saved = signal<unknown[]>([]);
+    toggle = jasmine.createSpy('toggle');
     user = signal<Partial<User> | null>({ firstname: 'Awa', lastname: '', email: '', role: { name: 'STUDENT' } });
 
     TestBed.configureTestingModule({
@@ -44,6 +49,7 @@ describe('ProfilePageComponent translations', () => {
         provideRouter([]),
         provideTransloco(translocoOptions),
         { provide: TokenService, useValue: { user } },
+        { provide: WishlistService, useValue: { schools: saved, load: () => {}, toggle } },
       ],
     });
   });
@@ -65,5 +71,16 @@ describe('ProfilePageComponent translations', () => {
     expect(text()).toContain('Not provided');
     expect(text()).toContain('Student');
     expect(text()).toContain('My documents');
+  });
+
+  it('lists the wishlisted schools from the API and removes one through the service', async () => {
+    const school = { id: 3, name: 'Real School', address: { location: '', city: '', country: '' } };
+    saved.set([school]);
+    await render('en');
+
+    expect(text()).toContain('Real School');
+    (fixture.nativeElement.querySelector('[data-testid="wishlist-remove"]') as HTMLButtonElement).click();
+
+    expect(toggle).toHaveBeenCalledWith(school);
   });
 });

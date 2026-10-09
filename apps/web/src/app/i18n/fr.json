@@ -167,14 +167,18 @@
   },
   "wishlist": {
     "button": "Souhaits",
-    "title": "Mes formations souhaitées",
+    "title": "Mes établissements souhaités",
     "count": {
-      "one": "{{ count }} formation",
-      "other": "{{ count }} formations"
+      "one": "{{ count }} établissement",
+      "other": "{{ count }} établissements"
     },
-    "empty": "Aucune formation dans vos souhaits",
-    "emptyHint": "Ajoutez des formations pour les retrouver facilement",
+    "empty": "Aucun établissement dans vos souhaits",
+    "emptyHint": "Ajoutez des établissements pour les retrouver facilement",
     "compare": "Comparer les formations",
+    "addAction": "Ajouter aux souhaits",
+    "removeAction": "Retirer des souhaits",
+    "updateError": "Votre liste de souhaits n'a pas pu être mise à jour. Veuillez réessayer.",
+    "dismiss": "Fermer",
     "loadError": "Votre liste de souhaits n'a pas pu être chargée."
   },
   "rating": {
@@ -204,9 +208,8 @@
     "specialty": "Spécialité",
     "specialtyPlaceholder": "Mathématiques, Physique, etc.",
     "wishlistTitle": "Ma liste de souhaits",
-    "programmeNumber": "Programme #{{ id }}",
     "remove": "Retirer",
-    "wishlistEmpty": "Aucune formation dans votre liste de souhaits"
+    "wishlistEmpty": "Aucun établissement dans votre liste de souhaits"
   },
   "documents": {
     "title": "Mes documents",
