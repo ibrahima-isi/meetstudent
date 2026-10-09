@@ -7,7 +7,6 @@ import { provideTransloco } from '@jsverse/transloco';
 import { NEVER, firstValueFrom, of, throwError } from 'rxjs';
 import { translocoOptions } from '@i18n/transloco.config';
 import { LocaleService } from '@services/locale.service';
-import { CourseService } from '@services/course.service';
 import { MediaService } from '@services/media.service';
 import { ProgramService } from '@services/program.service';
 import { SchoolService } from '@services/school.service';
@@ -97,7 +96,7 @@ describe('dark mode: no light-only palette classes', () => {
 
   const secondSchool = { ...school, id: 2, name: 'Stanford', tags: [] };
   const programmes = [
-    { id: 10, name: 'Computer Science', level: 'Master', duration: 2, startDate: '2026-09', capacity: 30, enrolled: 12, rating: 4, description: 'p' },
+    { id: 10, name: 'Computer Science', level: 'Master', duration: 2, startDate: '2026-09', capacity: 30, enrolled: 12, rating: 4, description: 'p', courses: [{ id: 100, name: 'Algorithms', code: 'CS101' }] },
     { id: 11, name: 'Law', level: 'Bachelor', duration: 3, startDate: '2026-09', capacity: 20, enrolled: 20, rating: 3 },
   ];
   const detailedSchool = {
@@ -106,7 +105,6 @@ describe('dark mode: no light-only palette classes', () => {
     accreditations: [{ id: 1, name: 'AACSB' }],
     programs: programmes,
   };
-  const courses = [{ id: 100, name: 'Algorithms', code: 'CS101' }];
   const student = { id: 7, firstname: 'Ada', lastname: 'L', email: 'a@b.c', role: { name: 'ROLE_STUDENT' } };
   const expert = { ...student, role: { name: 'ROLE_EXPERT' } };
   const documents = [
@@ -144,7 +142,6 @@ describe('dark mode: no light-only palette classes', () => {
           },
         },
         { provide: ProgramService, useValue: { getPrograms: () => of({ content: [] }) } },
-        { provide: CourseService, useValue: { getCoursesByProgram: () => of(courses) } },
         { provide: MediaService, useValue: { mine: () => of(documents) } },
         {
           provide: TokenService,

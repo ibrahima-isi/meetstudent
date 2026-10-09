@@ -49,7 +49,7 @@ describe('UserService', () => {
       expect(service.users().length).toBe(1);
     });
 
-    const req = httpMock.expectOne(`${environment.apiUrl}/users/1`);
+    const req = httpMock.expectOne(`${environment.apiUrl}/users/id/1`);
     expect(req.request.method).toBe('GET');
     req.flush(mockUser);
   });

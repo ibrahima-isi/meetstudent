@@ -9,7 +9,6 @@ import { provideTransloco, TranslocoService } from '@jsverse/transloco';
 import { translocoOptions } from '@i18n/transloco.config';
 import { School, Program, Course, Page } from '@models/entities';
 import { ProgramService } from '@services/program.service';
-import { CourseService } from '@services/course.service';
 import { SchoolService } from '@services/school.service';
 import { TokenService } from '@services/token.service';
 import { RatingService } from '@services/rating.service';
@@ -19,7 +18,6 @@ import { SchoolDetailPageComponent } from './school-detail-page.component';
 
 describe('SchoolDetailPageComponent', () => {
   let programServiceSpy: jasmine.SpyObj<ProgramService>;
-  let courseServiceSpy: jasmine.SpyObj<CourseService>;
   let schoolServiceSpy: jasmine.SpyObj<SchoolService>;
   let ratingServiceSpy: jasmine.SpyObj<RatingService>;
   let authenticated: ReturnType<typeof signal<boolean>>;
@@ -62,7 +60,6 @@ describe('SchoolDetailPageComponent', () => {
 
   beforeEach(() => {
     programServiceSpy = jasmine.createSpyObj('ProgramService', ['getPrograms']);
-    courseServiceSpy = jasmine.createSpyObj('CourseService', ['getCoursesByProgram']);
     schoolServiceSpy = jasmine.createSpyObj('SchoolService', ['getSchool']);
     ratingServiceSpy = jasmine.createSpyObj('RatingService', [
       'rateSchool',
@@ -96,7 +93,6 @@ describe('SchoolDetailPageComponent', () => {
           withComponentInputBinding(),
         ),
         { provide: ProgramService, useValue: programServiceSpy },
-        { provide: CourseService, useValue: courseServiceSpy },
         { provide: SchoolService, useValue: schoolServiceSpy },
         { provide: RatingService, useValue: ratingServiceSpy },
         { provide: TokenService, useValue: { isAuthenticated: authenticated, user: currentUser } },
@@ -156,15 +152,22 @@ describe('SchoolDetailPageComponent', () => {
   });
 
   it('opens the courses modal for a program', async () => {
-    const mockProgram: Program = { id: 1, name: 'Prog 1', duration: 3 };
-    courseServiceSpy.getCoursesByProgram.and.returnValue(of([{ id: 1, name: 'Course 1' } as Course]));
+    const mockProgram: Program = { id: 1, name: 'Prog 1', duration: 3, courses: [{ id: 1, name: 'Course 1' } as Course] };
 
     const component = await renderAt('/schools/7');
     component.openCoursesModal(mockProgram);
 
     expect(component.showCoursesModal()).toBeTrue();
     expect(component.selectedProgram()).toEqual(mockProgram);
-    expect(courseServiceSpy.getCoursesByProgram).toHaveBeenCalledWith(1);
+    // The school response embeds programs[].courses: no extra request.
+    expect(component.courses()).toEqual(mockProgram.courses!);
+  });
+
+  it('shows an empty course list for a program without courses', async () => {
+    const component = await renderAt('/schools/7');
+    component.openCoursesModal({ id: 2, name: 'Prog 2', duration: 1 });
+
+    expect(component.courses()).toEqual([]);
   });
 
   it('closes the courses modal', async () => {
@@ -404,16 +407,16 @@ describe('SchoolDetailPageComponent', () => {
     });
 
     it('offers expert-only course rating controls in the courses modal', async () => {
-      courseServiceSpy.getCoursesByProgram.and.returnValue(of([{ id: 9, name: 'C' } as Course]));
       currentUser.set({ id: 4, role: { name: 'ROLE_EXPERT' } });
       const component = await render();
-      component.openCoursesModal(progs[0]);
+      const withCourses = { ...progs[0], courses: [{ id: 9, name: 'C' } as Course] };
+      component.openCoursesModal(withCourses);
       await settle();
       expect(q('[data-testid="course-rating"] app-star-rating')).not.toBeNull();
 
       component.closeCoursesModal();
       currentUser.set({ id: 3, role: { name: 'ROLE_STUDENT' } });
-      component.openCoursesModal(progs[0]);
+      component.openCoursesModal(withCourses);
       await settle();
       expect(q('[data-testid="course-rating"]')).toBeNull();
     });

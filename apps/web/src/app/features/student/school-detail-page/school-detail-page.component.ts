@@ -9,7 +9,6 @@ import { ThemeToggleComponent } from '@shared/components/theme-toggle/theme-togg
 import { ErrorStateComponent } from '@shared/components/error-state/error-state.component';
 import { School, Program, Tag, Course } from '@models/entities';
 import { ProgramService } from '@services/program.service';
-import { CourseService } from '@services/course.service';
 import { SchoolService } from '@services/school.service';
 import { TokenService } from '@services/token.service';
 import { LocaleService } from '@services/locale.service';
@@ -30,7 +29,6 @@ export class SchoolDetailPageComponent {
   id = input.required<string>();
 
   private programService = inject(ProgramService);
-  private courseService = inject(CourseService);
   private readonly schoolService = inject(SchoolService);
   private readonly tokenService = inject(TokenService);
   private readonly router = inject(Router);
@@ -75,7 +73,6 @@ export class SchoolDetailPageComponent {
   selectedProgram = signal<Program | null>(null);
   courses = signal<Course[]>([]);
   showCoursesModal = signal(false);
-  isLoadingCourses = signal(false);
 
   constructor() {
     // The wishlist lives on the server: fetch it so the heart reflects it after a reload.
@@ -134,23 +131,11 @@ export class SchoolDetailPageComponent {
     });
   }
 
+  /** The school response embeds `programs[].courses`, so there is nothing to fetch. */
   openCoursesModal(program: Program) {
     this.selectedProgram.set(program);
+    this.courses.set(program.courses ?? []);
     this.showCoursesModal.set(true);
-    this.isLoadingCourses.set(true);
-    
-    if (program.id) {
-      this.courseService.getCoursesByProgram(program.id).subscribe({
-        next: (courses) => {
-          this.courses.set(courses);
-          this.isLoadingCourses.set(false);
-        },
-        error: () => {
-          this.courses.set([]);
-          this.isLoadingCourses.set(false);
-        }
-      });
-    }
   }
 
   closeCoursesModal() {
