@@ -38,8 +38,6 @@
     "login": {
       "title": "Bon retour parmi nous",
       "subtitle": "Connectez-vous à votre compte",
-      "continueWith": "Continuer avec {{ provider }}",
-      "orWithEmail": "Ou continuez avec votre e-mail",
       "rememberMe": "Se souvenir de moi",
       "forgotPassword": "Mot de passe oublié ?",
       "submit": "Se connecter",
@@ -48,7 +46,6 @@
       "signUp": "S'inscrire",
       "success": "Connexion réussie ! Bon retour parmi nous.",
       "registered": "Compte créé ! Connectez-vous pour continuer.",
-      "oauthSuccess": "Connecté avec {{ provider }} !",
       "failed": "La connexion a échoué. Veuillez réessayer."
     },
     "register": {

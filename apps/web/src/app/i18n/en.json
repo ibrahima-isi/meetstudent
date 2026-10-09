@@ -38,8 +38,6 @@
     "login": {
       "title": "Welcome Back",
       "subtitle": "Sign in to your account",
-      "continueWith": "Continue with {{ provider }}",
-      "orWithEmail": "Or continue with email",
       "rememberMe": "Remember me",
       "forgotPassword": "Forgot password?",
       "submit": "Sign In",
@@ -48,7 +46,6 @@
       "signUp": "Sign up",
       "success": "Login successful! Welcome back.",
       "registered": "Account created! Sign in to continue.",
-      "oauthSuccess": "Successfully logged in with {{ provider }}!",
       "failed": "Login failed. Please try again."
     },
     "register": {
