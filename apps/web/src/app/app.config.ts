@@ -6,7 +6,7 @@ import {
   provideZonelessChangeDetection,
 } from '@angular/core';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
-import { provideHttpClient, withInterceptors, withFetch } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideTransloco } from '@jsverse/transloco';
 
 import { routes } from './app.routes';
@@ -21,7 +21,9 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideZonelessChangeDetection(),
     provideRouter(routes, withComponentInputBinding()),
-    provideHttpClient(withInterceptors([jwtInterceptor, refreshInterceptor]), withFetch()),
+    // No withFetch(): the fetch backend emits no upload progress events, so the
+    // document upload bar would stay at 0%. XHR does, in the browser and on the server.
+    provideHttpClient(withInterceptors([jwtInterceptor, refreshInterceptor])),
     provideClientHydration(withEventReplay()),
     provideTransloco(translocoOptions),
     // Subscribes to the router, so it has to be told to start — nothing else
