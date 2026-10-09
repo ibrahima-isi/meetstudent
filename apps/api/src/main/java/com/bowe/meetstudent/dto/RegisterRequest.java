@@ -2,6 +2,7 @@ package com.bowe.meetstudent.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -27,6 +28,7 @@ public class RegisterRequest {
     private String email;
 
     @NotEmpty(message = "mot de passe vide")
+    @Size(min = 8, message = "Le mot de passe doit contenir au moins 8 caractères")
     private String password;
 
     @NotEmpty(message = "Confirmez le mot de passe")

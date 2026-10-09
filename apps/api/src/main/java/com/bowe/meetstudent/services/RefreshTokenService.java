@@ -2,6 +2,7 @@ package com.bowe.meetstudent.services;
 
 import com.bowe.meetstudent.entities.RefreshToken;
 import com.bowe.meetstudent.entities.UserEntity;
+import com.bowe.meetstudent.exceptions.InvalidRefreshTokenException;
 import com.bowe.meetstudent.repositories.RefreshTokenRepository;
 import com.bowe.meetstudent.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -47,7 +48,7 @@ public class RefreshTokenService {
     public RefreshToken verifyExpiration(RefreshToken token) {
         if (token.getExpiryDate().isBefore(Instant.now())) {
             refreshTokenRepository.delete(token);
-            throw new RuntimeException("Refresh token was expired. Please make a new signin request");
+            throw new InvalidRefreshTokenException("Refresh token was expired. Please make a new signin request");
         }
         return token;
     }

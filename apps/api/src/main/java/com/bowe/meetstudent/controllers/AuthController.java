@@ -1,5 +1,6 @@
 package com.bowe.meetstudent.controllers;
 
+import com.bowe.meetstudent.exceptions.InvalidRefreshTokenException;
 import com.bowe.meetstudent.models.LoginRequest;
 import com.bowe.meetstudent.models.LoginResponse;
 import com.bowe.meetstudent.models.TokenRefreshRequest;
@@ -78,6 +79,6 @@ public class AuthController {
                             .refreshToken(newRefreshToken.getToken())
                             .build();
                 })
-                .orElseThrow(() -> new RuntimeException("Refresh token is not in database!"));
+                .orElseThrow(() -> new InvalidRefreshTokenException("Refresh token is not in database!"));
     }
 }
