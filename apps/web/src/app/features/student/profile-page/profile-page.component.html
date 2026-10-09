@@ -143,7 +143,15 @@
             } @else {
               <div class="flex items-center gap-3 text-foreground">
                 <lucide-icon [img]="GraduationCap" class="w-5 h-5 text-muted-foreground"></lucide-icon>
-                <span>{{ profile().qualification || t('profile.notProvided') }}</span>
+                <span>
+                  @switch (profile().qualification) {
+                    @case ('bac-general') { {{ t('common.bacTypes.general') }} }
+                    @case ('bac-techno-sti2d') { {{ t('common.bacTypes.technoSti2d') }} }
+                    @case ('bac-techno-stmg') { {{ t('common.bacTypes.technoStmg') }} }
+                    @case ('bac-pro') { {{ t('common.bacTypes.pro') }} }
+                    @default { {{ profile().qualification || t('profile.notProvided') }} }
+                  }
+                </span>
               </div>
             }
           </div>

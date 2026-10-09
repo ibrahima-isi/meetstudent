@@ -120,4 +120,29 @@ describe('ProfilePageComponent translations', () => {
     expect(text()).not.toContain('Bac Général');
     expect(text()).not.toContain('Bac Professionnel');
   });
+
+  function readOnlyBac(): string {
+    const label = Array.from(fixture.nativeElement.querySelectorAll('label') as NodeListOf<HTMLElement>)
+      .find((el) => el.querySelector('*') === null && /BAC|Bac/.test(el.textContent ?? ''))!;
+    return label.parentElement!.querySelector('span')!.textContent!.trim();
+  }
+
+  it('shows the translated bac label, not the stored slug, outside edit mode', async () => {
+    user.set({ firstname: 'Awa', lastname: '', email: '', role: { name: 'STUDENT' }, qualification: 'bac-pro' });
+
+    await render('fr');
+    expect(readOnlyBac()).toBe('Bac Professionnel');
+    expect(text()).not.toContain('bac-pro');
+
+    await render('en');
+    expect(readOnlyBac()).toBe('Vocational Baccalaureate');
+  });
+
+  it('shows a stored qualification that is not a known bac type as-is', async () => {
+    user.set({ firstname: 'Awa', lastname: '', email: '', role: { name: 'STUDENT' }, qualification: 'Licence 2' });
+
+    await render('en');
+
+    expect(readOnlyBac()).toBe('Licence 2');
+  });
 });
