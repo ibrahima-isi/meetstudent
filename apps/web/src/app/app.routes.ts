@@ -1,6 +1,7 @@
 import { inject } from '@angular/core';
 import { Routes } from '@angular/router';
 import { localeGuard } from '@i18n/locale.guard';
+import { authGuard } from './guards/auth.guard';
 import { LocaleService } from '@services/locale.service';
 
 /**
@@ -28,6 +29,7 @@ export const routes: Routes = [
       },
       {
         path: 'home',
+        canActivate: [authGuard],
         loadComponent: () =>
           import('./features/student/home-page/home-page.component').then(
             (m) => m.HomePageComponent,
@@ -35,6 +37,7 @@ export const routes: Routes = [
       },
       {
         path: 'schools/:id',
+        canActivate: [authGuard],
         loadComponent: () =>
           import(
             './features/student/school-detail-page/school-detail-page.component'
@@ -42,6 +45,7 @@ export const routes: Routes = [
       },
       {
         path: 'profile',
+        canActivate: [authGuard],
         loadComponent: () =>
           import('./features/student/profile-page/profile-page.component').then(
             (m) => m.ProfilePageComponent,
