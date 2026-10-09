@@ -6,9 +6,9 @@ const ERROR_IMG_SRC = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODgiIGhlaWdodD0
   selector: 'app-image-with-fallback',
   template: `
     @if (didError()) {
-      <div [class]="'inline-block bg-gray-100 text-center align-middle ' + customClass()">
+      <div [class]="'inline-block bg-muted text-center align-middle ' + customClass()">
         <div class="flex items-center justify-center w-full h-full">
-          <img [src]="errorSrc" alt="Error loading image" [attr.data-original-url]="src()" />
+          <img class="dark:invert" [src]="errorSrc" alt="Error loading image" [attr.data-original-url]="src()" />
         </div>
       </div>
     } @else {
