@@ -81,6 +81,28 @@ class SchoolControllerIntegrationTests {
     }
 
     @Test
+    void getSchoolFullyMapsNestedProgramAndCoursePhotos() throws Exception {
+        var programPhoto = persistedLogo();
+        var coursePhoto = persistedLogo();
+        var courseDto = TestDataUtil.createCourseDto();
+        courseDto.setPhotoMediaId(coursePhoto.getId());
+        var programDto = TestDataUtil.createProgramDto();
+        programDto.setPhotoMediaId(programPhoto.getId());
+        programDto.setCourses(List.of(courseDto));
+        var schoolDto = TestDataUtil.createSchoolDto();
+        schoolDto.setPrograms(List.of(programDto));
+        School school = schoolService.save(schoolMapper.toEntity(schoolDto));
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/schools/" + school.getId()))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.programs[0].photo.id").value(programPhoto.getId()))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.programs[0].photo.publicUrl").value("/uploads/public/logo-it.png"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.programs[0].photo.category").value("SCHOOL_LOGO"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.programs[0].courses[0].photo.publicUrl").value("/uploads/public/logo-it.png"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.programs[0].courses[0].photo.category").value("SCHOOL_LOGO"));
+    }
+
+    @Test
     void deleteSchoolReturns200WithDeletedDto() throws Exception {
         School school = schoolService.save(schoolMapper.toEntity(TestDataUtil.createSchoolDto()));
 

@@ -15,6 +15,7 @@ public class SchoolMapper implements Mapper<School, SchoolDTO> {
     private final ModelMapper modelMapper;
     private final MediaService mediaService;
     private final MediaMapper mediaMapper;
+    private final ProgramMapper programMapper;
 
     @Override
     public SchoolDTO toDTO(School school) {
@@ -23,6 +24,10 @@ public class SchoolMapper implements Mapper<School, SchoolDTO> {
         dto.setCoverMediaId(school.getCoverMediaId());
         dto.setLogo(mediaService.findById(school.getLogoMediaId()).map(mediaMapper::toDTO).orElse(null));
         dto.setCover(mediaService.findById(school.getCoverMediaId()).map(mediaMapper::toDTO).orElse(null));
+        // ModelMapper only builds a stub photo (id) for nested programs; map them fully.
+        if (school.getPrograms() != null) {
+            dto.setPrograms(school.getPrograms().stream().map(programMapper::toDTO).toList());
+        }
         return dto;
     }
 
