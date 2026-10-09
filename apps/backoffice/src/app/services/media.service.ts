@@ -2,6 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { Media, Page, VerificationStatus } from '@models/entities';
+import { ProgramMediaCategory } from '@models/program';
 import { SchoolMediaCategory } from '@models/school';
 import { API_URL, SERVER_URL } from './api-config';
 
@@ -49,7 +50,7 @@ export class MediaService {
     return this.http.get(`${this.apiUrl}/media/${id}`, { responseType: 'blob' });
   }
 
-  upload(file: File, category: SchoolMediaCategory): Observable<Media> {
+  upload(file: File, category: SchoolMediaCategory | ProgramMediaCategory): Observable<Media> {
     const body = new FormData();
     body.append('category', category);
     body.append('file', file);
