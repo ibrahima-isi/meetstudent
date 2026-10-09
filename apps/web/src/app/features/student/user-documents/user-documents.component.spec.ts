@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
+import { HttpEventType, provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { UserDocumentsComponent } from './user-documents.component';
@@ -230,6 +230,131 @@ describe('UserDocumentsComponent', () => {
 
     expect(component.error()).toBeTruthy();
     expect(component.uploading()).toBeFalse();
+  });
+
+  function select(fixture: ReturnType<typeof TestBed.createComponent<UserDocumentsComponent>>, file: File): void {
+    fixture.componentInstance.onFileSelected({ target: { files: [file] } } as unknown as Event);
+  }
+
+  function setup() {
+    const fixture = TestBed.createComponent(UserDocumentsComponent);
+    fixture.detectChanges();
+    httpMock.expectOne(`${environment.apiUrl}/media/mine`).flush([]);
+    return fixture;
+  }
+
+  const uploadReq = () =>
+    httpMock.expectOne(r => r.method === 'POST' && r.url === `${environment.apiUrl}/media`);
+
+  describe('upload polish', () => {
+    it('tracks upload progress as a percentage and resets it when done', () => {
+      const fixture = setup();
+      select(fixture, new File([new ArrayBuffer(1024)], 'a.pdf', { type: 'application/pdf' }));
+      const component = fixture.componentInstance;
+      expect(component.uploadProgress()).toBe(0);
+
+      const req = uploadReq();
+      req.event({ type: HttpEventType.UploadProgress, loaded: 50, total: 200 });
+      expect(component.uploadProgress()).toBe(25);
+
+      req.flush(media({ id: 9 }));
+      expect(component.uploadProgress()).toBeNull();
+      expect(component.uploading()).toBeFalse();
+      httpMock.expectOne(`${environment.apiUrl}/media/mine`).flush([]);
+    });
+
+    it('renders an accessible progress bar while uploading', () => {
+      const fixture = setup();
+      select(fixture, new File([new ArrayBuffer(1024)], 'a.pdf', { type: 'application/pdf' }));
+      uploadReq().event({ type: HttpEventType.UploadProgress, loaded: 1, total: 2 });
+      fixture.detectChanges();
+
+      const bar = (fixture.nativeElement as HTMLElement).querySelector('[role="progressbar"]');
+      expect(bar?.getAttribute('aria-valuenow')).toBe('50');
+      httpMock.match(() => true);
+    });
+
+    it('rejects a file whose MIME type does not match its extension, before any request', () => {
+      const fixture = setup();
+      select(fixture, new File([new ArrayBuffer(1024)], 'a.pdf', { type: 'image/png' }));
+      expect(fixture.componentInstance.error()).toBe('documents.errors.typeNotAllowed');
+      httpMock.expectNone(`${environment.apiUrl}/media`);
+    });
+
+    it('rejects an empty MIME type, mirroring the server', () => {
+      const fixture = setup();
+      select(fixture, new File([new ArrayBuffer(1024)], 'a.pdf', { type: '' }));
+      expect(fixture.componentInstance.error()).toBe('documents.errors.typeNotAllowed');
+      httpMock.expectNone(`${environment.apiUrl}/media`);
+    });
+
+    it('accepts a MIME type carrying parameters', () => {
+      const fixture = setup();
+      select(fixture, new File([new ArrayBuffer(1024)], 'a.PDF', { type: 'application/pdf; charset=binary' }));
+      expect(fixture.componentInstance.error()).toBe('');
+      uploadReq().flush(media({}));
+      httpMock.expectOne(`${environment.apiUrl}/media/mine`).flush([]);
+    });
+
+    it('rejects an empty file', () => {
+      const fixture = setup();
+      select(fixture, new File([], 'a.pdf', { type: 'application/pdf' }));
+      expect(fixture.componentInstance.error()).toBe('documents.errors.empty');
+      httpMock.expectNone(`${environment.apiUrl}/media`);
+    });
+
+    it('uses the too-large key for oversize files', () => {
+      const fixture = setup();
+      select(fixture, new File([new ArrayBuffer(10485761)], 'big.pdf', { type: 'application/pdf' }));
+      expect(fixture.componentInstance.error()).toBe('documents.errors.tooLarge');
+    });
+
+    const cases: [number, string][] = [
+      [413, 'documents.errors.tooLarge'],
+      [415, 'documents.errors.typeNotAllowed'],
+      [400, 'documents.errors.rejectedByServer'],
+      [422, 'documents.errors.rejectedByServer'],
+      [403, 'documents.errors.forbidden'],
+      [0, 'documents.errors.network'],
+      [500, 'documents.errors.uploadFailed']
+    ];
+    for (const [status, key] of cases) {
+      it(`maps a ${status} upload response to ${key}`, () => {
+        const fixture = setup();
+        select(fixture, new File([new ArrayBuffer(1024)], 'a.pdf', { type: 'application/pdf' }));
+        uploadReq().flush('x', { status, statusText: 'err' });
+        expect(fixture.componentInstance.error()).toBe(key);
+        expect(fixture.componentInstance.uploading()).toBeFalse();
+        expect(fixture.componentInstance.uploadProgress()).toBeNull();
+      });
+    }
+
+    const labels = { PENDING: 'Pending', VERIFIED: 'Verified', REJECTED: 'Rejected' } as const;
+    for (const status of ['PENDING', 'VERIFIED', 'REJECTED'] as const) {
+      it(`renders a ${status} badge with its translated label`, async () => {
+        const transloco = TestBed.inject(TranslocoService);
+        await firstValueFrom(transloco.load('en'));
+        transloco.setActiveLang('en');
+        const fixture = TestBed.createComponent(UserDocumentsComponent);
+        fixture.detectChanges();
+        httpMock.expectOne(`${environment.apiUrl}/media/mine`).flush([
+          media({ verificationStatus: status, rejectionReason: status === 'REJECTED' ? 'Blurry' : null })
+        ]);
+        fixture.detectChanges();
+        await fixture.whenStable();
+        const badge = (fixture.nativeElement as HTMLElement).querySelector('[data-status]');
+        expect(badge?.getAttribute('data-status')).toBe(status);
+        expect(badge?.textContent?.trim()).toBe(labels[status]);
+      });
+    }
+
+    it('renders no badge when a document has no status yet', () => {
+      const fixture = TestBed.createComponent(UserDocumentsComponent);
+      fixture.detectChanges();
+      httpMock.expectOne(`${environment.apiUrl}/media/mine`).flush([media({ verificationStatus: null })]);
+      fixture.detectChanges();
+      expect((fixture.nativeElement as HTMLElement).querySelector('[data-status]')).toBeNull();
+    });
   });
 
   it('confirming a pending delete sends the DELETE request and reloads', () => {

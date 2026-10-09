@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
+import { HttpEventType, provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { MediaService } from './media.service';
@@ -89,6 +89,19 @@ describe('MediaService', () => {
       const req = httpMock.expectOne(r => r.url === `${environment.apiUrl}/media`);
       expect(req.request.headers.has('Idempotency-Key')).toBeFalse();
       req.flush(media({}));
+    });
+    it('uploadWithProgress reports upload progress events then the response', () => {
+      const events: HttpEventType[] = [];
+      service.uploadWithProgress(file, 'DIPLOMA', 'k').subscribe(e => events.push(e.type));
+
+      const req = httpMock.expectOne(r => r.url === `${environment.apiUrl}/media`);
+      expect(req.request.reportProgress).toBeTrue();
+      expect(req.request.headers.get('Idempotency-Key')).toBe('k');
+      req.event({ type: HttpEventType.UploadProgress, loaded: 1, total: 2 });
+      req.flush(media({}));
+
+      expect(events).toContain(HttpEventType.UploadProgress);
+      expect(events[events.length - 1]).toBe(HttpEventType.Response);
     });
   });
 

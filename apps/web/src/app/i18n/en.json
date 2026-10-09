@@ -235,7 +235,12 @@
       "BULLETIN": "School report",
       "PRESENTATION_VIDEO": "Presentation video"
     },
+    "uploading": "Uploading...",
     "errors": {
+      "empty": "This file is empty.",
+      "rejectedByServer": "The server refused this file. Check its type and size, then try again.",
+      "forbidden": "You are not allowed to upload this kind of document.",
+      "network": "Network error: the upload could not reach the server. Check your connection and try again.",
       "loadFailed": "Your documents could not be loaded. Please try again.",
       "popupBlocked": "Your browser blocked this document from opening. Allow pop-ups for this site, then try again.",
       "openFailed": "This document could not be opened. Please try again.",

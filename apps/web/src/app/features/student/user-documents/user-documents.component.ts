@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { HttpErrorResponse, HttpEventType } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MediaService } from '@services/media.service';
@@ -35,6 +36,8 @@ export class UserDocumentsComponent implements OnInit, OnDestroy {
 
   selectedCategory = signal<MediaCategory>('DIPLOMA');
   uploading = signal(false);
+  /** 0-100 while an upload is in flight, null otherwise. */
+  uploadProgress = signal<number | null>(null);
   readonly uploadableCategories: MediaCategory[] = [
     'DIPLOMA',
     'CERTIFICATE',
@@ -43,7 +46,17 @@ export class UserDocumentsComponent implements OnInit, OnDestroy {
   ];
 
   private readonly MAX_UPLOAD_BYTES = 10485760;
-  private readonly ALLOWED_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'mp4', 'webm', 'mov'];
+  /** Mirrors the server's extension -> MIME allow-list (MediaService.java). */
+  private readonly ALLOWED_MIME_BY_EXTENSION: Record<string, string> = {
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    png: 'image/png',
+    webp: 'image/webp',
+    pdf: 'application/pdf',
+    mp4: 'video/mp4',
+    webm: 'video/webm',
+    mov: 'video/quicktime'
+  };
 
   private objectUrls: string[] = [];
 
@@ -109,30 +122,67 @@ export class UserDocumentsComponent implements OnInit, OnDestroy {
     // as "no change" and won't fire another `change` event).
     input.value = '';
 
-    if (file.size > this.MAX_UPLOAD_BYTES) {
-      this.error.set('documents.errors.tooLarge');
-      return;
-    }
-
-    const extension = file.name.split('.').pop()?.toLowerCase() ?? '';
-    if (!this.ALLOWED_EXTENSIONS.includes(extension)) {
-      this.error.set('documents.errors.typeNotAllowed');
+    const invalid = this.validate(file);
+    if (invalid) {
+      this.error.set(invalid);
       return;
     }
 
     this.error.set('');
     this.uploading.set(true);
+    this.uploadProgress.set(0);
 
-    this.mediaService.upload(file, this.selectedCategory(), crypto.randomUUID()).subscribe({
-      next: () => {
-        this.uploading.set(false);
-        this.reload();
+    this.mediaService.uploadWithProgress(file, this.selectedCategory(), crypto.randomUUID()).subscribe({
+      next: event => {
+        if (event.type === HttpEventType.UploadProgress && event.total) {
+          this.uploadProgress.set(Math.round((100 * event.loaded) / event.total));
+        } else if (event.type === HttpEventType.Response) {
+          this.uploading.set(false);
+          this.uploadProgress.set(null);
+          this.reload();
+        }
       },
-      error: () => {
-        this.error.set('documents.errors.uploadFailed');
+      error: (err: unknown) => {
+        this.error.set(this.uploadErrorKey(err));
         this.uploading.set(false);
+        this.uploadProgress.set(null);
       }
     });
+  }
+
+  /** Client-side mirror of the server's checks; returns an error key or ''. */
+  private validate(file: File): string {
+    if (file.size === 0) {
+      return 'documents.errors.empty';
+    }
+    if (file.size > this.MAX_UPLOAD_BYTES) {
+      return 'documents.errors.tooLarge';
+    }
+    const extension = file.name.split('.').pop()?.toLowerCase() ?? '';
+    const expectedMime = this.ALLOWED_MIME_BY_EXTENSION[extension];
+    const mime = file.type.split(';')[0].trim().toLowerCase();
+    if (!expectedMime || mime !== expectedMime) {
+      return 'documents.errors.typeNotAllowed';
+    }
+    return '';
+  }
+
+  private uploadErrorKey(err: unknown): string {
+    switch (err instanceof HttpErrorResponse ? err.status : -1) {
+      case 413:
+        return 'documents.errors.tooLarge';
+      case 415:
+        return 'documents.errors.typeNotAllowed';
+      case 400:
+      case 422:
+        return 'documents.errors.rejectedByServer';
+      case 403:
+        return 'documents.errors.forbidden';
+      case 0:
+        return 'documents.errors.network';
+      default:
+        return 'documents.errors.uploadFailed';
+    }
   }
 
   /** Step 1 of the destructive delete: arm the inline confirmation for one row. */

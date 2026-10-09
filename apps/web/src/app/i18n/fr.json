@@ -235,7 +235,12 @@
       "BULLETIN": "Bulletin",
       "PRESENTATION_VIDEO": "Vidéo de présentation"
     },
+    "uploading": "Envoi en cours...",
     "errors": {
+      "empty": "Ce fichier est vide.",
+      "rejectedByServer": "Le serveur a refusé ce fichier. Vérifiez son type et sa taille puis réessayez.",
+      "forbidden": "Vous n'êtes pas autorisé à envoyer ce type de document.",
+      "network": "Erreur réseau : l'envoi n'a pas atteint le serveur. Vérifiez votre connexion puis réessayez.",
       "loadFailed": "Impossible de charger vos documents. Veuillez réessayer.",
       "popupBlocked": "Votre navigateur a bloqué l'ouverture de ce document. Autorisez les fenêtres pop-up pour ce site puis réessayez.",
       "openFailed": "Impossible d'ouvrir ce document. Veuillez réessayer.",
