@@ -21,6 +21,13 @@ describe('loadRuntimeConfig', () => {
     expect(await loadRuntimeConfig(badJson)).toEqual({});
   });
 
+  it('returns serverUrl when present, without trailing slash', async () => {
+    expect(await loadRuntimeConfig(reply({ serverUrl: 'https://media.x.io/' }))).toEqual({
+      serverUrl: 'https://media.x.io',
+    });
+    expect(await loadRuntimeConfig(reply({ serverUrl: 7 }))).toEqual({});
+  });
+
   it('ignores a missing or non-string apiUrl', async () => {
     expect(await loadRuntimeConfig(reply({ apiUrl: 42 }))).toEqual({});
     expect(await loadRuntimeConfig(reply({ apiUrl: '  ' }))).toEqual({});
