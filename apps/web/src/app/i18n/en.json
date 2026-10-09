@@ -4,7 +4,13 @@
     "defaultSchoolType": "School",
     "noDescription": "No description available",
     "errorGeneric": "Something went wrong",
-    "loading": "Loading…"
+    "loading": "Loading…",
+    "bacTypes": {
+      "general": "General Baccalaureate",
+      "technoSti2d": "Technological Baccalaureate - STI2D",
+      "technoStmg": "Technological Baccalaureate - STMG",
+      "pro": "Vocational Baccalaureate"
+    }
   },
   "language": {
     "fr": "Français",

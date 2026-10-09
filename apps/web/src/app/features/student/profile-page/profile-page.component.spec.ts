@@ -83,4 +83,41 @@ describe('ProfilePageComponent translations', () => {
 
     expect(toggle).toHaveBeenCalledWith(school);
   });
+
+  function bacOptions(): { value: string; label: string }[] {
+    const select = fixture.nativeElement.querySelector('select:has(option[value="bac-general"])') as HTMLSelectElement;
+    return Array.from(select.options)
+      .filter((option) => option.value !== '')
+      .map((option) => ({ value: option.value, label: option.textContent!.trim() }));
+  }
+
+  it('labels the bac options in French', async () => {
+    await render('fr');
+    fixture.componentInstance.isEditing.set(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(bacOptions()).toEqual([
+      { value: 'bac-general', label: 'Bac Général' },
+      { value: 'bac-techno-sti2d', label: 'Bac Technologique - STI2D' },
+      { value: 'bac-techno-stmg', label: 'Bac Technologique - STMG' },
+      { value: 'bac-pro', label: 'Bac Professionnel' },
+    ]);
+  });
+
+  it('labels the bac options in English without changing their values', async () => {
+    await render('en');
+    fixture.componentInstance.isEditing.set(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(bacOptions()).toEqual([
+      { value: 'bac-general', label: 'General Baccalaureate' },
+      { value: 'bac-techno-sti2d', label: 'Technological Baccalaureate - STI2D' },
+      { value: 'bac-techno-stmg', label: 'Technological Baccalaureate - STMG' },
+      { value: 'bac-pro', label: 'Vocational Baccalaureate' },
+    ]);
+    expect(text()).not.toContain('Bac Général');
+    expect(text()).not.toContain('Bac Professionnel');
+  });
 });
