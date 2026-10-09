@@ -1,7 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Page, School, SchoolInput } from '@models/school';
+import { Page } from '@models/entities';
+import { School, SchoolInput } from '@models/school';
 import { API_URL } from './api-config';
 
 @Injectable({ providedIn: 'root' })

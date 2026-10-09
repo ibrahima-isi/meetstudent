@@ -90,6 +90,35 @@ describe('LoginFormComponent translations', () => {
     }
   });
 
+  describe('after registration', () => {
+    function arriveFromRegistration(registered: boolean) {
+      TestBed.inject(ActivatedRoute).snapshot = {
+        queryParamMap: convertToParamMap(registered ? { registered: '1' } : {}),
+      } as ActivatedRouteSnapshot;
+    }
+
+    it('welcomes a new account in French', async () => {
+      arriveFromRegistration(true);
+      await render('fr');
+
+      expect(text()).toContain('Compte créé');
+    });
+
+    it('welcomes a new account in English', async () => {
+      arriveFromRegistration(true);
+      await render('en');
+
+      expect(text()).toContain('Account created');
+    });
+
+    it('shows no notice on a plain visit', async () => {
+      arriveFromRegistration(false);
+      await render('en');
+
+      expect(text()).not.toContain('Account created');
+    });
+  });
+
   describe('returnUrl', () => {
     async function loginWith(returnUrl: string | null): Promise<jasmine.Spy> {
       TestBed.inject(ActivatedRoute).snapshot = {

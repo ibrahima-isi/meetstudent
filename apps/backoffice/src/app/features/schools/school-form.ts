@@ -1,7 +1,8 @@
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, computed, inject, input, output, signal, WritableSignal } from '@angular/core';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { Observable, catchError, forkJoin, map, of, switchMap, tap, throwError } from 'rxjs';
-import { Media, School, SchoolInput, SchoolMediaCategory, Tag } from '@models/school';
+import { Media } from '@models/entities';
+import { School, SchoolInput, SchoolMediaCategory, Tag } from '@models/school';
 import { MediaService, validateImage } from '@services/media.service';
 import { SchoolService } from '@services/school.service';
 import { TagService } from '@services/tag.service';

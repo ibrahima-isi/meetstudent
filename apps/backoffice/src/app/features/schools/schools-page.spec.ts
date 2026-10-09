@@ -4,7 +4,8 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { SchoolsPage } from './schools-page';
 import { API_URL, SERVER_URL } from '@services/api-config';
-import { Page, School } from '@models/school';
+import { Page } from '@models/entities';
+import { School } from '@models/school';
 
 const api = 'http://api.test/api/v1';
 

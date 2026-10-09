@@ -55,6 +55,44 @@ describe('MediaService', () => {
 
   afterEach(() => backend.verify());
 
+  it('lists media by status with paging params', () => {
+    let result: unknown;
+    service.list('VERIFIED', 2, 10).subscribe((r) => (result = r));
+    const req = backend.expectOne((r) => r.url === `${api}/media`);
+    expect(req.request.method).toBe('GET');
+    expect(req.request.params.get('status')).toBe('VERIFIED');
+    expect(req.request.params.get('page')).toBe('2');
+    expect(req.request.params.get('size')).toBe('10');
+    const page = { content: [], totalElements: 0, totalPages: 0, number: 2, size: 10 };
+    req.flush(page);
+    expect(result).toEqual(page);
+  });
+
+  it('verifies with status and reason', () => {
+    service.verify(5, 'REJECTED', 'Illisible').subscribe();
+    const req = backend.expectOne(`${api}/media/5/verification`);
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.body).toEqual({ status: 'REJECTED', reason: 'Illisible' });
+    req.flush({});
+  });
+
+  it('omits the reason when approving', () => {
+    service.verify(5, 'VERIFIED').subscribe();
+    const req = backend.expectOne(`${api}/media/5/verification`);
+    expect(req.request.body).toEqual({ status: 'VERIFIED' });
+    req.flush({});
+  });
+
+  it('downloads the file as a blob through HttpClient', () => {
+    let blob: Blob | undefined;
+    service.download(7).subscribe((b) => (blob = b));
+    const req = backend.expectOne(`${api}/media/7`);
+    expect(req.request.method).toBe('GET');
+    expect(req.request.responseType).toBe('blob');
+    req.flush(new Blob(['x'], { type: 'application/pdf' }));
+    expect(blob?.type).toBe('application/pdf');
+  });
+
   it('uploads multipart with category and file', () => {
     const f = file('logo.png', 'image/png');
     let id = 0;
@@ -70,17 +108,17 @@ describe('MediaService', () => {
   });
 
   it('resolves publicUrl against the server root, not the API root', () => {
-    expect(service.publicUrl({ id: 1, publicUrl: '/uploads/public/x.png' })).toBe(
+    expect(service.publicUrl({ publicUrl: '/uploads/public/x.png' })).toBe(
       'http://srv.test/uploads/public/x.png',
     );
-    expect(service.publicUrl({ id: 1, publicUrl: 'uploads/public/x.png' })).toBe(
+    expect(service.publicUrl({ publicUrl: 'uploads/public/x.png' })).toBe(
       'http://srv.test/uploads/public/x.png',
     );
   });
 
   it('keeps an absolute publicUrl and returns null without one', () => {
-    expect(service.publicUrl({ id: 1, publicUrl: 'https://cdn.test/x.png' })).toBe('https://cdn.test/x.png');
-    expect(service.publicUrl({ id: 1, publicUrl: null })).toBeNull();
+    expect(service.publicUrl({ publicUrl: 'https://cdn.test/x.png' })).toBe('https://cdn.test/x.png');
+    expect(service.publicUrl({ publicUrl: null })).toBeNull();
     expect(service.publicUrl(null)).toBeNull();
   });
 });

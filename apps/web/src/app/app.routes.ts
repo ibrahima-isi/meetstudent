@@ -52,7 +52,7 @@ export const routes: Routes = [
           ),
       },
       {
-        // Prefix match, so the three auth screens render inside the shared shell.
+        // Prefix match, so the two auth screens render inside the shared shell.
         path: '',
         loadComponent: () =>
           import('./shared/layouts/auth-layout/auth-layout.component').then(
@@ -72,13 +72,6 @@ export const routes: Routes = [
               import('./features/auth/register-form/register-form.component').then(
                 (m) => m.RegisterFormComponent,
               ),
-          },
-          {
-            path: 'verify',
-            loadComponent: () =>
-              import(
-                './features/auth/email-verification/email-verification.component'
-              ).then((m) => m.EmailVerificationComponent),
           },
         ],
       },

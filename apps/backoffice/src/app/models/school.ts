@@ -1,29 +1,14 @@
-/** Spring Data `Page` envelope, as returned by every paginated endpoint. */
-export interface Page<T> {
-  content: T[];
-  totalElements: number;
-  totalPages: number;
-  /** Zero-based page index. */
-  number: number;
-  size: number;
-}
+import { Media, MediaCategory } from './entities';
 
 export interface Tag {
   id?: number;
   name: string;
 }
 
-export type SchoolMediaCategory = 'SCHOOL_LOGO' | 'SCHOOL_COVER';
+export type SchoolMediaCategory = Extract<MediaCategory, 'SCHOOL_LOGO' | 'SCHOOL_COVER'>;
 
-export interface Media {
-  id: number;
-  category?: string;
-  originalFilename?: string | null;
-  contentType?: string | null;
-  sizeBytes?: number | null;
-  /** Relative to the SERVER root (not to `/api/v1`); null for private media. */
-  publicUrl?: string | null;
-}
+/** The media embedded in a school: only `id` and `publicUrl` are relied upon. */
+export type SchoolMedia = Pick<Media, 'id'> & Partial<Media>;
 
 export interface Address {
   location?: string | null;
@@ -38,8 +23,8 @@ export interface School {
   address?: Address | null;
   logoMediaId?: number | null;
   coverMediaId?: number | null;
-  logo?: Media | null;
-  cover?: Media | null;
+  logo?: SchoolMedia | null;
+  cover?: SchoolMedia | null;
   averageRate?: number | null;
   tags?: Tag[] | null;
 }

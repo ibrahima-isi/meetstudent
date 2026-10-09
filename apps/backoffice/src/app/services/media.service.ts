@@ -1,7 +1,8 @@
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Media, SchoolMediaCategory } from '@models/school';
+import { Media, Page, VerificationStatus } from '@models/entities';
+import { SchoolMediaCategory } from '@models/school';
 import { API_URL, SERVER_URL } from './api-config';
 
 /** Same limit as the API (`spring.servlet.multipart.max-file-size`). */
@@ -32,6 +33,22 @@ export class MediaService {
   private readonly apiUrl = inject(API_URL);
   private readonly serverUrl = inject(SERVER_URL);
 
+  /** Moderation queue: media with the given verification status. */
+  list(status: VerificationStatus, page: number, size: number): Observable<Page<Media>> {
+    const params = new HttpParams().set('status', status).set('page', page).set('size', size);
+    return this.http.get<Page<Media>>(`${this.apiUrl}/media`, { params });
+  }
+
+  verify(id: number, status: 'VERIFIED' | 'REJECTED', reason?: string): Observable<Media> {
+    const body = reason === undefined ? { status } : { status, reason };
+    return this.http.patch<Media>(`${this.apiUrl}/media/${id}/verification`, body);
+  }
+
+  /** Private files need the bearer header, so they are fetched as a blob. */
+  download(id: number): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/media/${id}`, { responseType: 'blob' });
+  }
+
   upload(file: File, category: SchoolMediaCategory): Observable<Media> {
     const body = new FormData();
     body.append('category', category);
@@ -40,7 +57,7 @@ export class MediaService {
   }
 
   /** Browser-loadable url of a public media; `publicUrl` is relative to the server root. */
-  publicUrl(media: Media | null | undefined): string | null {
+  publicUrl(media: { publicUrl?: string | null } | null | undefined): string | null {
     const path = media?.publicUrl;
     if (!path) return null;
     if (/^https?:\/\//i.test(path)) return path;

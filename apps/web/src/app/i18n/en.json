@@ -41,6 +41,7 @@
       "noAccount": "Don't have an account?",
       "signUp": "Sign up",
       "success": "Login successful! Welcome back.",
+      "registered": "Account created! Sign in to continue.",
       "oauthSuccess": "Successfully logged in with {{ provider }}!",
       "failed": "Login failed. Please try again."
     },
@@ -77,21 +78,6 @@
       "incomplete": "Please complete all required fields.",
       "passwordMismatch": "Passwords do not match.",
       "failed": "Registration failed."
-    },
-    "verify": {
-      "title": "Verify Your Email",
-      "askEmail": "Enter the address you registered with",
-      "codeSentTo": "We've sent a verification code to",
-      "demoLabel": "Demo Mode:",
-      "demoCode": "Your verification code is",
-      "success": "Email verified successfully! Redirecting...",
-      "codeLabel": "Enter Verification Code",
-      "resend": "Resend Code",
-      "resendIn": "Resend in {{ seconds }}s",
-      "wrongEmail": "Wrong email?",
-      "goBack": "Go back",
-      "userNotFound": "User not found. Please try registering again.",
-      "invalidCode": "Invalid verification code. Please try again."
     }
   },
   "schools": {

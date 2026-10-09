@@ -41,6 +41,7 @@
       "noAccount": "Vous n'avez pas de compte ?",
       "signUp": "S'inscrire",
       "success": "Connexion réussie ! Bon retour parmi nous.",
+      "registered": "Compte créé ! Connectez-vous pour continuer.",
       "oauthSuccess": "Connecté avec {{ provider }} !",
       "failed": "La connexion a échoué. Veuillez réessayer."
     },
@@ -77,21 +78,6 @@
       "incomplete": "Veuillez remplir tous les champs obligatoires.",
       "passwordMismatch": "Les mots de passe ne correspondent pas.",
       "failed": "L'inscription a échoué. Veuillez réessayer."
-    },
-    "verify": {
-      "title": "Vérifiez votre adresse e-mail",
-      "askEmail": "Saisissez l'adresse utilisée lors de l'inscription",
-      "codeSentTo": "Nous avons envoyé un code de vérification à",
-      "demoLabel": "Mode démo :",
-      "demoCode": "votre code de vérification est",
-      "success": "Adresse vérifiée ! Redirection…",
-      "codeLabel": "Saisissez le code de vérification",
-      "resend": "Renvoyer le code",
-      "resendIn": "Renvoyer dans {{ seconds }} s",
-      "wrongEmail": "Mauvaise adresse ?",
-      "goBack": "Revenir",
-      "userNotFound": "Utilisateur introuvable. Veuillez vous réinscrire.",
-      "invalidCode": "Code de vérification invalide. Veuillez réessayer."
     }
   },
   "schools": {

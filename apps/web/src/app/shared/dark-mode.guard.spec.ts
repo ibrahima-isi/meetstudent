@@ -15,7 +15,6 @@ import { TokenService } from '@services/token.service';
 import { WishlistService } from '@services/wishlist.service';
 import { LoginFormComponent } from '../features/auth/login-form/login-form.component';
 import { RegisterFormComponent } from '../features/auth/register-form/register-form.component';
-import { EmailVerificationComponent } from '../features/auth/email-verification/email-verification.component';
 import { LandingPageComponent } from '../features/public/landing-page/landing-page.component';
 import { HomePageComponent } from '../features/student/home-page/home-page.component';
 import { ProfilePageComponent } from '../features/student/profile-page/profile-page.component';
@@ -208,11 +207,6 @@ describe('dark mode: no light-only palette classes', () => {
       },
     ],
     ['register step 2', RegisterFormComponent, (c) => c.step.set(2)],
-    [
-      'email verification',
-      EmailVerificationComponent,
-      (c) => c.error.set('auth.verify.invalid'),
-    ],
     [
       'landing page with schools',
       LandingPageComponent,

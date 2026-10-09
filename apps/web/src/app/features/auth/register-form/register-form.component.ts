@@ -6,7 +6,6 @@ import { LucideAngularModule, Mail, Lock, User as UserIcon, AlertCircle, UserPlu
 import { TranslocoDirective } from '@jsverse/transloco';
 import { AuthService, RegisterPayload } from '../../../services/auth.service';
 import { LocaleService } from '@services/locale.service';
-import { RegistrationFlowService } from '@services/registration-flow.service';
 
 const SENEGAL_SPECIALTIES = [
   'Mathématiques', 'Physique-Chimie', 'Sciences de la Vie et de la Terre (SVT)',
@@ -24,7 +23,6 @@ const SENEGAL_SPECIALTIES = [
 export class RegisterFormComponent {
   private fb = inject(FormBuilder);
   private authService = inject(AuthService);
-  private readonly registrationFlow = inject(RegistrationFlowService);
   private readonly router = inject(Router);
   private readonly locale = inject(LocaleService);
 
@@ -163,10 +161,11 @@ export class RegisterFormComponent {
     this.authService.register(userData).subscribe({
       next: () => {
         this.isLoading.set(false);
-        // The address goes to the verify screen through the service, never
-        // through the URL: it is personal data, and URLs are shared and logged.
-        this.registrationFlow.remember(email);
-        this.goTo('verify');
+        // No email verification yet (the backend has none): the account is
+        // usable, so go straight to login with a flag for the success notice.
+        void this.router.navigate(['/', this.locale.active(), 'login'], {
+          queryParams: { registered: '1' },
+        });
       },
       // The API's message is for logs only; the user reads the front's own text.
       error: () => {

@@ -119,7 +119,7 @@ interface MediaDTO {
 
 `MediaMapper` returns `"/uploads/" + storageKey`, e.g. `/uploads/public/ab12.jpg`.
 Static files are served at the **server root** (`/uploads/public/**`), while
-`environment.apiUrl` is `http://localhost:8080/api/v1`.
+`environment.apiUrl` is `/api/v1` (relative: the reverse proxy, or `proxy.conf.json` under `ng serve`, forwards it to the API).
 
 Naively prefixing `apiUrl` yields a broken `…/api/v1/uploads/…`. Add a separate
 origin to `src/environments/environment*.ts`:
@@ -127,8 +127,9 @@ origin to `src/environments/environment*.ts`:
 ```ts
 export const environment = {
   production: false,
-  apiUrl: 'http://localhost:8080/api/v1',
-  serverUrl: 'http://localhost:8080',      // NEW — for /uploads/** and media blobs
+  apiUrl: '/api/v1',
+  serverUrl: '',                           // NEW — server root; SSR overrides it via SERVER_URL
+  mediaBaseUrl: '',                        // NEW — prefix for Media.publicUrl (/uploads/**)
 };
 ```
 

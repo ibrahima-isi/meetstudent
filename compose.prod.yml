@@ -1,0 +1,272 @@
+name: meetstudent-prod
+
+# PRODUCTION stack for a single VPS. Standalone: do NOT combine with compose.yml.
+#
+#   cp .env.production.example .env     # fill in every value
+#   docker compose -f compose.prod.yml config -q            # validate
+#   docker compose -f compose.prod.yml up -d --build
+#
+# Only Traefik publishes ports (80/443). db, api, web and backoffice are
+# reachable solely through it. See docs/DEPLOY.md.
+#
+#   https://${DOMAIN}/api/*, /uploads/public/*  -> api
+#   https://${DOMAIN}/*                          -> web (Angular SSR)
+#   https://${BO_DOMAIN}/*                       -> backoffice (nginx, static SPA)
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+services:
+  traefik:
+    image: traefik:v3.6
+    restart: unless-stopped
+    command:
+      # Dashboard and the API are off. Only /ping is served, on an internal
+      # entrypoint that is never published, for the healthcheck.
+      - --api.dashboard=false
+      - --ping=true
+      - --ping.entryPoint=traefik
+      - --entryPoints.traefik.address=:8082
+      - --entryPoints.web.address=:80
+      - --entryPoints.web.http.redirections.entryPoint.to=websecure
+      - --entryPoints.web.http.redirections.entryPoint.scheme=https
+      - --entryPoints.websecure.address=:443
+      - --entryPoints.websecure.http.tls.certResolver=le
+      - --providers.docker=true
+      - --providers.docker.exposedByDefault=false
+      - --providers.docker.network=meetstudent-edge
+      # Let's Encrypt (HTTP-01 over port 80). Certificates persist in the
+      # traefik-acme volume. Override ACME_CA_SERVER with the staging URL
+      # while testing to avoid production rate limits.
+      - --certificatesResolvers.le.acme.email=${ACME_EMAIL:?set ACME_EMAIL in .env}
+      - --certificatesResolvers.le.acme.storage=/letsencrypt/acme.json
+      - --certificatesResolvers.le.acme.httpChallenge.entryPoint=web
+      - --certificatesResolvers.le.acme.caServer=${ACME_CA_SERVER:-https://acme-v02.api.letsencrypt.org/directory}
+      - --log.level=INFO
+      - --accesslog=true
+      - --accesslog.filters.statusCodes=400-599
+      - --global.checkNewVersion=false
+      - --global.sendAnonymousUsage=false
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # Read-only is a hardening measure, not a full barrier: access to the
+      # Docker socket is still powerful. Keep Traefik's image current.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik-acme:/letsencrypt
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:8082/ping || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      # Enabled only to carry the shared middlewares below (a container with
+      # traefik.enable=false is skipped entirely, middlewares included). It
+      # declares no router, so Traefik itself is never exposed.
+      - traefik.enable=true
+      # --- shared middlewares (referenced as <name>@docker) ---
+      - traefik.http.middlewares.sec.headers.stsSeconds=31536000
+      - traefik.http.middlewares.sec.headers.stsIncludeSubdomains=true
+      - traefik.http.middlewares.sec.headers.contentTypeNosniff=true
+      - traefik.http.middlewares.sec.headers.frameDeny=true
+      - traefik.http.middlewares.sec.headers.referrerPolicy=strict-origin-when-cross-origin
+      - traefik.http.middlewares.sec.headers.permissionsPolicy=camera=(), microphone=(), geolocation=()
+      # frame-ancestors only: a full CSP is deliberately omitted, see docs/DEPLOY.md.
+      - traefik.http.middlewares.sec.headers.contentSecurityPolicy=frame-ancestors 'none'
+      # Brute-force guard for login/refresh/register: 10 req/min per client IP.
+      - traefik.http.middlewares.rl-auth.ratelimit.average=10
+      - traefik.http.middlewares.rl-auth.ratelimit.period=1m
+      - traefik.http.middlewares.rl-auth.ratelimit.burst=5
+      # Loose general guard for the rest of the API.
+      - traefik.http.middlewares.rl-api.ratelimit.average=30
+      - traefik.http.middlewares.rl-api.ratelimit.period=1s
+      - traefik.http.middlewares.rl-api.ratelimit.burst=100
+      # 10 MB cap on uploads (matches the API's own multipart limit).
+      - traefik.http.middlewares.upload-limit.buffering.maxRequestBodyBytes=10485760
+      - traefik.http.middlewares.upload-limit.buffering.memRequestBodyBytes=1048576
+    networks:
+      - edge
+    logging: *default-logging
+
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-meetstudent}
+      POSTGRES_USER: ${POSTGRES_USER:-meetstudent}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      # Postgres 18+ must be mounted at /var/lib/postgresql, not .../data.
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - backend
+    logging: *default-logging
+
+  api:
+    build:
+      context: ./apps/api
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-meetstudent}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-meetstudent}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?set JWT_SECRET_KEY in .env}
+      JWT_ACCESS_TTL_MINUTES: ${JWT_ACCESS_TTL_MINUTES:-15}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:?set CORS_ALLOWED_ORIGINS in .env}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?set ADMIN_EMAIL in .env}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD in .env}
+      FILE_UPLOAD_DIR: /data/uploads
+      FILE_PRIVATE_DIR: /data/private
+      # Cap the heap relative to the container/VPS memory.
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=65
+    volumes:
+      # The api image has no USER directive: the JVM runs as root, so the
+      # named volumes are writable without any chown step. If the image is ever
+      # changed to run unprivileged, chown these two paths to its uid first.
+      - api-uploads:/data/uploads
+      - api-private:/data/private
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      # /actuator/health is not permitAll; this public endpoint goes through the DB.
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:8080/api/v1/schools || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - backend
+      - edge
+    logging: *default-logging
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=meetstudent-edge
+      - traefik.http.services.api.loadbalancer.server.port=8080
+      # Auth endpoints and registration: strict rate limit.
+      - traefik.http.routers.api-auth.rule=Host(`${DOMAIN:?set DOMAIN in .env}`) && (PathPrefix(`/api/v1/auth`) || (Path(`/api/v1/users`) && Method(`POST`)))
+      - traefik.http.routers.api-auth.priority=30
+      - traefik.http.routers.api-auth.entrypoints=websecure
+      - traefik.http.routers.api-auth.tls=true
+      - traefik.http.routers.api-auth.middlewares=rl-auth@docker,sec@docker
+      - traefik.http.routers.api-auth.service=api
+      # Uploads: 10 MB body cap.
+      - traefik.http.routers.api-upload.rule=Host(`${DOMAIN}`) && Method(`POST`) && PathPrefix(`/api/v1/media`)
+      - traefik.http.routers.api-upload.priority=25
+      - traefik.http.routers.api-upload.entrypoints=websecure
+      - traefik.http.routers.api-upload.tls=true
+      - traefik.http.routers.api-upload.middlewares=upload-limit@docker,rl-api@docker,sec@docker
+      - traefik.http.routers.api-upload.service=api
+      # Everything else under /api.
+      - traefik.http.routers.api.rule=Host(`${DOMAIN}`) && PathPrefix(`/api`)
+      - traefik.http.routers.api.priority=20
+      - traefik.http.routers.api.entrypoints=websecure
+      - traefik.http.routers.api.tls=true
+      - traefik.http.routers.api.middlewares=rl-api@docker,sec@docker
+      - traefik.http.routers.api.service=api
+      # Public media served statically by the API.
+      - traefik.http.routers.uploads.rule=Host(`${DOMAIN}`) && PathPrefix(`/uploads/public`)
+      - traefik.http.routers.uploads.priority=20
+      - traefik.http.routers.uploads.entrypoints=websecure
+      - traefik.http.routers.uploads.tls=true
+      - traefik.http.routers.uploads.middlewares=sec@docker
+      - traefik.http.routers.uploads.service=api
+
+  web:
+    build:
+      context: ./apps/web
+    restart: unless-stopped
+    environment:
+      PORT: 4200
+      # Server-side rendering reaches the API over the compose network.
+      API_URL: http://api:8080/api/v1
+      SERVER_URL: http://api:8080
+      # SSR renders only for these Host headers; localhost serves the healthcheck.
+      ALLOWED_HOSTS: ${DOMAIN},localhost,127.0.0.1
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:4200/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - edge
+    logging: *default-logging
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=meetstudent-edge
+      - traefik.http.services.web.loadbalancer.server.port=4200
+      - traefik.http.routers.web.rule=Host(`${DOMAIN}`)
+      - traefik.http.routers.web.priority=1
+      - traefik.http.routers.web.entrypoints=websecure
+      - traefik.http.routers.web.tls=true
+      - traefik.http.routers.web.middlewares=sec@docker
+      - traefik.http.routers.web.service=web
+
+  backoffice:
+    build:
+      context: ./apps/backoffice
+      args:
+        # Adjust if the Angular output path of the scaffold differs.
+        DIST_DIR: dist/backoffice/browser
+    restart: unless-stopped
+    environment:
+      # Rendered into /config.json at container start.
+      BO_API_URL: ${BO_API_URL:-https://${DOMAIN}/api/v1}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:8080/config.json || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - edge
+    logging: *default-logging
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=meetstudent-edge
+      - traefik.http.services.backoffice.loadbalancer.server.port=8080
+      - traefik.http.routers.backoffice.rule=Host(`${BO_DOMAIN:?set BO_DOMAIN in .env}`)
+      - traefik.http.routers.backoffice.entrypoints=websecure
+      - traefik.http.routers.backoffice.tls=true
+      - traefik.http.routers.backoffice.middlewares=sec@docker
+      - traefik.http.routers.backoffice.service=backoffice
+
+volumes:
+  pgdata:
+  api-uploads:
+  api-private:
+  traefik-acme:
+
+networks:
+  # Reachable by Traefik; carries all HTTP traffic.
+  edge:
+    name: meetstudent-edge
+  # Postgres lives here only, with no route to the outside world.
+  backend:
+    internal: true
