@@ -1,6 +1,7 @@
 package com.bowe.meetstudent.dto;
 
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -29,6 +30,8 @@ public class UpdateProfileRequest {
     @DateTimeFormat(pattern = "yyyy-MM-dd")
     private Date birthday;
 
+    // Optional: null or empty means "leave the password unchanged" (see UserService.patch).
+    @Pattern(regexp = "^(|.{8,})$", message = "Le mot de passe doit contenir au moins 8 caractères")
     private String password;
 
     private String qualification;

@@ -156,6 +156,40 @@ class AuthIntegrationTests {
                 .andExpect(status().isUnauthorized()); // Expect 401
     }
 
+    @Autowired
+    private com.bowe.meetstudent.repositories.RefreshTokenRepository refreshTokenRepository;
+
+    @Test
+    void shouldReturn401_whenRefreshTokenIsUnknown() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"does-not-exist\"}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.error").value("Unauthorized"))
+                .andExpect(jsonPath("$.message").value("Refresh token is not in database!"))
+                .andExpect(jsonPath("$.path").value("/api/v1/auth/refresh"));
+    }
+
+    @Test
+    void shouldReturn401_whenRefreshTokenIsExpired() throws Exception {
+        Role role = roleRepository.findByName("ROLE_STUDENT").orElseThrow();
+        var user = userService.saveUser(com.bowe.meetstudent.entities.UserEntity.builder()
+                .email("expired@test.com").password("password123").firstname("E").lastname("X")
+                .role(role).build(), passwordEncoder);
+        refreshTokenRepository.save(com.bowe.meetstudent.entities.RefreshToken.builder()
+                .user(user).token("expired-token")
+                .expiryDate(java.time.Instant.now().minusSeconds(60)).build());
+
+        mockMvc.perform(post("/api/v1/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"expired-token\"}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.error").value("Unauthorized"))
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("expired")));
+    }
+
     @Test
     void shouldFailAccessSecuredEndpoint_withoutToken() throws Exception {
         mockMvc.perform(get("/api/v1/users")) // Assuming this is secured now

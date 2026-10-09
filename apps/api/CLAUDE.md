@@ -76,6 +76,10 @@ Personal documents (diplomas, certificates, bulletins, presentation videos) are 
 - **Endpoints:** `POST /api/v1/media?category=...` (upload), `GET /api/v1/media/{id}` (download), `GET /api/v1/media/mine` (own media), `GET /api/v1/media?status=PENDING` (admin queue), `PATCH /api/v1/media/{id}/verification` (admin), `DELETE /api/v1/media/{id}` (owner/admin). Downloads render inline only for a MIME allowlist, else force `attachment`, and always send `X-Content-Type-Options: nosniff` + a sandbox CSP.
 - **Migrations:** `V14`/`V15` create the `media` table and migrate legacy `users.diplomas`/`certificates`/`presentation_video_url` data; `MediaMigrationRunner` relocates pre-existing private files into `storage/private/` at startup. These run only against Postgres — the H2 test suite (Flyway disabled) generates the schema from the entity.
 
+### Production
+
+The `prod` profile (env vars, admin bootstrap via `AdminBootstrapRunner`, proxy headers, disabled Swagger) is documented in `docs/production.md`. Access token lifetime is `security.jwt.access-ttl-minutes` (`JWT_ACCESS_TTL_MINUTES`, default 60); invalid/expired refresh tokens raise `InvalidRefreshTokenException` (HTTP 401).
+
 ### Testing
 
 Tests live in `src/test/java/com/bowe/meetstudent/` split into `unit/` (Mockito) and `integration/` (MockMvc + H2).
