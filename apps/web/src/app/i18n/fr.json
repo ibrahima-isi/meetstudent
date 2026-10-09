@@ -10,6 +10,12 @@
     "fr": "Français",
     "en": "English"
   },
+  "theme": {
+    "light": "clair",
+    "dark": "sombre",
+    "system": "système",
+    "switch": "Thème : {{current}}. Passer à {{next}}."
+  },
   "notFound": {
     "title": "Page introuvable",
     "message": "Cette page n'existe pas ou a été déplacée.",

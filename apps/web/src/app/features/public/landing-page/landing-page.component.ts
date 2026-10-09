@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { LucideAngularModule, Search, MapPin, Star, Filter, LogIn, UserPlus, ArrowUpDown } from 'lucide-angular';
 import { ImageWithFallbackComponent } from '@shared/components/image-with-fallback/image-with-fallback.component';
 import { LanguageSwitcherComponent } from '@shared/components/language-switcher/language-switcher.component';
+import { ThemeToggleComponent } from '@shared/components/theme-toggle/theme-toggle.component';
 import { ErrorStateComponent } from '@shared/components/error-state/error-state.component';
 import { School } from '@models/entities';
 import { SchoolService } from '@services/school.service';
@@ -20,6 +21,7 @@ import { pluralKey } from '@i18n/plural';
     LucideAngularModule,
     ImageWithFallbackComponent,
     LanguageSwitcherComponent,
+    ThemeToggleComponent,
     TranslocoDirective,
     ErrorStateComponent,
   ],
