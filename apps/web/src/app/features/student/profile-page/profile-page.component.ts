@@ -7,12 +7,13 @@ import { LocaleService } from '@services/locale.service';
 import { TokenService } from '@services/token.service';
 import { WishlistService } from '@services/wishlist.service';
 import { User } from '@models/entities';
+import { ThemeToggleComponent } from '@shared/components/theme-toggle/theme-toggle.component';
 import { UserDocumentsComponent } from '../user-documents/user-documents.component';
 import { TranslocoDirective } from '@jsverse/transloco';
 
 @Component({
   selector: 'app-profile-page',
-  imports: [CommonModule, FormsModule, LucideAngularModule, UserDocumentsComponent, TranslocoDirective],
+  imports: [CommonModule, FormsModule, LucideAngularModule, UserDocumentsComponent, TranslocoDirective, ThemeToggleComponent],
   templateUrl: './profile-page.component.html'
 })
 export class ProfilePageComponent implements OnInit {

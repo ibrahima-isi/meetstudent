@@ -8,6 +8,7 @@ import { LucideAngularModule, Search, MapPin, Star, Filter, LogOut, User, ArrowU
 import { ImageWithFallbackComponent } from '@shared/components/image-with-fallback/image-with-fallback.component';
 import { StarRatingComponent } from '@shared/components/star-rating/star-rating.component';
 import { WishlistCartComponent } from '@shared/components/wishlist-cart/wishlist-cart.component';
+import { ThemeToggleComponent } from '@shared/components/theme-toggle/theme-toggle.component';
 import { ErrorStateComponent } from '@shared/components/error-state/error-state.component';
 import { Page, School } from '@models/entities';
 import { SchoolService } from '@services/school.service';
@@ -23,7 +24,7 @@ const PAGE_SIZE = 12;
 
 @Component({
   selector: 'app-home-page',
-  imports: [CommonModule, FormsModule, LucideAngularModule, ImageWithFallbackComponent, StarRatingComponent, WishlistCartComponent, TranslocoDirective, ErrorStateComponent],
+  imports: [CommonModule, FormsModule, LucideAngularModule, ImageWithFallbackComponent, StarRatingComponent, WishlistCartComponent, TranslocoDirective, ErrorStateComponent, ThemeToggleComponent],
   templateUrl: './home-page.component.html'
 })
 export class HomePageComponent {

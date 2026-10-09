@@ -1,21 +1,24 @@
-<div class="min-h-screen bg-gray-50" *transloco="let t">
-  <div class="bg-white border-b border-gray-200">
+<div class="min-h-screen bg-muted/50" *transloco="let t">
+  <div class="bg-card border-b border-border">
     <div class="max-w-4xl mx-auto px-4 py-6">
-      <button
-        (click)="goTo('home')"
-        class="flex items-center gap-2 text-gray-700 hover:text-gray-900 mb-4 cursor-pointer"
-      >
-        <lucide-icon [img]="ArrowLeft" class="w-5 h-5"></lucide-icon>
-        <span>{{ t('profile.back') }}</span>
-      </button>
-      <h1 class="text-gray-900 text-2xl font-bold">{{ t('profile.title') }}</h1>
+      <div class="flex items-center justify-between mb-4">
+        <button
+          (click)="goTo('home')"
+          class="flex items-center gap-2 text-foreground hover:text-muted-foreground cursor-pointer"
+        >
+          <lucide-icon [img]="ArrowLeft" class="w-5 h-5"></lucide-icon>
+          <span>{{ t('profile.back') }}</span>
+        </button>
+        <app-theme-toggle />
+      </div>
+      <h1 class="text-foreground text-2xl font-bold">{{ t('profile.title') }}</h1>
     </div>
   </div>
 
   <div class="max-w-4xl mx-auto px-4 py-8">
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+    <div class="bg-card rounded-xl shadow-sm border border-border p-6 mb-6">
       <div class="flex items-center justify-between mb-6">
-        <h2 class="text-gray-900 text-xl font-bold">{{ t('profile.personalInfo') }}</h2>
+        <h2 class="text-foreground text-xl font-bold">{{ t('profile.personalInfo') }}</h2>
         @if (!isEditing()) {
           <button
             (click)="isEditing.set(true)"
@@ -27,7 +30,7 @@
           <div class="flex gap-2">
             <button
               (click)="handleCancel()"
-              class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+              class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-foreground rounded-lg hover:bg-accent transition-colors cursor-pointer"
             >
               {{ t('profile.cancel') }}
             </button>
@@ -45,39 +48,39 @@
       <div class="space-y-4">
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label class="block text-gray-700 mb-2 font-medium">{{ t('profile.firstname') }}</label>
+            <label class="block text-foreground mb-2 font-medium">{{ t('profile.firstname') }}</label>
             @if (isEditing()) {
               <div class="relative">
-                <lucide-icon [img]="UserIcon" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"></lucide-icon>
+                <lucide-icon [img]="UserIcon" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground"></lucide-icon>
                 <input
                   type="text"
                   [(ngModel)]="editedProfile().firstname"
-                  class="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  class="bg-card text-foreground placeholder:text-muted-foreground w-full pl-11 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   [placeholder]="t('profile.firstnamePlaceholder')"
                 />
               </div>
             } @else {
-              <div class="flex items-center gap-3 text-gray-900">
-                <lucide-icon [img]="UserIcon" class="w-5 h-5 text-gray-400"></lucide-icon>
+              <div class="flex items-center gap-3 text-foreground">
+                <lucide-icon [img]="UserIcon" class="w-5 h-5 text-muted-foreground"></lucide-icon>
                 <span>{{ profile().firstname || t('profile.notProvided') }}</span>
               </div>
             }
           </div>
           <div>
-            <label class="block text-gray-700 mb-2 font-medium">{{ t('profile.lastname') }}</label>
+            <label class="block text-foreground mb-2 font-medium">{{ t('profile.lastname') }}</label>
             @if (isEditing()) {
               <div class="relative">
-                <lucide-icon [img]="UserIcon" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"></lucide-icon>
+                <lucide-icon [img]="UserIcon" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground"></lucide-icon>
                 <input
                   type="text"
                   [(ngModel)]="editedProfile().lastname"
-                  class="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  class="bg-card text-foreground placeholder:text-muted-foreground w-full pl-11 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   [placeholder]="t('profile.lastnamePlaceholder')"
                 />
               </div>
             } @else {
-              <div class="flex items-center gap-3 text-gray-900">
-                <lucide-icon [img]="UserIcon" class="w-5 h-5 text-gray-400"></lucide-icon>
+              <div class="flex items-center gap-3 text-foreground">
+                <lucide-icon [img]="UserIcon" class="w-5 h-5 text-muted-foreground"></lucide-icon>
                 <span>{{ profile().lastname || t('profile.notProvided') }}</span>
               </div>
             }
@@ -85,36 +88,36 @@
         </div>
 
         <div>
-          <label class="block text-gray-700 mb-2 font-medium">{{ t('profile.email') }}</label>
+          <label class="block text-foreground mb-2 font-medium">{{ t('profile.email') }}</label>
           @if (isEditing()) {
             <div class="relative">
-              <lucide-icon [img]="Mail" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"></lucide-icon>
+              <lucide-icon [img]="Mail" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground"></lucide-icon>
               <input
                 type="email"
                 [(ngModel)]="editedProfile().email"
-                class="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                class="bg-card text-foreground placeholder:text-muted-foreground w-full pl-11 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 [placeholder]="t('profile.emailPlaceholder')"
               />
             </div>
           } @else {
-            <div class="flex items-center gap-3 text-gray-900">
-              <lucide-icon [img]="Mail" class="w-5 h-5 text-gray-400"></lucide-icon>
+            <div class="flex items-center gap-3 text-foreground">
+              <lucide-icon [img]="Mail" class="w-5 h-5 text-muted-foreground"></lucide-icon>
               <span>{{ profile().email || t('profile.notProvided') }}</span>
             </div>
           }
         </div>
 
         <div>
-          <label class="block text-gray-700 mb-2 font-medium">{{ t('profile.profileType') }}</label>
-          <div class="flex items-center gap-3 text-gray-900 uppercase">
+          <label class="block text-foreground mb-2 font-medium">{{ t('profile.profileType') }}</label>
+          <div class="flex items-center gap-3 text-foreground uppercase">
             @if (profile().role?.name === 'STUDENT') {
-              <lucide-icon [img]="GraduationCap" class="w-5 h-5 text-gray-400"></lucide-icon>
+              <lucide-icon [img]="GraduationCap" class="w-5 h-5 text-muted-foreground"></lucide-icon>
               <span>{{ t('profile.roleStudent') }}</span>
             } @else if (profile().role?.name === 'EXPERT') {
-              <lucide-icon [img]="Briefcase" class="w-5 h-5 text-gray-400"></lucide-icon>
+              <lucide-icon [img]="Briefcase" class="w-5 h-5 text-muted-foreground"></lucide-icon>
               <span>{{ t('profile.roleExpert') }}</span>
             } @else {
-              <lucide-icon [img]="UserIcon" class="w-5 h-5 text-gray-400"></lucide-icon>
+              <lucide-icon [img]="UserIcon" class="w-5 h-5 text-muted-foreground"></lucide-icon>
               <span>{{ profile().role?.name }}</span>
             }
           </div>
@@ -122,13 +125,13 @@
 
         @if (profile().role?.name === 'STUDENT') {
           <div>
-            <label class="block text-gray-700 mb-2 font-medium">{{ t('profile.bacType') }}</label>
+            <label class="block text-foreground mb-2 font-medium">{{ t('profile.bacType') }}</label>
             @if (isEditing()) {
               <div class="relative">
-                <lucide-icon [img]="GraduationCap" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"></lucide-icon>
+                <lucide-icon [img]="GraduationCap" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground"></lucide-icon>
                 <select
                   [(ngModel)]="editedProfile().qualification"
-                  class="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent appearance-none bg-white"
+                  class="bg-card text-foreground placeholder:text-muted-foreground w-full pl-11 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent appearance-none"
                 >
                   <option value="">{{ t('profile.bacPlaceholder') }}</option>
                   <option value="bac-general">Bac Général</option>
@@ -138,8 +141,8 @@
                 </select>
               </div>
             } @else {
-              <div class="flex items-center gap-3 text-gray-900">
-                <lucide-icon [img]="GraduationCap" class="w-5 h-5 text-gray-400"></lucide-icon>
+              <div class="flex items-center gap-3 text-foreground">
+                <lucide-icon [img]="GraduationCap" class="w-5 h-5 text-muted-foreground"></lucide-icon>
                 <span>{{ profile().qualification || t('profile.notProvided') }}</span>
               </div>
             }
@@ -148,20 +151,20 @@
 
         @if (profile().role?.name === 'EXPERT') {
           <div>
-            <label class="block text-gray-700 mb-2 font-medium">{{ t('profile.specialty') }}</label>
+            <label class="block text-foreground mb-2 font-medium">{{ t('profile.specialty') }}</label>
             @if (isEditing()) {
               <div class="relative">
-                <lucide-icon [img]="Briefcase" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"></lucide-icon>
+                <lucide-icon [img]="Briefcase" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground"></lucide-icon>
                 <input
                   type="text"
                   [(ngModel)]="editedProfile().qualification"
-                  class="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  class="bg-card text-foreground placeholder:text-muted-foreground w-full pl-11 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   [placeholder]="t('profile.specialtyPlaceholder')"
                 />
               </div>
             } @else {
-              <div class="flex items-center gap-3 text-gray-900">
-                <lucide-icon [img]="Briefcase" class="w-5 h-5 text-gray-400"></lucide-icon>
+              <div class="flex items-center gap-3 text-foreground">
+                <lucide-icon [img]="Briefcase" class="w-5 h-5 text-muted-foreground"></lucide-icon>
                 <span>{{ profile().qualification || t('profile.notProvided') }}</span>
               </div>
             }
@@ -173,20 +176,20 @@
     @if (profile().role?.name === 'STUDENT') {
       <app-user-documents />
 
-      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h2 class="text-gray-900 mb-4 text-xl font-bold">{{ t('profile.wishlistTitle') }}</h2>
+      <div class="bg-card rounded-xl shadow-sm border border-border p-6">
+        <h2 class="text-foreground mb-4 text-xl font-bold">{{ t('profile.wishlistTitle') }}</h2>
         @if (wishlist.schools().length > 0) {
           <div class="space-y-3">
             @for (school of wishlist.schools(); track school.id) {
-              <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+              <div class="flex items-center justify-between p-4 border border-border rounded-lg">
                 <div class="flex items-center gap-3">
-                  <lucide-icon [img]="Heart" class="w-5 h-5 text-red-600 fill-current"></lucide-icon>
-                  <span class="text-gray-900 font-medium">{{ school.name }}</span>
+                  <lucide-icon [img]="Heart" class="w-5 h-5 text-red-600 dark:text-red-400 fill-current"></lucide-icon>
+                  <span class="text-foreground font-medium">{{ school.name }}</span>
                 </div>
                 <button
                   data-testid="wishlist-remove"
                   (click)="wishlist.toggle(school)"
-                  class="px-3 py-1 text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                  class="px-3 py-1 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
                 >
                   {{ t('profile.remove') }}
                 </button>
@@ -194,8 +197,8 @@
             }
           </div>
         } @else {
-          <div class="text-center py-8 text-gray-500">
-            <lucide-icon [img]="Heart" class="w-12 h-12 mx-auto mb-3 text-gray-300"></lucide-icon>
+          <div class="text-center py-8 text-muted-foreground">
+            <lucide-icon [img]="Heart" class="w-12 h-12 mx-auto mb-3 text-muted-foreground/50"></lucide-icon>
             <p>{{ t('profile.wishlistEmpty') }}</p>
           </div>
         }

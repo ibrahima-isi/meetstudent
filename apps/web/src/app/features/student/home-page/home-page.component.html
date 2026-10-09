@@ -1,23 +1,24 @@
-<div class="min-h-screen bg-gray-50" *transloco="let t">
-  <header class="bg-white border-b border-gray-200 sticky top-0 z-50">
+<div class="min-h-screen bg-muted/50" *transloco="let t">
+  <header class="bg-card border-b border-border sticky top-0 z-50">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
       <div class="flex items-center justify-between">
         <div>
-          <h1 class="text-gray-900 font-bold text-xl">MeetStudent</h1>
-          <p class="text-gray-600 text-sm">{{ t('schools.tagline') }}</p>
+          <h1 class="text-foreground font-bold text-xl">MeetStudent</h1>
+          <p class="text-muted-foreground text-sm">{{ t('schools.tagline') }}</p>
         </div>
         <div class="flex items-center gap-2">
+          <app-theme-toggle />
           <app-wishlist-cart />
           <button
             (click)="goTo('profile')"
-            class="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+            class="flex items-center gap-2 px-4 py-2 text-foreground hover:bg-accent rounded-lg transition-colors cursor-pointer"
           >
             <lucide-icon [img]="UserIcon" class="w-5 h-5"></lucide-icon>
             <span class="hidden sm:inline">{{ t('home.profile') }}</span>
           </button>
           <button
             (click)="logout()"
-            class="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+            class="flex items-center gap-2 px-4 py-2 text-foreground hover:bg-accent rounded-lg transition-colors cursor-pointer"
           >
             <lucide-icon [img]="LogOut" class="w-5 h-5"></lucide-icon>
             <span class="hidden sm:inline">{{ t('home.logout') }}</span>
@@ -27,17 +28,17 @@
     </div>
   </header>
 
-  <div class="bg-white border-b border-gray-200">
+  <div class="bg-card border-b border-border">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
       <div class="space-y-4">
         <div class="relative">
-          <lucide-icon [img]="Search" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"></lucide-icon>
+          <lucide-icon [img]="Search" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground"></lucide-icon>
           <input
             type="text"
             [ngModel]="searchQuery()"
             (ngModelChange)="onSearchInput($event)"
             [placeholder]="t('schools.searchPlaceholder')"
-            class="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            class="bg-card text-foreground placeholder:text-muted-foreground w-full pl-12 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           />
         </div>
 
@@ -45,23 +46,23 @@
           <button
             data-testid="filters-toggle"
             (click)="showFilters.set(!showFilters())"
-            class="flex items-center gap-2 px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+            class="flex items-center gap-2 px-4 py-2 text-foreground border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-accent transition-colors cursor-pointer"
           >
             <lucide-icon [img]="Filter" class="w-4 h-4"></lucide-icon>
             <span>{{ t('schools.filters') }}</span>
             @if (activeFiltersCount() > 0) {
-              <span class="ml-2 px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold">
+              <span class="ml-2 px-2 py-0.5 bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 rounded-full text-xs font-bold">
                 {{ activeFiltersCount() }}
               </span>
             }
           </button>
 
           <div class="flex items-center gap-2">
-            <lucide-icon [img]="ArrowUpDown" class="w-4 h-4 text-gray-500"></lucide-icon>
+            <lucide-icon [img]="ArrowUpDown" class="w-4 h-4 text-muted-foreground"></lucide-icon>
             <select
               data-testid="sort-select"
               [(ngModel)]="sortBy"
-              class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-700"
+              class="bg-card text-foreground placeholder:text-muted-foreground px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             >
               <option value="name">{{ t('schools.sortName') }}</option>
               <option value="city">{{ t('schools.sortCity') }}</option>
@@ -73,11 +74,11 @@
         @if (showFilters()) {
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
             <div>
-              <label class="block text-gray-700 mb-2">{{ t('schools.city') }}</label>
+              <label class="block text-foreground mb-2">{{ t('schools.city') }}</label>
               <select
                 data-testid="city-filter"
                 [(ngModel)]="selectedCity"
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                class="bg-card text-foreground placeholder:text-muted-foreground w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               >
                 <option value="">{{ t('schools.allCities') }}</option>
                 @for (city of cities(); track city) {
@@ -86,10 +87,10 @@
               </select>
             </div>
             <div>
-              <label class="block text-gray-700 mb-2">{{ t('schools.type') }}</label>
+              <label class="block text-foreground mb-2">{{ t('schools.type') }}</label>
               <select
                 [(ngModel)]="selectedType"
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                class="bg-card text-foreground placeholder:text-muted-foreground w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               >
                 <option value="">{{ t('schools.allTypes') }}</option>
                 @for (type of types(); track type) {
@@ -112,12 +113,12 @@
       >
         <span class="sr-only">{{ t('common.loading') }}</span>
         @for (placeholder of skeletons; track placeholder) {
-          <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden animate-pulse" aria-hidden="true">
-            <div class="h-48 bg-gray-200"></div>
+          <div class="bg-card rounded-xl shadow-sm border border-border overflow-hidden animate-pulse" aria-hidden="true">
+            <div class="h-48 bg-muted"></div>
             <div class="p-5 space-y-3">
-              <div class="h-5 bg-gray-200 rounded w-3/4"></div>
-              <div class="h-4 bg-gray-200 rounded w-1/2"></div>
-              <div class="h-4 bg-gray-200 rounded w-full"></div>
+              <div class="h-5 bg-muted rounded w-3/4"></div>
+              <div class="h-4 bg-muted rounded w-1/2"></div>
+              <div class="h-4 bg-muted rounded w-full"></div>
             </div>
           </div>
         }
@@ -126,13 +127,13 @@
       <app-error-state [message]="t('schools.loadError')" (retry)="load()" />
     } @else {
     <div class="mb-6">
-      <p class="text-gray-600">
+      <p class="text-muted-foreground">
         {{ t(plural('schools.found', resultCount()), { count: resultCount() }) }}
       </p>
     </div>
 
     @if (wishlist.error()) {
-      <div role="alert" data-testid="wishlist-error" class="mb-6 flex items-center justify-between gap-3 px-4 py-3 bg-red-50 text-red-700 rounded-lg text-sm">
+      <div role="alert" data-testid="wishlist-error" class="mb-6 flex items-center justify-between gap-3 px-4 py-3 bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 rounded-lg text-sm">
         <span>{{ t('wishlist.updateError') }}</span>
         <button type="button" (click)="wishlist.dismissError()" class="font-medium underline cursor-pointer">{{ t('wishlist.dismiss') }}</button>
       </div>
@@ -140,7 +141,7 @@
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       @for (school of sortedSchools(); track school.id) {
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer flex flex-col">
+        <div class="bg-card rounded-xl shadow-sm border border-border overflow-hidden hover:shadow-md transition-shadow cursor-pointer flex flex-col">
           <div class="relative h-48" (click)="openSchool(school)">
             <app-image-with-fallback
               [src]="school.coverImageUrl || ''"
@@ -155,16 +156,13 @@
               [disabled]="wishlist.isPending(school.id)"
               (click)="$event.stopPropagation(); wishlist.toggle(school)"
               class="absolute top-3 left-3 p-2 rounded-full shadow-sm transition-colors cursor-pointer disabled:opacity-60"
-              [class.bg-red-50]="wishlist.has(school.id)"
-              [class.text-red-600]="wishlist.has(school.id)"
-              [class.bg-white]="!wishlist.has(school.id)"
-              [class.text-gray-400]="!wishlist.has(school.id)"
+              [class]="wishlist.has(school.id) ? 'bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-400' : 'bg-card text-muted-foreground'"
             >
               <lucide-icon [img]="Heart" class="w-5 h-5" [class.fill-current]="wishlist.has(school.id)"></lucide-icon>
             </button>
             <div class="absolute top-3 right-3 flex flex-col items-end gap-2">
-              <div class="px-3 py-1 bg-white rounded-full shadow-sm">
-                <span class="text-indigo-600 text-sm font-bold">{{ school.type || t('common.defaultSchoolType') }}</span>
+              <div class="px-3 py-1 bg-card rounded-full shadow-sm">
+                <span class="text-indigo-600 dark:text-indigo-400 text-sm font-bold">{{ school.type || t('common.defaultSchoolType') }}</span>
               </div>
               @if (school.tags && school.tags.length > 0) {
                 <div class="flex flex-wrap gap-1 justify-end max-w-[150px]">
@@ -184,7 +182,7 @@
           </div>
           
           <div class="p-5 flex-1 flex flex-col">
-            <h3 class="text-gray-900 mb-3 line-clamp-2 text-xl font-bold cursor-pointer" (click)="openSchool(school)">{{ school.name }}</h3>
+            <h3 class="text-foreground mb-3 line-clamp-2 text-xl font-bold cursor-pointer" (click)="openSchool(school)">{{ school.name }}</h3>
             
             <div class="mb-3">
               <app-star-rating 
@@ -195,14 +193,14 @@
             </div>
 
             <div class="flex items-start gap-2 mb-3 text-sm">
-              <lucide-icon [img]="MapPin" class="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5"></lucide-icon>
-              <div class="text-gray-600">
+              <lucide-icon [img]="MapPin" class="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5"></lucide-icon>
+              <div class="text-muted-foreground">
                 <p>{{ school.address.location }}</p>
                 <p>{{ school.address.city }}</p>
               </div>
             </div>
 
-            <p class="text-gray-600 line-clamp-2 mb-4 text-sm flex-1">
+            <p class="text-muted-foreground line-clamp-2 mb-4 text-sm flex-1">
               {{ school.description || t('common.noDescription') }}
             </p>
 
@@ -218,7 +216,7 @@
     </div>
 
     @if (loadMoreFailed()) {
-      <div role="alert" data-testid="load-more-error" class="mt-6 flex items-center justify-center gap-3 text-sm text-red-700">
+      <div role="alert" data-testid="load-more-error" class="mt-6 flex items-center justify-center gap-3 text-sm text-red-700 dark:text-red-400">
         <span>{{ t('schools.loadMoreError') }}</span>
         <button type="button" (click)="loadMore()" class="font-medium underline cursor-pointer">{{ t('common.retry') }}</button>
       </div>
@@ -229,7 +227,7 @@
           data-testid="load-more"
           [disabled]="loadingMore()"
           (click)="loadMore()"
-          class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium cursor-pointer disabled:opacity-60"
+          class="px-6 py-2 border border-gray-300 dark:border-gray-600 text-foreground rounded-lg hover:bg-accent transition-colors font-medium cursor-pointer disabled:opacity-60"
         >
           {{ t(loadingMore() ? 'common.loading' : 'schools.loadMore') }}
         </button>
@@ -238,7 +236,7 @@
 
     @if (sortedSchools().length === 0 && !hasMore()) {
       <div class="text-center py-12">
-        <p class="text-gray-600 text-lg">{{ t(schools().length === 0 && !hasFilters() ? 'schools.empty' : 'schools.noResults') }}</p>
+        <p class="text-muted-foreground text-lg">{{ t(schools().length === 0 && !hasFilters() ? 'schools.empty' : 'schools.noResults') }}</p>
       </div>
     }
     }

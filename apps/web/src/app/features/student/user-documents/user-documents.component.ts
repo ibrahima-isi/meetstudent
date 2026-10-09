@@ -29,6 +29,13 @@ export class UserDocumentsComponent implements OnInit, OnDestroy {
     this.allMedia().filter(m => PERSONAL_DOCUMENT_CATEGORIES.includes(m.category))
   );
 
+  /** Badge colours per moderation status, each with its dark counterpart. */
+  protected readonly statusClasses: Record<VerificationStatus, string> = {
+    PENDING: 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300',
+    VERIFIED: 'bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-300',
+    REJECTED: 'bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-300',
+  };
+
   loading = signal(false);
   /** A translation key, not a sentence, so a language switch re-renders it. */
   error = signal('');
