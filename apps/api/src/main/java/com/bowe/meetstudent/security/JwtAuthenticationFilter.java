@@ -36,7 +36,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 .map(UserPrincipalAuthenticationToken::new)
                 .ifPresent(auth -> SecurityContextHolder.getContext().setAuthentication(auth));
         }catch (Exception e){
-            logger.error("JWT authentication failed: {}", e.getMessage(), e);
+            logger.warn("JWT authentication failed: {}", e.getMessage());
             SecurityContextHolder.clearContext();
         }
 

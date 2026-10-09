@@ -28,6 +28,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -45,12 +46,14 @@ public class UserController {
     @Operation(summary = "Create a new user", description = "Registers a new student account.")
     @ApiResponse(responseCode = "201", description = "User created successfully")
     @ApiResponse(responseCode = "400", description = "Invalid input data or email already exists")
-    public ResponseEntity<UserDTO> saveUser(@RequestBody @Validated RegisterRequest request) {
+    public ResponseEntity<?> saveUser(@RequestBody @Validated RegisterRequest request) {
         if (!userService.isPasswordConfirmed(request.getPassword(), request.getConfirmedPassword())) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest()
+                    .body(Map.of("confirmedPassword", "Les mots de passe ne correspondent pas"));
         }
         if (!userService.emailNotExists(request.getEmail())) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest()
+                    .body(Map.of("email", "Cet email est déjà utilisé"));
         }
         UserEntity userEntity = UserEntity.builder()
                 .firstname(request.getFirstname())
@@ -66,8 +69,10 @@ public class UserController {
     }
 
     @GetMapping
-    @Operation(summary = "Get all users (paginated)", description = "Retrieves a paginated list of all users registered on the platform.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Get all users (paginated, admin only)", description = "Retrieves a paginated list of all users registered on the platform. Restricted to administrators.")
     @ApiResponse(responseCode = "200", description = "List of users retrieved")
+    @ApiResponse(responseCode = "403", description = "Caller is not an administrator")
     public Page<UserDTO> findAll(@ParameterObject Pageable pageable) {
         Page<UserEntity> userEntities = this.userService.findAll(pageable);
         return userEntities.map(userMapper::toDTO);
@@ -75,7 +80,7 @@ public class UserController {
 
     @GetMapping(path = "/id/{id}")
     @Operation(summary = "Get a user by ID", description = "Retrieves detailed information about a specific user by their unique ID.")
-    @ApiResponse(responseCode = "302", description = "User found")
+    @ApiResponse(responseCode = "200", description = "User found")
     @ApiResponse(responseCode = "404", description = "User not found")
     public ResponseEntity<UserDTO> findById(
             @AuthenticationPrincipal UserPrincipal principal,
@@ -86,7 +91,7 @@ public class UserController {
         Optional<UserEntity> user = this.userService.getUserById(id);
         return user.map( foundUser ->{
             UserDTO dto = this.userMapper.toDTO(foundUser);
-            return new ResponseEntity<>(dto, HttpStatus.FOUND);
+            return new ResponseEntity<>(dto, HttpStatus.OK);
         }).orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
 
@@ -99,13 +104,15 @@ public class UserController {
         Optional<UserEntity> user = this.userService.getUserByEmail(email);
         if (user.isPresent()) {
             checkOwnershipOrAdmin(principal, user.get().getId());
-            return new ResponseEntity<>(this.userMapper.toDTO(user.get()), HttpStatus.FOUND);
+            return new ResponseEntity<>(this.userMapper.toDTO(user.get()), HttpStatus.OK);
         }
         return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
 
     @GetMapping(path = "/role/{role}")
-    @Operation(summary = "Get users by role name", description = "Retrieves a list of all users assigned to a specific role (e.g., STUDENT).")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Get users by role name (admin only)", description = "Retrieves a list of all users assigned to a specific role (e.g., STUDENT). Restricted to administrators.")
+    @ApiResponse(responseCode = "403", description = "Caller is not an administrator")
     public ResponseEntity<List<UserDTO>> findByRole(
             @Parameter(description = "Name of the role (e.g., STUDENT)") @PathVariable String role) {
         Optional<Role> roleOptional = roleService.findRoleByName(role.toUpperCase());

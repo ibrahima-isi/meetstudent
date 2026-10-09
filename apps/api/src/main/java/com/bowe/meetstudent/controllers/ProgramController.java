@@ -150,7 +150,7 @@ public class ProgramController {
 
     @GetMapping(path = "/{id}")
     @Operation(summary = "Get a program by ID", description = "Retrieves details of a specific program using its unique ID.")
-    @ApiResponse(responseCode = "302", description = "Program found")
+    @ApiResponse(responseCode = "200", description = "Program found")
     @ApiResponse(responseCode = "404", description = "Program not found")
     public ResponseEntity<ProgramDTO> getProgramById(
             @Parameter(description = "ID of the program to retrieve") @PathVariable int id) {
@@ -158,7 +158,7 @@ public class ProgramController {
                 .map(program -> {
                     ProgramDTO dto = programMapper.toDTO(program);
                     dto.setAverageRate(programRateService.getAverageNoteByProgramId(program.getId()));
-                    return new ResponseEntity<>(dto, HttpStatus.FOUND);
+                    return new ResponseEntity<>(dto, HttpStatus.OK);
                 })
                 .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }

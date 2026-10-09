@@ -3,6 +3,7 @@ package com.bowe.meetstudent.services;
 import com.bowe.meetstudent.entities.Media;
 import com.bowe.meetstudent.entities.enums.MediaCategory;
 import com.bowe.meetstudent.entities.enums.VerificationStatus;
+import com.bowe.meetstudent.exceptions.MediaValidationException;
 import com.bowe.meetstudent.exceptions.ResourceNotFoundException;
 import com.bowe.meetstudent.repositories.MediaRepository;
 import com.bowe.meetstudent.security.UserPrincipal;
@@ -11,6 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -99,27 +101,27 @@ public class MediaService {
 
     private String validateFile(MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException("File is required and cannot be empty");
+            throw new MediaValidationException(HttpStatus.BAD_REQUEST, "File is required and cannot be empty");
         }
         if (file.getSize() > maxUploadBytes) {
-            throw new IllegalArgumentException("File exceeds the maximum allowed size");
+            throw new MediaValidationException(HttpStatus.PAYLOAD_TOO_LARGE, "File exceeds the maximum allowed size");
         }
 
         String originalFilename = StringUtils.cleanPath(file.getOriginalFilename() == null ? "" : file.getOriginalFilename());
         int extensionIndex = originalFilename.lastIndexOf(".");
         if (extensionIndex < 0 || extensionIndex == originalFilename.length() - 1) {
-            throw new IllegalArgumentException("File extension is required");
+            throw new MediaValidationException(HttpStatus.BAD_REQUEST, "File extension is required");
         }
 
         String extension = originalFilename.substring(extensionIndex + 1).toLowerCase();
         Set<String> allowedMimeTypes = ALLOWED_MIME_TYPES_BY_EXTENSION.get(extension);
         if (allowedMimeTypes == null) {
-            throw new IllegalArgumentException("File extension is not allowed");
+            throw new MediaValidationException(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "File extension is not allowed");
         }
 
         String contentType = normalizeContentType(file.getContentType());
         if (!allowedMimeTypes.contains(contentType)) {
-            throw new IllegalArgumentException("File type does not match an allowed media type");
+            throw new MediaValidationException(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "File type does not match an allowed media type");
         }
 
         return extension;
@@ -143,7 +145,7 @@ public class MediaService {
         };
 
         if (!valid) {
-            throw new IllegalArgumentException("File content does not match its declared type");
+            throw new MediaValidationException(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "File content does not match its declared type");
         }
     }
 

@@ -231,4 +231,36 @@ describe('RegisterFormComponent translations', () => {
     expect(text()).not.toContain('Bac Général');
     expect(text()).not.toContain('Bac Professionnel');
   });
+
+  function collegeLevelOptions(): { value: string; label: string }[] {
+    const select = fixture.nativeElement.querySelector('select#collegeLevel') as HTMLSelectElement;
+    return Array.from(select.options)
+      .filter((option) => option.value !== '')
+      .map((option) => ({ value: option.value, label: option.textContent!.trim() }));
+  }
+
+  it('labels the college levels in French', async () => {
+    await render('fr');
+    fixture.componentInstance.setUserType('student');
+    await settle();
+
+    expect(collegeLevelOptions()).toEqual([
+      { value: 'l1', label: 'Licence 1 (L1)' },
+      { value: 'l2', label: 'Licence 2 (L2)' },
+      { value: 'm1', label: 'Master 1 (M1)' },
+    ]);
+  });
+
+  it('labels the college levels in English without changing their values', async () => {
+    await render('en');
+    fixture.componentInstance.setUserType('student');
+    await settle();
+
+    expect(collegeLevelOptions()).toEqual([
+      { value: 'l1', label: "Bachelor's year 1 (L1)" },
+      { value: 'l2', label: "Bachelor's year 2 (L2)" },
+      { value: 'm1', label: "Master's year 1 (M1)" },
+    ]);
+    expect(text()).not.toContain('Licence 1');
+  });
 });
