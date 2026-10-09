@@ -7,6 +7,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -74,6 +76,44 @@ public class GlobalExceptionHandler {
                 request.getDescription(false).replace("uri=", "")
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
+    }
+
+    /**
+     * Upload validation failures: 400 (invalid), 413 (too large) or 415 (unsupported type).
+     */
+    @ExceptionHandler(MediaValidationException.class)
+    public ResponseEntity<ErrorResponse> handleMediaValidationException(
+            MediaValidationException ex, WebRequest request) {
+        return build(ex.getStatus(), ex.getMessage(), request);
+    }
+
+    /**
+     * Multipart request larger than the configured limit (rejected before the controller runs).
+     */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleMaxUploadSizeExceeded(
+            MaxUploadSizeExceededException ex, WebRequest request) {
+        return build(HttpStatus.PAYLOAD_TOO_LARGE, "File exceeds the maximum allowed size", request);
+    }
+
+    /**
+     * Unknown route / static resource.
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResourceFound(
+            NoResourceFoundException ex, WebRequest request) {
+        return build(HttpStatus.NOT_FOUND, "Resource not found", request);
+    }
+
+    private ResponseEntity<ErrorResponse> build(HttpStatus status, String message, WebRequest request) {
+        ErrorResponse errorResponse = new ErrorResponse(
+                LocalDateTime.now(),
+                status.value(),
+                status.getReasonPhrase(),
+                message,
+                request.getDescription(false).replace("uri=", "")
+        );
+        return new ResponseEntity<>(errorResponse, status);
     }
 
     /**

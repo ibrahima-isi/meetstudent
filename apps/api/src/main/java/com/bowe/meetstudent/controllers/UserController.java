@@ -28,6 +28,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -45,12 +46,14 @@ public class UserController {
     @Operation(summary = "Create a new user", description = "Registers a new student account.")
     @ApiResponse(responseCode = "201", description = "User created successfully")
     @ApiResponse(responseCode = "400", description = "Invalid input data or email already exists")
-    public ResponseEntity<UserDTO> saveUser(@RequestBody @Validated RegisterRequest request) {
+    public ResponseEntity<?> saveUser(@RequestBody @Validated RegisterRequest request) {
         if (!userService.isPasswordConfirmed(request.getPassword(), request.getConfirmedPassword())) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest()
+                    .body(Map.of("confirmedPassword", "Les mots de passe ne correspondent pas"));
         }
         if (!userService.emailNotExists(request.getEmail())) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest()
+                    .body(Map.of("email", "Cet email est déjà utilisé"));
         }
         UserEntity userEntity = UserEntity.builder()
                 .firstname(request.getFirstname())
