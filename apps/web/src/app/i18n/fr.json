@@ -4,7 +4,13 @@
     "defaultSchoolType": "Établissement",
     "noDescription": "Aucune description disponible",
     "errorGeneric": "Une erreur est survenue",
-    "loading": "Chargement…"
+    "loading": "Chargement…",
+    "bacTypes": {
+      "general": "Bac Général",
+      "technoSti2d": "Bac Technologique - STI2D",
+      "technoStmg": "Bac Technologique - STMG",
+      "pro": "Bac Professionnel"
+    }
   },
   "language": {
     "fr": "Français",
