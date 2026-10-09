@@ -265,6 +265,78 @@ class UserControllerIntegrationTests {
     }
 
     @Test
+    void testThatRegistrationRejectsPasswordShorterThanEightCharacters() throws Exception {
+        ensureRole("ROLE_STUDENT");
+        UserDTO userDTO = TestDataUtil.createUserDto();
+        userDTO.setRole(null);
+        userDTO.setPassword("short12");
+        userDTO.setConfirmedPassword("short12");
+
+        mockMvc.perform(
+                MockMvcRequestBuilders.post("/api/v1/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(userDTO))
+        ).andExpect(
+                MockMvcResultMatchers.status().isBadRequest()
+        ).andExpect(
+                MockMvcResultMatchers.jsonPath("$.password").value("Le mot de passe doit contenir au moins 8 caractères")
+        );
+    }
+
+    @Test
+    void testThatProfilePatchRejectsPasswordShorterThanEightCharacters() throws Exception {
+        Role studentRole = ensureRole("ROLE_STUDENT");
+        UserDTO userDTO = TestDataUtil.createUserDto();
+        userDTO.setRole(studentRole);
+        UserEntity user = userService.saveUser(userMapper.toEntity(userDTO), passwordEncoder);
+
+        mockMvc.perform(
+                MockMvcRequestBuilders.patch("/api/v1/users/" + user.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"password\":\"short12\"}")
+                        .with(TestDataUtil.mockUser(user.getId(), "ROLE_STUDENT"))
+        ).andExpect(
+                MockMvcResultMatchers.status().isBadRequest()
+        ).andExpect(
+                MockMvcResultMatchers.jsonPath("$.password").value("Le mot de passe doit contenir au moins 8 caractères")
+        );
+    }
+
+    @Test
+    void testThatProfilePutRejectsPasswordShorterThanEightCharacters() throws Exception {
+        Role studentRole = ensureRole("ROLE_STUDENT");
+        UserDTO userDTO = TestDataUtil.createUserDto();
+        userDTO.setRole(studentRole);
+        UserEntity user = userService.saveUser(userMapper.toEntity(userDTO), passwordEncoder);
+
+        mockMvc.perform(
+                MockMvcRequestBuilders.put("/api/v1/users/" + user.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"password\":\"short12\"}")
+                        .with(TestDataUtil.mockUser(user.getId(), "ROLE_STUDENT"))
+        ).andExpect(
+                MockMvcResultMatchers.status().isBadRequest()
+        );
+    }
+
+    @Test
+    void testThatProfilePatchAcceptsEightCharacterPassword() throws Exception {
+        Role studentRole = ensureRole("ROLE_STUDENT");
+        UserDTO userDTO = TestDataUtil.createUserDto();
+        userDTO.setRole(studentRole);
+        UserEntity user = userService.saveUser(userMapper.toEntity(userDTO), passwordEncoder);
+
+        mockMvc.perform(
+                MockMvcRequestBuilders.patch("/api/v1/users/" + user.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"password\":\"exactly8\"}")
+                        .with(TestDataUtil.mockUser(user.getId(), "ROLE_STUDENT"))
+        ).andExpect(
+                MockMvcResultMatchers.status().isOk()
+        );
+    }
+
+    @Test
     void testThatRegistrationRejectsDuplicateEmail() throws Exception {
         ensureRole("ROLE_STUDENT");
         UserDTO userDTO = TestDataUtil.createUserDto();
