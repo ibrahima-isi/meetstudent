@@ -102,4 +102,36 @@ describe('SchoolService', () => {
 
     httpMock.expectOne((request) => request.url.endsWith('/schools/2')).flush(mockSchool);
   });
+
+  describe('server-side search', () => {
+    const emptyPage = { content: [], last: true, totalElements: 0, number: 0 };
+
+    it('passes the sort to the listing', () => {
+      service.getSchools(1, 12, undefined, 'name,asc').subscribe();
+      const req = httpMock.expectOne((r) => r.url.endsWith('/schools'));
+      expect(req.request.params.get('sort')).toBe('name,asc');
+      expect(req.request.params.get('page')).toBe('1');
+      req.flush(emptyPage);
+    });
+
+    it('sends the city filter, paging and sort to /search', () => {
+      service.searchSchools('Dakar', undefined, undefined, undefined, 2, 12, 'address.city,asc').subscribe();
+      const req = httpMock.expectOne((r) => r.url.endsWith('/schools/search'));
+      expect(req.request.params.get('city')).toBe('Dakar');
+      expect(req.request.params.has('country')).toBeFalse();
+      expect(req.request.params.get('page')).toBe('2');
+      expect(req.request.params.get('size')).toBe('12');
+      expect(req.request.params.get('sort')).toBe('address.city,asc');
+      req.flush(emptyPage);
+    });
+
+    it('searches by name through /name/{name}, encoded, and maps the fields', () => {
+      let rating: number | undefined;
+      service.searchSchoolsByName('école & co', 0, 12, 'name,asc').subscribe((p) => (rating = p.content[0].rating));
+      const req = httpMock.expectOne((r) => r.url.endsWith(`/schools/name/${encodeURIComponent('école & co')}`));
+      expect(req.request.params.get('sort')).toBe('name,asc');
+      req.flush({ ...emptyPage, content: [{ id: 1, name: 'X', averageRate: 4, address: { city: 'D' } }] });
+      expect(rating).toBe(4);
+    });
+  });
 });

@@ -110,7 +110,9 @@
     "viewDetails": "Voir les détails",
     "noResults": "Aucun établissement trouvé avec ces critères",
     "empty": "Aucun établissement n'est encore référencé",
-    "loadError": "Les établissements n'ont pas pu être chargés."
+    "loadError": "Les établissements n'ont pas pu être chargés.",
+    "loadMore": "Voir plus",
+    "loadMoreError": "Impossible de charger d'autres établissements."
   },
   "landing": {
     "login": "Connexion",
