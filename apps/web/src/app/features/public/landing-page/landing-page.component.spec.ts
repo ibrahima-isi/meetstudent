@@ -2,10 +2,11 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { LandingPageComponent } from './landing-page.component';
 import { SchoolService } from '@services/school.service';
-import { firstValueFrom, of } from 'rxjs';
+import { firstValueFrom, Observable, of, throwError } from 'rxjs';
 import { LocaleService } from '@services/locale.service';
 import { School } from '@models/entities';
 import { signal } from '@angular/core';
+import { Subject } from 'rxjs';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
@@ -167,3 +168,88 @@ describe('LandingPageComponent translations', () => {
     expect(compare).not.toHaveBeenCalledWith(jasmine.any(String), 'fr');
   });
 });
+
+describe('LandingPageComponent data states', () => {
+  let fixture: ComponentFixture<LandingPageComponent>;
+  let getSchools: jasmine.Spy;
+
+  const text = () => (fixture.nativeElement as HTMLElement).textContent ?? '';
+  const q = (sel: string) => (fixture.nativeElement as HTMLElement).querySelector(sel);
+
+  async function render(response: Observable<unknown>) {
+    getSchools = jasmine.createSpy('getSchools').and.returnValue(response);
+    TestBed.configureTestingModule({
+      imports: [LandingPageComponent],
+      providers: [
+        provideZonelessChangeDetection(),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        provideTransloco(translocoOptions),
+        { provide: SchoolService, useValue: { getSchools, schools: () => [] } },
+      ],
+    });
+    await firstValueFrom(TestBed.inject(LocaleService).use('en'));
+    fixture = TestBed.createComponent(LandingPageComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+  }
+
+  it('shows a loading state while the request is pending', async () => {
+    await render(new Subject<never>());
+
+    expect(q('[aria-busy="true"]')).not.toBeNull();
+    expect(text()).not.toContain('No school matches');
+  });
+
+  it('shows an error state, never fake schools, when the API fails', async () => {
+    await render(throwError(() => new Error('down')));
+
+    expect(q('app-error-state')).not.toBeNull();
+    expect(fixture.componentInstance.schools()).toEqual([]);
+    expect(text()).not.toContain('Cheikh Anta Diop');
+    expect(text()).not.toContain('Gaston Berger');
+  });
+
+  it('retries the fetch and recovers when the retry button is pressed', async () => {
+    await render(throwError(() => new Error('down')));
+    getSchools.and.returnValue(
+      of({ content: [{ id: 1, name: 'Real School', address: { city: 'Dakar' } }] }),
+    );
+
+    (q('app-error-state button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(getSchools).toHaveBeenCalledTimes(2);
+    expect(q('app-error-state')).toBeNull();
+    expect(text()).toContain('Real School');
+  });
+
+  it('shows a translated empty message when the API returns no schools', async () => {
+    await render(of({ content: [] }));
+
+    expect(q('app-error-state')).toBeNull();
+    expect(text()).toContain('No schools are listed yet');
+  });
+
+  it('builds the city and type filters from the loaded schools', async () => {
+    await render(
+      of({
+        content: [
+          { id: 1, name: 'A', type: 'Public', address: { city: 'Thiès' } },
+          { id: 2, name: 'B', type: 'Public', address: { city: 'Thiès' } },
+        ],
+      }),
+    );
+    fixture.componentInstance.showFilters.set(true);
+    fixture.detectChanges();
+
+    const options = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('option')).map((o) =>
+      o.textContent?.trim(),
+    );
+    expect(options.filter((o) => o === 'Thiès').length).toBe(1);
+    expect(options).not.toContain('Dakar');
+  });
+});
+

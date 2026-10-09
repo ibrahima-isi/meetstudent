@@ -4,7 +4,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter, withComponentInputBinding, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { firstValueFrom, of } from 'rxjs';
+import { firstValueFrom, of, Subject, throwError } from 'rxjs';
 import { provideTransloco, TranslocoService } from '@jsverse/transloco';
 import { translocoOptions } from '@i18n/transloco.config';
 import { School, Program, Course, Page } from '@models/entities';
@@ -206,6 +206,81 @@ describe('SchoolDetailPageComponent', () => {
       expect(badge?.textContent?.trim()).toBe('School');
       expect(text).toContain('No description available');
       expect(text).not.toContain('Établissement');
+    });
+  });
+  describe('data states', () => {
+    const text = () => harness.routeNativeElement?.textContent ?? '';
+    const q = (sel: string) => harness.routeNativeElement?.querySelector(sel) ?? null;
+
+    async function settle() {
+      harness.detectChanges();
+      await harness.fixture.whenStable();
+    }
+
+    beforeEach(async () => {
+      const transloco = TestBed.inject(TranslocoService);
+      await firstValueFrom(transloco.load('en'));
+      transloco.setActiveLang('en');
+      locale.set('en');
+    });
+
+    it('shows a loading state while the school is being fetched', async () => {
+      schoolServiceSpy.getSchool.and.returnValue(new Subject<School>());
+      await renderAt('/schools/7');
+      await settle();
+
+      expect(q('[aria-busy="true"]')).not.toBeNull();
+      expect(q('app-error-state')).toBeNull();
+    });
+
+    it('shows an error state with retry when the school cannot be loaded', async () => {
+      schoolServiceSpy.getSchool.and.returnValue(throwError(() => new Error('down')));
+      await renderAt('/schools/7');
+      await settle();
+
+      expect(q('app-error-state')).not.toBeNull();
+      expect(q('[aria-busy="true"]')).toBeNull();
+    });
+
+    it('re-fetches the school when retry is pressed', async () => {
+      schoolServiceSpy.getSchool.and.returnValue(throwError(() => new Error('down')));
+      await renderAt('/schools/7');
+      await settle();
+      schoolServiceSpy.getSchool.and.returnValue(of(mockSchool));
+
+      (q('app-error-state button') as HTMLButtonElement).click();
+      await settle();
+
+      expect(schoolServiceSpy.getSchool).toHaveBeenCalledTimes(2);
+      expect(q('app-error-state')).toBeNull();
+      expect(text()).toContain('Test School');
+    });
+
+    it('shows an error with retry, and no mock programmes, when programmes fail', async () => {
+      programServiceSpy.getPrograms.and.returnValue(throwError(() => new Error('down')));
+      const component = await renderAt('/schools/7');
+      await settle();
+
+      expect(component.programs()).toEqual([]);
+      expect(q('app-error-state')).not.toBeNull();
+      expect(text()).not.toContain('Licence en');
+
+      programServiceSpy.getPrograms.and.returnValue(
+        of(pageOf([{ id: 1, name: 'Real Prog', duration: 3, school: { id: 7 } }] as Program[])),
+      );
+      (q('app-error-state button') as HTMLButtonElement).click();
+      await settle();
+
+      expect(q('app-error-state')).toBeNull();
+      expect(text()).toContain('Real Prog');
+    });
+
+    it('shows a translated empty message when the school has no programmes', async () => {
+      await renderAt('/schools/7');
+      await settle();
+
+      expect(q('app-error-state')).toBeNull();
+      expect(text()).toContain('No programmes are listed for this school yet');
     });
   });
 });

@@ -5,7 +5,7 @@ import { Router } from '@angular/router';
 import { LucideAngularModule, ArrowLeft, MapPin, Heart, GraduationCap, Clock, Calendar, Users, ArrowUpDown, Book, Star, X } from 'lucide-angular';
 import { ImageWithFallbackComponent } from '@shared/components/image-with-fallback/image-with-fallback.component';
 import { StarRatingComponent } from '@shared/components/star-rating/star-rating.component';
-import { PROGRAMMES as MOCK_PROGRAMMES } from '@data/programmes';
+import { ErrorStateComponent } from '@shared/components/error-state/error-state.component';
 import { School, Program, Tag, Course } from '@models/entities';
 import { ProgramService } from '@services/program.service';
 import { CourseService } from '@services/course.service';
@@ -17,7 +17,7 @@ import { pluralKey } from '@i18n/plural';
 
 @Component({
   selector: 'app-school-detail-page',
-  imports: [CommonModule, FormsModule, LucideAngularModule, ImageWithFallbackComponent, StarRatingComponent, TranslocoDirective],
+  imports: [CommonModule, FormsModule, LucideAngularModule, ImageWithFallbackComponent, StarRatingComponent, TranslocoDirective, ErrorStateComponent],
   templateUrl: './school-detail-page.component.html'
 })
 export class SchoolDetailPageComponent implements OnInit, OnDestroy {
@@ -39,6 +39,12 @@ export class SchoolDetailPageComponent implements OnInit, OnDestroy {
    * its parent; it is reachable by URL now, so it fetches its own.
    */
   school = signal<School | null>(null);
+  /** The school request: 'error' shows the retry surface, never placeholder data. */
+  schoolStatus = signal<'loading' | 'loaded' | 'error'>('loading');
+  /** The programmes request, tracked apart so a failure does not hide the school. */
+  programsStatus = signal<'loading' | 'loaded' | 'error'>('loading');
+  /** Placeholder rows shown while the programmes load. */
+  protected readonly skeletons = [0, 1];
   readonly isAuthenticated = computed(() => this.tokenService.isAuthenticated());
 
   readonly ArrowLeft = ArrowLeft;
@@ -74,19 +80,33 @@ export class SchoolDetailPageComponent implements OnInit, OnDestroy {
     // Re-runs when the id changes, so /schools/7 → /schools/8 reloads even
     // though the router reuses the component instance.
     effect(() => {
-      const id = Number(this.id());
-      if (!Number.isInteger(id)) {
-        this.school.set(null);
-        return;
-      }
+      this.load(Number(this.id()));
+    });
+  }
 
-      this.schoolService.getSchool(id).subscribe({
-        next: (school) => {
-          this.school.set(school);
-          this.loadPrograms();
-        },
-        error: () => this.school.set(null),
-      });
+  /** Fetches the school named by the URL; also the retry action of the error state. */
+  protected retry(): void {
+    this.load(Number(this.id()));
+  }
+
+  private load(id: number): void {
+    if (!Number.isInteger(id)) {
+      this.school.set(null);
+      this.schoolStatus.set('error');
+      return;
+    }
+
+    this.schoolStatus.set('loading');
+    this.schoolService.getSchool(id).subscribe({
+      next: (school) => {
+        this.school.set(school);
+        this.schoolStatus.set('loaded');
+        this.loadPrograms();
+      },
+      error: () => {
+        this.school.set(null);
+        this.schoolStatus.set('error');
+      },
     });
   }
 
@@ -127,36 +147,33 @@ export class SchoolDetailPageComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const schoolId = school.id;
-    // Since ProgramController doesn't have schoolId filter directly,
-    // we use the programs field in the School object if populated,
-    // or fetch all programs and filter them (less efficient but works for now).
-
+    // ProgramController has no schoolId filter, so when the school did not
+    // embed its programmes we fetch a page of them and keep the ones that
+    // belong to it.
     if (school.programs && school.programs.length > 0) {
       this.programs.set(school.programs);
+      this.programsStatus.set('loaded');
       return;
     }
 
-    if (schoolId) {
-      this.programService.getPrograms(0, 100).subscribe({
-        next: (page) => {
-          if (page && page.content && page.content.length > 0) {
-            // Filter programs belonging to this school locally
-            const schoolProgs = page.content.filter(p => p.school?.id === schoolId);
-            if (schoolProgs.length > 0) {
-              this.programs.set(schoolProgs);
-            } else {
-              this.programs.set(MOCK_PROGRAMMES[schoolId] || []);
-            }
-          } else {
-            this.programs.set(MOCK_PROGRAMMES[schoolId] || []);
-          }
-        },
-        error: () => {
-          this.programs.set(MOCK_PROGRAMMES[schoolId] || []);
-        }
-      });
+    const schoolId = school.id;
+    if (schoolId === undefined) {
+      this.programs.set([]);
+      this.programsStatus.set('loaded');
+      return;
     }
+
+    this.programsStatus.set('loading');
+    this.programService.getPrograms(0, 100).subscribe({
+      next: (page) => {
+        this.programs.set((page?.content ?? []).filter((p) => p.school?.id === schoolId));
+        this.programsStatus.set('loaded');
+      },
+      error: () => {
+        this.programs.set([]);
+        this.programsStatus.set('error');
+      },
+    });
   }
 
   ngOnDestroy() {

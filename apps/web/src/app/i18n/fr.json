@@ -2,7 +2,9 @@
   "common": {
     "retry": "Réessayer",
     "defaultSchoolType": "Établissement",
-    "noDescription": "Aucune description disponible"
+    "noDescription": "Aucune description disponible",
+    "errorGeneric": "Une erreur est survenue",
+    "loading": "Chargement…"
   },
   "language": {
     "fr": "Français",
@@ -106,7 +108,9 @@
       "other": "({{ count }} avis)"
     },
     "viewDetails": "Voir les détails",
-    "noResults": "Aucun établissement trouvé avec ces critères"
+    "noResults": "Aucun établissement trouvé avec ces critères",
+    "empty": "Aucun établissement n'est encore référencé",
+    "loadError": "Les établissements n'ont pas pu être chargés."
   },
   "landing": {
     "login": "Connexion",
@@ -156,7 +160,10 @@
     "noCourses": "Aucun cours trouvé pour ce programme.",
     "rateCourse": "Évaluer ce cours",
     "close": "Fermer",
-    "loading": "Chargement de l'établissement…"
+    "loading": "Chargement de l'établissement…",
+    "loadError": "Cet établissement n'a pas pu être chargé.",
+    "programmesLoadError": "Les formations n'ont pas pu être chargées.",
+    "noProgrammes": "Aucune formation n'est encore référencée pour cet établissement"
   },
   "wishlist": {
     "button": "Souhaits",
@@ -167,7 +174,8 @@
     },
     "empty": "Aucune formation dans vos souhaits",
     "emptyHint": "Ajoutez des formations pour les retrouver facilement",
-    "compare": "Comparer les formations"
+    "compare": "Comparer les formations",
+    "loadError": "Votre liste de souhaits n'a pas pu être chargée."
   },
   "rating": {
     "commentPlaceholder": "Ajouter un commentaire (optionnel)...",

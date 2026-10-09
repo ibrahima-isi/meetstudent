@@ -2,7 +2,9 @@
   "common": {
     "retry": "Retry",
     "defaultSchoolType": "School",
-    "noDescription": "No description available"
+    "noDescription": "No description available",
+    "errorGeneric": "Something went wrong",
+    "loading": "Loading…"
   },
   "language": {
     "fr": "Français",
@@ -106,7 +108,9 @@
       "other": "({{ count }} reviews)"
     },
     "viewDetails": "View details",
-    "noResults": "No school matches these criteria"
+    "noResults": "No school matches these criteria",
+    "empty": "No schools are listed yet",
+    "loadError": "Schools could not be loaded."
   },
   "landing": {
     "login": "Log in",
@@ -156,7 +160,10 @@
     "noCourses": "No courses found for this programme.",
     "rateCourse": "Rate this course",
     "close": "Close",
-    "loading": "Loading school…"
+    "loading": "Loading school…",
+    "loadError": "This school could not be loaded.",
+    "programmesLoadError": "Programmes could not be loaded.",
+    "noProgrammes": "No programmes are listed for this school yet"
   },
   "wishlist": {
     "button": "Wishlist",
@@ -167,7 +174,8 @@
     },
     "empty": "Your wishlist is empty",
     "emptyHint": "Add programmes to find them again easily",
-    "compare": "Compare programmes"
+    "compare": "Compare programmes",
+    "loadError": "Your wishlist could not be loaded."
   },
   "rating": {
     "commentPlaceholder": "Add a comment (optional)...",
