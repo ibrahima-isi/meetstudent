@@ -16,9 +16,9 @@ import { TranslocoDirective } from '@jsverse/transloco';
       role="alert"
       class="max-w-md mx-auto text-center py-12 px-4"
     >
-      <p class="text-gray-900 font-bold text-lg mb-1">{{ t('common.errorGeneric') }}</p>
+      <p class="text-foreground font-bold text-lg mb-1">{{ t('common.errorGeneric') }}</p>
       @if (message(); as detail) {
-        <p class="text-gray-600 mb-6">{{ detail }}</p>
+        <p class="text-muted-foreground mb-6">{{ detail }}</p>
       }
       <button
         type="button"

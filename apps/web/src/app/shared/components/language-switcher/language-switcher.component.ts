@@ -23,8 +23,8 @@ import { LocaleService } from '@services/locale.service';
           [attr.aria-current]="locale === activeLocale() ? 'true' : null"
           [class]="
             locale === activeLocale()
-              ? 'rounded-md px-2 py-1 text-sm font-semibold text-indigo-700 bg-indigo-50'
-              : 'rounded-md px-2 py-1 text-sm text-gray-600 hover:bg-gray-100 cursor-pointer'
+              ? 'rounded-md px-2 py-1 text-sm font-semibold text-indigo-700 bg-indigo-50 dark:text-indigo-300 dark:bg-indigo-500/20'
+              : 'rounded-md px-2 py-1 text-sm text-muted-foreground hover:bg-accent cursor-pointer'
           "
           (click)="switchTo(locale)"
         >

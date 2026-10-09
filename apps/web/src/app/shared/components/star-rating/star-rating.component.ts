@@ -30,12 +30,12 @@ import { TranslocoPipe } from '@jsverse/transloco';
             <lucide-icon
               [img]="Star"
               class="w-6 h-6"
-              [class]="value <= displayRating() ? 'fill-yellow-400 text-yellow-400' : 'fill-gray-200 text-gray-200'"
+              [class]="value <= displayRating() ? 'fill-yellow-400 text-yellow-400' : 'fill-gray-200 text-gray-200 dark:fill-gray-700 dark:text-gray-700'"
             ></lucide-icon>
           </button>
         }
         @if (rating() > 0 && showValue()) {
-          <span class="ml-2 text-sm font-medium text-gray-600">{{ rating() }}/5</span>
+          <span class="ml-2 text-sm font-medium text-muted-foreground">{{ rating() }}/5</span>
         }
       </div>
 
@@ -44,13 +44,13 @@ import { TranslocoPipe } from '@jsverse/transloco';
           <textarea
             [(ngModel)]="comment"
             [placeholder]="'rating.commentPlaceholder' | transloco"
-            class="w-full p-3 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none resize-none"
+            class="w-full p-3 text-sm border border-border rounded-lg bg-card text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none resize-none"
             rows="3"
           ></textarea>
           <button
             (click)="submitRating()"
             [disabled]="isSubmitting()"
-            class="self-end px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 transition-colors"
+            class="self-end px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {{ (isSubmitting() ? 'rating.submitting' : 'rating.submit') | transloco }}
           </button>
@@ -58,11 +58,11 @@ import { TranslocoPipe } from '@jsverse/transloco';
       }
 
       @if (submitted()) {
-        <p data-testid="rating-done" role="status" class="text-sm font-medium text-green-700">{{ 'rating.thanks' | transloco }}</p>
+        <p data-testid="rating-done" role="status" class="text-sm font-medium text-green-700 dark:text-green-400">{{ 'rating.thanks' | transloco }}</p>
       }
 
       @if (failed()) {
-        <p data-testid="rating-error" role="alert" class="text-sm font-medium text-red-700">{{ 'rating.error' | transloco }}</p>
+        <p data-testid="rating-error" role="alert" class="text-sm font-medium text-red-700 dark:text-red-400">{{ 'rating.error' | transloco }}</p>
       }
     </div>
   `
