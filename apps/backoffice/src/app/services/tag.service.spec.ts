@@ -8,7 +8,9 @@ import { API_URL } from './api-config';
 const api = 'http://api.test/api/v1';
 
 describe('TagService', () => {
-  it('lists all tags from /tags (a plain array, not a page)', () => {
+  let backend: HttpTestingController;
+
+  beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [
         provideZonelessChangeDetection(),
@@ -17,7 +19,12 @@ describe('TagService', () => {
         { provide: API_URL, useValue: api },
       ],
     });
-    const backend = TestBed.inject(HttpTestingController);
+    backend = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => backend.verify());
+
+  it('lists all tags from /tags (a plain array, not a page)', () => {
     let result: unknown;
     TestBed.inject(TagService)
       .list()
@@ -28,6 +35,32 @@ describe('TagService', () => {
     req.flush([{ id: 1, name: 'PUBLIC' }]);
 
     expect(result).toEqual([{ id: 1, name: 'PUBLIC' }]);
-    backend.verify();
+  });
+
+  it('creates a tag with POST /tags and only its name', () => {
+    let result: unknown;
+    TestBed.inject(TagService)
+      .create('MASTER')
+      .subscribe((t) => (result = t));
+
+    const req = backend.expectOne(`${api}/tags`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ name: 'MASTER' });
+    req.flush({ id: 5, name: 'MASTER' });
+
+    expect(result).toEqual({ id: 5, name: 'MASTER' });
+  });
+
+  it('deletes a tag with DELETE /tags/{id}', () => {
+    let done = false;
+    TestBed.inject(TagService)
+      .delete(5)
+      .subscribe(() => (done = true));
+
+    const req = backend.expectOne(`${api}/tags/5`);
+    expect(req.request.method).toBe('DELETE');
+    req.flush(null, { status: 204, statusText: 'No Content' });
+
+    expect(done).toBeTrue();
   });
 });
