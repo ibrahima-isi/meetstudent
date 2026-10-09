@@ -1,9 +1,9 @@
-<div class="min-h-screen bg-gray-50" *transloco="let t">
+<div class="min-h-screen bg-muted/50" *transloco="let t">
   @if (showLoginPrompt()) {
     <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-        <h3 class="text-gray-900 mb-2 font-bold text-lg">{{ t('schoolDetail.loginRequired') }}</h3>
-        <p class="text-gray-600 mb-6">
+      <div class="bg-card rounded-xl shadow-xl max-w-md w-full p-6">
+        <h3 class="text-foreground mb-2 font-bold text-lg">{{ t('schoolDetail.loginRequired') }}</h3>
+        <p class="text-muted-foreground mb-6">
           {{ t('schoolDetail.loginRequiredText') }}
         </p>
         <div class="flex gap-3">
@@ -15,7 +15,7 @@
           </button>
           <button
             (click)="showLoginPrompt.set(false)"
-            class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+            class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-foreground rounded-lg hover:bg-accent transition-colors cursor-pointer"
           >
             {{ t('schoolDetail.cancel') }}
           </button>
@@ -34,13 +34,16 @@
     ></app-image-with-fallback>
     <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
     
-    <button
-      (click)="goBack()"
-      class="absolute top-4 left-4 flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow-md hover:bg-gray-50 transition-colors cursor-pointer z-10"
-    >
-      <lucide-icon [img]="ArrowLeft" class="w-5 h-5"></lucide-icon>
-      <span class="font-medium">{{ t('schoolDetail.back') }}</span>
-    </button>
+    <div class="absolute top-4 left-4 flex items-center gap-2 z-10">
+      <button
+        (click)="goBack()"
+        class="flex items-center gap-2 px-4 py-2 bg-card text-foreground rounded-lg shadow-md hover:bg-accent transition-colors cursor-pointer"
+      >
+        <lucide-icon [img]="ArrowLeft" class="w-5 h-5"></lucide-icon>
+        <span class="font-medium">{{ t('schoolDetail.back') }}</span>
+      </button>
+      <app-theme-toggle class="rounded-lg bg-card shadow-md" />
+    </div>
 
     <button
       type="button"
@@ -50,16 +53,13 @@
       [disabled]="wishlist.isPending(detail.id)"
       (click)="toggleWishlist(detail)"
       class="absolute top-16 left-4 p-3 rounded-full shadow-md transition-colors cursor-pointer z-10 disabled:opacity-60"
-      [class.bg-red-50]="wishlist.has(detail.id)"
-      [class.text-red-600]="wishlist.has(detail.id)"
-      [class.bg-white]="!wishlist.has(detail.id)"
-      [class.text-gray-500]="!wishlist.has(detail.id)"
+      [class]="wishlist.has(detail.id) ? 'bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-400' : 'bg-card text-muted-foreground'"
     >
       <lucide-icon [img]="Heart" class="w-5 h-5" [class.fill-current]="wishlist.has(detail.id)"></lucide-icon>
     </button>
 
     @if (wishlist.error()) {
-      <div role="alert" data-testid="wishlist-error" class="absolute top-28 left-4 right-4 sm:right-auto z-10 flex items-center gap-3 px-4 py-3 bg-red-50 text-red-700 rounded-lg shadow-md text-sm">
+      <div role="alert" data-testid="wishlist-error" class="absolute top-28 left-4 right-4 sm:right-auto z-10 flex items-center gap-3 px-4 py-3 bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-400 rounded-lg shadow-md text-sm">
         <span>{{ t('wishlist.updateError') }}</span>
         <button type="button" (click)="wishlist.dismissError()" class="font-medium underline cursor-pointer">{{ t('wishlist.dismiss') }}</button>
       </div>
@@ -68,7 +68,7 @@
     <!-- Tags at Top Right -->
     <div class="absolute top-4 right-4 flex flex-wrap gap-2 justify-end max-w-[60%] z-10">
       @for (tag of detail.tags; track tag.id) {
-        <span class="px-3 py-1 bg-white/90 backdrop-blur-sm text-indigo-700 text-xs font-bold rounded-full shadow-sm border border-indigo-100">
+        <span class="px-3 py-1 bg-card/90 backdrop-blur-sm text-indigo-700 dark:text-indigo-300 text-xs font-bold rounded-full shadow-sm border border-indigo-100 dark:border-indigo-500/30">
           {{ tag.name }}
         </span>
       }
@@ -94,18 +94,18 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
       <!-- Main Content -->
       <div class="lg:col-span-2 space-y-6">
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h2 class="text-gray-900 mb-3 text-xl font-bold">{{ t('schoolDetail.about') }}</h2>
-          <p class="text-gray-600 leading-relaxed">{{ detail.description || t('common.noDescription') }}</p>
+        <div class="bg-card rounded-xl shadow-sm border border-border p-6">
+          <h2 class="text-foreground mb-3 text-xl font-bold">{{ t('schoolDetail.about') }}</h2>
+          <p class="text-muted-foreground leading-relaxed">{{ detail.description || t('common.noDescription') }}</p>
 
           <!-- Accreditations and Tags as Buttons -->
           <div class="mt-6 space-y-4">
             @if (detail.accreditations && detail.accreditations!.length > 0) {
               <div>
-                <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">{{ t('schoolDetail.accreditations') }}</h3>
+                <h3 class="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3">{{ t('schoolDetail.accreditations') }}</h3>
                 <div class="flex flex-wrap gap-2">
                   @for (acc of detail.accreditations; track acc.id) {
-                    <button class="px-4 py-2 bg-emerald-50 text-emerald-700 text-sm font-semibold rounded-lg border border-emerald-100 hover:bg-emerald-100 transition-colors cursor-pointer">
+                    <button class="px-4 py-2 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 text-sm font-semibold rounded-lg border border-emerald-100 dark:border-emerald-500/30 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors cursor-pointer">
                       {{ acc.name }}
                     </button>
                   }
@@ -115,10 +115,10 @@
 
             @if (detail.tags && detail.tags!.length > 0) {
               <div>
-                <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">{{ t('schoolDetail.expertise') }}</h3>
+                <h3 class="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3">{{ t('schoolDetail.expertise') }}</h3>
                 <div class="flex flex-wrap gap-2">
                   @for (tag of detail.tags; track tag.id) {
-                    <button class="px-4 py-2 bg-indigo-50 text-indigo-700 text-sm font-semibold rounded-lg border border-indigo-100 hover:bg-indigo-100 transition-colors cursor-pointer">
+                    <button class="px-4 py-2 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 text-sm font-semibold rounded-lg border border-indigo-100 dark:border-indigo-500/30 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors cursor-pointer">
                       {{ tag.name }}
                     </button>
                   }
@@ -130,13 +130,13 @@
 
         <div class="space-y-4">
           <div class="flex items-center justify-between mb-4">
-            <h2 class="text-gray-900 text-xl font-bold">{{ t('schoolDetail.programmes', { count: programs().length }) }}</h2>
+            <h2 class="text-foreground text-xl font-bold">{{ t('schoolDetail.programmes', { count: programs().length }) }}</h2>
             
             <div class="flex items-center gap-2">
-              <lucide-icon [img]="ArrowUpDown" class="w-4 h-4 text-gray-500"></lucide-icon>
+              <lucide-icon [img]="ArrowUpDown" class="w-4 h-4 text-muted-foreground"></lucide-icon>
               <select
                 [(ngModel)]="sortBy"
-                class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-700"
+                class="bg-card text-foreground placeholder:text-muted-foreground px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               >
                 <option value="name">{{ t('schools.sortName') }}</option>
                 <option value="places">{{ t('schools.sortPlaces') }}</option>
@@ -148,46 +148,46 @@
             <div role="status" aria-busy="true" class="space-y-4">
               <span class="sr-only">{{ t('common.loading') }}</span>
               @for (placeholder of skeletons; track placeholder) {
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 animate-pulse space-y-3" aria-hidden="true">
-                  <div class="h-5 bg-gray-200 rounded w-1/2"></div>
-                  <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+                <div class="bg-card rounded-xl shadow-sm border border-border p-6 animate-pulse space-y-3" aria-hidden="true">
+                  <div class="h-5 bg-muted rounded w-1/2"></div>
+                  <div class="h-4 bg-muted rounded w-3/4"></div>
                 </div>
               }
             </div>
           } @else if (programsStatus() === 'error') {
             <app-error-state [message]="t('schoolDetail.programmesLoadError')" (retry)="loadPrograms()" />
           } @else if (programs().length === 0) {
-            <p class="text-center text-gray-600 py-8">{{ t('schoolDetail.noProgrammes') }}</p>
+            <p class="text-center text-muted-foreground py-8">{{ t('schoolDetail.noProgrammes') }}</p>
           }
           @for (programme of sortedProgrammes(); track programme.id) {
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+            <div class="bg-card rounded-xl shadow-sm border border-border p-6 hover:shadow-md transition-shadow">
               <div class="flex items-start justify-between mb-4">
                 <div class="flex-1">
                   <div class="flex items-start justify-between mb-2">
-                    <h3 class="text-gray-900 flex-1 line-clamp-2 text-lg font-bold">{{ programme.name }}</h3>
+                    <h3 class="text-foreground flex-1 line-clamp-2 text-lg font-bold">{{ programme.name }}</h3>
                   </div>
                   
-                  <div class="flex items-center gap-4 flex-wrap text-gray-600 mb-3 text-sm font-medium">
+                  <div class="flex items-center gap-4 flex-wrap text-muted-foreground mb-3 text-sm font-medium">
                     <div class="flex items-center gap-2">
-                      <lucide-icon [img]="GraduationCap" class="w-4 h-4 text-indigo-500"></lucide-icon>
+                      <lucide-icon [img]="GraduationCap" class="w-4 h-4 text-indigo-500 dark:text-indigo-400"></lucide-icon>
                       <span>{{ programme.level }}</span>
                     </div>
                     <div class="flex items-center gap-2">
-                      <lucide-icon [img]="Clock" class="w-4 h-4 text-indigo-500"></lucide-icon>
+                      <lucide-icon [img]="Clock" class="w-4 h-4 text-indigo-500 dark:text-indigo-400"></lucide-icon>
                       <span>{{ t(plural('schoolDetail.years', programme.duration), { count: programme.duration }) }}</span>
                     </div>
                     <div class="flex items-center gap-2">
-                      <lucide-icon [img]="Calendar" class="w-4 h-4 text-indigo-500"></lucide-icon>
+                      <lucide-icon [img]="Calendar" class="w-4 h-4 text-indigo-500 dark:text-indigo-400"></lucide-icon>
                       <span>{{ t('schoolDetail.intake', { date: programme.startDate }) }}</span>
                     </div>
                   </div>
                   
-                  <p class="text-gray-600 mb-4 text-sm">{{ programme.description || t('common.noDescription') }}</p>
+                  <p class="text-muted-foreground mb-4 text-sm">{{ programme.description || t('common.noDescription') }}</p>
                   
                   <!-- Program Rating with comments -->
                   @if (canRateProgramAndCourse() && programme.id !== undefined) {
-                    <div data-testid="programme-rating" class="mb-4 bg-gray-50 p-4 rounded-lg border border-gray-100">
-                      <h4 class="text-sm font-bold text-gray-700 mb-2">{{ t('schoolDetail.rateProgramme') }}</h4>
+                    <div data-testid="programme-rating" class="mb-4 bg-muted/50 p-4 rounded-lg border border-border">
+                      <h4 class="text-sm font-bold text-foreground mb-2">{{ t('schoolDetail.rateProgramme') }}</h4>
                       <app-star-rating 
                         [itemId]="programme.id"
                         itemType="program"
@@ -198,12 +198,12 @@
                   }
                   
                   <div class="flex items-center gap-2 text-sm font-medium mt-4">
-                    <lucide-icon [img]="Users" class="w-4 h-4 text-gray-600"></lucide-icon>
+                    <lucide-icon [img]="Users" class="w-4 h-4 text-muted-foreground"></lucide-icon>
                     <span>
                       @if (placesLeft(programme) > 0) {
-                        <span class="text-gray-600">{{ t(plural('schoolDetail.placesLeft', placesLeft(programme)), { count: placesLeft(programme) }) }}</span>
+                        <span class="text-muted-foreground">{{ t(plural('schoolDetail.placesLeft', placesLeft(programme)), { count: placesLeft(programme) }) }}</span>
                       } @else {
-                        <span class="text-red-600 font-bold">{{ t('schoolDetail.full') }}</span>
+                        <span class="text-red-600 dark:text-red-400 font-bold">{{ t('schoolDetail.full') }}</span>
                       }
                     </span>
                   </div>
@@ -212,15 +212,15 @@
               
               <div class="flex gap-3">
                 <button
-                  class="flex-1 px-4 py-2 text-white rounded-lg transition-colors font-bold cursor-pointer"
-                  [ngClass]="(programme.capacity || 0) - (programme.enrolled || 0) > 0 ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-gray-300 cursor-not-allowed text-gray-500'"
+                  class="flex-1 px-4 py-2 rounded-lg transition-colors font-bold cursor-pointer"
+                  [class]="placesLeft(programme) > 0 ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-muted cursor-not-allowed text-muted-foreground'"
                   [disabled]="(programme.capacity || 0) - (programme.enrolled || 0) === 0"
                 >
                   {{ t(placesLeft(programme) > 0 ? 'schoolDetail.apply' : 'schoolDetail.waitlist') }}
                 </button>
                 <button 
                   (click)="openCoursesModal(programme)"
-                  class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer font-medium"
+                  class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-foreground rounded-lg hover:bg-accent transition-colors cursor-pointer font-medium"
                 >
                   {{ t('schoolDetail.viewCourses') }}
                 </button>
@@ -233,10 +233,10 @@
       <!-- Sidebar -->
       <div class="space-y-6">
         <!-- School Rating Sidebar Section -->
-        <div data-testid="school-rating" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h2 class="text-gray-900 mb-4 text-xl font-bold">{{ t('schoolDetail.reviewsTitle') }}</h2>
+        <div data-testid="school-rating" class="bg-card rounded-xl shadow-sm border border-border p-6">
+          <h2 class="text-foreground mb-4 text-xl font-bold">{{ t('schoolDetail.reviewsTitle') }}</h2>
           <div class="flex items-center gap-3 mb-4">
-            <span data-testid="school-aggregate" class="text-4xl font-bold text-gray-900">{{ detail.rating || '0.0' }}</span>
+            <span data-testid="school-aggregate" class="text-4xl font-bold text-foreground">{{ detail.rating || '0.0' }}</span>
             <div class="flex flex-col">
               <div class="flex text-yellow-400">
                 <lucide-icon [img]="Star" class="w-4 h-4 fill-current"></lucide-icon>
@@ -245,13 +245,13 @@
                 <lucide-icon [img]="Star" class="w-4 h-4 fill-current"></lucide-icon>
                 <lucide-icon [img]="Star" class="w-4 h-4 fill-current opacity-30"></lucide-icon>
               </div>
-              <span class="text-xs text-gray-500 font-medium">{{ t(plural('schoolDetail.verifiedReviews', detail.reviewCount || 0), { count: detail.reviewCount || 0 }) }}</span>
+              <span class="text-xs text-muted-foreground font-medium">{{ t(plural('schoolDetail.verifiedReviews', detail.reviewCount || 0), { count: detail.reviewCount || 0 }) }}</span>
             </div>
           </div>
 
           @if (canRateSchool()) {
-            <div class="pt-4 border-t border-gray-100">
-              <p class="text-sm font-bold text-gray-700 mb-3">{{ t('schoolDetail.yourExperience') }}</p>
+            <div class="pt-4 border-t border-border">
+              <p class="text-sm font-bold text-foreground mb-3">{{ t('schoolDetail.yourExperience') }}</p>
               <app-star-rating 
                 [itemId]="detail.id || 0"
                 itemType="school"
@@ -263,7 +263,7 @@
           } @else if (!isAuthenticated()) {
             <button 
               (click)="handleLoginClick()"
-              class="w-full px-4 py-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg text-sm font-bold transition-colors cursor-pointer"
+              class="w-full px-4 py-2 text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 rounded-lg text-sm font-bold transition-colors cursor-pointer"
             >
               {{ t('schoolDetail.signInToRate') }}
             </button>
@@ -271,15 +271,15 @@
         </div>
 
         <!-- Contact/Info Section -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h3 class="text-gray-900 mb-4 font-bold">{{ t('schoolDetail.information') }}</h3>
+        <div class="bg-card rounded-xl shadow-sm border border-border p-6">
+          <h3 class="text-foreground mb-4 font-bold">{{ t('schoolDetail.information') }}</h3>
           <div class="space-y-4 text-sm">
             <div class="flex items-start gap-3">
-              <lucide-icon [img]="MapPin" class="w-5 h-5 text-gray-400 shrink-0"></lucide-icon>
+              <lucide-icon [img]="MapPin" class="w-5 h-5 text-muted-foreground shrink-0"></lucide-icon>
               <div>
-                <p class="text-gray-900 font-medium">{{ t('schoolDetail.address') }}</p>
-                <p class="text-gray-600">{{ detail.address.location }}</p>
-                <p class="text-gray-600">{{ detail.address.city }}, {{ detail.address.country }}</p>
+                <p class="text-foreground font-medium">{{ t('schoolDetail.address') }}</p>
+                <p class="text-muted-foreground">{{ detail.address.location }}</p>
+                <p class="text-muted-foreground">{{ detail.address.city }}, {{ detail.address.country }}</p>
               </div>
             </div>
           </div>
@@ -291,44 +291,44 @@
   <!-- Courses Modal -->
   @if (showCoursesModal()) {
     <div class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-in fade-in">
-      <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+      <div class="bg-card rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
         <!-- Modal Header -->
-        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-white sticky top-0">
+        <div class="px-6 py-4 border-b border-border flex items-center justify-between bg-card sticky top-0">
           <div>
-            <h3 class="text-gray-900 font-bold text-xl">{{ selectedProgram()?.name }}</h3>
-            <p class="text-gray-500 text-sm">{{ t('schoolDetail.courseList') }}</p>
+            <h3 class="text-foreground font-bold text-xl">{{ selectedProgram()?.name }}</h3>
+            <p class="text-muted-foreground text-sm">{{ t('schoolDetail.courseList') }}</p>
           </div>
-          <button (click)="closeCoursesModal()" class="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer">
-            <lucide-icon [img]="X" class="w-6 h-6 text-gray-500"></lucide-icon>
+          <button (click)="closeCoursesModal()" class="p-2 hover:bg-accent rounded-full transition-colors cursor-pointer">
+            <lucide-icon [img]="X" class="w-6 h-6 text-muted-foreground"></lucide-icon>
           </button>
         </div>
 
         <!-- Modal Content -->
-        <div class="p-6 overflow-y-auto flex-1 bg-gray-50/50">
+        <div class="p-6 overflow-y-auto flex-1 bg-muted/50">
           @if (isLoadingCourses()) {
             <div class="flex flex-col items-center justify-center py-12">
               <div class="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-              <p class="mt-4 text-gray-500 font-medium">{{ t('schoolDetail.loadingCourses') }}</p>
+              <p class="mt-4 text-muted-foreground font-medium">{{ t('schoolDetail.loadingCourses') }}</p>
             </div>
           } @else if (courses().length === 0) {
             <div class="text-center py-12">
-              <lucide-icon [img]="Book" class="w-12 h-12 text-gray-300 mx-auto mb-3"></lucide-icon>
-              <p class="text-gray-500 font-medium">{{ t('schoolDetail.noCourses') }}</p>
+              <lucide-icon [img]="Book" class="w-12 h-12 text-muted-foreground/50 mx-auto mb-3"></lucide-icon>
+              <p class="text-muted-foreground font-medium">{{ t('schoolDetail.noCourses') }}</p>
             </div>
           } @else {
             <div class="grid grid-cols-1 gap-4">
               @for (course of courses(); track course.id) {
-                <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm hover:border-indigo-200 transition-colors">
+                <div class="bg-card p-5 rounded-xl border border-border shadow-sm hover:border-indigo-200 dark:hover:border-indigo-500/40 transition-colors">
                   <div class="flex justify-between items-start mb-3">
                     <div>
-                      <h4 class="text-gray-900 font-bold text-lg mb-1">{{ course.name }}</h4>
-                      <p class="text-xs text-indigo-600 font-bold tracking-wide uppercase">{{ course.code }}</p>
+                      <h4 class="text-foreground font-bold text-lg mb-1">{{ course.name }}</h4>
+                      <p class="text-xs text-indigo-600 dark:text-indigo-400 font-bold tracking-wide uppercase">{{ course.code }}</p>
                     </div>
                   </div>
 
                   @if (canRateProgramAndCourse() && course.id !== undefined) {
-                    <div data-testid="course-rating" class="mt-4 pt-4 border-t border-gray-100">
-                      <h5 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{{ t('schoolDetail.rateCourse') }}</h5>
+                    <div data-testid="course-rating" class="mt-4 pt-4 border-t border-border">
+                      <h5 class="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">{{ t('schoolDetail.rateCourse') }}</h5>
                       <app-star-rating 
                         [itemId]="course.id"
                         itemType="course"
@@ -344,7 +344,7 @@
         </div>
 
         <!-- Modal Footer -->
-        <div class="px-6 py-4 border-t border-gray-100 bg-white flex justify-end">
+        <div class="px-6 py-4 border-t border-border bg-card flex justify-end">
           <button 
             (click)="closeCoursesModal()"
             class="px-6 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition-colors cursor-pointer"
@@ -363,7 +363,7 @@
     <div
       role="status"
       aria-busy="true"
-      class="max-w-6xl mx-auto px-4 py-16 text-center text-gray-600 animate-pulse"
+      class="max-w-6xl mx-auto px-4 py-16 text-center text-muted-foreground animate-pulse"
     >
       {{ t('schoolDetail.loading') }}
     </div>

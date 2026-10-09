@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { LucideAngularModule, ArrowLeft, MapPin, Heart, GraduationCap, Clock, Calendar, Users, ArrowUpDown, Book, Star, X } from 'lucide-angular';
 import { ImageWithFallbackComponent } from '@shared/components/image-with-fallback/image-with-fallback.component';
 import { StarRatingComponent } from '@shared/components/star-rating/star-rating.component';
+import { ThemeToggleComponent } from '@shared/components/theme-toggle/theme-toggle.component';
 import { ErrorStateComponent } from '@shared/components/error-state/error-state.component';
 import { School, Program, Tag, Course } from '@models/entities';
 import { ProgramService } from '@services/program.service';
@@ -18,7 +19,7 @@ import { pluralKey } from '@i18n/plural';
 
 @Component({
   selector: 'app-school-detail-page',
-  imports: [CommonModule, FormsModule, LucideAngularModule, ImageWithFallbackComponent, StarRatingComponent, TranslocoDirective, ErrorStateComponent],
+  imports: [CommonModule, FormsModule, LucideAngularModule, ImageWithFallbackComponent, StarRatingComponent, TranslocoDirective, ErrorStateComponent, ThemeToggleComponent],
   templateUrl: './school-detail-page.component.html'
 })
 export class SchoolDetailPageComponent {

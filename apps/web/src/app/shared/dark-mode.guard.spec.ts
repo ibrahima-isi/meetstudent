@@ -4,9 +4,12 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { provideTransloco } from '@jsverse/transloco';
-import { firstValueFrom, of } from 'rxjs';
+import { NEVER, firstValueFrom, of, throwError } from 'rxjs';
 import { translocoOptions } from '@i18n/transloco.config';
 import { LocaleService } from '@services/locale.service';
+import { CourseService } from '@services/course.service';
+import { MediaService } from '@services/media.service';
+import { ProgramService } from '@services/program.service';
 import { SchoolService } from '@services/school.service';
 import { TokenService } from '@services/token.service';
 import { WishlistService } from '@services/wishlist.service';
@@ -14,6 +17,10 @@ import { LoginFormComponent } from '../features/auth/login-form/login-form.compo
 import { RegisterFormComponent } from '../features/auth/register-form/register-form.component';
 import { EmailVerificationComponent } from '../features/auth/email-verification/email-verification.component';
 import { LandingPageComponent } from '../features/public/landing-page/landing-page.component';
+import { HomePageComponent } from '../features/student/home-page/home-page.component';
+import { ProfilePageComponent } from '../features/student/profile-page/profile-page.component';
+import { SchoolDetailPageComponent } from '../features/student/school-detail-page/school-detail-page.component';
+import { UserDocumentsComponent } from '../features/student/user-documents/user-documents.component';
 import { AuthLayoutComponent } from './layouts/auth-layout/auth-layout.component';
 import { ErrorStateComponent } from './components/error-state/error-state.component';
 import { ImageWithFallbackComponent } from './components/image-with-fallback/image-with-fallback.component';
@@ -45,6 +52,14 @@ const BOTH_MODES = new Set([
   'fill-yellow-400',
   'text-yellow-400',
   'focus:ring-indigo-500',
+  // Overlays and tints over photos, readable on either theme.
+  'bg-black/50',
+  'bg-black/60',
+  'from-black/60',
+  'bg-white/20',
+  'bg-red-600',
+  'hover:bg-red-700',
+  'text-indigo-300',
 ]);
 
 function lightOnlyClasses(root: HTMLElement): string[] {
@@ -81,6 +96,38 @@ describe('dark mode: no light-only palette classes', () => {
     tags: [1, 2, 3].map((id) => ({ id, name: `tag${id}` })),
   };
 
+  const secondSchool = { ...school, id: 2, name: 'Stanford', tags: [] };
+  const programmes = [
+    { id: 10, name: 'Computer Science', level: 'Master', duration: 2, startDate: '2026-09', capacity: 30, enrolled: 12, rating: 4, description: 'p' },
+    { id: 11, name: 'Law', level: 'Bachelor', duration: 3, startDate: '2026-09', capacity: 20, enrolled: 20, rating: 3 },
+  ];
+  const detailedSchool = {
+    ...school,
+    address: { city: 'Cambridge', location: 'MA', country: 'USA' },
+    accreditations: [{ id: 1, name: 'AACSB' }],
+    programs: programmes,
+  };
+  const courses = [{ id: 100, name: 'Algorithms', code: 'CS101' }];
+  const student = { id: 7, firstname: 'Ada', lastname: 'L', email: 'a@b.c', role: { name: 'ROLE_STUDENT' } };
+  const expert = { ...student, role: { name: 'ROLE_EXPERT' } };
+  const documents = [
+    { id: 1, category: 'DIPLOMA', verificationStatus: 'PENDING', rejectionReason: null, originalFilename: 'a.pdf' },
+    { id: 2, category: 'CERTIFICATE', verificationStatus: 'VERIFIED', rejectionReason: null, originalFilename: 'b.pdf' },
+    { id: 3, category: 'BULLETIN', verificationStatus: 'REJECTED', rejectionReason: 'Blurry', originalFilename: 'c.pdf' },
+  ];
+
+  /** Detail page as this role; the effect that loads the school runs on the first detectChanges. */
+  const detailAs = (role: typeof student | typeof expert) => (c: any, f: ComponentFixture<any>) => {
+    TestBed.inject(TokenService).user.set(role as never);
+    f.componentRef.setInput('id', '1');
+  };
+  const homeWith = (answer: unknown) => () =>
+    spyOn(TestBed.inject(SchoolService), 'getSchools').and.returnValue(answer as never);
+  const profileAs = (role: typeof student | typeof expert) => (c: any) => {
+    c.profile.set(role);
+    c.editedProfile.set({ ...role });
+  };
+
   beforeEach(async () => {
     TestBed.configureTestingModule({
       providers: [
@@ -91,16 +138,29 @@ describe('dark mode: no light-only palette classes', () => {
         provideTransloco(translocoOptions),
         {
           provide: SchoolService,
-          useValue: { getSchools: () => of({ content: [school] }), schools: () => [school] },
+          useValue: {
+            getSchools: () => of({ content: [school, secondSchool], last: false, totalElements: 5 }),
+            getSchool: () => of(detailedSchool),
+            schools: () => [school],
+          },
         },
-        { provide: TokenService, useValue: { isAuthenticated: signal(true), user: signal(null) } },
+        { provide: ProgramService, useValue: { getPrograms: () => of({ content: [] }) } },
+        { provide: CourseService, useValue: { getCoursesByProgram: () => of(courses) } },
+        { provide: MediaService, useValue: { mine: () => of(documents) } },
+        {
+          provide: TokenService,
+          useValue: { isAuthenticated: signal(true), user: signal(student), clear: () => undefined },
+        },
         {
           provide: WishlistService,
           useValue: {
             schools: signal([school]),
             status: signal('loaded'),
+            error: signal(true),
             load: () => undefined,
-            isPending: () => false,
+            has: (id: number) => id === 1,
+            isPending: (id: number) => id === 2,
+            dismissError: () => undefined,
             toggle: () => undefined,
           },
         },
@@ -117,6 +177,14 @@ describe('dark mode: no light-only palette classes', () => {
     fixture.detectChanges();
     return fixture.nativeElement as HTMLElement;
   }
+
+  const detailSetup = (extra?: (c: any, f: ComponentFixture<any>) => void, role = student) => {
+    const as = detailAs(role);
+    return (c: any, f: ComponentFixture<any>) => {
+      as(c, f);
+      extra?.(c, f);
+    };
+  };
 
   const cases: [string, Type<unknown>, ((component: any, fixture: ComponentFixture<any>) => void)?][] = [
     ['auth layout', AuthLayoutComponent],
@@ -169,6 +237,51 @@ describe('dark mode: no light-only palette classes', () => {
     ['not found', NotFoundComponent],
     ['theme toggle', ThemeToggleComponent],
     ['wishlist cart', WishlistCartComponent, (c) => c.isOpen.set(true)],
+    ['home with schools, filters and load more', HomePageComponent, (c) => c.showFilters.set(true)],
+    ['home with a failed load more', HomePageComponent, (c) => c.loadMoreFailed.set(true)],
+    ['home empty', HomePageComponent, homeWith(of({ content: [], last: true, totalElements: 0 }))],
+    ['home loading', HomePageComponent, homeWith(NEVER)],
+    ['home error', HomePageComponent, homeWith(throwError(() => new Error('x')))],
+    ['school detail as student', SchoolDetailPageComponent, detailSetup()],
+    ['school detail as expert with course modal', SchoolDetailPageComponent, detailSetup((c) => c.openCoursesModal(programmes[0]), expert)],
+    ['school detail as expert, login prompt', SchoolDetailPageComponent, detailSetup((c) => c.showLoginPrompt.set(true), expert)],
+    [
+      'school detail loading',
+      SchoolDetailPageComponent,
+      detailSetup(() => spyOn(TestBed.inject(SchoolService), 'getSchool').and.returnValue(NEVER)),
+    ],
+    [
+      'school detail error',
+      SchoolDetailPageComponent,
+      detailSetup(() => spyOn(TestBed.inject(SchoolService), 'getSchool').and.returnValue(throwError(() => new Error('x')))),
+    ],
+    [
+      'school detail with programmes loading',
+      SchoolDetailPageComponent,
+      detailSetup(() => {
+        spyOn(TestBed.inject(SchoolService), 'getSchool').and.returnValue(of({ ...detailedSchool, programs: [] }) as never);
+        spyOn(TestBed.inject(ProgramService), 'getPrograms').and.returnValue(NEVER);
+      }),
+    ],
+    [
+      'school detail with programmes error',
+      SchoolDetailPageComponent,
+      detailSetup(() => {
+        spyOn(TestBed.inject(SchoolService), 'getSchool').and.returnValue(of({ ...detailedSchool, programs: [] }) as never);
+        spyOn(TestBed.inject(ProgramService), 'getPrograms').and.returnValue(throwError(() => new Error('x')));
+      }),
+    ],
+    ['profile (student, wishlist, documents)', ProfilePageComponent, profileAs(student)],
+    ['profile editing as student', ProfilePageComponent, (c) => { profileAs(student)(c); c.isEditing.set(true); }],
+    ['profile editing as expert', ProfilePageComponent, (c) => { profileAs(expert)(c); c.isEditing.set(true); }],
+    ['user documents with every status', UserDocumentsComponent],
+    ['user documents with upload progress and error', UserDocumentsComponent, (c) => {
+      c.uploadProgress.set(40);
+      c.error.set('documents.errors.uploadFailed');
+    }],
+    ['user documents with delete confirmation', UserDocumentsComponent, (c) => c.pendingDeleteId.set(1)],
+    ['user documents empty', UserDocumentsComponent, () => spyOn(TestBed.inject(MediaService), 'mine').and.returnValue(of([]))],
+    ['user documents loading', UserDocumentsComponent, () => spyOn(TestBed.inject(MediaService), 'mine').and.returnValue(NEVER)],
   ];
 
   for (const [name, type, setup] of cases) {
@@ -187,10 +300,15 @@ describe('dark mode: no light-only palette classes', () => {
     expect(lightOnlyClasses(root)).toEqual([]);
   });
 
-  it('puts the theme toggle on the auth layout and the landing page', async () => {
-    for (const type of [AuthLayoutComponent, LandingPageComponent]) {
+  it('puts the theme toggle on every screen a visitor can reach', async () => {
+    for (const type of [AuthLayoutComponent, LandingPageComponent, HomePageComponent, ProfilePageComponent]) {
       const root = await render(type as Type<unknown>);
       expect(root.querySelector('app-theme-toggle button')).withContext(type.name).not.toBeNull();
     }
+  });
+
+  it('puts the theme toggle on the school detail page', async () => {
+    const root = await render(SchoolDetailPageComponent, detailSetup());
+    expect(root.querySelector('app-theme-toggle button')).not.toBeNull();
   });
 });
