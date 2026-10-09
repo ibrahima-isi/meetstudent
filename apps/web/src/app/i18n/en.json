@@ -16,6 +16,15 @@
     "fr": "Français",
     "en": "English"
   },
+  "pageTitle": {
+    "landing": "Find the school that suits you",
+    "login": "Sign in",
+    "register": "Create account",
+    "home": "Home",
+    "school": "School",
+    "profile": "My profile",
+    "notFound": "Page not found"
+  },
   "theme": {
     "light": "light",
     "dark": "dark",

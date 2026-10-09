@@ -5,7 +5,7 @@ import {
   provideEnvironmentInitializer,
   provideZonelessChangeDetection,
 } from '@angular/core';
-import { provideRouter, withComponentInputBinding } from '@angular/router';
+import { provideRouter, TitleStrategy, withComponentInputBinding } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideTransloco } from '@jsverse/transloco';
 
@@ -15,6 +15,7 @@ import { jwtInterceptor } from './interceptors/jwt.interceptor';
 import { refreshInterceptor } from './interceptors/refresh.interceptor';
 import { translocoOptions } from '@i18n/transloco.config';
 import { AlternateLinksService } from '@i18n/alternate-links.service';
+import { PageTitleStrategy } from '@shared/page-title';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -26,6 +27,7 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(withInterceptors([jwtInterceptor, refreshInterceptor])),
     provideClientHydration(withEventReplay()),
     provideTransloco(translocoOptions),
+    { provide: TitleStrategy, useExisting: PageTitleStrategy },
     // Subscribes to the router, so it has to be told to start — nothing else
     // injects it, and a service nobody injects is never constructed.
     provideEnvironmentInitializer(() => inject(AlternateLinksService).start()),

@@ -16,6 +16,15 @@
     "fr": "Français",
     "en": "English"
   },
+  "pageTitle": {
+    "landing": "Trouvez l'école qui vous correspond",
+    "login": "Connexion",
+    "register": "Inscription",
+    "home": "Accueil",
+    "school": "Établissement",
+    "profile": "Mon profil",
+    "notFound": "Page introuvable"
+  },
   "theme": {
     "light": "clair",
     "dark": "sombre",

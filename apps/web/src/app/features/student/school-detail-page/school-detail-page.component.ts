@@ -17,6 +17,7 @@ import { WishlistService } from '@services/wishlist.service';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { pluralKey } from '@i18n/plural';
 import { roundRating } from '@shared/format-rating';
+import { PageTitleService } from '@shared/page-title';
 
 @Component({
   selector: 'app-school-detail-page',
@@ -35,6 +36,7 @@ export class SchoolDetailPageComponent {
   private readonly tokenService = inject(TokenService);
   private readonly router = inject(Router);
   private readonly locale = inject(LocaleService);
+  private readonly pageTitle = inject(PageTitleService);
   protected readonly wishlist = inject(WishlistService);
 
   /**
@@ -123,6 +125,7 @@ export class SchoolDetailPageComponent {
     this.schoolService.getSchool(id).subscribe({
       next: (school) => {
         this.school.set(school);
+        this.pageTitle.set(school.name);
         this.schoolStatus.set('loaded');
         this.loadPrograms();
       },

@@ -4,6 +4,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter, withComponentInputBinding, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
+import { Title } from '@angular/platform-browser';
 import { firstValueFrom, of, Subject, throwError } from 'rxjs';
 import { provideTransloco, TranslocoService } from '@jsverse/transloco';
 import { translocoOptions } from '@i18n/transloco.config';
@@ -108,6 +109,12 @@ describe('SchoolDetailPageComponent', () => {
 
     expect(schoolServiceSpy.getSchool).toHaveBeenCalledWith(7);
     expect(component.school()?.name).toBe('Test School');
+  });
+
+  it('puts the school name in the page title', async () => {
+    await renderAt('/schools/7');
+
+    expect(TestBed.inject(Title).getTitle()).toBe('Test School | MeetStudent');
   });
 
   it('sends an authenticated visitor back to the localised home', async () => {
