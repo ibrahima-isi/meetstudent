@@ -13,4 +13,12 @@ export class TagService {
   list(): Observable<Tag[]> {
     return this.http.get<Tag[]>(this.base);
   }
+
+  create(name: string): Observable<Tag> {
+    return this.http.post<Tag>(this.base, { name });
+  }
+
+  delete(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/${id}`);
+  }
 }
