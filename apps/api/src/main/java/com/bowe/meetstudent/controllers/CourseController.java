@@ -81,7 +81,7 @@ public class CourseController {
 
     @GetMapping(path = "/{id}")
     @Operation(summary = "Get a course by ID", description = "Retrieves details of a specific course using its unique ID.")
-    @ApiResponse(responseCode = "302", description = "Course found")
+    @ApiResponse(responseCode = "200", description = "Course found")
     @ApiResponse(responseCode = "404", description = "Course not found")
     public ResponseEntity<CourseDTO> getCourseById(
             @Parameter(description = "ID of the course to retrieve") @PathVariable int id) {
@@ -89,7 +89,7 @@ public class CourseController {
                 .map(course -> {
                     CourseDTO dto = courseMapper.toDTO(course);
                     dto.setAverageRate(courseRateService.getAverageNoteByCourseId(course.getId()));
-                    return new ResponseEntity<>(dto, HttpStatus.FOUND);
+                    return new ResponseEntity<>(dto, HttpStatus.OK);
                 })
                 .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }

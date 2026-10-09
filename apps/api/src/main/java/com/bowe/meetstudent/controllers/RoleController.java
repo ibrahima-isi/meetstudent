@@ -47,12 +47,12 @@ public class RoleController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Get a role by ID", description = "Retrieves details of a specific role using its unique ID.")
-    @ApiResponse(responseCode = "302", description = "Role found")
+    @ApiResponse(responseCode = "200", description = "Role found")
     @ApiResponse(responseCode = "404", description = "Role not found")
     public ResponseEntity<RoleDTO> getRoleById(
             @Parameter(description = "ID of the role to retrieve") @PathVariable Integer id) {
         return roleService.findRoleById(id)
-                .map(role -> new ResponseEntity<>(roleMapper.toDTO(role), HttpStatus.FOUND))
+                .map(role -> new ResponseEntity<>(roleMapper.toDTO(role), HttpStatus.OK))
                 .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
 

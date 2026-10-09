@@ -75,7 +75,7 @@ public class UserController {
 
     @GetMapping(path = "/id/{id}")
     @Operation(summary = "Get a user by ID", description = "Retrieves detailed information about a specific user by their unique ID.")
-    @ApiResponse(responseCode = "302", description = "User found")
+    @ApiResponse(responseCode = "200", description = "User found")
     @ApiResponse(responseCode = "404", description = "User not found")
     public ResponseEntity<UserDTO> findById(
             @AuthenticationPrincipal UserPrincipal principal,
@@ -86,7 +86,7 @@ public class UserController {
         Optional<UserEntity> user = this.userService.getUserById(id);
         return user.map( foundUser ->{
             UserDTO dto = this.userMapper.toDTO(foundUser);
-            return new ResponseEntity<>(dto, HttpStatus.FOUND);
+            return new ResponseEntity<>(dto, HttpStatus.OK);
         }).orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
 
@@ -99,7 +99,7 @@ public class UserController {
         Optional<UserEntity> user = this.userService.getUserByEmail(email);
         if (user.isPresent()) {
             checkOwnershipOrAdmin(principal, user.get().getId());
-            return new ResponseEntity<>(this.userMapper.toDTO(user.get()), HttpStatus.FOUND);
+            return new ResponseEntity<>(this.userMapper.toDTO(user.get()), HttpStatus.OK);
         }
         return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
