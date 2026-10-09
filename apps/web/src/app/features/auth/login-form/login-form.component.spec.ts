@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, ActivatedRouteSnapshot, convertToParamMap, provideRouter, Router } from '@angular/router';
 import { provideTransloco, TranslocoService } from '@jsverse/transloco';
 import { firstValueFrom } from 'rxjs';
 import { translocoOptions } from '@i18n/transloco.config';
@@ -88,5 +88,37 @@ describe('LoginFormComponent translations', () => {
     } finally {
       jasmine.clock().uninstall();
     }
+  });
+
+  describe('returnUrl', () => {
+    async function loginWith(returnUrl: string | null): Promise<jasmine.Spy> {
+      TestBed.inject(ActivatedRoute).snapshot = {
+        queryParamMap: convertToParamMap(returnUrl ? { returnUrl } : {}),
+      } as ActivatedRouteSnapshot;
+      const navigate = spyOn(TestBed.inject(Router), 'navigateByUrl').and.resolveTo(true);
+      jasmine.clock().install();
+      await render('en');
+      const component = fixture.componentInstance;
+      component.loginForm.setValue({ email: 'awa@example.com', password: 'secret' });
+      component.handleSubmit();
+      httpMock.expectOne(`${environment.apiUrl}/auth`).flush({ accessToken: 'a', refreshToken: 'r' });
+      httpMock.expectOne(`${environment.apiUrl}/users/email/awa@example.com`).flush({});
+      jasmine.clock().tick(1000);
+      return navigate;
+    }
+
+    afterEach(() => jasmine.clock().uninstall());
+
+    it('sends the visitor back to the page they asked for', async () => {
+      const navigate = await loginWith('/en/schools/42');
+
+      expect(navigate).toHaveBeenCalledWith('/en/schools/42');
+    });
+
+    it('ignores a returnUrl that leaves the site', async () => {
+      const navigate = await loginWith('//evil.example.com');
+
+      expect(navigate).not.toHaveBeenCalledWith('//evil.example.com');
+    });
   });
 });

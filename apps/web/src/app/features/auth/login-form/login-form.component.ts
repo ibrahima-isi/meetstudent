@@ -1,7 +1,7 @@
 import { Component, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { LucideAngularModule, Mail, Lock, LogIn, AlertCircle, CheckCircle } from 'lucide-angular';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { AuthService } from '../../../services/auth.service';
@@ -23,6 +23,7 @@ export class LoginFormComponent {
   private authService = inject(AuthService);
   private readonly router = inject(Router);
   private readonly locale = inject(LocaleService);
+  private readonly route = inject(ActivatedRoute);
 
   loginForm: FormGroup;
   // Both hold translation keys, not sentences, so a language switch re-renders
@@ -60,7 +61,7 @@ export class LoginFormComponent {
       next: () => {
         this.success.set({ key: 'auth.login.success' });
         this.isLoading.set(false);
-        setTimeout(() => this.goTo('home'), 1000);
+        setTimeout(() => this.afterLogin(), 1000);
       },
       // The API's message is for logs only; the user reads the front's own text.
       error: () => {
@@ -68,6 +69,16 @@ export class LoginFormComponent {
         this.isLoading.set(false);
       }
     });
+  }
+
+  /** Back to the page `authGuard` interrupted, else home. Same-site paths only. */
+  private afterLogin(): void {
+    const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
+    if (returnUrl?.startsWith('/') && !returnUrl.startsWith('//')) {
+      void this.router.navigateByUrl(returnUrl);
+    } else {
+      this.goTo('home');
+    }
   }
 
   /** Navigations stay in the language the visitor is reading. */
