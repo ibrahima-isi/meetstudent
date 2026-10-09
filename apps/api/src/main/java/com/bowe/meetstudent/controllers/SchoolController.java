@@ -17,6 +17,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.validation.annotation.Validated;
+import com.bowe.meetstudent.dto.validation.OnCreate;
+import jakarta.validation.groups.Default;
+
 
 import java.util.Optional;
 
@@ -35,7 +39,7 @@ public class SchoolController {
     @Operation(summary = "Create a new school", description = "Adds a new school/university to the platform.")
     @ApiResponse(responseCode = "201", description = "School created successfully")
     @ApiResponse(responseCode = "400", description = "Invalid input data")
-    public ResponseEntity<SchoolDTO> create(@RequestBody SchoolDTO schoolDTO) {
+    public ResponseEntity<SchoolDTO> create(@RequestBody @Validated({Default.class, OnCreate.class}) SchoolDTO schoolDTO) {
         School school = schoolMapper.toEntity(schoolDTO);
         var savedSchool = this.schoolService.save(school);
         SchoolDTO savedSchoolDto = schoolMapper.toDTO(savedSchool);
@@ -148,7 +152,7 @@ public class SchoolController {
     @ApiResponse(responseCode = "200", description = "School updated successfully")
     @ApiResponse(responseCode = "404", description = "School not found")
     public ResponseEntity<SchoolDTO> update(
-        @RequestBody SchoolDTO newSchoolDTO,
+        @RequestBody @Validated SchoolDTO newSchoolDTO,
         @Parameter(description = "ID of the school to update") @PathVariable int id) {
 
         School updates = schoolMapper.toEntity(newSchoolDTO);
@@ -163,7 +167,7 @@ public class SchoolController {
     @ApiResponse(responseCode = "200", description = "School patched successfully")
     @ApiResponse(responseCode = "404", description = "School not found")
     public ResponseEntity<SchoolDTO> patch(
-        @RequestBody SchoolDTO schoolDTO,
+        @RequestBody @Validated SchoolDTO schoolDTO,
         @Parameter(description = "ID of the school to patch") @PathVariable int id) {
 
         School updates = schoolMapper.toEntity(schoolDTO);

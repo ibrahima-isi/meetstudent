@@ -18,6 +18,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.validation.annotation.Validated;
+import com.bowe.meetstudent.dto.validation.OnCreate;
+import jakarta.validation.groups.Default;
+
 
 import java.util.Optional;
 
@@ -107,7 +111,7 @@ public class ProgramController {
     @Operation(summary = "Create a new program", description = "Adds a new educational program to the system, optionally linking it to a school.")
     @ApiResponse(responseCode = "201", description = "Program created successfully")
     @ApiResponse(responseCode = "400", description = "Invalid School ID or input data")
-    public ResponseEntity<ProgramDTO> create(@RequestBody ProgramDTO programDTO) {
+    public ResponseEntity<ProgramDTO> create(@RequestBody @Validated({Default.class, OnCreate.class}) ProgramDTO programDTO) {
         Program program = programMapper.toEntity(programDTO);
         
         if (programDTO.getSchoolId() != null) {
@@ -182,7 +186,7 @@ public class ProgramController {
     @ApiResponse(responseCode = "404", description = "Program not found")
     @ApiResponse(responseCode = "400", description = "Invalid School ID")
     public ResponseEntity<ProgramDTO> update(
-            @RequestBody ProgramDTO newProgramDTO,
+            @RequestBody @Validated ProgramDTO newProgramDTO,
             @Parameter(description = "ID of the program to update") @PathVariable int id) {
         
         Program updates = programMapper.toEntity(newProgramDTO);
@@ -202,7 +206,7 @@ public class ProgramController {
     @ApiResponse(responseCode = "404", description = "Program not found")
     @ApiResponse(responseCode = "400", description = "Invalid School ID")
     public ResponseEntity<ProgramDTO> patch(
-            @RequestBody ProgramDTO programDTO,
+            @RequestBody @Validated ProgramDTO programDTO,
             @Parameter(description = "ID of the program to patch") @PathVariable int id) {
         
         Program updates = programMapper.toEntity(programDTO);

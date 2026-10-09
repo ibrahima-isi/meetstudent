@@ -14,6 +14,7 @@ import java.util.List;
 @SuperBuilder
 public class SchoolDTO extends BaseDTO {
 
+    @jakarta.validation.Valid
     private Address address;
     // input: ids of already-uploaded media
     private Integer logoMediaId;

@@ -1,6 +1,7 @@
 package com.bowe.meetstudent.entities.embedded;
 
 import jakarta.persistence.Embeddable;
+import jakarta.validation.constraints.Size;
 import lombok.*;
 
 /**
@@ -16,7 +17,10 @@ import lombok.*;
 @Builder
 public class Address {
 
+    @Size(max = 255, message = "location must be at most 255 characters")
     private String location;
+    @Size(max = 255, message = "city must be at most 255 characters")
     private String city;
+    @Size(max = 255, message = "country must be at most 255 characters")
     private String country;
 }
