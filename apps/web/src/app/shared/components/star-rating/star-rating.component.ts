@@ -6,6 +6,7 @@ import { RatingService } from '@services/rating.service';
 import { TokenService } from '@services/token.service';
 import { Observable } from 'rxjs';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { roundRating } from '@shared/format-rating';
 
 @Component({
   selector: 'app-star-rating',
@@ -35,7 +36,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
           </button>
         }
         @if (rating() > 0 && showValue()) {
-          <span class="ml-2 text-sm font-medium text-muted-foreground">{{ rating() }}/5</span>
+          <span class="ml-2 text-sm font-medium text-muted-foreground">{{ shownRating() }}/5</span>
         }
       </div>
 
@@ -88,6 +89,8 @@ export class StarRatingComponent {
   submitted = signal(false);
   /** True after a failed request, until the next attempt. */
   failed = signal(false);
+  /** The average as read by people; `rating` itself stays exact for the stars. */
+  protected shownRating = computed(() => roundRating(this.rating()));
   protected locked = computed(() => this.readonly() || this.submitted());
 
   readonly Star = Star;

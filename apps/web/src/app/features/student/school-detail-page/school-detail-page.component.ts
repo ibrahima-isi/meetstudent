@@ -16,6 +16,7 @@ import { LocaleService } from '@services/locale.service';
 import { WishlistService } from '@services/wishlist.service';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { pluralKey } from '@i18n/plural';
+import { roundRating } from '@shared/format-rating';
 
 @Component({
   selector: 'app-school-detail-page',
@@ -200,6 +201,18 @@ export class SchoolDetailPageComponent {
   /** The key for a count, by the plural rule of the language being read. */
   protected plural(base: string, count: number): string {
     return pluralKey(base, count, this.locale.active());
+  }
+
+  protected readonly roundRating = roundRating;
+
+  /** Capacity is not in the API yet: availability is only shown when it is. */
+  protected hasCapacity(programme: Program): boolean {
+    return typeof programme.capacity === 'number';
+  }
+
+  /** Known to be full; unknown capacity is not full. */
+  protected isFull(programme: Program): boolean {
+    return this.hasCapacity(programme) && this.placesLeft(programme) === 0;
   }
 
   /** Seats left in a programme; never negative. */

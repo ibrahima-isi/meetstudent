@@ -176,10 +176,12 @@
                       <lucide-icon [img]="Clock" class="w-4 h-4 text-indigo-500 dark:text-indigo-400"></lucide-icon>
                       <span>{{ t(plural('schoolDetail.years', programme.duration), { count: programme.duration }) }}</span>
                     </div>
-                    <div class="flex items-center gap-2">
-                      <lucide-icon [img]="Calendar" class="w-4 h-4 text-indigo-500 dark:text-indigo-400"></lucide-icon>
-                      <span>{{ t('schoolDetail.intake', { date: programme.startDate }) }}</span>
-                    </div>
+                    @if (programme.startDate) {
+                      <div class="flex items-center gap-2">
+                        <lucide-icon [img]="Calendar" class="w-4 h-4 text-indigo-500 dark:text-indigo-400"></lucide-icon>
+                        <span>{{ t('schoolDetail.intake', { date: programme.startDate }) }}</span>
+                      </div>
+                    }
                   </div>
                   
                   <p class="text-muted-foreground mb-4 text-sm">{{ programme.description || t('common.noDescription') }}</p>
@@ -197,26 +199,28 @@
                     </div>
                   }
                   
-                  <div class="flex items-center gap-2 text-sm font-medium mt-4">
-                    <lucide-icon [img]="Users" class="w-4 h-4 text-muted-foreground"></lucide-icon>
-                    <span>
-                      @if (placesLeft(programme) > 0) {
-                        <span class="text-muted-foreground">{{ t(plural('schoolDetail.placesLeft', placesLeft(programme)), { count: placesLeft(programme) }) }}</span>
-                      } @else {
-                        <span class="text-red-600 dark:text-red-400 font-bold">{{ t('schoolDetail.full') }}</span>
-                      }
-                    </span>
-                  </div>
+                  @if (hasCapacity(programme)) {
+                    <div class="flex items-center gap-2 text-sm font-medium mt-4">
+                      <lucide-icon [img]="Users" class="w-4 h-4 text-muted-foreground"></lucide-icon>
+                      <span>
+                        @if (isFull(programme)) {
+                          <span class="text-red-600 dark:text-red-400 font-bold">{{ t('schoolDetail.full') }}</span>
+                        } @else {
+                          <span class="text-muted-foreground">{{ t(plural('schoolDetail.placesLeft', placesLeft(programme)), { count: placesLeft(programme) }) }}</span>
+                        }
+                      </span>
+                    </div>
+                  }
                 </div>
               </div>
               
               <div class="flex gap-3">
                 <button
                   class="flex-1 px-4 py-2 rounded-lg transition-colors font-bold cursor-pointer"
-                  [class]="placesLeft(programme) > 0 ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-muted cursor-not-allowed text-muted-foreground'"
-                  [disabled]="(programme.capacity || 0) - (programme.enrolled || 0) === 0"
+                  [class]="isFull(programme) ? 'bg-muted cursor-not-allowed text-muted-foreground' : 'bg-indigo-600 hover:bg-indigo-700 text-white'"
+                  [disabled]="isFull(programme)"
                 >
-                  {{ t(placesLeft(programme) > 0 ? 'schoolDetail.apply' : 'schoolDetail.waitlist') }}
+                  {{ t(isFull(programme) ? 'schoolDetail.waitlist' : 'schoolDetail.apply') }}
                 </button>
                 <button 
                   (click)="openCoursesModal(programme)"
@@ -236,7 +240,7 @@
         <div data-testid="school-rating" class="bg-card rounded-xl shadow-sm border border-border p-6">
           <h2 class="text-foreground mb-4 text-xl font-bold">{{ t('schoolDetail.reviewsTitle') }}</h2>
           <div class="flex items-center gap-3 mb-4">
-            <span data-testid="school-aggregate" class="text-4xl font-bold text-foreground">{{ detail.rating || '0.0' }}</span>
+            <span data-testid="school-aggregate" class="text-4xl font-bold text-foreground">{{ roundRating(detail.rating) }}</span>
             <div class="flex flex-col">
               <div class="flex text-yellow-400">
                 <lucide-icon [img]="Star" class="w-4 h-4 fill-current"></lucide-icon>
@@ -245,7 +249,9 @@
                 <lucide-icon [img]="Star" class="w-4 h-4 fill-current"></lucide-icon>
                 <lucide-icon [img]="Star" class="w-4 h-4 fill-current opacity-30"></lucide-icon>
               </div>
-              <span class="text-xs text-muted-foreground font-medium">{{ t(plural('schoolDetail.verifiedReviews', detail.reviewCount || 0), { count: detail.reviewCount || 0 }) }}</span>
+              @if (detail.reviewCount) {
+                <span class="text-xs text-muted-foreground font-medium">{{ t(plural('schoolDetail.verifiedReviews', detail.reviewCount), { count: detail.reviewCount }) }}</span>
+              }
             </div>
           </div>
 

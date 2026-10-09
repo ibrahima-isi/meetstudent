@@ -43,7 +43,6 @@ export class SchoolService {
     return {
       ...school,
       rating: (school as any).averageRate || school.rating || 0,
-      reviewCount: school.reviewCount || 0,
       // No default for type or description: the service stays locale-free and
       // the template shows a fallback in the active language.
       accreditations: school.accreditations || [],

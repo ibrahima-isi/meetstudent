@@ -12,6 +12,7 @@ import { SchoolService } from '@services/school.service';
 import { LocaleService } from '@services/locale.service';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { pluralKey } from '@i18n/plural';
+import { roundRating } from '@shared/format-rating';
 
 @Component({
   selector: 'app-landing-page',
@@ -133,6 +134,8 @@ export class LandingPageComponent implements OnInit {
       this.goTo('schools', school.id);
     }
   }
+
+  protected readonly roundRating = roundRating;
 
   /** The key for a count, by the plural rule of the language being read. */
   protected plural(base: string, count: number): string {

@@ -453,4 +453,58 @@ describe('SchoolDetailPageComponent', () => {
       expect(programServiceSpy.getPrograms).toHaveBeenCalledTimes(1);
     });
   });
+
+  describe('what the API does not provide', () => {
+    const text = () => harness.routeNativeElement?.textContent ?? '';
+    async function renderWith(school: School, programmes: Program[]) {
+      schoolServiceSpy.getSchool.and.returnValue(of({ ...school, programs: programmes }));
+      await renderAt('/schools/7');
+      harness.detectChanges();
+      await harness.fixture.whenStable();
+    }
+
+    beforeEach(async () => {
+      const transloco = TestBed.inject(TranslocoService);
+      await firstValueFrom(transloco.load('en'));
+      transloco.setActiveLang('en');
+      locale.set('en');
+    });
+
+    it('shows no availability, waiting list or intake for a programme without capacity or start date', async () => {
+      await renderWith(mockSchool, [{ id: 1, name: 'Prog', duration: 3 }]);
+
+      expect(text()).toContain('Prog');
+      expect(text()).not.toContain('Full');
+      expect(text()).not.toContain('Waiting list');
+      expect(text()).not.toContain('Intake');
+    });
+
+    it('shows availability and intake when the programme has them', async () => {
+      await renderWith(mockSchool, [{ id: 1, name: 'Prog', duration: 3, capacity: 30, enrolled: 10, startDate: '2026-09' }]);
+
+      expect(text()).toContain('20 places available');
+      expect(text()).toContain('Intake: 2026-09');
+      expect(text()).not.toContain('Waiting list');
+    });
+
+    it('offers the waiting list only when the programme is known to be full', async () => {
+      await renderWith(mockSchool, [{ id: 1, name: 'Prog', duration: 3, capacity: 10, enrolled: 10 }]);
+
+      expect(text()).toContain('Full');
+      expect(text()).toContain('Waiting list');
+    });
+
+    it('rounds the average to one decimal and shows no review count the API did not send', async () => {
+      await renderWith({ ...mockSchool, rating: 5.333333333333333 }, []);
+
+      expect(harness.routeNativeElement?.querySelector('[data-testid="school-aggregate"]')?.textContent?.trim()).toBe('5.3');
+      expect(text()).not.toContain('verified reviews');
+    });
+
+    it('shows the review count when the API sends one', async () => {
+      await renderWith({ ...mockSchool, rating: 4, reviewCount: 3 }, []);
+
+      expect(text()).toContain('3 verified reviews');
+    });
+  });
 });
