@@ -110,7 +110,9 @@
     "viewDetails": "View details",
     "noResults": "No school matches these criteria",
     "empty": "No schools are listed yet",
-    "loadError": "Schools could not be loaded."
+    "loadError": "Schools could not be loaded.",
+    "loadMore": "Load more",
+    "loadMoreError": "More schools could not be loaded."
   },
   "landing": {
     "login": "Log in",

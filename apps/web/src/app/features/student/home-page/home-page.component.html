@@ -34,7 +34,8 @@
           <lucide-icon [img]="Search" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"></lucide-icon>
           <input
             type="text"
-            [(ngModel)]="searchQuery"
+            [ngModel]="searchQuery()"
+            (ngModelChange)="onSearchInput($event)"
             [placeholder]="t('schools.searchPlaceholder')"
             class="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           />
@@ -42,6 +43,7 @@
 
         <div class="flex items-center gap-3 flex-wrap">
           <button
+            data-testid="filters-toggle"
             (click)="showFilters.set(!showFilters())"
             class="flex items-center gap-2 px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
           >
@@ -57,6 +59,7 @@
           <div class="flex items-center gap-2">
             <lucide-icon [img]="ArrowUpDown" class="w-4 h-4 text-gray-500"></lucide-icon>
             <select
+              data-testid="sort-select"
               [(ngModel)]="sortBy"
               class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-700"
             >
@@ -72,6 +75,7 @@
             <div>
               <label class="block text-gray-700 mb-2">{{ t('schools.city') }}</label>
               <select
+                data-testid="city-filter"
                 [(ngModel)]="selectedCity"
                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               >
@@ -123,7 +127,7 @@
     } @else {
     <div class="mb-6">
       <p class="text-gray-600">
-        {{ t(plural('schools.found', sortedSchools().length), { count: sortedSchools().length }) }}
+        {{ t(plural('schools.found', resultCount()), { count: resultCount() }) }}
       </p>
     </div>
 
@@ -213,9 +217,28 @@
       }
     </div>
 
-    @if (sortedSchools().length === 0) {
+    @if (loadMoreFailed()) {
+      <div role="alert" data-testid="load-more-error" class="mt-6 flex items-center justify-center gap-3 text-sm text-red-700">
+        <span>{{ t('schools.loadMoreError') }}</span>
+        <button type="button" (click)="loadMore()" class="font-medium underline cursor-pointer">{{ t('common.retry') }}</button>
+      </div>
+    } @else if (hasMore()) {
+      <div class="mt-8 text-center">
+        <button
+          type="button"
+          data-testid="load-more"
+          [disabled]="loadingMore()"
+          (click)="loadMore()"
+          class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium cursor-pointer disabled:opacity-60"
+        >
+          {{ t(loadingMore() ? 'common.loading' : 'schools.loadMore') }}
+        </button>
+      </div>
+    }
+
+    @if (sortedSchools().length === 0 && !hasMore()) {
       <div class="text-center py-12">
-        <p class="text-gray-600 text-lg">{{ t(schools().length === 0 ? 'schools.empty' : 'schools.noResults') }}</p>
+        <p class="text-gray-600 text-lg">{{ t(schools().length === 0 && !hasFilters() ? 'schools.empty' : 'schools.noResults') }}</p>
       </div>
     }
     }

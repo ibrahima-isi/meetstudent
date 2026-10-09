@@ -16,7 +16,7 @@ export class SchoolService {
   private schoolsSignal = signal<School[]>([]);
   readonly schools = this.schoolsSignal.asReadonly();
 
-  getSchools(page: number = 0, size: number = 10, sortRate?: string): Observable<Page<School>> {
+  getSchools(page: number = 0, size: number = 10, sortRate?: string, sort?: string): Observable<Page<School>> {
     let params = new HttpParams()
       .set('page', page.toString())
       .set('size', size.toString());
@@ -24,6 +24,7 @@ export class SchoolService {
     if (sortRate) {
       params = params.set('sortRate', sortRate);
     }
+    if (sort) params = params.set('sort', sort);
 
     return this.http.get<Page<School>>(this.apiUrl, { params }).pipe(
       map(res => ({
@@ -59,7 +60,7 @@ export class SchoolService {
     );
   }
 
-  searchSchools(city?: string, country?: string, tag?: string, program?: string, page: number = 0, size: number = 10): Observable<Page<School>> {
+  searchSchools(city?: string, country?: string, tag?: string, program?: string, page: number = 0, size: number = 10, sort?: string): Observable<Page<School>> {
     let params = new HttpParams()
       .set('page', page.toString())
       .set('size', size.toString());
@@ -68,8 +69,22 @@ export class SchoolService {
     if (country) params = params.set('country', country);
     if (tag) params = params.set('tag', tag);
     if (program) params = params.set('program', program);
+    if (sort) params = params.set('sort', sort);
 
     return this.http.get<Page<School>>(`${this.apiUrl}/search`, { params }).pipe(
+      map(res => ({
+        ...res,
+        content: res.content.map(school => this.mapSchoolFields(school))
+      }))
+    );
+  }
+
+  /** Name contains `name`, case-insensitive, paged by the API (`/schools/name/{name}`). */
+  searchSchoolsByName(name: string, page: number = 0, size: number = 10, sort?: string): Observable<Page<School>> {
+    let params = new HttpParams().set('page', page.toString()).set('size', size.toString());
+    if (sort) params = params.set('sort', sort);
+
+    return this.http.get<Page<School>>(`${this.apiUrl}/name/${encodeURIComponent(name)}`, { params }).pipe(
       map(res => ({
         ...res,
         content: res.content.map(school => this.mapSchoolFields(school))
