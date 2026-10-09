@@ -64,6 +64,11 @@
       "bacTypePlaceholder": "Sélectionnez votre type de bac",
       "collegeLevel": "Niveau d'études supérieures",
       "collegeLevelPlaceholder": "Sélectionnez votre niveau",
+      "collegeLevels": {
+        "l1": "Licence 1 (L1)",
+        "l2": "Licence 2 (L2)",
+        "m1": "Master 1 (M1)"
+      },
       "specialty": "Spécialité",
       "specialtyPlaceholder": "Commencez à saisir votre spécialité…",
       "town": "Ville",
