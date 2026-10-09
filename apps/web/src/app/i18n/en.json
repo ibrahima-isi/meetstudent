@@ -64,6 +64,11 @@
       "bacTypePlaceholder": "Select your BAC type",
       "collegeLevel": "Level of College Studies",
       "collegeLevelPlaceholder": "Select your level",
+      "collegeLevels": {
+        "l1": "Bachelor's year 1 (L1)",
+        "l2": "Bachelor's year 2 (L2)",
+        "m1": "Master's year 1 (M1)"
+      },
       "specialty": "Specialty",
       "specialtyPlaceholder": "Start typing your specialty...",
       "town": "Town / City",
