@@ -189,9 +189,11 @@
             <div class="flex items-center gap-1 mb-3 text-sm">
               <div class="flex items-center gap-1">
                 <lucide-icon [img]="Star" class="w-4 h-4 fill-yellow-400 text-yellow-400"></lucide-icon>
-                <span class="text-foreground font-medium">{{ school.rating }}</span>
+                <span class="text-foreground font-medium">{{ roundRating(school.rating) }}</span>
               </div>
-              <span class="text-muted-foreground">{{ t(plural('schools.reviews', school.reviewCount ?? 0), { count: school.reviewCount ?? 0 }) }}</span>
+              @if (school.reviewCount) {
+                <span class="text-muted-foreground">{{ t(plural('schools.reviews', school.reviewCount), { count: school.reviewCount }) }}</span>
+              }
             </div>
 
             <div class="flex items-start gap-2 mb-3 text-sm">

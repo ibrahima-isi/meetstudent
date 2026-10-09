@@ -154,6 +154,30 @@ describe('LandingPageComponent translations', () => {
     expect(text()).toContain('No description available');
     expect(text()).not.toContain('Établissement');
   });
+  it('rounds the rating to one decimal and shows no review count the API did not send', async () => {
+    await render('en');
+    fixture.componentInstance.schools.set([
+      { id: 1, name: 'Rated', rating: 5.333333333333333, address: { location: 'Loc', city: 'Dakar', country: 'Senegal' } },
+    ]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(text()).toContain('5.3');
+    expect(text()).not.toContain('5.33');
+    expect(text()).not.toContain('reviews)');
+  });
+
+  it('shows the review count when the API sends one', async () => {
+    await render('en');
+    fixture.componentInstance.schools.set([
+      { id: 1, name: 'Rated', rating: 4, reviewCount: 12, address: { location: 'Loc', city: 'Dakar', country: 'Senegal' } },
+    ]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(text()).toContain('(12 reviews)');
+  });
+
   it('sorts names with the collation of the active language', async () => {
     await render('en');
     const compare = spyOn(String.prototype, 'localeCompare').and.callThrough();

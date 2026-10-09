@@ -4,12 +4,12 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter, withComponentInputBinding, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
+import { Title } from '@angular/platform-browser';
 import { firstValueFrom, of, Subject, throwError } from 'rxjs';
 import { provideTransloco, TranslocoService } from '@jsverse/transloco';
 import { translocoOptions } from '@i18n/transloco.config';
 import { School, Program, Course, Page } from '@models/entities';
 import { ProgramService } from '@services/program.service';
-import { CourseService } from '@services/course.service';
 import { SchoolService } from '@services/school.service';
 import { TokenService } from '@services/token.service';
 import { RatingService } from '@services/rating.service';
@@ -19,7 +19,6 @@ import { SchoolDetailPageComponent } from './school-detail-page.component';
 
 describe('SchoolDetailPageComponent', () => {
   let programServiceSpy: jasmine.SpyObj<ProgramService>;
-  let courseServiceSpy: jasmine.SpyObj<CourseService>;
   let schoolServiceSpy: jasmine.SpyObj<SchoolService>;
   let ratingServiceSpy: jasmine.SpyObj<RatingService>;
   let authenticated: ReturnType<typeof signal<boolean>>;
@@ -62,7 +61,6 @@ describe('SchoolDetailPageComponent', () => {
 
   beforeEach(() => {
     programServiceSpy = jasmine.createSpyObj('ProgramService', ['getPrograms']);
-    courseServiceSpy = jasmine.createSpyObj('CourseService', ['getCoursesByProgram']);
     schoolServiceSpy = jasmine.createSpyObj('SchoolService', ['getSchool']);
     ratingServiceSpy = jasmine.createSpyObj('RatingService', [
       'rateSchool',
@@ -96,7 +94,6 @@ describe('SchoolDetailPageComponent', () => {
           withComponentInputBinding(),
         ),
         { provide: ProgramService, useValue: programServiceSpy },
-        { provide: CourseService, useValue: courseServiceSpy },
         { provide: SchoolService, useValue: schoolServiceSpy },
         { provide: RatingService, useValue: ratingServiceSpy },
         { provide: TokenService, useValue: { isAuthenticated: authenticated, user: currentUser } },
@@ -112,6 +109,12 @@ describe('SchoolDetailPageComponent', () => {
 
     expect(schoolServiceSpy.getSchool).toHaveBeenCalledWith(7);
     expect(component.school()?.name).toBe('Test School');
+  });
+
+  it('puts the school name in the page title', async () => {
+    await renderAt('/schools/7');
+
+    expect(TestBed.inject(Title).getTitle()).toBe('Test School | MeetStudent');
   });
 
   it('sends an authenticated visitor back to the localised home', async () => {
@@ -156,15 +159,22 @@ describe('SchoolDetailPageComponent', () => {
   });
 
   it('opens the courses modal for a program', async () => {
-    const mockProgram: Program = { id: 1, name: 'Prog 1', duration: 3 };
-    courseServiceSpy.getCoursesByProgram.and.returnValue(of([{ id: 1, name: 'Course 1' } as Course]));
+    const mockProgram: Program = { id: 1, name: 'Prog 1', duration: 3, courses: [{ id: 1, name: 'Course 1' } as Course] };
 
     const component = await renderAt('/schools/7');
     component.openCoursesModal(mockProgram);
 
     expect(component.showCoursesModal()).toBeTrue();
     expect(component.selectedProgram()).toEqual(mockProgram);
-    expect(courseServiceSpy.getCoursesByProgram).toHaveBeenCalledWith(1);
+    // The school response embeds programs[].courses: no extra request.
+    expect(component.courses()).toEqual(mockProgram.courses!);
+  });
+
+  it('shows an empty course list for a program without courses', async () => {
+    const component = await renderAt('/schools/7');
+    component.openCoursesModal({ id: 2, name: 'Prog 2', duration: 1 });
+
+    expect(component.courses()).toEqual([]);
   });
 
   it('closes the courses modal', async () => {
@@ -404,16 +414,16 @@ describe('SchoolDetailPageComponent', () => {
     });
 
     it('offers expert-only course rating controls in the courses modal', async () => {
-      courseServiceSpy.getCoursesByProgram.and.returnValue(of([{ id: 9, name: 'C' } as Course]));
       currentUser.set({ id: 4, role: { name: 'ROLE_EXPERT' } });
       const component = await render();
-      component.openCoursesModal(progs[0]);
+      const withCourses = { ...progs[0], courses: [{ id: 9, name: 'C' } as Course] };
+      component.openCoursesModal(withCourses);
       await settle();
       expect(q('[data-testid="course-rating"] app-star-rating')).not.toBeNull();
 
       component.closeCoursesModal();
       currentUser.set({ id: 3, role: { name: 'ROLE_STUDENT' } });
-      component.openCoursesModal(progs[0]);
+      component.openCoursesModal(withCourses);
       await settle();
       expect(q('[data-testid="course-rating"]')).toBeNull();
     });
@@ -448,6 +458,60 @@ describe('SchoolDetailPageComponent', () => {
       expect(component.school()?.rating).toBe(4.5);
       expect(q('[data-testid="school-aggregate"]')?.textContent).toContain('4.5');
       expect(programServiceSpy.getPrograms).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('what the API does not provide', () => {
+    const text = () => harness.routeNativeElement?.textContent ?? '';
+    async function renderWith(school: School, programmes: Program[]) {
+      schoolServiceSpy.getSchool.and.returnValue(of({ ...school, programs: programmes }));
+      await renderAt('/schools/7');
+      harness.detectChanges();
+      await harness.fixture.whenStable();
+    }
+
+    beforeEach(async () => {
+      const transloco = TestBed.inject(TranslocoService);
+      await firstValueFrom(transloco.load('en'));
+      transloco.setActiveLang('en');
+      locale.set('en');
+    });
+
+    it('shows no availability, waiting list or intake for a programme without capacity or start date', async () => {
+      await renderWith(mockSchool, [{ id: 1, name: 'Prog', duration: 3 }]);
+
+      expect(text()).toContain('Prog');
+      expect(text()).not.toContain('Full');
+      expect(text()).not.toContain('Waiting list');
+      expect(text()).not.toContain('Intake');
+    });
+
+    it('shows availability and intake when the programme has them', async () => {
+      await renderWith(mockSchool, [{ id: 1, name: 'Prog', duration: 3, capacity: 30, enrolled: 10, startDate: '2026-09' }]);
+
+      expect(text()).toContain('20 places available');
+      expect(text()).toContain('Intake: 2026-09');
+      expect(text()).not.toContain('Waiting list');
+    });
+
+    it('offers the waiting list only when the programme is known to be full', async () => {
+      await renderWith(mockSchool, [{ id: 1, name: 'Prog', duration: 3, capacity: 10, enrolled: 10 }]);
+
+      expect(text()).toContain('Full');
+      expect(text()).toContain('Waiting list');
+    });
+
+    it('rounds the average to one decimal and shows no review count the API did not send', async () => {
+      await renderWith({ ...mockSchool, rating: 5.333333333333333 }, []);
+
+      expect(harness.routeNativeElement?.querySelector('[data-testid="school-aggregate"]')?.textContent?.trim()).toBe('5.3');
+      expect(text()).not.toContain('verified reviews');
+    });
+
+    it('shows the review count when the API sends one', async () => {
+      await renderWith({ ...mockSchool, rating: 4, reviewCount: 3 }, []);
+
+      expect(text()).toContain('3 verified reviews');
     });
   });
 });

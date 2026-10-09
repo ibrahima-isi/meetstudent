@@ -17,7 +17,7 @@ export class UserService {
   readonly users = this.usersSignal.asReadonly();
 
   getUser(id: number): Observable<User> {
-    return this.http.get<User>(`${this.apiUrl}/${id}`).pipe(
+    return this.http.get<User>(`${this.apiUrl}/id/${id}`).pipe(
       map(user => this.mapUserFields(user)),
       tap(user => {
         this.usersSignal.update(users => {

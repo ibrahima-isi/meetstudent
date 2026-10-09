@@ -7,15 +7,17 @@ import { ImageWithFallbackComponent } from '@shared/components/image-with-fallba
 import { StarRatingComponent } from '@shared/components/star-rating/star-rating.component';
 import { ThemeToggleComponent } from '@shared/components/theme-toggle/theme-toggle.component';
 import { ErrorStateComponent } from '@shared/components/error-state/error-state.component';
+import { ROLE_EXPERT, ROLE_STUDENT } from '@models/roles';
 import { School, Program, Tag, Course } from '@models/entities';
 import { ProgramService } from '@services/program.service';
-import { CourseService } from '@services/course.service';
 import { SchoolService } from '@services/school.service';
 import { TokenService } from '@services/token.service';
 import { LocaleService } from '@services/locale.service';
 import { WishlistService } from '@services/wishlist.service';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { pluralKey } from '@i18n/plural';
+import { roundRating } from '@shared/format-rating';
+import { PageTitleService } from '@shared/page-title';
 
 @Component({
   selector: 'app-school-detail-page',
@@ -30,11 +32,11 @@ export class SchoolDetailPageComponent {
   id = input.required<string>();
 
   private programService = inject(ProgramService);
-  private courseService = inject(CourseService);
   private readonly schoolService = inject(SchoolService);
   private readonly tokenService = inject(TokenService);
   private readonly router = inject(Router);
   private readonly locale = inject(LocaleService);
+  private readonly pageTitle = inject(PageTitleService);
   protected readonly wishlist = inject(WishlistService);
 
   /**
@@ -51,9 +53,9 @@ export class SchoolDetailPageComponent {
   readonly isAuthenticated = computed(() => this.tokenService.isAuthenticated());
   private readonly roleName = computed(() => this.tokenService.user()?.role?.name);
   /** Mirrors the API: students and experts rate schools. */
-  readonly canRateSchool = computed(() => this.roleName() === 'ROLE_STUDENT' || this.roleName() === 'ROLE_EXPERT');
+  readonly canRateSchool = computed(() => this.roleName() === ROLE_STUDENT || this.roleName() === ROLE_EXPERT);
   /** Mirrors the API: only experts rate programmes and courses. */
-  readonly canRateProgramAndCourse = computed(() => this.roleName() === 'ROLE_EXPERT');
+  readonly canRateProgramAndCourse = computed(() => this.roleName() === ROLE_EXPERT);
 
   readonly ArrowLeft = ArrowLeft;
   readonly MapPin = MapPin;
@@ -75,7 +77,6 @@ export class SchoolDetailPageComponent {
   selectedProgram = signal<Program | null>(null);
   courses = signal<Course[]>([]);
   showCoursesModal = signal(false);
-  isLoadingCourses = signal(false);
 
   constructor() {
     // The wishlist lives on the server: fetch it so the heart reflects it after a reload.
@@ -124,6 +125,7 @@ export class SchoolDetailPageComponent {
     this.schoolService.getSchool(id).subscribe({
       next: (school) => {
         this.school.set(school);
+        this.pageTitle.set(school.name);
         this.schoolStatus.set('loaded');
         this.loadPrograms();
       },
@@ -134,23 +136,11 @@ export class SchoolDetailPageComponent {
     });
   }
 
+  /** The school response embeds `programs[].courses`, so there is nothing to fetch. */
   openCoursesModal(program: Program) {
     this.selectedProgram.set(program);
+    this.courses.set(program.courses ?? []);
     this.showCoursesModal.set(true);
-    this.isLoadingCourses.set(true);
-    
-    if (program.id) {
-      this.courseService.getCoursesByProgram(program.id).subscribe({
-        next: (courses) => {
-          this.courses.set(courses);
-          this.isLoadingCourses.set(false);
-        },
-        error: () => {
-          this.courses.set([]);
-          this.isLoadingCourses.set(false);
-        }
-      });
-    }
   }
 
   closeCoursesModal() {
@@ -214,6 +204,18 @@ export class SchoolDetailPageComponent {
   /** The key for a count, by the plural rule of the language being read. */
   protected plural(base: string, count: number): string {
     return pluralKey(base, count, this.locale.active());
+  }
+
+  protected readonly roundRating = roundRating;
+
+  /** Capacity is not in the API yet: availability is only shown when it is. */
+  protected hasCapacity(programme: Program): boolean {
+    return typeof programme.capacity === 'number';
+  }
+
+  /** Known to be full; unknown capacity is not full. */
+  protected isFull(programme: Program): boolean {
+    return this.hasCapacity(programme) && this.placesLeft(programme) === 0;
   }
 
   /** Seats left in a programme; never negative. */

@@ -16,6 +16,15 @@
     "fr": "Français",
     "en": "English"
   },
+  "pageTitle": {
+    "landing": "Trouvez l'école qui vous correspond",
+    "login": "Connexion",
+    "register": "Inscription",
+    "home": "Accueil",
+    "school": "Établissement",
+    "profile": "Mon profil",
+    "notFound": "Page introuvable"
+  },
   "theme": {
     "light": "clair",
     "dark": "sombre",
@@ -38,8 +47,6 @@
     "login": {
       "title": "Bon retour parmi nous",
       "subtitle": "Connectez-vous à votre compte",
-      "continueWith": "Continuer avec {{ provider }}",
-      "orWithEmail": "Ou continuez avec votre e-mail",
       "rememberMe": "Se souvenir de moi",
       "forgotPassword": "Mot de passe oublié ?",
       "submit": "Se connecter",
@@ -48,7 +55,6 @@
       "signUp": "S'inscrire",
       "success": "Connexion réussie ! Bon retour parmi nous.",
       "registered": "Compte créé ! Connectez-vous pour continuer.",
-      "oauthSuccess": "Connecté avec {{ provider }} !",
       "failed": "La connexion a échoué. Veuillez réessayer."
     },
     "register": {
@@ -161,7 +167,6 @@
     "information": "Informations",
     "address": "Adresse",
     "courseList": "Liste des cours disponibles",
-    "loadingCourses": "Chargement des cours...",
     "noCourses": "Aucun cours trouvé pour ce programme.",
     "rateCourse": "Évaluer ce cours",
     "close": "Fermer",

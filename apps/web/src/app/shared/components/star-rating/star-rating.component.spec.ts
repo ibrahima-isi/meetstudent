@@ -97,6 +97,15 @@ describe('StarRatingComponent', () => {
       .toBe('Add a comment (optional)...');
   });
 
+  it('shows an average rounded to one decimal', async () => {
+    fixture.componentRef.setInput('initialRating', 5.333333333333333);
+    component = fixture.componentInstance;
+    component.rating.set(5.333333333333333);
+    fixture.detectChanges();
+
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('5.3/5');
+  });
+
   describe('submission', () => {
     const q = (sel: string) => (fixture.nativeElement as HTMLElement).querySelector(sel);
 

@@ -38,7 +38,7 @@ describe('ProfilePageComponent translations', () => {
   beforeEach(() => {
     saved = signal<unknown[]>([]);
     toggle = jasmine.createSpy('toggle');
-    user = signal<Partial<User> | null>({ firstname: 'Awa', lastname: '', email: '', role: { name: 'STUDENT' } });
+    user = signal<Partial<User> | null>({ firstname: 'Awa', lastname: '', email: '', role: { name: 'ROLE_STUDENT' } });
 
     TestBed.configureTestingModule({
       imports: [ProfilePageComponent],
@@ -71,6 +71,34 @@ describe('ProfilePageComponent translations', () => {
     expect(text()).toContain('Not provided');
     expect(text()).toContain('Student');
     expect(text()).toContain('My documents');
+  });
+
+  it('shows the translated role, never the raw API name', async () => {
+    await render('fr');
+    expect(text()).toContain('Étudiant');
+    expect(text()).not.toContain('ROLE_STUDENT');
+
+    user.set({ firstname: 'Awa', lastname: '', email: '', role: { name: 'ROLE_EXPERT' } });
+    await render('en');
+    expect(text()).toContain('Expert / Teacher');
+    expect(text()).not.toContain('ROLE_EXPERT');
+  });
+
+  it('shows the documents panel and the wishlist to a student, and not the expert specialty', async () => {
+    await render('en');
+
+    expect(fixture.nativeElement.querySelector('app-user-documents')).not.toBeNull();
+    expect(text()).toContain('BAC type');
+    expect(text()).not.toContain('Specialty');
+  });
+
+  it('shows the specialty to an expert, with no documents panel', async () => {
+    user.set({ firstname: 'Awa', lastname: '', email: '', role: { name: 'ROLE_EXPERT' } });
+    await render('en');
+
+    expect(fixture.nativeElement.querySelector('app-user-documents')).toBeNull();
+    expect(text()).toContain('Specialty');
+    expect(text()).not.toContain('BAC type');
   });
 
   it('lists the wishlisted schools from the API and removes one through the service', async () => {
@@ -128,7 +156,7 @@ describe('ProfilePageComponent translations', () => {
   }
 
   it('shows the translated bac label, not the stored slug, outside edit mode', async () => {
-    user.set({ firstname: 'Awa', lastname: '', email: '', role: { name: 'STUDENT' }, qualification: 'bac-pro' });
+    user.set({ firstname: 'Awa', lastname: '', email: '', role: { name: 'ROLE_STUDENT' }, qualification: 'bac-pro' });
 
     await render('fr');
     expect(readOnlyBac()).toBe('Bac Professionnel');
@@ -139,7 +167,7 @@ describe('ProfilePageComponent translations', () => {
   });
 
   it('shows a stored qualification that is not a known bac type as-is', async () => {
-    user.set({ firstname: 'Awa', lastname: '', email: '', role: { name: 'STUDENT' }, qualification: 'Licence 2' });
+    user.set({ firstname: 'Awa', lastname: '', email: '', role: { name: 'ROLE_STUDENT' }, qualification: 'Licence 2' });
 
     await render('en');
 

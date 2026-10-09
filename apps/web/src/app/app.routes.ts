@@ -22,6 +22,7 @@ export const routes: Routes = [
       {
         path: '',
         pathMatch: 'full',
+        title: 'pageTitle.landing',
         loadComponent: () =>
           import('./features/public/landing-page/landing-page.component').then(
             (m) => m.LandingPageComponent,
@@ -29,6 +30,7 @@ export const routes: Routes = [
       },
       {
         path: 'home',
+        title: 'pageTitle.home',
         canActivate: [authGuard],
         loadComponent: () =>
           import('./features/student/home-page/home-page.component').then(
@@ -37,6 +39,7 @@ export const routes: Routes = [
       },
       {
         path: 'schools/:id',
+        title: 'pageTitle.school',
         canActivate: [authGuard],
         loadComponent: () =>
           import(
@@ -45,6 +48,7 @@ export const routes: Routes = [
       },
       {
         path: 'profile',
+        title: 'pageTitle.profile',
         canActivate: [authGuard],
         loadComponent: () =>
           import('./features/student/profile-page/profile-page.component').then(
@@ -61,6 +65,7 @@ export const routes: Routes = [
         children: [
           {
             path: 'login',
+            title: 'pageTitle.login',
             loadComponent: () =>
               import('./features/auth/login-form/login-form.component').then(
                 (m) => m.LoginFormComponent,
@@ -68,6 +73,7 @@ export const routes: Routes = [
           },
           {
             path: 'register',
+            title: 'pageTitle.register',
             loadComponent: () =>
               import('./features/auth/register-form/register-form.component').then(
                 (m) => m.RegisterFormComponent,
@@ -80,6 +86,7 @@ export const routes: Routes = [
         // `*transloco`, so it must sit behind `localeGuard` or the first SSR
         // paint can serialise an empty page with nothing loaded.
         path: '**',
+        title: 'pageTitle.notFound',
         loadComponent: () =>
           import('./shared/components/not-found/not-found.component').then(
             (m) => m.NotFoundComponent,

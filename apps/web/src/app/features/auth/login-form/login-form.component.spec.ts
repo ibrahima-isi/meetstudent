@@ -76,18 +76,12 @@ describe('LoginFormComponent translations', () => {
     expect(text()).not.toContain('Bad credentials from Spring');
   });
 
-  it('names the OAuth provider inside the translated sentence', async () => {
-    jasmine.clock().install();
-    try {
-      await render('fr');
-      fixture.componentInstance.handleOAuthLogin('google');
-      jasmine.clock().tick(1500);
-      fixture.detectChanges();
+  it('offers no social login: there is no OAuth backend behind it', async () => {
+    await render('fr');
 
-      expect(text()).toContain('Connecté avec Google !');
-    } finally {
-      jasmine.clock().uninstall();
-    }
+    expect(text()).not.toContain('Google');
+    expect(text()).not.toContain('Microsoft');
+    expect(text()).not.toContain('Ou continuez avec votre e-mail');
   });
 
   describe('after registration', () => {

@@ -16,6 +16,15 @@
     "fr": "Français",
     "en": "English"
   },
+  "pageTitle": {
+    "landing": "Find the school that suits you",
+    "login": "Sign in",
+    "register": "Create account",
+    "home": "Home",
+    "school": "School",
+    "profile": "My profile",
+    "notFound": "Page not found"
+  },
   "theme": {
     "light": "light",
     "dark": "dark",
@@ -38,8 +47,6 @@
     "login": {
       "title": "Welcome Back",
       "subtitle": "Sign in to your account",
-      "continueWith": "Continue with {{ provider }}",
-      "orWithEmail": "Or continue with email",
       "rememberMe": "Remember me",
       "forgotPassword": "Forgot password?",
       "submit": "Sign In",
@@ -48,7 +55,6 @@
       "signUp": "Sign up",
       "success": "Login successful! Welcome back.",
       "registered": "Account created! Sign in to continue.",
-      "oauthSuccess": "Successfully logged in with {{ provider }}!",
       "failed": "Login failed. Please try again."
     },
     "register": {
@@ -161,7 +167,6 @@
     "information": "Information",
     "address": "Address",
     "courseList": "Available courses",
-    "loadingCourses": "Loading courses...",
     "noCourses": "No courses found for this programme.",
     "rateCourse": "Rate this course",
     "close": "Close",
