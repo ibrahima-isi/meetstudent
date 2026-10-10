@@ -6,6 +6,7 @@ import {
   provideZonelessChangeDetection,
 } from '@angular/core';
 import { provideRouter, TitleStrategy, withComponentInputBinding, withInMemoryScrolling } from '@angular/router';
+import { ViewportScroller } from '@angular/common';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideTransloco } from '@jsverse/transloco';
 
@@ -36,5 +37,8 @@ export const appConfig: ApplicationConfig = {
     // Subscribes to the router, so it has to be told to start — nothing else
     // injects it, and a service nobody injects is never constructed.
     provideEnvironmentInitializer(() => inject(AlternateLinksService).start()),
+    // The router scrolls to anchors with an explicit offset and ignores CSS scroll-padding/margin
+    // (`scrollOffset` is not an option of provideRouter). The Dock pill is ~68px tall, plus breathing room.
+    provideEnvironmentInitializer(() => inject(ViewportScroller).setOffset([0, 96])),
   ],
 };
