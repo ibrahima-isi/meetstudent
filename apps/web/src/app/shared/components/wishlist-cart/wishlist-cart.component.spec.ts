@@ -84,6 +84,31 @@ describe('WishlistCartComponent', () => {
     // English puts zero with many; French would read "0 établissement".
     expect(text).toContain('0 schools');
   });
+  it('emits openChange when the panel opens and closes', () => {
+    authenticated.set(true);
+    const emitted: boolean[] = [];
+    component.openChange.subscribe((open: boolean) => emitted.push(open));
+
+    component.handleCartClick();
+    fixture.detectChanges();
+    component.handleCartClick();
+    fixture.detectChanges();
+
+    expect(emitted).toEqual([true, false]);
+  });
+
+  it('hides the text label but keeps the accessible name when compact', async () => {
+    await firstValueFrom(TestBed.inject(TranslocoService).load('fr'));
+    fixture.detectChanges();
+    const button = (fixture.nativeElement as HTMLElement).querySelector('button') as HTMLButtonElement;
+    expect(button.querySelector('span')).not.toBeNull();
+
+    fixture.componentRef.setInput('compact', true);
+    fixture.detectChanges();
+
+    expect(button.querySelector('span')).toBeNull();
+    expect(button.getAttribute('aria-label')).toBeTruthy();
+  });
 });
 
 describe('WishlistCartComponent data states', () => {

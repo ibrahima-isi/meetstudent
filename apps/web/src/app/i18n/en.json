@@ -29,7 +29,10 @@
     "openMenu": "Open menu",
     "closeMenu": "Close menu",
     "skipToContent": "Skip to content",
-    "backHome": "Back to home"
+    "backHome": "Back to home",
+    "account": "Account",
+    "profile": "Profile",
+    "logout": "Log out"
   },
   "authPanel": {
     "title": "Your future starts here",

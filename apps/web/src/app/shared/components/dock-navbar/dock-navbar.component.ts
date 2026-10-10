@@ -6,6 +6,7 @@ import {
   computed,
   ElementRef,
   inject,
+  Injector,
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -13,10 +14,13 @@ import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { LucideAngularModule, Menu, X } from 'lucide-angular';
 import { filter } from 'rxjs';
+import { AuthService } from '@services/auth.service';
 import { LocaleService } from '@services/locale.service';
 import { TokenService } from '@services/token.service';
+import { WishlistService } from '@services/wishlist.service';
 import { LanguageSwitcherComponent } from '../language-switcher/language-switcher.component';
 import { ThemeToggleComponent } from '../theme-toggle/theme-toggle.component';
+import { WishlistCartComponent } from '../wishlist-cart/wishlist-cart.component';
 import { nextDockVisible, SCROLL_DELTA_PX } from './dock-visibility';
 
 /**
@@ -31,15 +35,15 @@ import { nextDockVisible, SCROLL_DELTA_PX } from './dock-visibility';
  */
 @Component({
   selector: 'app-dock-navbar',
-  imports: [RouterLink, TranslocoDirective, LucideAngularModule, LanguageSwitcherComponent, ThemeToggleComponent],
+  imports: [RouterLink, TranslocoDirective, LucideAngularModule, LanguageSwitcherComponent, ThemeToggleComponent, WishlistCartComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     '(window:scroll)': 'onScroll()',
     '(document:pointermove)': 'onPointer($event)',
     '(window:mouseout)': 'onMouseOut($event)',
     '(window:blur)': 'forgetPointer()',
-    '(document:keydown.escape)': 'closeMenu()',
-    '(document:pointerdown)': 'mouseDriven = true',
+    '(document:keydown.escape)': 'closeOverlays()',
+    '(document:pointerdown)': 'onPointerDown($event)',
     '(document:keydown)': 'mouseDriven = false',
     '(focusin)': 'onFocusIn()',
     '(focusout)': 'onFocusOut($event)',
@@ -63,7 +67,12 @@ import { nextDockVisible, SCROLL_DELTA_PX } from './dock-visibility';
       .links a:hover, .panel a.item:hover { background: var(--accent); color: var(--foreground); }
       .actions { display: flex; align-items: center; gap: 0.25rem; margin-left: auto; }
       .desktop-only { display: none; }
-      .avatar { display: inline-grid; place-items: center; width: 2.25rem; height: 2.25rem; border-radius: 9999px; background: var(--brand-soft); color: var(--brand-soft-foreground); font-size: 0.8rem; font-weight: 600; }
+      .avatar { border: 0; cursor: pointer; display: inline-grid; place-items: center; width: 2.25rem; height: 2.25rem; border-radius: 9999px; background: var(--brand-soft); color: var(--brand-soft-foreground); font-size: 0.8rem; font-weight: 600; }
+      .avatar:focus-visible, .account-panel .item:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+      .account-anchor { pointer-events: none; width: 100%; max-width: 64rem; display: flex; justify-content: flex-end; }
+      .account-panel { pointer-events: auto; margin-top: 0.5rem; min-width: 12rem; display: flex; flex-direction: column; gap: 0.25rem; padding: 0.5rem; border-radius: 1rem; background: var(--card); border: 1px solid var(--border-strong); box-shadow: 0 16px 48px -16px rgb(0 0 0 / 0.35); }
+      .account-panel .item { display: block; width: 100%; text-align: left; border: 0; background: transparent; cursor: pointer; padding: 0.6rem 0.9rem; border-radius: 0.75rem; font-size: 0.95rem; color: var(--foreground); text-decoration: none; }
+      .account-panel .item:hover { background: var(--accent); }
       .panel { pointer-events: auto; width: 100%; max-width: 64rem; margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.25rem; padding: 0.75rem; border-radius: 1.5rem; background: var(--card); border: 1px solid var(--border-strong); box-shadow: 0 16px 48px -16px rgb(0 0 0 / 0.35); }
       .brand:focus-visible, .links a:focus-visible, .panel a.item:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
       .panel a.item { font-size: 1rem; padding: 0.75rem 1rem; }
@@ -88,7 +97,18 @@ import { nextDockVisible, SCROLL_DELTA_PX } from './dock-visibility';
           <app-theme-toggle />
           @if (signedIn()) {
             <a class="btn btn-primary desktop-only" [routerLink]="['/', lang(), 'home']">{{ t('nav.mySpace') }}</a>
-            <span class="avatar" aria-hidden="true">{{ initials() }}</span>
+            <app-wishlist-cart [compact]="true" (openChange)="onWishlistOpen($event)" />
+            <button
+              type="button"
+              class="avatar"
+              aria-haspopup="true"
+              [attr.aria-expanded]="accountOpen()"
+              [attr.aria-controls]="accountOpen() ? 'account-menu' : null"
+              [attr.aria-label]="t('nav.account')"
+              (click)="toggleAccount()"
+            >
+              <span aria-hidden="true">{{ initials() }}</span>
+            </button>
           } @else {
             <a class="btn btn-ghost desktop-only" [routerLink]="['/', lang(), 'login']">{{ t('nav.login') }}</a>
             <a class="btn btn-primary desktop-only" [routerLink]="['/', lang(), 'register']">{{ t('nav.register') }}</a>
@@ -105,6 +125,14 @@ import { nextDockVisible, SCROLL_DELTA_PX } from './dock-visibility';
           </button>
         </div>
       </nav>
+      @if (accountOpen()) {
+        <div class="account-anchor">
+          <nav class="account-panel" id="account-menu" [attr.aria-label]="t('nav.account')">
+            <a class="item" [routerLink]="['/', lang(), 'profile']">{{ t('nav.profile') }}</a>
+            <button type="button" class="item" (click)="logout()">{{ t('nav.logout') }}</button>
+          </nav>
+        </div>
+      }
       @if (menuOpen()) {
         <nav class="panel" id="dock-menu" [attr.aria-label]="t('nav.primary')">
           <a class="item" [routerLink]="['/', lang(), 'schools']">{{ t('nav.schools') }}</a>
@@ -112,6 +140,8 @@ import { nextDockVisible, SCROLL_DELTA_PX } from './dock-visibility';
           <a class="item" [routerLink]="['/', lang()]" fragment="reviews">{{ t('nav.reviews') }}</a>
           @if (signedIn()) {
             <a class="btn btn-primary btn-lg" [routerLink]="['/', lang(), 'home']">{{ t('nav.mySpace') }}</a>
+            <a class="item" [routerLink]="['/', lang(), 'profile']">{{ t('nav.profile') }}</a>
+            <button type="button" class="btn btn-secondary btn-lg" (click)="logout()">{{ t('nav.logout') }}</button>
           } @else {
             <a class="btn btn-secondary btn-lg" [routerLink]="['/', lang(), 'login']">{{ t('nav.login') }}</a>
             <a class="btn btn-primary btn-lg" [routerLink]="['/', lang(), 'register']">{{ t('nav.register') }}</a>
@@ -127,11 +157,15 @@ export class DockNavbarComponent {
   private readonly router = inject(Router);
   private readonly token = inject(TokenService);
   private readonly locale = inject(LocaleService);
+  /** Resolved on logout only: the anonymous bar (and its host specs) need no HTTP stack. */
+  private readonly injector = inject(Injector);
 
   protected readonly Menu = Menu;
   protected readonly X = X;
   protected readonly lang = this.locale.active;
   protected readonly menuOpen = signal(false);
+  protected readonly accountOpen = signal(false);
+  protected readonly wishlistOpen = signal(false);
   protected readonly focusWithin = signal(false);
   protected readonly visible = signal(true);
 
@@ -164,7 +198,10 @@ export class DockNavbarComponent {
         filter((event) => event instanceof NavigationEnd),
         takeUntilDestroyed(),
       )
-      .subscribe(() => this.menuOpen.set(false));
+      .subscribe(() => {
+        this.menuOpen.set(false);
+        this.accountOpen.set(false);
+      });
   }
 
   protected onScroll(): void {
@@ -201,20 +238,56 @@ export class DockNavbarComponent {
   protected onFocusOut(event: FocusEvent): void {
     if (!this.host.contains(event.relatedTarget as Node | null)) {
       this.focusWithin.set(false);
+      // A mouse press can blur to nothing before the click lands (Safari does not focus buttons);
+      // outside presses are handled by `onPointerDown`, so only keyboard focus closes the menu here.
+      if (!this.mouseDriven) {
+        this.accountOpen.set(false);
+      }
+    }
+  }
+
+  protected onPointerDown(event: Event): void {
+    this.mouseDriven = true;
+    if (this.accountOpen() && !this.host.contains(event.target as Node | null)) {
+      this.accountOpen.set(false);
     }
   }
 
   protected toggleMenu(): void {
     this.menuOpen.update((open) => !open);
+    this.accountOpen.set(false);
     this.visible.set(true);
   }
 
-  protected closeMenu(): void {
-    const panel = this.host.querySelector('#dock-menu');
-    if (panel?.contains(this.document.activeElement)) {
+  protected toggleAccount(): void {
+    this.accountOpen.update((open) => !open);
+    this.visible.set(true);
+  }
+
+  protected onWishlistOpen(open: boolean): void {
+    this.wishlistOpen.set(open);
+    if (open) {
+      this.visible.set(true);
+    }
+  }
+
+  protected logout(): void {
+    this.injector.get(AuthService).logout();
+    this.injector.get(WishlistService).clear();
+    this.accountOpen.set(false);
+    this.menuOpen.set(false);
+    void this.router.navigate(['/', this.lang()]);
+  }
+
+  protected closeOverlays(): void {
+    const active = this.document.activeElement;
+    if (this.host.querySelector('#dock-menu')?.contains(active)) {
       this.host.querySelector<HTMLElement>('.menu-btn')?.focus();
+    } else if (this.host.querySelector('#account-menu')?.contains(active)) {
+      this.host.querySelector<HTMLElement>('.avatar')?.focus();
     }
     this.menuOpen.set(false);
+    this.accountOpen.set(false);
   }
 
   private update(scrollY: number): void {
@@ -224,7 +297,7 @@ export class DockNavbarComponent {
         previousScrollY: this.anchorY,
         pointerY: this.pointerY,
         focusWithin: this.focusWithin(),
-        menuOpen: this.menuOpen(),
+        menuOpen: this.menuOpen() || this.accountOpen() || this.wishlistOpen(),
         visible: this.visible(),
       }),
     );

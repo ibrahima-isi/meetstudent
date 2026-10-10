@@ -114,4 +114,19 @@ describe('WishlistService', () => {
 
     expect(service.error()).toBeFalse();
   });
+
+  it('forgets everything on clear, so the next visitor starts empty', () => {
+    const reply = new Subject<User>();
+    userService.addToWishlist.and.returnValue(reply);
+    service.load();
+    service.toggle(b);
+    service.error.set(true);
+
+    service.clear();
+
+    expect(service.schools()).toEqual([]);
+    expect(service.isPending(2)).toBeFalse();
+    expect(service.status()).toBe('idle');
+    expect(service.error()).toBeFalse();
+  });
 });

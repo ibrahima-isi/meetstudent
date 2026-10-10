@@ -5,7 +5,9 @@ import { provideTransloco, TranslocoService } from '@jsverse/transloco';
 import { firstValueFrom } from 'rxjs';
 import { translocoOptions } from '@i18n/transloco.config';
 import { LocaleService } from '@services/locale.service';
+import { AuthService } from '@services/auth.service';
 import { TokenService } from '@services/token.service';
+import { WishlistService } from '@services/wishlist.service';
 import { REVEAL_ZONE_PX } from './dock-visibility';
 import { DockNavbarComponent } from './dock-navbar.component';
 
@@ -16,6 +18,8 @@ describe('DockNavbarComponent', () => {
   let fixture: ComponentFixture<DockNavbarComponent>;
   let authenticated: ReturnType<typeof signal<boolean>>;
   let scrollY: number;
+  let logout: jasmine.Spy;
+  let clearWishlist: jasmine.Spy;
 
   const root = () => fixture.nativeElement as HTMLElement;
   const nav = () => root().querySelector('nav') as HTMLElement;
@@ -48,6 +52,8 @@ describe('DockNavbarComponent', () => {
   beforeEach(async () => {
     authenticated = signal(false);
     scrollY = 0;
+    logout = jasmine.createSpy('logout');
+    clearWishlist = jasmine.createSpy('clear');
     spyOnProperty(window, 'scrollY', 'get').and.callFake(() => scrollY);
 
     TestBed.configureTestingModule({
@@ -55,6 +61,11 @@ describe('DockNavbarComponent', () => {
         provideZonelessChangeDetection(),
         provideRouter([{ path: '**', component: BlankComponent }]),
         provideTransloco(translocoOptions),
+        { provide: AuthService, useValue: { logout } },
+        {
+          provide: WishlistService,
+          useValue: { schools: signal([]), status: signal('idle'), error: signal(false), load: () => undefined, toggle: () => undefined, isPending: () => false, has: () => false, clear: clearWishlist },
+        },
         { provide: LocaleService, useValue: { active: signal('fr'), remember: () => undefined } },
         {
           provide: TokenService,
@@ -357,5 +368,145 @@ describe('DockNavbarComponent', () => {
     fixture.detectChanges();
 
     expect(root().querySelector('#dock-menu')).toBeNull();
+  });
+
+  describe('account menu', () => {
+    const avatar = () => root().querySelector('button.avatar') as HTMLButtonElement;
+    const menu = () => root().querySelector('#account-menu') as HTMLElement | null;
+    const openMenu = async () => {
+      authenticated.set(true);
+      await render();
+      avatar().click();
+      fixture.detectChanges();
+    };
+
+    it('shows the avatar as a closed disclosure button with no menu', async () => {
+      authenticated.set(true);
+      await render();
+
+      expect(avatar()).toBeTruthy();
+      expect(avatar().getAttribute('aria-expanded')).toBe('false');
+      expect(avatar().getAttribute('aria-haspopup')).toBe('true');
+      expect(avatar().getAttribute('aria-label')).toBe('Compte');
+      expect(menu()).toBeNull();
+    });
+
+    it('opens on click with Profile and Log out', async () => {
+      await openMenu();
+
+      expect(avatar().getAttribute('aria-expanded')).toBe('true');
+      expect(avatar().getAttribute('aria-controls')).toBe('account-menu');
+      expect(menu()!.querySelector('a')!.getAttribute('href')).toBe('/fr/profile');
+      expect(menu()!.querySelector('button')!.textContent).toContain('Se déconnecter');
+    });
+
+    it('closes on Escape and refocuses the avatar when focus was inside', async () => {
+      await openMenu();
+      (menu()!.querySelector('a') as HTMLElement).focus();
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      fixture.detectChanges();
+
+      expect(menu()).toBeNull();
+      expect(document.activeElement).toBe(avatar());
+    });
+
+    it('closes on a press outside the bar but not inside it', async () => {
+      await openMenu();
+
+      menu()!.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      fixture.detectChanges();
+      expect(menu()).not.toBeNull();
+
+      document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      fixture.detectChanges();
+      expect(menu()).toBeNull();
+    });
+
+    it('closes when focus leaves the bar, not when it moves inside', async () => {
+      await openMenu();
+      const profile = menu()!.querySelector('a') as HTMLElement;
+
+      avatar().dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: profile }));
+      fixture.detectChanges();
+      expect(menu()).not.toBeNull();
+
+      profile.dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: document.body }));
+      fixture.detectChanges();
+      expect(menu()).toBeNull();
+    });
+
+    it('keeps the bar visible while open, even after a scroll down', async () => {
+      await openMenu();
+      hide();
+      expect(isHidden()).toBeFalse();
+    });
+
+    it('logs out, clears the wishlist, closes and goes to the home page of the language', async () => {
+      await openMenu();
+      const navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+
+      (menu()!.querySelector('button') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(logout).toHaveBeenCalledTimes(1);
+      expect(clearWishlist).toHaveBeenCalledTimes(1);
+      expect(navigate).toHaveBeenCalledWith(['/', 'fr']);
+      expect(menu()).toBeNull();
+    });
+
+    it('closes when the visitor navigates', async () => {
+      await openMenu();
+
+      await TestBed.inject(Router).navigateByUrl('/fr/profile');
+      fixture.detectChanges();
+
+      expect(menu()).toBeNull();
+    });
+
+    it('closes when the mobile menu opens', async () => {
+      await openMenu();
+
+      (root().querySelector('button.menu-btn') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(menu()).toBeNull();
+      expect(root().querySelector('#dock-menu')).toBeTruthy();
+    });
+
+    it('offers Profile and Log out in the mobile panel when signed in', async () => {
+      authenticated.set(true);
+      await render();
+      (root().querySelector('button.menu-btn') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      const panel = root().querySelector('#dock-menu') as HTMLElement;
+      expect(panel.querySelector('a[href="/fr/profile"]')).toBeTruthy();
+      expect(Array.from(panel.querySelectorAll('button')).some((b) => b.textContent!.includes('Se déconnecter'))).toBeTrue();
+    });
+
+    it('mounts the compact wishlist button next to the avatar, signed in only', async () => {
+      await render();
+      expect(root().querySelector('app-wishlist-cart')).toBeNull();
+      expect(root().querySelector('button.avatar')).toBeNull();
+
+      authenticated.set(true);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(root().querySelector('app-wishlist-cart')).toBeTruthy();
+    });
+
+    it('keeps the bar visible while the wishlist popover is open', async () => {
+      authenticated.set(true);
+      await render();
+      (root().querySelector('app-wishlist-cart button') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      hide();
+
+      expect(isHidden()).toBeFalse();
+    });
   });
 });

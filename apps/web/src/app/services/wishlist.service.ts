@@ -30,6 +30,14 @@ export class WishlistService {
     return schoolId !== undefined && this.pending().has(schoolId);
   }
 
+  /** Forgets everything; called on logout so the next session never sees this one's list. */
+  clear(): void {
+    this.state.set([]);
+    this.pending.set(new Set());
+    this.status.set('idle');
+    this.error.set(false);
+  }
+
   dismissError(): void {
     this.error.set(false);
   }
