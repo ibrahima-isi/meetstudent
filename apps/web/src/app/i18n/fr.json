@@ -301,6 +301,12 @@
       "search": { "title": "Cherchez", "text": "Filtrez par ville, type d'établissement ou formation pour cibler ce qui vous convient." },
       "compare": { "title": "Comparez", "text": "Lisez les avis d'étudiants et d'experts, consultez les formations et les accréditations." },
       "choose": { "title": "Décidez", "text": "Enregistrez vos favoris et préparez votre dossier avec vos documents au même endroit." }
+    },
+    "featured": {
+      "title": "Établissements à la une",
+      "subtitle": "Une sélection du catalogue.",
+      "all": "Voir tous les établissements",
+      "error": "Les établissements n'ont pas pu être chargés."
     }
   }
 }

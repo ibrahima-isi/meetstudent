@@ -301,6 +301,12 @@
       "search": { "title": "Search", "text": "Filter by city, type of school or programme to find what fits." },
       "compare": { "title": "Compare", "text": "Read reviews from students and experts, browse programmes and accreditations." },
       "choose": { "title": "Decide", "text": "Save your favourites and keep your application documents in one place." }
+    },
+    "featured": {
+      "title": "Featured schools",
+      "subtitle": "A selection from the catalogue.",
+      "all": "See all schools",
+      "error": "Schools could not be loaded."
     }
   }
 }
