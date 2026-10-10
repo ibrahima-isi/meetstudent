@@ -20,6 +20,7 @@ import { ProfilePageComponent } from '../features/student/profile-page/profile-p
 import { SchoolDetailPageComponent } from '../features/student/school-detail-page/school-detail-page.component';
 import { UserDocumentsComponent } from '../features/student/user-documents/user-documents.component';
 import { AuthLayoutComponent } from './layouts/auth-layout/auth-layout.component';
+import { DockNavbarComponent } from './components/dock-navbar/dock-navbar.component';
 import { ErrorStateComponent } from './components/error-state/error-state.component';
 import { ImageWithFallbackComponent } from './components/image-with-fallback/image-with-fallback.component';
 import { LanguageSwitcherComponent } from './components/language-switcher/language-switcher.component';
@@ -227,6 +228,7 @@ describe('dark mode: no light-only palette classes', () => {
     ['language switcher', LanguageSwitcherComponent],
     ['not found', NotFoundComponent],
     ['theme toggle', ThemeToggleComponent],
+    ['dock navbar', DockNavbarComponent],
     ['mesh background', MeshBackgroundComponent],
     ['wishlist cart', WishlistCartComponent, (c) => c.isOpen.set(true)],
     ['home with schools, filters and load more', HomePageComponent, (c) => c.showFilters.set(true)],

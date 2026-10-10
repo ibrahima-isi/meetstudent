@@ -16,6 +16,19 @@
     "fr": "Français",
     "en": "English"
   },
+  "nav": {
+    "primary": "Main navigation",
+    "brandHome": "MeetStudent, back to home",
+    "schools": "Schools",
+    "howItWorks": "How it works",
+    "reviews": "Reviews",
+    "login": "Log in",
+    "register": "Sign up",
+    "mySpace": "My space",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "skipToContent": "Skip to content"
+  },
   "pageTitle": {
     "landing": "Find the school that suits you",
     "login": "Sign in",
