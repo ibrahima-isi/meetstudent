@@ -20,9 +20,8 @@ describe('SchoolsPageComponent', () => {
   let schoolServiceSpy: jasmine.SpyObj<SchoolService>;
 
   beforeEach(async () => {
-    schoolServiceSpy = jasmine.createSpyObj('SchoolService', ['getSchools', 'schools']);
+    schoolServiceSpy = jasmine.createSpyObj('SchoolService', ['getSchools']);
     schoolServiceSpy.getSchools.and.returnValue(of({ content: [] } as any));
-    schoolServiceSpy.schools.and.returnValue([]);
 
     await TestBed.configureTestingModule({
       imports: [SchoolsPageComponent],

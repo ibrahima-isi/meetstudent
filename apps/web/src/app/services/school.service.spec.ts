@@ -60,7 +60,8 @@ describe('SchoolService', () => {
       expect(page.content[0].rating).toBe(0);
       // The API sends no review count: the service must not invent a 0.
       expect(page.content[0].reviewCount).toBeUndefined();
-      expect(service.schools().length).toBe(1);
+      // No shared state: callers own their results.
+      expect('schools' in service).toBeFalse();
     });
 
     const req = httpMock.expectOne(request => 
