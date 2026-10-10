@@ -74,4 +74,20 @@ describe('HowItWorksComponent', () => {
     expect(steps().length).toBe(3);
     expect(steps().every((li) => li.classList.contains('reveal'))).toBeTrue();
   });
+
+  it('keeps the reveal fade on the li and puts the tilt on an inner card', async () => {
+    await render('fr');
+    for (const li of steps()) {
+      expect(getComputedStyle(li).transitionProperty).toContain('opacity');
+      const card = li.querySelector('.step-card');
+      expect(card).not.toBeNull();
+      expect(card!.parentElement).toBe(li);
+      expect(li.classList).not.toContain('step-card');
+    }
+  });
+
+  it('gives the ordered list an explicit list role', async () => {
+    await render('fr');
+    expect(root().querySelector('ol')!.getAttribute('role')).toBe('list');
+  });
 });
