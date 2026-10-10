@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
-import { LandingPageComponent } from './landing-page.component';
+import { SchoolsPageComponent } from './schools-page.component';
 import { SchoolService } from '@services/school.service';
 import { firstValueFrom, Observable, of, throwError } from 'rxjs';
 import { LocaleService } from '@services/locale.service';
@@ -9,13 +9,13 @@ import { signal } from '@angular/core';
 import { Subject } from 'rxjs';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { provideTransloco } from '@jsverse/transloco';
 import { translocoOptions } from '@i18n/transloco.config';
 
-describe('LandingPageComponent', () => {
-  let component: LandingPageComponent;
-  let fixture: ComponentFixture<LandingPageComponent>;
+describe('SchoolsPageComponent', () => {
+  let component: SchoolsPageComponent;
+  let fixture: ComponentFixture<SchoolsPageComponent>;
   let schoolServiceSpy: jasmine.SpyObj<SchoolService>;
 
   beforeEach(async () => {
@@ -24,7 +24,7 @@ describe('LandingPageComponent', () => {
     schoolServiceSpy.schools.and.returnValue([]);
 
     await TestBed.configureTestingModule({
-      imports: [LandingPageComponent],
+      imports: [SchoolsPageComponent],
       providers: [
         provideZonelessChangeDetection(),
         provideHttpClient(),
@@ -37,7 +37,7 @@ describe('LandingPageComponent', () => {
       ]
     }).compileComponents();
 
-    fixture = TestBed.createComponent(LandingPageComponent);
+    fixture = TestBed.createComponent(SchoolsPageComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });
@@ -75,8 +75,8 @@ describe('LandingPageComponent', () => {
   });
 });
 
-describe('LandingPageComponent translations', () => {
-  let fixture: ComponentFixture<LandingPageComponent>;
+describe('SchoolsPageComponent translations', () => {
+  let fixture: ComponentFixture<SchoolsPageComponent>;
 
   function text(): string {
     return (fixture.nativeElement as HTMLElement).textContent ?? '';
@@ -86,7 +86,7 @@ describe('LandingPageComponent translations', () => {
     // The same call the locale guard makes: it moves the active locale and
     // loads its bundle, so *transloco has something to render.
     await firstValueFrom(TestBed.inject(LocaleService).use(lang));
-    fixture = TestBed.createComponent(LandingPageComponent);
+    fixture = TestBed.createComponent(SchoolsPageComponent);
     fixture.detectChanges();
     await fixture.whenStable();
   }
@@ -97,7 +97,7 @@ describe('LandingPageComponent translations', () => {
     schoolService.schools.and.returnValue([]);
 
     TestBed.configureTestingModule({
-      imports: [LandingPageComponent],
+      imports: [SchoolsPageComponent],
       providers: [
         provideZonelessChangeDetection(),
         provideHttpClient(),
@@ -200,8 +200,8 @@ describe('LandingPageComponent translations', () => {
   });
 });
 
-describe('LandingPageComponent data states', () => {
-  let fixture: ComponentFixture<LandingPageComponent>;
+describe('SchoolsPageComponent data states', () => {
+  let fixture: ComponentFixture<SchoolsPageComponent>;
   let getSchools: jasmine.Spy;
 
   const text = () => (fixture.nativeElement as HTMLElement).textContent ?? '';
@@ -210,7 +210,7 @@ describe('LandingPageComponent data states', () => {
   async function render(response: Observable<unknown>) {
     getSchools = jasmine.createSpy('getSchools').and.returnValue(response);
     TestBed.configureTestingModule({
-      imports: [LandingPageComponent],
+      imports: [SchoolsPageComponent],
       providers: [
         provideZonelessChangeDetection(),
         provideHttpClient(),
@@ -221,7 +221,7 @@ describe('LandingPageComponent data states', () => {
       ],
     });
     await firstValueFrom(TestBed.inject(LocaleService).use('en'));
-    fixture = TestBed.createComponent(LandingPageComponent);
+    fixture = TestBed.createComponent(SchoolsPageComponent);
     fixture.detectChanges();
     await fixture.whenStable();
   }
@@ -290,3 +290,44 @@ describe('LandingPageComponent data states', () => {
   });
 });
 
+
+describe('SchoolsPageComponent search prefill', () => {
+  async function renderWith(params: Record<string, string>) {
+    const schoolService = jasmine.createSpyObj('SchoolService', ['getSchools']);
+    schoolService.getSchools.and.returnValue(of({ content: [] }));
+    await TestBed.configureTestingModule({
+      imports: [SchoolsPageComponent],
+      providers: [
+        provideZonelessChangeDetection(),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        provideTransloco(translocoOptions),
+        { provide: SchoolService, useValue: schoolService },
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap(params) } } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(SchoolsPageComponent);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  it('prefills the search from ?q=', async () => {
+    const fixture = await renderWith({ q: 'dak' });
+    expect(fixture.componentInstance.searchQuery()).toBe('dak');
+  });
+
+  it('starts empty without ?q=', async () => {
+    const fixture = await renderWith({});
+    expect(fixture.componentInstance.searchQuery()).toBe('');
+  });
+
+  it('keeps a hostile ?q= as plain text', async () => {
+    const hostile = '<img src=x onerror=alert(1)>';
+    const fixture = await renderWith({ q: hostile });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.searchQuery()).toBe(hostile);
+    expect((fixture.nativeElement as HTMLElement).querySelector('img[src="x"]')).toBeNull();
+  });
+});

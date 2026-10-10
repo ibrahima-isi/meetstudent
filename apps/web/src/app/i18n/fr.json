@@ -31,6 +31,7 @@
   },
   "pageTitle": {
     "landing": "Trouvez l'école qui vous correspond",
+    "schools": "Établissements et universités au Sénégal",
     "login": "Connexion",
     "register": "Inscription",
     "home": "Accueil",
@@ -112,6 +113,8 @@
     }
   },
   "schools": {
+    "heroTitle": "Découvrez les meilleurs établissements du Sénégal",
+    "heroText": "Explorez notre catalogue d'écoles, lycées et universités. Comparez les formations et trouvez celle qui vous correspond.",
     "tagline": "Trouvez votre établissement idéal",
     "searchPlaceholder": "Rechercher un établissement...",
     "filters": "Filtres",
@@ -135,12 +138,6 @@
     "loadError": "Les établissements n'ont pas pu être chargés.",
     "loadMore": "Voir plus",
     "loadMoreError": "Impossible de charger d'autres établissements."
-  },
-  "landing": {
-    "login": "Connexion",
-    "register": "S'inscrire",
-    "heroTitle": "Découvrez les meilleurs établissements du Sénégal",
-    "heroText": "Explorez notre catalogue d'écoles, lycées et universités. Comparez les formations et trouvez celle qui vous correspond."
   },
   "home": {
     "profile": "Profil",

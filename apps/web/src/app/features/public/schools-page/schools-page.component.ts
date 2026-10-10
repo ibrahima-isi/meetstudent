@@ -1,7 +1,7 @@
 import { Component, signal, computed, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { LucideAngularModule, Search, MapPin, Star, Filter, ArrowUpDown } from 'lucide-angular';
 import { ImageWithFallbackComponent } from '@shared/components/image-with-fallback/image-with-fallback.component';
 import { ErrorStateComponent } from '@shared/components/error-state/error-state.component';
@@ -13,7 +13,7 @@ import { pluralKey } from '@i18n/plural';
 import { roundRating } from '@shared/format-rating';
 
 @Component({
-  selector: 'app-landing-page',
+  selector: 'app-schools-page',
   imports: [
     CommonModule,
     FormsModule,
@@ -22,11 +22,12 @@ import { roundRating } from '@shared/format-rating';
     TranslocoDirective,
     ErrorStateComponent,
   ],
-  templateUrl: './landing-page.component.html'
+  templateUrl: './schools-page.component.html'
 })
-export class LandingPageComponent implements OnInit {
+export class SchoolsPageComponent implements OnInit {
   private schoolService = inject(SchoolService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly locale = inject(LocaleService);
 
   readonly Search = Search;
@@ -36,7 +37,7 @@ export class LandingPageComponent implements OnInit {
   readonly ArrowUpDown = ArrowUpDown;
 
   schools = signal<School[]>([]);
-  searchQuery = signal('');
+  searchQuery = signal(this.route.snapshot.queryParamMap.get('q') ?? '');
   /** '' means no filter; the template labels that choice in the active language. */
   selectedCity = signal('');
   selectedType = signal('');

@@ -122,7 +122,7 @@ describe('routes', () => {
 
     expect(TestBed.inject(Router).url).toBe('/fr/schools');
     expect(navbar()).toBeTruthy();
-    expect((harness.fixture.nativeElement as HTMLElement).querySelector('app-landing-page')).toBeTruthy();
+    expect((harness.fixture.nativeElement as HTMLElement).querySelector('app-schools-page')).toBeTruthy();
   });
 
   it('still guards a school detail', async () => {

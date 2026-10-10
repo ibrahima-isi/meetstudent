@@ -31,6 +31,7 @@
   },
   "pageTitle": {
     "landing": "Find the school that suits you",
+    "schools": "Schools and universities in Senegal",
     "login": "Sign in",
     "register": "Create account",
     "home": "Home",
@@ -112,6 +113,8 @@
     }
   },
   "schools": {
+    "heroTitle": "Discover the best schools in Senegal",
+    "heroText": "Explore our catalogue of schools, high schools and universities. Compare programmes and find the one that suits you.",
     "tagline": "Find the school that suits you",
     "searchPlaceholder": "Search for a school...",
     "filters": "Filters",
@@ -135,12 +138,6 @@
     "loadError": "Schools could not be loaded.",
     "loadMore": "Load more",
     "loadMoreError": "More schools could not be loaded."
-  },
-  "landing": {
-    "login": "Log in",
-    "register": "Sign up",
-    "heroTitle": "Discover the best schools in Senegal",
-    "heroText": "Explore our catalogue of schools, high schools and universities. Compare programmes and find the one that suits you."
   },
   "home": {
     "profile": "Profile",

@@ -56,22 +56,22 @@ export const routes: Routes = [
           ),
         children: [
           {
+            // Temporary: serves the catalogue until the new landing replaces it (plan Task 13).
             path: '',
             pathMatch: 'full',
             title: 'pageTitle.landing',
             loadComponent: () =>
-              import('./features/public/landing-page/landing-page.component').then(
-                (m) => m.LandingPageComponent,
+              import('./features/public/schools-page/schools-page.component').then(
+                (m) => m.SchoolsPageComponent,
               ),
           },
           {
-            // Interim: the navbar links here; PR 2 renames and retitles the catalogue.
             path: 'schools',
             pathMatch: 'full',
-            title: 'pageTitle.landing',
+            title: 'pageTitle.schools',
             loadComponent: () =>
-              import('./features/public/landing-page/landing-page.component').then(
-                (m) => m.LandingPageComponent,
+              import('./features/public/schools-page/schools-page.component').then(
+                (m) => m.SchoolsPageComponent,
               ),
           },
           {
