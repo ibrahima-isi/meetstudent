@@ -11,7 +11,8 @@ prefix.
 apps/
   api/          Spring Boot 3 / Java 21 REST API (Maven)
   web/          Angular 20 + SSR client (npm)
-  backoffice/   placeholder, no code yet
+  backoffice/   ADMIN-only back office (Angular 20 SPA, static build served by nginx);
+                a vanilla TypeScript + Vite rewrite is planned, see docs/plans/2026-10-10-backoffice-vite-rewrite.md
 docs/           cross-cutting documentation (this file)
 infra/          placeholder
 shared/         placeholder
@@ -164,11 +165,14 @@ cleanly from `origin/dev` to `origin/main`.
 
 ## CI and branch protection
 
-A single workflow, `.github/workflows/ci.yml`, runs two jobs — the published
-check names are what branch protection matches:
+A single workflow, `.github/workflows/ci.yml`, runs three jobs — the published
+check names are what branch protection matches. Two are **required**:
 
 - `api / build-and-test`
 - `web / build-and-test`
+
+and `backoffice / build-and-test` runs on every PR but is not a required check
+(add it to the `required-ci` ruleset if it should gate merges).
 
 Protection is enforced through **rulesets**, not legacy branch protection rules:
 
