@@ -39,8 +39,8 @@ import { nextDockVisible, SCROLL_DELTA_PX } from './dock-visibility';
     '(window:mouseout)': 'onMouseOut($event)',
     '(window:blur)': 'forgetPointer()',
     '(document:keydown.escape)': 'closeMenu()',
-    '(pointerdown)': 'mouseDriven = true',
-    '(keydown)': 'mouseDriven = false',
+    '(document:pointerdown)': 'mouseDriven = true',
+    '(document:keydown)': 'mouseDriven = false',
     '(focusin)': 'onFocusIn()',
     '(focusout)': 'onFocusOut($event)',
   },
@@ -65,6 +65,7 @@ import { nextDockVisible, SCROLL_DELTA_PX } from './dock-visibility';
       .desktop-only { display: none; }
       .avatar { display: inline-grid; place-items: center; width: 2.25rem; height: 2.25rem; border-radius: 9999px; background: var(--brand-soft); color: var(--brand-soft-foreground); font-size: 0.8rem; font-weight: 600; }
       .panel { pointer-events: auto; width: 100%; max-width: 64rem; margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.25rem; padding: 0.75rem; border-radius: 1.5rem; background: var(--card); border: 1px solid var(--border-strong); box-shadow: 0 16px 48px -16px rgb(0 0 0 / 0.35); }
+      .brand:focus-visible, .links a:focus-visible, .panel a.item:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
       .panel a.item { font-size: 1rem; padding: 0.75rem 1rem; }
       @media (min-width: 48rem) { .links { display: flex; } .desktop-only { display: inline-flex; } .menu-btn, .panel { display: none; } }
       @media (prefers-reduced-motion: reduce) { .dock { transition: none; } }
@@ -95,7 +96,7 @@ import { nextDockVisible, SCROLL_DELTA_PX } from './dock-visibility';
           <button
             type="button"
             class="btn btn-ghost menu-btn"
-            aria-controls="dock-menu"
+            [attr.aria-controls]="menuOpen() ? 'dock-menu' : null"
             [attr.aria-expanded]="menuOpen()"
             [attr.aria-label]="t(menuOpen() ? 'nav.closeMenu' : 'nav.openMenu')"
             (click)="toggleMenu()"
@@ -105,7 +106,7 @@ import { nextDockVisible, SCROLL_DELTA_PX } from './dock-visibility';
         </div>
       </nav>
       @if (menuOpen()) {
-        <div class="panel" id="dock-menu">
+        <nav class="panel" id="dock-menu" [attr.aria-label]="t('nav.primary')">
           <a class="item" [routerLink]="['/', lang(), 'schools']">{{ t('nav.schools') }}</a>
           <a class="item" [routerLink]="['/', lang()]" fragment="how-it-works">{{ t('nav.howItWorks') }}</a>
           <a class="item" [routerLink]="['/', lang()]" fragment="reviews">{{ t('nav.reviews') }}</a>
@@ -115,7 +116,7 @@ import { nextDockVisible, SCROLL_DELTA_PX } from './dock-visibility';
             <a class="btn btn-secondary btn-lg" [routerLink]="['/', lang(), 'login']">{{ t('nav.login') }}</a>
             <a class="btn btn-primary btn-lg" [routerLink]="['/', lang(), 'register']">{{ t('nav.register') }}</a>
           }
-        </div>
+        </nav>
       }
     </header>
   `,
@@ -194,6 +195,7 @@ export class DockNavbarComponent {
 
   protected onFocusIn(): void {
     this.focusWithin.set(!this.mouseDriven);
+    this.update(this.scrollY());
   }
 
   protected onFocusOut(event: FocusEvent): void {
@@ -208,6 +210,10 @@ export class DockNavbarComponent {
   }
 
   protected closeMenu(): void {
+    const panel = this.host.querySelector('#dock-menu');
+    if (panel?.contains(this.document.activeElement)) {
+      this.host.querySelector<HTMLElement>('.menu-btn')?.focus();
+    }
     this.menuOpen.set(false);
   }
 

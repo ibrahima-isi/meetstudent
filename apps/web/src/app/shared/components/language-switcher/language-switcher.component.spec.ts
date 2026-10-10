@@ -102,7 +102,7 @@ describe('LanguageSwitcherComponent', () => {
 
     expect(buttonFor('fr').textContent?.trim()).toBe('FR');
     expect(buttonFor('en').textContent?.trim()).toBe('EN');
-    expect(buttonFor('fr').getAttribute('aria-label')).toBe('Français');
-    expect(buttonFor('en').getAttribute('aria-label')).toBe('English');
+    expect(buttonFor('fr').getAttribute('aria-label')).toBe('Français (FR)');
+    expect(buttonFor('en').getAttribute('aria-label')).toBe('English (EN)');
   });
 });

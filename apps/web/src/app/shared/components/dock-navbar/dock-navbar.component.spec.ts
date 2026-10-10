@@ -102,8 +102,11 @@ describe('DockNavbarComponent', () => {
     expect((fixture.componentInstance as unknown as { signedIn(): boolean }).signedIn()).toBeFalse();
   });
 
-  it('starts visible without reading the window at construction', () => {
+  it('starts visible without reading the scroll position at construction', () => {
+    const getter = Object.getOwnPropertyDescriptor(window, 'scrollY')!.get as jasmine.Spy;
+    getter.calls.reset();
     fixture = TestBed.createComponent(DockNavbarComponent);
+    expect(getter).not.toHaveBeenCalled();
     expect((fixture.componentInstance as unknown as { visible(): boolean }).visible()).toBeTrue();
   });
 
@@ -239,6 +242,41 @@ describe('DockNavbarComponent', () => {
       expect(isHidden()).toBeTrue();
     });
 
+    it('reveals a hidden bar when keyboard focus arrives, without any scroll', async () => {
+      await render();
+      hide();
+      expect(isHidden()).toBeTrue();
+
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
+      (link('/fr/schools') as HTMLElement).dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+      fixture.detectChanges();
+
+      expect(isHidden()).toBeFalse();
+    });
+
+    it('does not reveal a hidden bar for focus caused by a mouse press', async () => {
+      await render();
+      hide();
+
+      document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      (link('/fr/schools') as HTMLElement).dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+      fixture.detectChanges();
+
+      expect(isHidden()).toBeTrue();
+    });
+
+    it('counts Tab from outside the bar as keyboard focus after an earlier mouse press', async () => {
+      await render();
+      languageButton().dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
+      (link('/fr/schools') as HTMLElement).dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+
+      scrollTo(600);
+      scrollTo(900);
+
+      expect(isHidden()).toBeFalse();
+    });
+
     it('releases the pin when focus leaves the bar', async () => {
       await render();
       languageButton().dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
@@ -254,7 +292,7 @@ describe('DockNavbarComponent', () => {
 
   it('opens and closes the mobile menu with the button and Escape, exposing the state', async () => {
     await render();
-    const button = root().querySelector('button[aria-controls="dock-menu"]') as HTMLButtonElement;
+    const button = root().querySelector('button.menu-btn') as HTMLButtonElement;
     expect(button.getAttribute('aria-expanded')).toBe('false');
 
     button.click();
@@ -267,16 +305,52 @@ describe('DockNavbarComponent', () => {
     expect(root().querySelector('#dock-menu')).toBeNull();
   });
 
+  it('only references the menu panel while it exists', async () => {
+    await render();
+    const button = root().querySelector('button.menu-btn') as HTMLButtonElement;
+    expect(button.getAttribute('aria-controls')).toBeNull();
+
+    button.click();
+    fixture.detectChanges();
+
+    expect(button.getAttribute('aria-controls')).toBe('dock-menu');
+  });
+
+  it('puts every mobile menu link inside a labelled navigation landmark', async () => {
+    await render();
+    (root().querySelector('button.menu-btn') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    const links = Array.from(root().querySelectorAll('#dock-menu a'));
+    expect(links.length).toBeGreaterThan(0);
+    for (const anchor of links) {
+      expect(anchor.closest('nav[aria-label]')).withContext(anchor.textContent ?? '').not.toBeNull();
+    }
+  });
+
+  it('moves focus to the menu button when Escape closes the menu from inside the panel', async () => {
+    await render();
+    const button = root().querySelector('button.menu-btn') as HTMLButtonElement;
+    button.click();
+    fixture.detectChanges();
+    (root().querySelector('#dock-menu a') as HTMLElement).focus();
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    fixture.detectChanges();
+
+    expect(document.activeElement).toBe(button);
+  });
+
   it('keeps the bar visible while the menu is open, even when the page scrolls down', async () => {
     await render();
-    (root().querySelector('button[aria-controls="dock-menu"]') as HTMLButtonElement).click();
+    (root().querySelector('button.menu-btn') as HTMLButtonElement).click();
     hide();
     expect(isHidden()).toBeFalse();
   });
 
   it('closes the menu when the visitor navigates', async () => {
     await render();
-    (root().querySelector('button[aria-controls="dock-menu"]') as HTMLButtonElement).click();
+    (root().querySelector('button.menu-btn') as HTMLButtonElement).click();
     fixture.detectChanges();
 
     await TestBed.inject(Router).navigateByUrl('/fr/schools');

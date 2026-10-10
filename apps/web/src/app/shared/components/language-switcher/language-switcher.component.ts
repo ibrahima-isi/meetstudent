@@ -21,7 +21,7 @@ import { LocaleService } from '@services/locale.service';
           type="button"
           [lang]="locale"
           [attr.aria-current]="locale === activeLocale() ? 'true' : null"
-          [attr.aria-label]="compact() ? t('language.' + locale) : null"
+          [attr.aria-label]="compact() ? t('language.' + locale) + ' (' + locale.toUpperCase() + ')' : null"
           [class]="
             locale === activeLocale()
               ? 'rounded-full px-2.5 py-1 text-sm font-semibold bg-brand-soft text-brand-soft-foreground'
