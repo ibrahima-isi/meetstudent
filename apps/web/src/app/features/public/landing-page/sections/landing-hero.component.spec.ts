@@ -1,4 +1,4 @@
-import { provideZonelessChangeDetection, signal } from '@angular/core';
+import { Component, provideZonelessChangeDetection, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { provideTransloco, TranslocoService } from '@jsverse/transloco';
@@ -6,6 +6,9 @@ import { firstValueFrom } from 'rxjs';
 import { translocoOptions } from '@i18n/transloco.config';
 import { LocaleService } from '@services/locale.service';
 import { LandingHeroComponent } from './landing-hero.component';
+
+@Component({ template: '' })
+class BlankComponent {}
 
 describe('LandingHeroComponent', () => {
   let fixture: ComponentFixture<LandingHeroComponent>;
@@ -126,6 +129,14 @@ describe('LandingHeroComponent', () => {
     expect(wrap.textContent?.trim()).toBe('');
   });
 
+  it('keeps the animation delays out of inline style attributes', () => {
+    const inline = Array.from(root().querySelectorAll('[style]')).filter((el) =>
+      (el.getAttribute('style') ?? '').includes('animation-delay'),
+    );
+    expect(inline.length).toBe(0);
+    expect(root().querySelectorAll('.stage .card.animate-float').length).toBe(3);
+  });
+
   it('tilts the stage with the mouse and resets on leave', () => {
     const rect = root().getBoundingClientRect();
     pointer('pointermove', { pointerType: 'mouse', clientX: rect.right, clientY: rect.top + rect.height / 2 });
@@ -149,5 +160,60 @@ describe('LandingHeroComponent', () => {
     pointer('pointermove', { pointerType: 'mouse', clientX: rect.right, clientY: rect.bottom });
     expect(px()).toBe(0);
     expect(py()).toBe(0);
+  });
+});
+
+describe('LandingHeroComponent with the real router', () => {
+  let fixture: ComponentFixture<LandingHeroComponent>;
+  let router: Router;
+
+  const input = () => fixture.nativeElement.querySelector('input[type="search"]') as HTMLInputElement;
+  const submit = async (text: string) => {
+    input().value = text;
+    input().dispatchEvent(new Event('input'));
+    fixture.nativeElement.querySelector('form').dispatchEvent(new Event('submit', { cancelable: true }));
+    await fixture.whenStable();
+  };
+
+  beforeEach(async () => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        provideRouter([{ path: '**', component: BlankComponent }]),
+        provideTransloco(translocoOptions),
+        { provide: LocaleService, useValue: { active: signal('fr') } },
+      ],
+    });
+    await firstValueFrom(TestBed.inject(TranslocoService).load('fr'));
+    router = TestBed.inject(Router);
+    fixture = TestBed.createComponent(LandingHeroComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+  });
+
+  it('encodes reserved characters and leaves the fragment empty', async () => {
+    await submit('a&b=c#d');
+    expect(router.url).toBe('/fr/schools?q=a%26b%3Dc%23d');
+    expect(router.parseUrl(router.url).fragment).toBeNull();
+  });
+
+  it('truncates a 500-character term to 100 characters', async () => {
+    await submit('x'.repeat(500));
+    const q = router.parseUrl(router.url).queryParams['q'] as string;
+    expect(q.length).toBe(100);
+  });
+
+  it('round-trips non-Latin text through the URL', async () => {
+    const text = 'Université Cheikh Anta Diop — été 大学';
+    await submit(text);
+    expect(router.url).toContain(encodeURIComponent(text));
+    expect(decodeURIComponent(router.url.split('q=')[1])).toBe(text);
+  });
+
+  it('survives a lone surrogate and sends a well-formed term', async () => {
+    await expectAsync(submit('\uD83D')).toBeResolved();
+    const q = router.parseUrl(router.url).queryParams['q'] as string;
+    expect(q).toBe('\uFFFD');
+    expect(() => encodeURIComponent(q)).not.toThrow();
   });
 });

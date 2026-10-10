@@ -6,6 +6,13 @@ import { ArrowRight, GraduationCap, LucideAngularModule, MapPin, Search, Star } 
 import { MeshBackgroundComponent } from '@shared/components/mesh-background/mesh-background.component';
 import { LocaleService } from '@services/locale.service';
 
+const MAX_TERM_LENGTH = 100;
+
+/** Lone surrogates make encodeURIComponent throw; replace them with U+FFFD. */
+function wellFormed(value: string): string {
+  return value.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '\uFFFD');
+}
+
 @Component({
   selector: 'app-landing-hero',
   imports: [ReactiveFormsModule, RouterLink, TranslocoDirective, LucideAngularModule, MeshBackgroundComponent],
@@ -23,7 +30,8 @@ import { LocaleService } from '@services/locale.service';
       .c1 { width: 15rem; top: 2rem; left: 6%; transform: translateZ(60px); }
       .c2 { width: 13rem; top: 10rem; right: 2%; transform: translateZ(110px) rotate(3deg); }
       .c3 { width: 14rem; bottom: 1rem; left: 22%; transform: translateZ(30px); }
-      @media (max-width: 47.99rem) { .stage { height: 18rem; } .c3 { display: none; } .c1 { left: 0; } .c2 { right: 0; top: 7rem; } }
+      .c2 { animation-delay: -2s; }
+      .c3 { animation-delay: -4s; }
       @media (prefers-reduced-motion: reduce) { .stage { transform: none; transition: none; } }
     `,
   ],
@@ -34,7 +42,7 @@ import { LocaleService } from '@services/locale.service';
         <div>
           <p class="mb-4 inline-flex rounded-full bg-brand-soft px-3 py-1 text-sm font-medium text-brand-soft-foreground">{{ t('lp.hero.eyebrow') }}</p>
           <h1 class="text-4xl font-semibold tracking-tight text-foreground sm:text-5xl lg:text-6xl">{{ t('lp.hero.title') }}</h1>
-          <p class="mt-5 max-w-xl text-lg text-muted-foreground">{{ t('lp.hero.subtitle') }}</p>
+          <p class="mt-5 max-w-xl text-lg text-foreground/75">{{ t('lp.hero.subtitle') }}</p>
 
           <form class="mt-8 flex max-w-xl items-center gap-2 rounded-full border border-border-strong bg-glass p-1.5 backdrop-blur" role="search" (submit)="onSubmit($event)">
             <label for="hero-search" class="sr-only">{{ t('lp.hero.searchLabel') }}</label>
@@ -66,13 +74,13 @@ import { LocaleService } from '@services/locale.service';
               <span class="chip"><lucide-icon [img]="GraduationCap" class="h-5 w-5" /></span>
               <span class="line w-3/4"></span><span class="line w-1/2"></span>
             </div>
-            <div class="card c2 animate-float" style="animation-delay: -2s">
+            <div class="card c2 animate-float">
               <div class="flex gap-1 text-yellow-400">
                 @for (n of [1, 2, 3, 4, 5]; track n) { <lucide-icon [img]="Star" class="h-4 w-4 fill-yellow-400" /> }
               </div>
               <span class="line w-full"></span><span class="line w-2/3"></span>
             </div>
-            <div class="card c3 animate-float" style="animation-delay: -4s">
+            <div class="card c3 animate-float">
               <span class="chip"><lucide-icon [img]="MapPin" class="h-5 w-5" /></span>
               <span class="line w-2/3"></span><span class="line w-1/3"></span>
             </div>
@@ -99,7 +107,7 @@ export class LandingHeroComponent {
 
   protected onSubmit(event: Event): void {
     event.preventDefault();
-    const q = this.query.value.trim();
+    const q = wellFormed(this.query.value.trim().slice(0, MAX_TERM_LENGTH));
     void this.router.navigate(['/', this.lang(), 'schools'], { queryParams: q ? { q } : {} });
   }
 
