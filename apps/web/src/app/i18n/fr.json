@@ -27,7 +27,15 @@
     "mySpace": "Mon espace",
     "openMenu": "Ouvrir le menu",
     "closeMenu": "Fermer le menu",
-    "skipToContent": "Aller au contenu"
+    "skipToContent": "Aller au contenu",
+    "backHome": "Retour à l'accueil"
+  },
+  "authPanel": {
+    "title": "Votre avenir commence ici",
+    "text": "Comparez, enregistrez et préparez votre dossier sur une seule plateforme.",
+    "example": "Exemple",
+    "quote": "J'ai pu comparer trois écoles en une soirée.",
+    "who": "Étudiante en licence · Dakar"
   },
   "pageTitle": {
     "landing": "Trouvez l'école qui vous correspond",

@@ -27,7 +27,15 @@
     "mySpace": "My space",
     "openMenu": "Open menu",
     "closeMenu": "Close menu",
-    "skipToContent": "Skip to content"
+    "skipToContent": "Skip to content",
+    "backHome": "Back to home"
+  },
+  "authPanel": {
+    "title": "Your future starts here",
+    "text": "Compare, save and prepare your file on a single platform.",
+    "example": "Example",
+    "quote": "I compared three schools in one evening.",
+    "who": "Undergraduate student · Dakar"
   },
   "pageTitle": {
     "landing": "Find the school that suits you",

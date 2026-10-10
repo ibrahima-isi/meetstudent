@@ -117,3 +117,23 @@ describe('design tokens', () => {
     expect(parseFloat(padding)).toBeGreaterThanOrEqual(80);
   });
 });
+
+describe('design tokens: field input', () => {
+  it('is a tall, rounded, bordered text field', () => {
+    inPage('input', 'field-input', (el) => {
+      const style = getComputedStyle(el);
+      expect(parseFloat(style.height)).toBeGreaterThanOrEqual(44);
+      expect(style.borderTopWidth).toBe('1px');
+      expect(parseFloat(style.borderTopLeftRadius)).toBeGreaterThanOrEqual(10);
+    });
+  });
+
+  it('changes its border colour when marked invalid', () => {
+    const normal = inPage('input', 'field-input', (el) => getComputedStyle(el).borderTopColor);
+    const invalid = inPage('input', 'field-input', (el) => {
+      el.setAttribute('aria-invalid', 'true');
+      return getComputedStyle(el).borderTopColor;
+    });
+    expect(invalid).not.toBe(normal);
+  });
+});
