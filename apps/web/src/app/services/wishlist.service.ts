@@ -1,4 +1,5 @@
 import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
+import { timeout } from 'rxjs';
 import { School } from '@models/entities';
 import { TokenService } from './token.service';
 import { UserService } from './user.service';
@@ -8,6 +9,9 @@ import { UserService } from './user.service';
  * is the source of truth: it is loaded from the API, mutations are applied
  * optimistically and then replaced by the server's answer, or rolled back.
  */
+/** A load that never answers would block every later one; after this it counts as failed. */
+const LOAD_TIMEOUT_MS = 15000;
+
 @Injectable({ providedIn: 'root' })
 export class WishlistService {
   private readonly userService = inject(UserService);
@@ -33,15 +37,20 @@ export class WishlistService {
   constructor() {
     // The one place every sign-out path goes through (dock, home page, refresh
     // interceptor): they all end up changing the session user in TokenService.
+    // It runs asynchronously, so load() and toggle() also sync the owner themselves.
     effect(() => {
-      const id = this.tokenService.user()?.id;
-      untracked(() => {
-        if (id !== this.owner) {
-          this.owner = id;
-          this.clear();
-        }
-      });
+      this.tokenService.user();
+      untracked(() => this.syncOwner());
     });
+  }
+
+  /** Resets the list the moment the session user differs from the one it belongs to. */
+  private syncOwner(): void {
+    const id = this.tokenService.user()?.id;
+    if (id !== this.owner) {
+      this.owner = id;
+      this.clear();
+    }
   }
 
   has(schoolId: number | undefined): boolean {
@@ -67,6 +76,7 @@ export class WishlistService {
 
   /** Fetches the wishlist from the API; also the retry action of the error state. */
   load(): void {
+    this.syncOwner();
     const userId = this.tokenService.user()?.id;
     if (userId === undefined) {
       this.state.set([]);
@@ -79,7 +89,7 @@ export class WishlistService {
     }
     const generation = this.generation;
     this.status.set('loading');
-    this.userService.getUser(userId).subscribe({
+    this.userService.getUser(userId).pipe(timeout(LOAD_TIMEOUT_MS)).subscribe({
       next: (user) => {
         if (generation !== this.generation) {
           return;
@@ -97,6 +107,7 @@ export class WishlistService {
 
   /** Adds or removes a school: shown at once, rolled back if the server refuses. */
   toggle(school: School): void {
+    this.syncOwner();
     const userId = this.tokenService.user()?.id;
     const schoolId = school.id;
     if (userId === undefined || schoolId === undefined || this.isPending(schoolId)) {
