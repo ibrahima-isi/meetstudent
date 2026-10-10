@@ -4,6 +4,7 @@
     "defaultSchoolType": "School",
     "noDescription": "No description available",
     "errorGeneric": "Something went wrong",
+    "imageError": "Image could not be loaded",
     "loading": "Loading…",
     "bacTypes": {
       "general": "General Baccalaureate",
