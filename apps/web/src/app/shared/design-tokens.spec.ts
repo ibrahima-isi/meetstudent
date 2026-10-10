@@ -9,16 +9,37 @@ function inPage<T>(tag: string, className: string, read: (el: HTMLElement) => T)
   }
 }
 
-function mediaRules(): string[] {
-  const found: string[] = [];
+function mediaRules(): CSSMediaRule[] {
+  const found: CSSMediaRule[] = [];
   for (const sheet of Array.from(document.styleSheets)) {
     for (const rule of Array.from(sheet.cssRules)) {
       if (rule instanceof CSSMediaRule) {
-        found.push(rule.conditionText);
+        found.push(rule);
       }
     }
   }
   return found;
+}
+
+function inTheme<T>(dark: boolean, read: () => T): T {
+  const root = document.documentElement;
+  const had = root.classList.contains('dark');
+  root.classList.toggle('dark', dark);
+  try {
+    return read();
+  } finally {
+    root.classList.toggle('dark', had);
+  }
+}
+
+function rootVar(name: string): string {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+function lightness(oklch: string): number {
+  const match = /oklch\(\s*([\d.]+)/.exec(oklch);
+  expect(match).not.toBeNull();
+  return parseFloat(match![1]);
 }
 
 describe('design tokens', () => {
@@ -57,13 +78,32 @@ describe('design tokens', () => {
   });
 
   it('switches animation off for visitors who ask for reduced motion', () => {
-    expect(mediaRules().some((c) => c.includes('prefers-reduced-motion'))).toBeTrue();
+    const css = mediaRules()
+      .filter((r) => r.conditionText.includes('prefers-reduced-motion'))
+      .map((r) => r.cssText)
+      .join('\n');
+    for (const selector of ['.reveal', '.btn', '.animate-float', '.animate-orb']) {
+      expect(css).toContain(selector);
+    }
+  });
+
+  it('uses a different brand colour in the dark theme', () => {
+    const light = inTheme(false, () => rootVar('--brand'));
+    const dark = inTheme(true, () => rootVar('--brand'));
+    expect(dark).not.toBe(light);
+  });
+
+  it('never lightens the primary button on hover in the dark theme', () => {
+    inTheme(true, () => {
+      expect(lightness(rootVar('--brand-hover'))).toBeLessThanOrEqual(lightness(rootVar('--brand')));
+    });
   });
 
   it('hides a pending reveal until it is done', () => {
     inPage('div', 'reveal', (el) => {
       el.setAttribute('data-reveal', 'pending');
       expect(getComputedStyle(el).opacity).toBe('0');
+      expect(getComputedStyle(el).transitionDuration).not.toBe('0s');
       // The reveal transition would report a mid-flight opacity; read the settled value.
       el.style.transition = 'none';
       el.setAttribute('data-reveal', 'done');
