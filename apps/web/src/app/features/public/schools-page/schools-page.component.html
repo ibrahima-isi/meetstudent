@@ -22,7 +22,8 @@
           <lucide-icon [img]="Search" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground"></lucide-icon>
           <input
             type="text"
-            [(ngModel)]="searchQuery"
+            [ngModel]="searchQuery()"
+            (ngModelChange)="onSearchInput($event)"
             [placeholder]="t('schools.searchPlaceholder')"
             class="w-full pl-12 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           />
@@ -114,7 +115,7 @@
     } @else {
     <div class="mb-6">
       <p class="text-muted-foreground">
-        {{ t(plural('schools.found', sortedSchools().length), { count: sortedSchools().length }) }}
+        {{ t(plural('schools.found', resultCount()), { count: resultCount() }) }}
       </p>
     </div>
 
@@ -187,9 +188,28 @@
       }
     </div>
 
-    @if (sortedSchools().length === 0) {
+    @if (loadMoreFailed()) {
+      <div role="alert" data-testid="load-more-error" class="mt-6 flex items-center justify-center gap-3 text-sm text-red-700 dark:text-red-400">
+        <span>{{ t('schools.loadMoreError') }}</span>
+        <button type="button" (click)="loadMore()" class="font-medium underline cursor-pointer">{{ t('common.retry') }}</button>
+      </div>
+    } @else if (hasMore()) {
+      <div class="mt-8 text-center">
+        <button
+          type="button"
+          data-testid="load-more"
+          [disabled]="loadingMore()"
+          (click)="loadMore()"
+          class="px-6 py-2 border border-gray-300 dark:border-gray-600 text-foreground rounded-lg hover:bg-accent transition-colors font-medium cursor-pointer disabled:opacity-60"
+        >
+          {{ t(loadingMore() ? 'common.loading' : 'schools.loadMore') }}
+        </button>
+      </div>
+    }
+
+    @if (sortedSchools().length === 0 && !hasMore()) {
       <div class="text-center py-12">
-        <p class="text-muted-foreground text-lg">{{ t(schools().length === 0 ? 'schools.empty' : 'schools.noResults') }}</p>
+        <p class="text-muted-foreground text-lg">{{ t(schools().length === 0 && !hasFilters() ? 'schools.empty' : 'schools.noResults') }}</p>
       </div>
     }
     }

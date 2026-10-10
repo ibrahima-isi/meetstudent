@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, map } from 'rxjs';
+import { Observable, map, of } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { School, Page } from '@models/entities';
 import { MediaService } from './media.service';
@@ -70,16 +70,43 @@ export class SchoolService {
     );
   }
 
-  /** Name contains `name`, case-insensitive, paged by the API (`/schools/name/{name}`). */
+  /**
+   * Name contains `name`, case-insensitive, paged by the API (`/schools/name/{name}`).
+   * The term travels as a path variable, and a few characters cannot: `/` and `\`
+   * are decoded or refused by the server before routing, `%` and `;` are mangled by
+   * it. No school name carries them in the search sense the visitor means, so the
+   * answer is an empty page without bothering the API.
+   */
   searchSchoolsByName(name: string, page: number = 0, size: number = 10, sort?: string): Observable<Page<School>> {
+    const term = name.trim();
+    if (/[/\\%;]/.test(term)) {
+      return of(this.emptyPage(size));
+    }
     let params = new HttpParams().set('page', page.toString()).set('size', size.toString());
     if (sort) params = params.set('sort', sort);
 
-    return this.http.get<Page<School>>(`${this.apiUrl}/name/${encodeURIComponent(name)}`, { params }).pipe(
+    return this.http.get<Page<School>>(`${this.apiUrl}/name/${encodeURIComponent(term)}`, { params }).pipe(
       map(res => ({
         ...res,
         content: res.content.map(school => this.mapSchoolFields(school))
       }))
     );
+  }
+
+  private emptyPage(size: number): Page<School> {
+    const sort = { empty: true, sorted: false, unsorted: true };
+    return {
+      content: [],
+      pageable: { sort, offset: 0, pageNumber: 0, pageSize: size, paged: true, unpaged: false },
+      last: true,
+      totalPages: 0,
+      totalElements: 0,
+      size,
+      number: 0,
+      sort,
+      first: true,
+      numberOfElements: 0,
+      empty: true,
+    };
   }
 }

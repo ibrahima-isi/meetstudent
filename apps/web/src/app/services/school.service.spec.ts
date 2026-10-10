@@ -136,5 +136,37 @@ describe('SchoolService', () => {
       req.flush({ ...emptyPage, content: [{ id: 1, name: 'X', averageRate: 4, address: { city: 'D' } }] });
       expect(rating).toBe(4);
     });
+
+    it('encodes reserved characters that survive the path', () => {
+      service.searchSchoolsByName('a&b=c#d', 0, 12).subscribe();
+      const req = httpMock.expectOne((r) => r.url.endsWith('/schools/name/a%26b%3Dc%23d'));
+      req.flush(emptyPage);
+    });
+
+    for (const term of ['a/b', 'a\\b', '100%', 'a;b']) {
+      it(`answers an empty page without a request for "${term}"`, () => {
+        let page: Page<School> | undefined;
+        service.searchSchoolsByName(term, 0, 12).subscribe((p) => (page = p));
+        httpMock.expectNone((r) => r.url.includes('/schools/name'));
+        expect(page?.content).toEqual([]);
+        expect(page?.last).toBeTrue();
+        expect(page?.totalElements).toBe(0);
+        expect(page?.empty).toBeTrue();
+        expect(page?.number).toBe(0);
+      });
+    }
+
+    it('trims before checking and sending', () => {
+      service.searchSchoolsByName('  dakar ', 0, 12).subscribe();
+      httpMock.expectOne((r) => r.url.endsWith('/schools/name/dakar')).flush(emptyPage);
+    });
+
+    it('sends a long non-Latin term as one request without throwing', () => {
+      const term = 'é'.repeat(250) + '漢'.repeat(250);
+      service.searchSchoolsByName(term, 0, 12).subscribe();
+      const req = httpMock.expectOne((r) => r.url.endsWith('/schools/name/' + encodeURIComponent(term)));
+      expect(req.request.method).toBe('GET');
+      req.flush(emptyPage);
+    });
   });
 });
