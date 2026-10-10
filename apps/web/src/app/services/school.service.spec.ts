@@ -156,13 +156,52 @@ describe('SchoolService', () => {
       });
     }
 
+    for (const term of ['.', '..']) {
+      it(`answers an empty page without a request for the dot segment "${term}"`, () => {
+        let page: Page<School> | undefined;
+        service.searchSchoolsByName(term, 0, 12).subscribe((p) => (page = p));
+        httpMock.expectNone((r) => r.url.includes('/schools/name'));
+        expect(page?.content).toEqual([]);
+      });
+    }
+
+    it('answers an empty page without a request when the term is longer than 50', () => {
+      let page: Page<School> | undefined;
+      service.searchSchoolsByName('a'.repeat(51), 0, 12).subscribe((p) => (page = p));
+      httpMock.expectNone((r) => r.url.includes('/schools/name'));
+      expect(page?.empty).toBeTrue();
+    });
+
+    it('still searches a term of exactly 50', () => {
+      service.searchSchoolsByName('a'.repeat(50), 0, 12).subscribe();
+      httpMock.expectOne((r) => r.url.endsWith('/schools/name/' + 'a'.repeat(50))).flush(emptyPage);
+    });
+
+    it('answers an empty page, not an error, for a lone surrogate', () => {
+      let page: Page<School> | undefined;
+      let failed = false;
+      service.searchSchoolsByName('\uD800', 0, 12).subscribe({ next: (p) => (page = p), error: () => (failed = true) });
+      httpMock.expectNone((r) => r.url.includes('/schools/name'));
+      expect(failed).toBeFalse();
+      expect(page?.content).toEqual([]);
+    });
+
+    it('adds id as a tiebreaker to every sorted paged call', () => {
+      service.getSchools(0, 12, undefined, 'name,asc').subscribe();
+      expect(httpMock.expectOne((r) => r.url.endsWith('/schools')).request.params.getAll('sort')).toEqual(['name,asc', 'id,asc']);
+      service.searchSchools('Dakar', undefined, undefined, undefined, 0, 12, 'name,asc').subscribe();
+      expect(httpMock.expectOne((r) => r.url.endsWith('/schools/search')).request.params.getAll('sort')).toEqual(['name,asc', 'id,asc']);
+      service.searchSchoolsByName('x', 0, 12, 'address.city,asc').subscribe();
+      expect(httpMock.expectOne((r) => r.url.endsWith('/schools/name/x')).request.params.getAll('sort')).toEqual(['address.city,asc', 'id,asc']);
+    });
+
     it('trims before checking and sending', () => {
       service.searchSchoolsByName('  dakar ', 0, 12).subscribe();
       httpMock.expectOne((r) => r.url.endsWith('/schools/name/dakar')).flush(emptyPage);
     });
 
     it('sends a long non-Latin term as one request without throwing', () => {
-      const term = 'é'.repeat(250) + '漢'.repeat(250);
+      const term = 'é'.repeat(25) + '漢'.repeat(25);
       service.searchSchoolsByName(term, 0, 12).subscribe();
       const req = httpMock.expectOne((r) => r.url.endsWith('/schools/name/' + encodeURIComponent(term)));
       expect(req.request.method).toBe('GET');

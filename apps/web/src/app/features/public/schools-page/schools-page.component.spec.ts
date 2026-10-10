@@ -600,4 +600,66 @@ describe('SchoolsPageComponent server search', () => {
     await settle();
     expect(text()).toContain('No school matches');
   });
+
+  it('does not duplicate a school a later page repeats', async () => {
+    getSchools.and.callFake((n: number) =>
+      of(n === 0 ? page([school(1, 'Alpha')], 0, false, 3) : page([school(1, 'Alpha'), school(2, 'Beta')], 1, true, 3)),
+    );
+    const component = await open('/schools');
+    (q('[data-testid="load-more"]') as HTMLButtonElement).click();
+    await settle();
+
+    expect(component.schools().map((x) => x.id)).toEqual([1, 2]);
+    expect(el().querySelectorAll('h3').length).toBe(2);
+  });
+
+  it('explains an empty client-side filter while more pages remain, and keeps Load more', async () => {
+    getSchools.and.returnValue(of(page([school(1, 'Alpha')], 0, false, 40)));
+    const component = await open('/schools');
+    component.selectedType.set('Private');
+    await settle();
+
+    expect(text()).toContain('No school matches');
+    expect(q('[data-testid="load-more"]')).not.toBeNull();
+    expect(text()).not.toContain('40 schools found');
+  });
+
+  it('resets a type that the new search no longer offers', async () => {
+    const component = await open('/schools');
+    component.selectedType.set('Public');
+    searchSchoolsByName.and.returnValue(of(page([school(3, 'Other', 'Dakar', 'Private')])));
+    await router.navigateByUrl('/schools?q=other');
+    await settle();
+
+    expect(component.selectedType()).toBe('');
+    expect(text()).toContain('Other');
+  });
+
+  it('limits the input to 50 characters and names it for assistive technology', async () => {
+    await open('/schools');
+
+    expect(input().getAttribute('maxlength')).toBe('50');
+    expect(input().getAttribute('aria-label')).toBe('Search for a school...');
+  });
+
+  it('announces the result count politely', async () => {
+    await open('/schools');
+
+    expect(q('[aria-live="polite"]')?.textContent).toContain('2 schools found');
+  });
+
+  it('keeps Load more focusable and ignores clicks while loading', async () => {
+    const slow = new Subject<unknown>();
+    getSchools.and.callFake((n: number) => (n === 0 ? of(page([school(1, 'Alpha')], 0, false, 2)) : slow));
+    await open('/schools');
+    const button = q('[data-testid="load-more"]') as HTMLButtonElement;
+    button.click();
+    await settle();
+
+    expect(button.disabled).toBeFalse();
+    expect(button.getAttribute('aria-disabled')).toBe('true');
+    button.click();
+    await settle();
+    expect(getSchools.calls.allArgs().filter((a) => a[0] === 1).length).toBe(1);
+  });
 });

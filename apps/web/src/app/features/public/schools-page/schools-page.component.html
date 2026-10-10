@@ -25,6 +25,8 @@
             [ngModel]="searchQuery()"
             (ngModelChange)="onSearchInput($event)"
             [placeholder]="t('schools.searchPlaceholder')"
+            [attr.aria-label]="t('schools.searchPlaceholder')"
+            maxlength="50"
             class="w-full pl-12 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           />
         </div>
@@ -113,7 +115,7 @@
     } @else if (status() === 'error') {
       <app-error-state [message]="t('schools.loadError')" (retry)="load()" />
     } @else {
-    <div class="mb-6">
+    <div class="mb-6" aria-live="polite">
       <p class="text-muted-foreground">
         {{ t(plural('schools.found', resultCount()), { count: resultCount() }) }}
       </p>
@@ -198,16 +200,16 @@
         <button
           type="button"
           data-testid="load-more"
-          [disabled]="loadingMore()"
-          (click)="loadMore()"
-          class="px-6 py-2 border border-gray-300 dark:border-gray-600 text-foreground rounded-lg hover:bg-accent transition-colors font-medium cursor-pointer disabled:opacity-60"
+          [attr.aria-disabled]="loadingMore()"
+          (click)="loadingMore() || loadMore()"
+          class="px-6 py-2 border border-gray-300 dark:border-gray-600 text-foreground rounded-lg hover:bg-accent transition-colors font-medium cursor-pointer aria-disabled:opacity-60"
         >
           {{ t(loadingMore() ? 'common.loading' : 'schools.loadMore') }}
         </button>
       </div>
     }
 
-    @if (sortedSchools().length === 0 && !hasMore()) {
+    @if (sortedSchools().length === 0) {
       <div class="text-center py-12">
         <p class="text-muted-foreground text-lg">{{ t(schools().length === 0 && !hasFilters() ? 'schools.empty' : 'schools.noResults') }}</p>
       </div>

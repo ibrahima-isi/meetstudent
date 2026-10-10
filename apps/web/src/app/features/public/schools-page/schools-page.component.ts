@@ -118,8 +118,9 @@ export class SchoolsPageComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // Read synchronously so the first request (SSR included) already carries the
-    // term and needs no debounce.
+    // Read synchronously: the first request is fired by the toObservable(criteria)
+    // effect during the first change detection (still SSR-safe), after this has
+    // run, so it already carries the term and needs no debounce.
     this.applyUrlTerm(this.route.snapshot.queryParamMap.get('q'));
     // External navigation (hero deep link, Back) moves the term later on.
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
@@ -191,7 +192,15 @@ export class SchoolsPageComponent implements OnInit {
       return;
     }
     const content = result.content ?? [];
-    this.schools.update((current) => (page === 0 ? content : [...current, ...content]));
+    // A page boundary can repeat a school when the data moved between requests.
+    this.schools.update((current) => {
+      if (page === 0) return content;
+      const seen = new Set(current.map((school) => school.id));
+      return [...current, ...content.filter((school) => !seen.has(school.id))];
+    });
+    if (page === 0 && !this.types().includes(this.selectedType())) {
+      this.selectedType.set('');
+    }
     this.pageNumber.set(page);
     this.lastPage.set(result.last ?? true);
     this.totalElements.set(result.totalElements);
