@@ -149,7 +149,6 @@ describe('dark mode: no light-only palette classes', () => {
           useValue: {
             getSchools: () => of({ content: [school, secondSchool], last: false, totalElements: 5 }),
             getSchool: () => of(detailedSchool),
-            schools: () => [school],
           },
         },
         { provide: ProgramService, useValue: { getPrograms: () => of({ content: [] }) } },

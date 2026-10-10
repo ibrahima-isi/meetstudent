@@ -27,9 +27,8 @@ describe('HomePageComponent translations', () => {
   }
 
   beforeEach(() => {
-    const schoolService = jasmine.createSpyObj('SchoolService', ['getSchools', 'schools']);
+    const schoolService = jasmine.createSpyObj('SchoolService', ['getSchools']);
     schoolService.getSchools.and.returnValue(of({ content: [] }));
-    schoolService.schools.and.returnValue([]);
 
     TestBed.configureTestingModule({
       imports: [HomePageComponent],
@@ -97,7 +96,7 @@ describe('HomePageComponent data states', () => {
         provideHttpClientTesting(),
         provideRouter([]),
         provideTransloco(translocoOptions),
-        { provide: SchoolService, useValue: { getSchools, schools: () => [] } },
+        { provide: SchoolService, useValue: { getSchools } },
         { provide: TokenService, useValue: { isAuthenticated: signal(true), user: signal(null), clear: () => {} } },
       ],
     });
@@ -186,7 +185,7 @@ describe('HomePageComponent wishlist', () => {
         provideHttpClientTesting(),
         provideRouter([]),
         provideTransloco(translocoOptions),
-        { provide: SchoolService, useValue: { getSchools: () => of({ content: [school] }), schools: () => [] } },
+        { provide: SchoolService, useValue: { getSchools: () => of({ content: [school] }) } },
         { provide: TokenService, useValue: { isAuthenticated: signal(true), user: signal(null), clear: () => {} } },
         {
           provide: WishlistService,
@@ -300,7 +299,7 @@ describe('HomePageComponent API search', () => {
         provideHttpClientTesting(),
         provideRouter([]),
         provideTransloco(translocoOptions),
-        { provide: SchoolService, useValue: { getSchools, searchSchools, searchSchoolsByName, schools: () => [] } },
+        { provide: SchoolService, useValue: { getSchools, searchSchools, searchSchoolsByName } },
         { provide: TokenService, useValue: { isAuthenticated: signal(true), user: signal(null), clear: () => {} } },
       ],
     });

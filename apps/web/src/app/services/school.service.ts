@@ -1,6 +1,6 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, map, tap } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { School, Page } from '@models/entities';
 import { MediaService } from './media.service';
@@ -12,9 +12,6 @@ export class SchoolService {
   private http = inject(HttpClient);
   private mediaService = inject(MediaService);
   private apiUrl = `${environment.apiUrl}/schools`;
-
-  private schoolsSignal = signal<School[]>([]);
-  readonly schools = this.schoolsSignal.asReadonly();
 
   getSchools(page: number = 0, size: number = 10, sortRate?: string, sort?: string): Observable<Page<School>> {
     let params = new HttpParams()
@@ -30,12 +27,7 @@ export class SchoolService {
       map(res => ({
         ...res,
         content: res.content.map(school => this.mapSchoolFields(school))
-      })),
-      tap(res => {
-        if (res.content && res.content.length > 0) {
-          this.schoolsSignal.set(res.content);
-        }
-      })
+      }))
     );
   }
 
