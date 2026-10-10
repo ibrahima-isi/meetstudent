@@ -11,17 +11,19 @@ describe('WishlistService', () => {
   const b: School = { id: 2, name: 'B', address: { location: '', city: '', country: '' } };
   let userService: jasmine.SpyObj<UserService>;
   let service: WishlistService;
+  let user: ReturnType<typeof signal<{ id: number } | null>>;
 
   const userWith = (wishlist: School[]) => ({ id: 9, wishlist }) as User;
 
   beforeEach(() => {
+    user = signal<{ id: number } | null>({ id: 9 });
     userService = jasmine.createSpyObj('UserService', ['getUser', 'addToWishlist', 'removeFromWishlist']);
     userService.getUser.and.returnValue(of(userWith([a])));
     TestBed.configureTestingModule({
       providers: [
         provideZonelessChangeDetection(),
         { provide: UserService, useValue: userService },
-        { provide: TokenService, useValue: { user: signal({ id: 9 }), isAuthenticated: signal(true) } },
+        { provide: TokenService, useValue: { user, isAuthenticated: signal(true) } },
       ],
     });
     service = TestBed.inject(WishlistService);
@@ -113,5 +115,93 @@ describe('WishlistService', () => {
     service.dismissError();
 
     expect(service.error()).toBeFalse();
+  });
+
+  it('forgets everything on clear, so the next visitor starts empty', () => {
+    const reply = new Subject<User>();
+    userService.addToWishlist.and.returnValue(reply);
+    service.load();
+    service.toggle(b);
+    service.error.set(true);
+
+    service.clear();
+
+    expect(service.schools()).toEqual([]);
+    expect(service.isPending(2)).toBeFalse();
+    expect(service.status()).toBe('idle');
+    expect(service.error()).toBeFalse();
+  });
+
+  it('empties itself when the session ends, whichever code path ends it', () => {
+    service.load();
+    expect(service.schools()).toEqual([a]);
+
+    user.set(null); // what TokenService.clear() does
+    TestBed.tick();
+
+    expect(service.schools()).toEqual([]);
+    expect(service.status()).toBe('idle');
+  });
+
+  it('never shows the previous user\'s schools after a user switch', () => {
+    service.load();
+
+    user.set({ id: 10 });
+    TestBed.tick();
+
+    expect(service.schools()).toEqual([]);
+  });
+
+  it('ignores a toggle answer that arrives after clear', () => {
+    const reply = new Subject<User>();
+    userService.addToWishlist.and.returnValue(reply);
+    service.toggle(b);
+
+    service.clear();
+    reply.next(userWith([a, b]));
+    reply.complete();
+
+    expect(service.schools()).toEqual([]);
+    expect(service.status()).toBe('idle');
+    expect(service.isPending(2)).toBeFalse();
+  });
+
+  it('does not roll a failed toggle back onto a list that was cleared meanwhile', () => {
+    const reply = new Subject<User>();
+    userService.addToWishlist.and.returnValue(reply);
+    service.toggle(b);
+    service.clear();
+    user.set({ id: 10 });
+    userService.getUser.and.returnValue(of(userWith([a])));
+    service.load();
+
+    reply.error(new Error('boom'));
+
+    expect(service.schools()).toEqual([a]);
+    expect(service.error()).toBeFalse();
+  });
+
+  it('ignores a load answer that arrives after clear', () => {
+    const reply = new Subject<User>();
+    userService.getUser.and.returnValue(reply);
+    service.load();
+
+    service.clear();
+    reply.next(userWith([a]));
+
+    expect(service.schools()).toEqual([]);
+    expect(service.status()).toBe('idle');
+  });
+
+  it('ignores a load answer that belongs to the previous user', () => {
+    const reply = new Subject<User>();
+    userService.getUser.and.returnValue(reply);
+    service.load();
+
+    user.set({ id: 10 });
+    TestBed.tick();
+    reply.next(userWith([a]));
+
+    expect(service.schools()).toEqual([]);
   });
 });

@@ -1,4 +1,4 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 import { School } from '@models/entities';
 import { TokenService } from './token.service';
 import { UserService } from './user.service';
@@ -13,6 +13,14 @@ export class WishlistService {
   private readonly userService = inject(UserService);
   private readonly tokenService = inject(TokenService);
 
+  /**
+   * Bumped whenever the list is cleared or its owner changes. Every request
+   * remembers the value it started under and drops its answer if it moved, so
+   * a slow response can never refill (or roll back onto) someone else's list.
+   */
+  private generation = 0;
+  private owner: number | undefined = this.tokenService.user()?.id;
+
   private readonly state = signal<School[]>([]);
   private readonly pending = signal<ReadonlySet<number>>(new Set());
 
@@ -22,12 +30,35 @@ export class WishlistService {
   readonly error = signal(false);
   private readonly ids = computed(() => new Set(this.state().map((s) => s.id)));
 
+  constructor() {
+    // The one place every sign-out path goes through (dock, home page, refresh
+    // interceptor): they all end up changing the session user in TokenService.
+    effect(() => {
+      const id = this.tokenService.user()?.id;
+      untracked(() => {
+        if (id !== this.owner) {
+          this.owner = id;
+          this.clear();
+        }
+      });
+    });
+  }
+
   has(schoolId: number | undefined): boolean {
     return schoolId !== undefined && this.ids().has(schoolId);
   }
 
   isPending(schoolId: number | undefined): boolean {
     return schoolId !== undefined && this.pending().has(schoolId);
+  }
+
+  /** Forgets everything; called on logout so the next session never sees this one's list. */
+  clear(): void {
+    this.generation++;
+    this.state.set([]);
+    this.pending.set(new Set());
+    this.status.set('idle');
+    this.error.set(false);
   }
 
   dismissError(): void {
@@ -41,13 +72,21 @@ export class WishlistService {
       this.state.set([]);
       return;
     }
+    const generation = this.generation;
     this.status.set('loading');
     this.userService.getUser(userId).subscribe({
       next: (user) => {
+        if (generation !== this.generation) {
+          return;
+        }
         this.state.set(user.wishlist ?? []);
         this.status.set('loaded');
       },
-      error: () => this.status.set('error'),
+      error: () => {
+        if (generation === this.generation) {
+          this.status.set('error');
+        }
+      },
     });
   }
 
@@ -59,6 +98,7 @@ export class WishlistService {
       return;
     }
 
+    const generation = this.generation;
     const adding = !this.has(schoolId);
     this.error.set(false);
     this.setPending(schoolId, true);
@@ -69,10 +109,16 @@ export class WishlistService {
       : this.userService.removeFromWishlist(userId, schoolId);
     request.subscribe({
       next: (user) => {
+        if (generation !== this.generation) {
+          return;
+        }
         this.state.set(user.wishlist ?? []);
         this.setPending(schoolId, false);
       },
       error: () => {
+        if (generation !== this.generation) {
+          return;
+        }
         this.state.update((list) => (adding ? list.filter((s) => s.id !== schoolId) : [...list, school]));
         this.error.set(true);
         this.setPending(schoolId, false);

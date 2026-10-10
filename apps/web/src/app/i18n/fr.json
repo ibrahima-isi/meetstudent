@@ -29,7 +29,10 @@
     "openMenu": "Ouvrir le menu",
     "closeMenu": "Fermer le menu",
     "skipToContent": "Aller au contenu",
-    "backHome": "Retour à l'accueil"
+    "backHome": "Retour à l'accueil",
+    "account": "Compte",
+    "profile": "Profil",
+    "logout": "Se déconnecter"
   },
   "authPanel": {
     "title": "Votre avenir commence ici",

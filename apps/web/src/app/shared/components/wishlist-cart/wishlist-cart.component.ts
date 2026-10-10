@@ -1,6 +1,8 @@
-import { Component, computed, signal, OnInit, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Component, computed, DestroyRef, ElementRef, input, output, signal, OnInit, inject } from '@angular/core';
+import { CommonModule, DOCUMENT } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { filter } from 'rxjs';
+import { NavigationEnd, Router } from '@angular/router';
 import { LucideAngularModule, ShoppingCart, X, GraduationCap } from 'lucide-angular';
 import { ErrorStateComponent } from '@shared/components/error-state/error-state.component';
 import { WishlistService } from '@services/wishlist.service';
@@ -11,16 +13,24 @@ import { pluralKey } from '@i18n/plural';
 
 @Component({
   selector: 'app-wishlist-cart',
+  host: {
+    '(document:pointerdown)': 'onPointerDown($event)',
+    '(document:keydown.escape)': 'onEscape()',
+  },
   imports: [CommonModule, LucideAngularModule, TranslocoDirective, ErrorStateComponent],
   template: `
-    <div class="sm:relative" *transloco="let t">
+    <div [class]="compact() ? '' : 'sm:relative'" *transloco="let t">
       <button
         (click)="handleCartClick()"
         [attr.aria-label]="t('wishlist.button')"
+        [attr.aria-expanded]="isOpen()"
+        [attr.aria-controls]="isOpen() ? 'wishlist-panel' : null"
         class="relative flex items-center gap-2 px-3 sm:px-4 py-2 text-foreground hover:bg-accent rounded-lg transition-colors cursor-pointer"
       >
         <lucide-icon [img]="ShoppingCart" class="w-5 h-5"></lucide-icon>
-        <span class="hidden sm:inline">{{ t('wishlist.button') }}</span>
+        @if (!compact()) {
+          <span class="hidden sm:inline">{{ t('wishlist.button') }}</span>
+        }
         @if (isAuthenticated() && wishlist.schools().length > 0) {
           <span class="absolute -top-1 -right-1 w-5 h-5 bg-indigo-600 text-white rounded-full flex items-center justify-center text-xs">
             {{ wishlist.schools().length }}
@@ -29,14 +39,18 @@ import { pluralKey } from '@i18n/plural';
       </button>
 
       @if (isOpen() && isAuthenticated()) {
-        <div class="fixed inset-0 z-40" (click)="isOpen.set(false)"></div>
-        
-        <div class="absolute inset-x-4 top-full mt-2 sm:inset-x-auto sm:left-0 sm:w-96 bg-card rounded-xl shadow-xl border border-border z-50 max-h-[80vh] overflow-hidden flex flex-col">
+        <!-- Inside the dock a fixed overlay would be clipped to the bar (backdrop-filter), so the host closes on an outside press instead. -->
+        @if (!compact()) {
+          <div class="fixed inset-0 z-40" (click)="setOpen(false)"></div>
+        }
+
+        <div id="wishlist-panel" [class]="(compact() ? 'right-0 w-[min(24rem,100%)]' : 'inset-x-4 sm:inset-x-auto sm:left-0 sm:w-96') + ' absolute top-full mt-2 bg-card rounded-xl shadow-xl border border-border z-50 max-h-[80vh] overflow-hidden flex flex-col'">
           <div class="p-4 border-b border-border">
             <div class="flex items-center justify-between">
               <h3 class="text-foreground font-bold">{{ t('wishlist.title') }}</h3>
               <button
-                (click)="isOpen.set(false)"
+                (click)="setOpen(false)"
+                [attr.aria-label]="t('wishlist.dismiss')"
                 class="p-1 hover:bg-accent rounded-lg transition-colors cursor-pointer"
               >
                 <lucide-icon [img]="X" class="w-5 h-5"></lucide-icon>
@@ -106,7 +120,28 @@ export class WishlistCartComponent implements OnInit {
    */
   readonly isAuthenticated = computed(() => this.tokenService.isAuthenticated());
 
+  /** Icon and badge only; the accessible name stays. */
+  readonly compact = input(false);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly unregisterDestroy = this.destroyRef.onDestroy(() => {
+    if (this.isOpen()) {
+      this.openChange.emit(false);
+    }
+  });
+  readonly openChange = output<boolean>();
+
   isOpen = signal(false);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+  private readonly document = inject(DOCUMENT);
+
+  constructor() {
+    this.router.events
+      .pipe(
+        filter((event) => event instanceof NavigationEnd),
+        takeUntilDestroyed(),
+      )
+      .subscribe(() => this.setOpen(false));
+  }
 
   /** The key for a count, by the plural rule of the language being read. */
   protected plural(base: string, count: number): string {
@@ -130,6 +165,32 @@ export class WishlistCartComponent implements OnInit {
       void this.router.navigate(['/', this.locale.active(), 'login']);
       return;
     }
-    this.isOpen.update(v => !v);
+    this.setOpen(!this.isOpen());
+  }
+
+  protected setOpen(open: boolean): void {
+    if (this.isOpen() === open) {
+      return;
+    }
+    this.isOpen.set(open);
+    this.openChange.emit(open);
+  }
+
+  protected onPointerDown(event: Event): void {
+    if (this.isOpen() && !this.host.contains(event.target as Node | null)) {
+      this.setOpen(false);
+    }
+  }
+
+  protected onEscape(): void {
+    if (this.isOpen() && this.host.querySelector('#wishlist-panel')?.contains(this.document.activeElement)) {
+      this.host.querySelector<HTMLElement>('button')?.focus();
+    }
+    this.setOpen(false);
+  }
+
+  /** Lets the host bar close the popover when another overlay opens. */
+  close(): void {
+    this.setOpen(false);
   }
 }

@@ -240,6 +240,7 @@ describe('dark mode: no light-only palette classes', () => {
     ['not found', NotFoundComponent],
     ['theme toggle', ThemeToggleComponent],
     ['dock navbar', DockNavbarComponent],
+    ['dock navbar with the account menu open', DockNavbarComponent, (c) => c.accountOpen.set(true)],
     ['mesh background', MeshBackgroundComponent],
     ['landing page', LandingPageComponent],
     ['landing hero', LandingHeroComponent],
