@@ -19,6 +19,7 @@ import { HomePageComponent } from '../features/student/home-page/home-page.compo
 import { ProfilePageComponent } from '../features/student/profile-page/profile-page.component';
 import { SchoolDetailPageComponent } from '../features/student/school-detail-page/school-detail-page.component';
 import { UserDocumentsComponent } from '../features/student/user-documents/user-documents.component';
+import { PublicShellComponent } from './layouts/public-shell/public-shell.component';
 import { AuthLayoutComponent } from './layouts/auth-layout/auth-layout.component';
 import { DockNavbarComponent } from './components/dock-navbar/dock-navbar.component';
 import { ErrorStateComponent } from './components/error-state/error-state.component';
@@ -185,6 +186,7 @@ describe('dark mode: no light-only palette classes', () => {
 
   const cases: [string, Type<unknown>, ((component: any, fixture: ComponentFixture<any>) => void)?][] = [
     ['auth layout', AuthLayoutComponent],
+    ['public shell', PublicShellComponent],
     ['login form', LoginFormComponent],
     [
       'login form with error and success',
@@ -295,7 +297,7 @@ describe('dark mode: no light-only palette classes', () => {
   });
 
   it('puts the theme toggle on every screen a visitor can reach', async () => {
-    for (const type of [AuthLayoutComponent, LandingPageComponent, HomePageComponent, ProfilePageComponent]) {
+    for (const type of [PublicShellComponent, HomePageComponent, ProfilePageComponent]) {
       const root = await render(type as Type<unknown>);
       expect(root.querySelector('app-theme-toggle button')).withContext(type.name).not.toBeNull();
     }

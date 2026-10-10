@@ -226,6 +226,12 @@ describe('LandingPageComponent data states', () => {
     await fixture.whenStable();
   }
 
+  it('does not render its own header: the shell owns navigation', async () => {
+    await render(of({ content: [], last: true, totalElements: 0 }));
+
+    expect(q('header')).toBeNull();
+  });
+
   it('shows a loading state while the request is pending', async () => {
     await render(new Subject<never>());
 

@@ -1,7 +1,5 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { LanguageSwitcherComponent } from '@shared/components/language-switcher/language-switcher.component';
-import { ThemeToggleComponent } from '@shared/components/theme-toggle/theme-toggle.component';
 
 /**
  * The gradient shell around login and register. It was the same block
@@ -10,17 +8,13 @@ import { ThemeToggleComponent } from '@shared/components/theme-toggle/theme-togg
  */
 @Component({
   selector: 'app-auth-layout',
-  imports: [RouterOutlet, LanguageSwitcherComponent, ThemeToggleComponent],
+  imports: [RouterOutlet],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div
-      class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-950 dark:to-indigo-950 flex items-center justify-center p-4"
+      class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-950 dark:to-indigo-950 flex items-center justify-center px-4 pb-8 pt-24"
     >
       <div class="w-full max-w-md">
-        <div class="mb-3 flex items-center justify-end gap-2">
-          <app-language-switcher />
-          <app-theme-toggle />
-        </div>
         <router-outlet />
       </div>
     </div>

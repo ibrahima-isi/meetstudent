@@ -8,6 +8,7 @@ import { provideTransloco, TranslocoService } from '@jsverse/transloco';
 import { firstValueFrom, of } from 'rxjs';
 import { translocoOptions } from '@i18n/transloco.config';
 import { LocaleService } from '@services/locale.service';
+import { TokenService } from '@services/token.service';
 import { routes } from './app.routes';
 
 describe('routes', () => {
@@ -35,6 +36,7 @@ describe('routes', () => {
         provideHttpClientTesting(),
         provideTransloco(translocoOptions),
         { provide: LocaleService, useValue: locale },
+        { provide: TokenService, useValue: { isAuthenticated: signal(false), user: signal(null) } },
       ],
     });
 
@@ -83,5 +85,35 @@ describe('routes', () => {
 
     await harness.navigateByUrl('/fr/login');
     expect(TestBed.inject(Router).url).toBe('/fr/login');
+  });
+
+  const navbar = () => (harness.fixture.nativeElement as HTMLElement).querySelector('app-dock-navbar');
+
+  it('frames the locale root with the navbar', async () => {
+    await harness.navigateByUrl('/fr');
+
+    expect(navbar()).toBeTruthy();
+  });
+
+  it('frames the login screen with the navbar', async () => {
+    await harness.navigateByUrl('/fr/login');
+
+    expect(navbar()).toBeTruthy();
+    expect((harness.fixture.nativeElement as HTMLElement).querySelector('app-login-form')).toBeTruthy();
+  });
+
+  it('sends an anonymous visitor of a guarded route to the login inside the shell', async () => {
+    await harness.navigateByUrl('/fr/home');
+
+    expect(TestBed.inject(Router).url).toContain('/fr/login');
+    expect(navbar()).toBeTruthy();
+    expect((harness.fixture.nativeElement as HTMLElement).querySelector('app-login-form')).toBeTruthy();
+  });
+
+  it('renders the 404 without the navbar', async () => {
+    await harness.navigateByUrl('/fr/zzz');
+
+    expect(harness.routeNativeElement?.textContent).toContain('404');
+    expect(navbar()).toBeNull();
   });
 });
