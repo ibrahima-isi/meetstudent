@@ -1,6 +1,8 @@
-import { Component, computed, ElementRef, input, output, signal, OnInit, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Component, computed, DestroyRef, ElementRef, input, output, signal, OnInit, inject } from '@angular/core';
+import { CommonModule, DOCUMENT } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { filter } from 'rxjs';
+import { NavigationEnd, Router } from '@angular/router';
 import { LucideAngularModule, ShoppingCart, X, GraduationCap } from 'lucide-angular';
 import { ErrorStateComponent } from '@shared/components/error-state/error-state.component';
 import { WishlistService } from '@services/wishlist.service';
@@ -17,10 +19,12 @@ import { pluralKey } from '@i18n/plural';
   },
   imports: [CommonModule, LucideAngularModule, TranslocoDirective, ErrorStateComponent],
   template: `
-    <div [class]="compact() ? 'relative' : 'sm:relative'" *transloco="let t">
+    <div [class]="compact() ? '' : 'sm:relative'" *transloco="let t">
       <button
         (click)="handleCartClick()"
         [attr.aria-label]="t('wishlist.button')"
+        [attr.aria-expanded]="isOpen()"
+        [attr.aria-controls]="isOpen() ? 'wishlist-panel' : null"
         class="relative flex items-center gap-2 px-3 sm:px-4 py-2 text-foreground hover:bg-accent rounded-lg transition-colors cursor-pointer"
       >
         <lucide-icon [img]="ShoppingCart" class="w-5 h-5"></lucide-icon>
@@ -40,12 +44,13 @@ import { pluralKey } from '@i18n/plural';
           <div class="fixed inset-0 z-40" (click)="setOpen(false)"></div>
         }
 
-        <div [class]="(compact() ? 'right-0 w-[min(24rem,calc(100vw-5rem))]' : 'inset-x-4 sm:inset-x-auto sm:left-0 sm:w-96') + ' absolute top-full mt-2 bg-card rounded-xl shadow-xl border border-border z-50 max-h-[80vh] overflow-hidden flex flex-col'">
+        <div id="wishlist-panel" [class]="(compact() ? 'right-0 w-[min(24rem,100%)]' : 'inset-x-4 sm:inset-x-auto sm:left-0 sm:w-96') + ' absolute top-full mt-2 bg-card rounded-xl shadow-xl border border-border z-50 max-h-[80vh] overflow-hidden flex flex-col'">
           <div class="p-4 border-b border-border">
             <div class="flex items-center justify-between">
               <h3 class="text-foreground font-bold">{{ t('wishlist.title') }}</h3>
               <button
                 (click)="setOpen(false)"
+                [attr.aria-label]="t('wishlist.dismiss')"
                 class="p-1 hover:bg-accent rounded-lg transition-colors cursor-pointer"
               >
                 <lucide-icon [img]="X" class="w-5 h-5"></lucide-icon>
@@ -117,10 +122,26 @@ export class WishlistCartComponent implements OnInit {
 
   /** Icon and badge only; the accessible name stays. */
   readonly compact = input(false);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly unregisterDestroy = this.destroyRef.onDestroy(() => {
+    if (this.isOpen()) {
+      this.openChange.emit(false);
+    }
+  });
   readonly openChange = output<boolean>();
 
   isOpen = signal(false);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+  private readonly document = inject(DOCUMENT);
+
+  constructor() {
+    this.router.events
+      .pipe(
+        filter((event) => event instanceof NavigationEnd),
+        takeUntilDestroyed(),
+      )
+      .subscribe(() => this.setOpen(false));
+  }
 
   /** The key for a count, by the plural rule of the language being read. */
   protected plural(base: string, count: number): string {
@@ -162,6 +183,14 @@ export class WishlistCartComponent implements OnInit {
   }
 
   protected onEscape(): void {
+    if (this.isOpen() && this.host.querySelector('#wishlist-panel')?.contains(this.document.activeElement)) {
+      this.host.querySelector<HTMLElement>('button')?.focus();
+    }
+    this.setOpen(false);
+  }
+
+  /** Lets the host bar close the popover when another overlay opens. */
+  close(): void {
     this.setOpen(false);
   }
 }

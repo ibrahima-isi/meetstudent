@@ -109,6 +109,89 @@ describe('WishlistCartComponent', () => {
     expect(button.querySelector('span')).toBeNull();
     expect(button.getAttribute('aria-label')).toBeTruthy();
   });
+
+  it('closes and emits false on a press outside, but not on a press inside', async () => {
+    await firstValueFrom(TestBed.inject(TranslocoService).load('fr'));
+    authenticated.set(true);
+    component.handleCartClick();
+    fixture.detectChanges();
+    const emitted: boolean[] = [];
+    component.openChange.subscribe((open: boolean) => emitted.push(open));
+
+    (fixture.nativeElement as HTMLElement).querySelector('button')!.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+    expect(component.isOpen()).toBeTrue();
+
+    document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+    expect(component.isOpen()).toBeFalse();
+    expect(emitted).toEqual([false]);
+  });
+
+  it('closes on Escape, giving focus back to the cart button when it was inside the panel', async () => {
+    await firstValueFrom(TestBed.inject(TranslocoService).load('fr'));
+    authenticated.set(true);
+    component.handleCartClick();
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    (root.querySelector('#wishlist-panel button') as HTMLElement).focus();
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    fixture.detectChanges();
+
+    expect(component.isOpen()).toBeFalse();
+    expect(document.activeElement).toBe(root.querySelector('button'));
+  });
+
+  it('exposes its state on the button and names the close button', async () => {
+    await firstValueFrom(TestBed.inject(TranslocoService).load('fr'));
+    authenticated.set(true);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    const trigger = root.querySelector('button') as HTMLButtonElement;
+    expect(trigger.getAttribute('aria-expanded')).toBe('false');
+    expect(trigger.getAttribute('aria-controls')).toBeNull();
+
+    component.handleCartClick();
+    fixture.detectChanges();
+
+    expect(trigger.getAttribute('aria-expanded')).toBe('true');
+    expect(trigger.getAttribute('aria-controls')).toBe('wishlist-panel');
+    expect(root.querySelector('#wishlist-panel')).toBeTruthy();
+    expect(root.querySelector('#wishlist-panel button')!.getAttribute('aria-label')).toBe('Fermer');
+  });
+
+  it('closes when the visitor navigates', async () => {
+    authenticated.set(true);
+    component.handleCartClick();
+    fixture.detectChanges();
+
+    await TestBed.inject(Router).navigateByUrl('/');
+
+    expect(component.isOpen()).toBeFalse();
+  });
+
+  it('emits false when it is destroyed while open', () => {
+    authenticated.set(true);
+    component.handleCartClick();
+    const emitted: boolean[] = [];
+    component.openChange.subscribe((open: boolean) => emitted.push(open));
+
+    fixture.destroy();
+
+    expect(emitted).toEqual([false]);
+  });
+
+  it('places the compact panel inside its host bar, right-aligned and never wider than it', async () => {
+    await firstValueFrom(TestBed.inject(TranslocoService).load('fr'));
+    authenticated.set(true);
+    fixture.componentRef.setInput('compact', true);
+    component.handleCartClick();
+    fixture.detectChanges();
+
+    const panel = (fixture.nativeElement as HTMLElement).querySelector('#wishlist-panel') as HTMLElement;
+    expect(panel.classList).toContain('right-0');
+    expect(panel.classList).toContain('w-[min(24rem,100%)]');
+    expect(panel.classList).not.toContain('left-0');
+  });
 });
 
 describe('WishlistCartComponent data states', () => {

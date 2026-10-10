@@ -19,7 +19,6 @@ describe('DockNavbarComponent', () => {
   let authenticated: ReturnType<typeof signal<boolean>>;
   let scrollY: number;
   let logout: jasmine.Spy;
-  let clearWishlist: jasmine.Spy;
 
   const root = () => fixture.nativeElement as HTMLElement;
   const nav = () => root().querySelector('nav') as HTMLElement;
@@ -53,7 +52,6 @@ describe('DockNavbarComponent', () => {
     authenticated = signal(false);
     scrollY = 0;
     logout = jasmine.createSpy('logout');
-    clearWishlist = jasmine.createSpy('clear');
     spyOnProperty(window, 'scrollY', 'get').and.callFake(() => scrollY);
 
     TestBed.configureTestingModule({
@@ -64,7 +62,7 @@ describe('DockNavbarComponent', () => {
         { provide: AuthService, useValue: { logout } },
         {
           provide: WishlistService,
-          useValue: { schools: signal([]), status: signal('idle'), error: signal(false), load: () => undefined, toggle: () => undefined, isPending: () => false, has: () => false, clear: clearWishlist },
+          useValue: { schools: signal([]), status: signal('idle'), error: signal(false), load: () => undefined, toggle: () => undefined, isPending: () => false, has: () => false },
         },
         { provide: LocaleService, useValue: { active: signal('fr'), remember: () => undefined } },
         {
@@ -386,7 +384,7 @@ describe('DockNavbarComponent', () => {
 
       expect(avatar()).toBeTruthy();
       expect(avatar().getAttribute('aria-expanded')).toBe('false');
-      expect(avatar().getAttribute('aria-haspopup')).toBe('true');
+      expect(avatar().hasAttribute('aria-haspopup')).toBeFalse();
       expect(avatar().getAttribute('aria-label')).toBe('Compte');
       expect(menu()).toBeNull();
     });
@@ -442,7 +440,7 @@ describe('DockNavbarComponent', () => {
       expect(isHidden()).toBeFalse();
     });
 
-    it('logs out, clears the wishlist, closes and goes to the home page of the language', async () => {
+    it('logs out, closes and goes to the home page of the language', async () => {
       await openMenu();
       const navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
 
@@ -450,7 +448,6 @@ describe('DockNavbarComponent', () => {
       fixture.detectChanges();
 
       expect(logout).toHaveBeenCalledTimes(1);
-      expect(clearWishlist).toHaveBeenCalledTimes(1);
       expect(navigate).toHaveBeenCalledWith(['/', 'fr']);
       expect(menu()).toBeNull();
     });
@@ -507,6 +504,139 @@ describe('DockNavbarComponent', () => {
       hide();
 
       expect(isHidden()).toBeFalse();
+    });
+
+    it('keeps the menu open when a mouse press inside is followed by a focusout to nothing', async () => {
+      await openMenu();
+      const profile = menu()!.querySelector('a') as HTMLElement;
+
+      profile.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      profile.dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: null }));
+      fixture.detectChanges();
+
+      expect(menu()).not.toBeNull();
+    });
+
+    it('puts the compact wishlist button, without a label, right before the avatar', async () => {
+      authenticated.set(true);
+      await render();
+
+      const cart = root().querySelector('app-wishlist-cart') as HTMLElement;
+      expect(cart.nextElementSibling).toBe(avatar());
+      expect(cart.querySelector('button span:not([class*="absolute"])')).toBeNull();
+    });
+
+    it('lets the account menu follow the avatar in tab order', async () => {
+      await openMenu();
+      expect(avatar().nextElementSibling).toBe(menu());
+    });
+
+    it('anchors the popovers to the bar so they stay inside the viewport', async () => {
+      authenticated.set(true);
+      await render();
+      expect(getComputedStyle(nav()).position).toBe('relative');
+    });
+
+    it('collapses the brand text and moves the switchers into the mobile menu below sm when signed in', async () => {
+      authenticated.set(true);
+      await render();
+      expect(root().querySelector('.brand-text')!.classList).toContain('collapse-xs');
+      expect(root().querySelector('.switchers')!.classList).toContain('hide-xs');
+
+      (root().querySelector('button.menu-btn') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      const panel = root().querySelector('#dock-menu') as HTMLElement;
+      expect(panel.querySelector('app-language-switcher')).toBeTruthy();
+      expect(panel.querySelector('app-theme-toggle')).toBeTruthy();
+    });
+
+    it('keeps the anonymous bar as it was: brand text and switchers always shown, none in the panel', async () => {
+      await render();
+      expect(root().querySelector('.brand-text')!.classList).not.toContain('collapse-xs');
+      expect(root().querySelector('.switchers')!.classList).not.toContain('hide-xs');
+      (root().querySelector('button.menu-btn') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(root().querySelector('#dock-menu app-theme-toggle')).toBeNull();
+    });
+
+    describe('one overlay at a time', () => {
+      const cartButton = () => root().querySelector('app-wishlist-cart button') as HTMLButtonElement;
+      const popover = () => root().querySelector('#wishlist-panel');
+
+      it('opening the account menu closes the wishlist popover', async () => {
+        authenticated.set(true);
+        await render();
+        cartButton().click();
+        fixture.detectChanges();
+        expect(popover()).toBeTruthy();
+
+        avatar().click();
+        fixture.detectChanges();
+
+        expect(popover()).toBeNull();
+        expect(menu()).toBeTruthy();
+      });
+
+      it('opening the wishlist popover closes the account menu', async () => {
+        await openMenu();
+
+        cartButton().click();
+        fixture.detectChanges();
+
+        expect(menu()).toBeNull();
+        expect(popover()).toBeTruthy();
+      });
+
+      it('opening the mobile menu closes the wishlist popover', async () => {
+        authenticated.set(true);
+        await render();
+        cartButton().click();
+        fixture.detectChanges();
+
+        (root().querySelector('button.menu-btn') as HTMLButtonElement).click();
+        fixture.detectChanges();
+
+        expect(popover()).toBeNull();
+      });
+
+      it('opening the wishlist popover closes the mobile menu', async () => {
+        authenticated.set(true);
+        await render();
+        (root().querySelector('button.menu-btn') as HTMLButtonElement).click();
+        fixture.detectChanges();
+
+        cartButton().click();
+        fixture.detectChanges();
+
+        expect(root().querySelector('#dock-menu')).toBeNull();
+      });
+
+      it('stops pinning the bar once the popover is closed by navigating', async () => {
+        authenticated.set(true);
+        await render();
+        cartButton().click();
+        fixture.detectChanges();
+
+        await TestBed.inject(Router).navigateByUrl('/fr/schools');
+        fixture.detectChanges();
+        hide();
+
+        expect(isHidden()).toBeTrue();
+      });
+
+      it('stops pinning the bar when the visitor signs out while the popover is open', async () => {
+        authenticated.set(true);
+        await render();
+        cartButton().click();
+        fixture.detectChanges();
+
+        authenticated.set(false);
+        fixture.detectChanges();
+        await fixture.whenStable();
+        hide();
+
+        expect(isHidden()).toBeTrue();
+      });
     });
   });
 });
