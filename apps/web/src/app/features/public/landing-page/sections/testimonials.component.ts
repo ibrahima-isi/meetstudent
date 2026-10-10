@@ -35,7 +35,7 @@ import { RevealDirective } from '@shared/directives/reveal.directive';
     `,
   ],
   template: `
-    <section id="reviews" class="scroll-mt-24 mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
+    <section id="reviews" class="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
       <ng-container *transloco="let t">
         <div class="text-center">
           <h2 class="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">

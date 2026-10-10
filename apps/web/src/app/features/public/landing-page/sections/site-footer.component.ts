@@ -9,7 +9,7 @@ import { LocaleService } from '@services/locale.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' },
   template: `
-    <footer class="border-t border-border bg-card" *transloco="let t">
+    <footer role="contentinfo" class="border-t border-border bg-card" *transloco="let t">
       <div class="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-3 lg:px-8">
         <div>
           <a

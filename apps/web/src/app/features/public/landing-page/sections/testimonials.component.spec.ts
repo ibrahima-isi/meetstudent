@@ -26,11 +26,11 @@ describe('TestimonialsComponent', () => {
     });
   });
 
-  it('is an anchor target on a section that clears the fixed navbar', async () => {
+  it('is an anchor target; the global scroll-padding clears the navbar', async () => {
     await render('fr');
     const section = root().querySelector('section#reviews');
     expect(section).not.toBeNull();
-    expect(section!.classList).toContain('scroll-mt-24');
+    expect(section!.classList).not.toContain('scroll-mt-24');
   });
 
   it('renders three figures with a blockquote and a figcaption each', async () => {

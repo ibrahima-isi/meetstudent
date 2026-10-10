@@ -1,4 +1,7 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Meta } from '@angular/platform-browser';
+import { TranslocoService } from '@jsverse/transloco';
 import { CtaBandComponent } from './sections/cta-band.component';
 import { FeaturedSchoolsComponent } from './sections/featured-schools.component';
 import { HowItWorksComponent } from './sections/how-it-works.component';
@@ -30,4 +33,12 @@ import { TestimonialsComponent } from './sections/testimonials.component';
     <app-site-footer />
   `,
 })
-export class LandingPageComponent {}
+export class LandingPageComponent {
+  constructor() {
+    const meta = inject(Meta);
+    inject(TranslocoService)
+      .selectTranslate('lp.meta.description')
+      .pipe(takeUntilDestroyed())
+      .subscribe((content) => meta.updateTag({ name: 'description', content }));
+  }
+}

@@ -280,6 +280,9 @@
     }
   },
   "lp": {
+    "meta": {
+      "description": "Comparez les établissements, formations et avis d'étudiants et d'experts au Sénégal, et trouvez l'école qui vous correspond."
+    },
     "hero": {
       "eyebrow": "Plateforme d'orientation au Sénégal",
       "title": "Trouvez l'école qui vous ressemble",

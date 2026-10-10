@@ -27,11 +27,11 @@ describe('HowItWorksComponent', () => {
     });
   });
 
-  it('is an anchor target that clears the fixed navbar', async () => {
+  it('is an anchor target; the global scroll-padding clears the navbar', async () => {
     await render('fr');
     const section = root().querySelector('section#how-it-works');
     expect(section).not.toBeNull();
-    expect(section!.classList).toContain('scroll-mt-24');
+    expect(section!.classList).not.toContain('scroll-mt-24');
   });
 
   it('lists the three steps in order, in French', async () => {

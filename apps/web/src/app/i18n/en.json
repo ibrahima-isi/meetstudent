@@ -280,6 +280,9 @@
     }
   },
   "lp": {
+    "meta": {
+      "description": "Compare schools, programmes and reviews from students and experts in Senegal, and find the school that suits you."
+    },
     "hero": {
       "eyebrow": "Orientation platform for Senegal",
       "title": "Find the school that fits you",

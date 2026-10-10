@@ -46,6 +46,7 @@ describe('SiteFooterComponent', () => {
   it('is a footer landmark', async () => {
     await render('fr');
     expect(root().querySelectorAll('footer').length).toBe(1);
+    expect(root().querySelector('footer')!.getAttribute('role')).toBe('contentinfo');
   });
 
   it('links the brand to the language home', async () => {

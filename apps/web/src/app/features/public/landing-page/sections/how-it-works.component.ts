@@ -34,7 +34,7 @@ import { RevealDirective } from '@shared/directives/reveal.directive';
   template: `
     <section
       id="how-it-works"
-      class="scroll-mt-24 mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8"
+      class="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8"
       *transloco="let t"
     >
       <div class="text-center">
