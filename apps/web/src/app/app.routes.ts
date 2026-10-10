@@ -56,13 +56,12 @@ export const routes: Routes = [
           ),
         children: [
           {
-            // Temporary: serves the catalogue until the new landing replaces it (plan Task 13).
             path: '',
             pathMatch: 'full',
             title: 'pageTitle.landing',
             loadComponent: () =>
-              import('./features/public/schools-page/schools-page.component').then(
-                (m) => m.SchoolsPageComponent,
+              import('./features/public/landing-page/landing-page.component').then(
+                (m) => m.LandingPageComponent,
               ),
           },
           {

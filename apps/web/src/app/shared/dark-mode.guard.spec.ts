@@ -20,6 +20,7 @@ import { HowItWorksComponent } from '../features/public/landing-page/sections/ho
 import { CtaBandComponent } from '../features/public/landing-page/sections/cta-band.component';
 import { SiteFooterComponent } from '../features/public/landing-page/sections/site-footer.component';
 import { TestimonialsComponent } from '../features/public/landing-page/sections/testimonials.component';
+import { LandingPageComponent } from '../features/public/landing-page/landing-page.component';
 import { LandingHeroComponent } from '../features/public/landing-page/sections/landing-hero.component';
 import { SchoolsPageComponent } from '../features/public/schools-page/schools-page.component';
 import { HomePageComponent } from '../features/student/home-page/home-page.component';
@@ -239,6 +240,7 @@ describe('dark mode: no light-only palette classes', () => {
     ['theme toggle', ThemeToggleComponent],
     ['dock navbar', DockNavbarComponent],
     ['mesh background', MeshBackgroundComponent],
+    ['landing page', LandingPageComponent],
     ['landing hero', LandingHeroComponent],
     ['key figures', KeyFiguresComponent],
     ['how it works', HowItWorksComponent],
