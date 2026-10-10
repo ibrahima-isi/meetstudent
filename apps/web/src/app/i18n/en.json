@@ -278,5 +278,17 @@
       "uploadFailed": "This document could not be uploaded. Please try again.",
       "deleteFailed": "This document could not be deleted. Please try again."
     }
+  },
+  "lp": {
+    "hero": {
+      "eyebrow": "Orientation platform for Senegal",
+      "title": "Find the school that fits you",
+      "subtitle": "Compare schools, programmes and reviews from students and experts, all in one place.",
+      "searchLabel": "Search for a school",
+      "searchPlaceholder": "A school, a city…",
+      "searchSubmit": "Search",
+      "ctaExplore": "Explore schools",
+      "ctaRegister": "Create a free account"
+    }
   }
 }

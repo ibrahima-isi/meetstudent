@@ -278,5 +278,17 @@
       "uploadFailed": "Impossible d'envoyer ce document. Veuillez réessayer.",
       "deleteFailed": "Impossible de supprimer ce document. Veuillez réessayer."
     }
+  },
+  "lp": {
+    "hero": {
+      "eyebrow": "Plateforme d'orientation au Sénégal",
+      "title": "Trouvez l'école qui vous ressemble",
+      "subtitle": "Comparez établissements, formations et avis d'étudiants et d'experts, au même endroit.",
+      "searchLabel": "Rechercher un établissement",
+      "searchPlaceholder": "Un établissement, une ville…",
+      "searchSubmit": "Rechercher",
+      "ctaExplore": "Explorer les établissements",
+      "ctaRegister": "Créer un compte gratuit"
+    }
   }
 }

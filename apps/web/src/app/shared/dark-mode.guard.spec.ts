@@ -14,6 +14,7 @@ import { TokenService } from '@services/token.service';
 import { WishlistService } from '@services/wishlist.service';
 import { LoginFormComponent } from '../features/auth/login-form/login-form.component';
 import { RegisterFormComponent } from '../features/auth/register-form/register-form.component';
+import { LandingHeroComponent } from '../features/public/landing-page/sections/landing-hero.component';
 import { SchoolsPageComponent } from '../features/public/schools-page/schools-page.component';
 import { HomePageComponent } from '../features/student/home-page/home-page.component';
 import { ProfilePageComponent } from '../features/student/profile-page/profile-page.component';
@@ -232,6 +233,7 @@ describe('dark mode: no light-only palette classes', () => {
     ['theme toggle', ThemeToggleComponent],
     ['dock navbar', DockNavbarComponent],
     ['mesh background', MeshBackgroundComponent],
+    ['landing hero', LandingHeroComponent],
     ['wishlist cart', WishlistCartComponent, (c) => c.isOpen.set(true)],
     ['home with schools, filters and load more', HomePageComponent, (c) => c.showFilters.set(true)],
     ['home with a failed load more', HomePageComponent, (c) => c.loadMoreFailed.set(true)],
