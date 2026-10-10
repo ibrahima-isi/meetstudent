@@ -1,18 +1,28 @@
-<div class="bg-card rounded-2xl shadow-xl p-8" *transloco="let t">
-  <div class="text-center mb-8">
-    <div class="inline-flex items-center justify-center w-16 h-16 bg-indigo-100 dark:bg-indigo-500/20 rounded-full mb-4">
-      <lucide-icon [img]="UserPlus" class="w-8 h-8 text-indigo-600 dark:text-indigo-400"></lucide-icon>
-    </div>
-    <h1 class="text-foreground mb-2">{{ t('auth.register.title') }}</h1>
+<div *transloco="let t">
+  <div class="mb-8">
+    <h1 class="text-3xl font-semibold tracking-tight text-foreground mb-2">{{ t('auth.register.title') }}</h1>
     <p class="text-muted-foreground">
       {{ t(step() === 1 ? 'auth.register.step1' : 'auth.register.step2') }}
     </p>
   </div>
 
   <div class="mb-6">
-    <div class="flex gap-2">
-      <div class="flex-1 h-2 rounded-full" [class]="step() >= 1 ? 'bg-indigo-600' : 'bg-muted'"></div>
-      <div class="flex-1 h-2 rounded-full" [class]="step() >= 2 ? 'bg-indigo-600' : 'bg-muted'"></div>
+    <div class="flex items-center gap-3">
+      <div class="flex flex-1 gap-2">
+        <div
+          class="flex-1 h-2 rounded-full"
+          data-testid="progress-segment"
+          [class]="step() >= 1 ? 'bg-brand' : 'bg-muted'"
+          [attr.aria-current]="step() === 1 ? 'step' : null"
+        ></div>
+        <div
+          class="flex-1 h-2 rounded-full"
+          data-testid="progress-segment"
+          [class]="step() >= 2 ? 'bg-brand' : 'bg-muted'"
+          [attr.aria-current]="step() === 2 ? 'step' : null"
+        ></div>
+      </div>
+      <span class="text-sm text-muted-foreground" data-testid="step-caption">{{ step() }}/2</span>
     </div>
   </div>
 
@@ -34,7 +44,8 @@
               id="firstname"
               type="text"
               formControlName="firstname"
-              class="w-full pl-11 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              [attr.aria-invalid]="fieldError('firstname') ? 'true' : null"
+              class="field-input pl-11"
               [placeholder]="t('auth.register.firstnamePlaceholder')"
             />
           </div>
@@ -50,7 +61,8 @@
               id="lastname"
               type="text"
               formControlName="lastname"
-              class="w-full pl-11 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              [attr.aria-invalid]="fieldError('lastname') ? 'true' : null"
+              class="field-input pl-11"
               [placeholder]="t('auth.register.lastnamePlaceholder')"
             />
           </div>
@@ -68,7 +80,8 @@
             id="email"
             type="email"
             formControlName="email"
-            class="w-full pl-11 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            [attr.aria-invalid]="fieldError('email') ? 'true' : null"
+            class="field-input pl-11"
             [placeholder]="t('auth.fields.emailPlaceholder')"
           />
         </div>
@@ -104,7 +117,7 @@
           <select
             id="bacType"
             formControlName="bacType"
-            class="w-full pl-11 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent appearance-none bg-card"
+            class="field-input pl-11"
           >
             <option value="" disabled>{{ t('auth.register.bacTypePlaceholder') }}</option>
             <option value="bac-general">{{ t('common.bacTypes.general') }}</option>
@@ -121,7 +134,7 @@
             <select
               id="collegeLevel"
               formControlName="collegeLevel"
-              class="w-full pl-11 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent appearance-none bg-card"
+              class="field-input pl-11"
             >
               <option value="" disabled>{{ t('auth.register.collegeLevelPlaceholder') }}</option>
               <option value="l1">{{ t('auth.register.collegeLevels.l1') }}</option>
@@ -143,7 +156,7 @@
               formControlName="specialty"
               (focus)="filteredSpecialties().length > 0 && showSuggestions.set(true)"
               (blur)="showSuggestions.set(false)"
-              class="w-full pl-11 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              class="field-input pl-11"
               [placeholder]="t('auth.register.specialtyPlaceholder')"
             />
             @if (showSuggestions() && filteredSpecialties().length > 0) {
@@ -171,7 +184,7 @@
             id="town"
             type="text"
             formControlName="town"
-            class="w-full pl-11 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            class="field-input pl-11"
             [placeholder]="t('auth.register.townPlaceholder')"
           />
         </div>
@@ -179,7 +192,7 @@
 
       <button
         type="submit"
-        class="w-full flex items-center justify-center bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition-colors"
+        class="btn btn-primary btn-lg w-full"
       >
         {{ t('auth.register.next') }}
       </button>
@@ -196,7 +209,8 @@
             id="password"
             type="password"
             formControlName="password"
-            class="w-full pl-11 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            [attr.aria-invalid]="fieldError('password') ? 'true' : null"
+            class="field-input pl-11"
             placeholder="••••••••"
           />
         </div>
@@ -214,7 +228,8 @@
             id="confirmPassword"
             type="password"
             formControlName="confirmPassword"
-            class="w-full pl-11 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            [attr.aria-invalid]="fieldError('confirmedPassword') ? 'true' : null"
+            class="field-input pl-11"
             placeholder="••••••••"
           />
         </div>
@@ -231,7 +246,7 @@
           class="w-4 h-4 text-indigo-600 dark:text-indigo-500 border-gray-300 dark:border-gray-600 rounded focus:ring-indigo-500 mt-1"
         />
         <label for="terms" class="ml-2 text-foreground">
-          {{ t('auth.register.termsAgree') }} <button type="button" class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300">{{ t('auth.register.termsOfService') }}</button> {{ t('auth.register.termsAnd') }} <button type="button" class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300">{{ t('auth.register.privacyPolicy') }}</button>
+          {{ t('auth.register.termsAgree') }} <button type="button" class="text-brand font-medium hover:underline">{{ t('auth.register.termsOfService') }}</button> {{ t('auth.register.termsAnd') }} <button type="button" class="text-brand font-medium hover:underline">{{ t('auth.register.privacyPolicy') }}</button>
         </label>
       </div>
 
@@ -239,14 +254,14 @@
         <button
           type="button"
           (click)="step.set(1); error.set('')"
-          class="flex-1 flex items-center justify-center bg-muted text-foreground py-3 rounded-lg hover:bg-accent transition-colors"
+          class="btn btn-secondary btn-lg flex-1"
         >
           {{ t('auth.register.back') }}
         </button>
         <button
           type="submit"
           [disabled]="isLoading()"
-          class="flex-1 flex items-center justify-center bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          class="btn btn-primary btn-lg flex-1"
         >
           {{ t(isLoading() ? 'auth.register.submitting' : 'auth.register.submit') }}
         </button>
@@ -257,7 +272,7 @@
   <div class="mt-6 text-center">
     <p class="text-muted-foreground">
       {{ t('auth.register.hasAccount') }}
-      <button (click)="goTo('login')" class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300">{{ t('auth.register.signIn') }}</button>
+      <button (click)="goTo('login')" class="text-brand font-medium hover:underline">{{ t('auth.register.signIn') }}</button>
     </p>
   </div>
 </div>

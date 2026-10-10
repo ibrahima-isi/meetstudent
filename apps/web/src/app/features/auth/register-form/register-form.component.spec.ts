@@ -308,3 +308,116 @@ describe('RegisterFormComponent translations', () => {
     expect(text()).not.toContain('Licence 1');
   });
 });
+
+describe('RegisterFormComponent restyle', () => {
+  let fixture: ComponentFixture<RegisterFormComponent>;
+
+  async function render() {
+    const transloco = TestBed.inject(TranslocoService);
+    await firstValueFrom(transloco.load('fr'));
+    transloco.setActiveLang('fr');
+    fixture = TestBed.createComponent(RegisterFormComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+  }
+
+  async function settle() {
+    fixture.detectChanges();
+    await fixture.whenStable();
+  }
+
+  function root(): HTMLElement {
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  function segments(): HTMLElement[] {
+    return Array.from(root().querySelectorAll<HTMLElement>('[data-testid="progress-segment"]'));
+  }
+
+  function expectFieldInputs() {
+    const fields = Array.from(root().querySelectorAll('input[formControlName], select[formControlName]')).filter(
+      (el) => (el as HTMLInputElement).type !== 'checkbox',
+    );
+    expect(fields.length).toBeGreaterThan(0);
+    for (const field of fields) {
+      expect(field.classList.contains('field-input')).withContext(field.id).toBeTrue();
+    }
+  }
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [RegisterFormComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideZonelessChangeDetection(),
+        provideRouter([]),
+        provideTransloco(translocoOptions),
+      ],
+    });
+  });
+
+  it('styles every step 1 field with field-input and the next button as a large primary button', async () => {
+    await render();
+    fixture.componentInstance.setUserType('student');
+    await settle();
+    expectFieldInputs();
+    fixture.componentInstance.setUserType('teacher');
+    await settle();
+    expectFieldInputs();
+
+    const submit = root().querySelector('form button[type="submit"]') as HTMLElement;
+    for (const cls of ['btn', 'btn-primary', 'btn-lg']) {
+      expect(submit.classList.contains(cls)).withContext(cls).toBeTrue();
+    }
+  });
+
+  it('styles every step 2 field with field-input and the submit button as a large primary button', async () => {
+    await render();
+    fixture.componentInstance.step.set(2);
+    await settle();
+    expectFieldInputs();
+
+    const submit = root().querySelector('form button[type="submit"]') as HTMLElement;
+    for (const cls of ['btn', 'btn-primary', 'btn-lg']) {
+      expect(submit.classList.contains(cls)).withContext(cls).toBeTrue();
+    }
+  });
+
+  it('colours the progress segments with the brand token for reached steps and shows a caption', async () => {
+    await render();
+    let [first, second] = segments();
+    expect(first.classList.contains('bg-brand')).toBeTrue();
+    expect(second.classList.contains('bg-muted')).toBeTrue();
+    expect(first.getAttribute('aria-current')).toBe('step');
+    expect(second.getAttribute('aria-current')).toBeNull();
+    expect(root().textContent).toContain('1/2');
+
+    fixture.componentInstance.step.set(2);
+    await settle();
+    [first, second] = segments();
+    expect(first.classList.contains('bg-brand')).toBeTrue();
+    expect(second.classList.contains('bg-brand')).toBeTrue();
+    expect(first.getAttribute('aria-current')).toBeNull();
+    expect(second.getAttribute('aria-current')).toBe('step');
+    expect(root().textContent).toContain('2/2');
+  });
+
+  it('marks a field with an API error as aria-invalid', async () => {
+    await render();
+    const component = fixture.componentInstance;
+    component.step1Form.patchValue({ firstname: 'Awa', lastname: 'Diop', email: 'awa@example.com', town: 'Dakar' });
+    component.step.set(2);
+    await settle();
+    component.step2Form.setValue({ password: 'sup3rsecret', confirmPassword: 'sup3rsecret', terms: true });
+    component.handleSubmit();
+    const httpMock = TestBed.inject(HttpTestingController);
+    httpMock
+      .expectOne(`${environment.apiUrl}/users`)
+      .flush({ email: 'Cet email est déjà utilisé' }, { status: 400, statusText: 'Bad Request' });
+    await settle();
+
+    expect(root().querySelector('#email')?.getAttribute('aria-invalid')).toBe('true');
+    expect(root().querySelector('#town')?.getAttribute('aria-invalid')).toBeNull();
+  });
+});
