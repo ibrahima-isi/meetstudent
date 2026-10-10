@@ -73,6 +73,7 @@ Fill in every variable (the file documents them):
 | `SPRING_MAIL_HOST`, `SPRING_MAIL_PORT` | SMTP server; the host is required when `MAIL_ENABLED=true` |
 | `SPRING_MAIL_USERNAME`, `SPRING_MAIL_PASSWORD` | SMTP credentials (secret) |
 | `SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH`, `SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE` | `true`/`false`, typical for port 587 |
+| `SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED` | recommended `true` with STARTTLS (otherwise it is opportunistic and can be downgraded); defaults to the `STARTTLS_ENABLE` value |
 | `BACKUP_DIR`, `BACKUP_KEEP_DAYS` | optional, used by `scripts/backup.sh` |
 
 Do not use `$` in secrets: compose would try to interpolate it.
@@ -82,6 +83,8 @@ Email is optional and off by default: leave the `MAIL_*` / `SPRING_MAIL_*` varia
 starts and runs without sending anything. If `MAIL_ENABLED=true` with a missing SMTP host, sender address or
 a non-https `FRONTEND_BASE_URL`, the API refuses to start and names the variable. The health check does not
 contact the SMTP server. Details: `apps/api/docs/production.md`.
+Never run the API without `SPRING_PROFILES_ACTIVE=prod` (compose sets it): the default `dev` profile prints
+emails and their one-time links to the log.
 
 Validate before starting (prints nothing on success, names the missing variable otherwise):
 

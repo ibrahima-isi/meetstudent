@@ -11,8 +11,13 @@ public class DevLogEmailSender implements EmailSender {
 
     @Override
     public void send(EmailMessage message) {
-        log.info("DEV EMAIL {} for user {} to {} | {}\n{}", message.type(), message.userId(), message.to(),
-                message.subject(), message.text());
+        // Line breaks (e.g. from a first name) must not be able to forge extra log lines.
+        log.info("DEV EMAIL {} for user {} to {} | {} | {}", message.type(), message.userId(), message.to(),
+                message.subject(), oneLine(message.text()));
+    }
+
+    private static String oneLine(String value) {
+        return value == null ? "" : value.replaceAll("[\\r\\n]+", " / ");
     }
 
     @Override

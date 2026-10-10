@@ -22,6 +22,7 @@ the prod profile has no fallbacks for the required ones, so a missing value stop
 | `SPRING_MAIL_PORT` | no | `25` | SMTP port (usually 587 with STARTTLS). |
 | `SPRING_MAIL_USERNAME`, `SPRING_MAIL_PASSWORD` | no | none | SMTP credentials. Secrets: keep them in `.env` only. |
 | `SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH`, `SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE` | no | none | Standard JavaMail switches (`true`/`false`). |
+| `SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED` | no | none (compose: the `STARTTLS_ENABLE` value) | Set `true` with STARTTLS: otherwise STARTTLS is opportunistic and an attacker can strip it, sending credentials in clear. |
 
 ## Email
 
@@ -43,6 +44,12 @@ a missing `SPRING_MAIL_HOST` or `MAIL_FROM`, or on a `FRONTEND_BASE_URL` that is
   claiming an email was sent while mail is off.
 - `app.mail.dev-log` (set in the `dev` and `docker` profiles) prints emails, links included, to the log.
   The `prod` profile refuses to start with it.
+
+## Profile must be set explicitly
+
+Without `SPRING_PROFILES_ACTIVE` the API falls back to the `dev` profile, whose `app.mail.dev-log: true`
+prints emails, one-time links included, to the log. Production must always set `SPRING_PROFILES_ACTIVE=prod`
+(`compose.prod.yml` does); the prod profile refuses to start with dev-log on.
 
 ## Admin bootstrap
 

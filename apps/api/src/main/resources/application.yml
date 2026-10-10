@@ -12,6 +12,10 @@ spring:
       max-request-size: 10MB
   flyway:
     enabled: true
+  task:
+    execution:
+      # Keep Boot's applicationTaskExecutor even though MailConfig defines the mailExecutor bean.
+      mode: force
   mail:
     # Host, port, credentials come from SPRING_MAIL_HOST/PORT/USERNAME/PASSWORD and
     # SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH / ..._STARTTLS_ENABLE. Nothing is set here, so an

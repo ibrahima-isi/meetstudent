@@ -89,7 +89,12 @@ public class MailConfig {
         return Clock.systemUTC();
     }
 
-    /** Bounded pool so a slow SMTP server cannot pile up threads; a full queue drops the email and says so. */
+    /**
+     * Trap: Boot's default {@code applicationTaskExecutor} backs off as soon as any other Executor bean
+     * exists, unless {@code spring.task.execution.mode=force} (set in application.yml) is configured.
+     * Do not remove that property.
+     * <p>
+     * Bounded pool so a slow SMTP server cannot pile up threads; a full queue drops the email and says so. */
     @Bean(name = "mailExecutor")
     public TaskExecutor mailExecutor(MailProperties properties) {
         if (!properties.getMail().isAsync()) {
@@ -100,7 +105,13 @@ public class MailConfig {
         executor.setCorePoolSize(1);
         executor.setMaxPoolSize(2);
         executor.setQueueCapacity(100);
-        executor.setRejectedExecutionHandler((task, pool) -> log.warn("Mail queue is full: an email was dropped"));
+        executor.setRejectedExecutionHandler((task, pool) -> {
+            if (pool.isShutdown()) {
+                log.warn("Mail executor is shutting down: an email was dropped");
+            } else {
+                log.warn("Mail queue is full: an email was dropped");
+            }
+        });
         executor.setWaitForTasksToCompleteOnShutdown(true);
         executor.setAwaitTerminationSeconds(10);
         return executor;

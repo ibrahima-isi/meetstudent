@@ -132,4 +132,12 @@ class SmtpEmailSenderTest {
         assertThat(all).contains("EMAIL_VERIFICATION").contains("42")
                 .doesNotContain(SECRET_TOKEN).doesNotContain(ADDRESS);
     }
+
+    @Test
+    void multipleOrGroupRecipientsAreRefusedAndNothingIsSent() {
+        for (String to : new String[]{"a@example.com, b@example.com", "Team: a@example.com, b@example.com;", "a@@example.com", "a b@example.com"}) {
+            sender.send(new EmailMessage(EmailType.PASSWORD_RESET, 5, to, "s", "t", "<p>h</p>"));
+        }
+        Mockito.verify(javaMailSender, Mockito.never()).send(any(MimeMessage.class));
+    }
 }

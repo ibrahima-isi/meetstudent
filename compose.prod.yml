@@ -145,6 +145,8 @@ services:
       SPRING_MAIL_PASSWORD:
       SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH:
       SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE:
+      # Defaults to the STARTTLS_ENABLE value, so enabling STARTTLS also makes it mandatory (no silent downgrade).
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED:-${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE:-}}
       # Cap the heap relative to the container/VPS memory.
       JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=65
     volumes:
@@ -173,8 +175,9 @@ services:
       - traefik.enable=true
       - traefik.docker.network=meetstudent-edge
       - traefik.http.services.api.loadbalancer.server.port=8080
-      # Auth endpoints and registration: strict rate limit.
-      - traefik.http.routers.api-auth.rule=Host(`${DOMAIN:?set DOMAIN in .env}`) && (PathPrefix(`/api/v1/auth`) || (Path(`/api/v1/users`) && Method(`POST`)))
+      # Auth endpoints and registration: strict rate limit. /auth/capabilities is excluded: the web
+      # calls it on page loads and it must not eat the login/refresh budget (it falls to the api router).
+      - traefik.http.routers.api-auth.rule=Host(`${DOMAIN:?set DOMAIN in .env}`) && (PathPrefix(`/api/v1/auth`) || (Path(`/api/v1/users`) && Method(`POST`))) && !Path(`/api/v1/auth/capabilities`)
       - traefik.http.routers.api-auth.priority=30
       - traefik.http.routers.api-auth.entrypoints=websecure
       - traefik.http.routers.api-auth.tls=true

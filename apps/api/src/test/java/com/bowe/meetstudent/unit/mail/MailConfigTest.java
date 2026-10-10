@@ -84,6 +84,8 @@ class MailConfigTest {
             "https://app.example.com/#frag",
             "https://app.example.com?x=1",
             "ftp://app.example.com",
+            "https://evil@app.example.com",
+            "https://user:pw@app.example.com",
             "app.example.com",
             ""
     })
@@ -158,5 +160,32 @@ class MailConfigTest {
             executor.execute(() -> ranOn.set(Thread.currentThread()));
             assertThat(ranOn.get()).isSameAs(caller);
         });
+    }
+
+    @Test
+    void aFullQueueAndAShutdownPoolLogDifferentMessages() {
+        var logger = (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger(MailConfig.class);
+        var logs = new ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>();
+        logs.start();
+        logger.addAppender(logs);
+        try {
+            runner.run(ctx -> {
+                var executor = ctx.getBean("mailExecutor", org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor.class);
+                var pool = executor.getThreadPoolExecutor();
+                pool.shutdown();
+                executor.execute(() -> { });
+                assertThat(logs.list).anyMatch(e -> e.getFormattedMessage().contains("shutting down"));
+                assertThat(logs.list).noneMatch(e -> e.getFormattedMessage().contains("queue is full"));
+            });
+        } finally {
+            logger.detachAppender(logs);
+        }
+    }
+
+    @Test
+    void theFrontendBaseUrlIsStrippedOnceSoValidationAndLinksAgree() {
+        var props = new com.bowe.meetstudent.mail.MailProperties();
+        props.setFrontendBaseUrl("  https://app.example.com ");
+        assertThat(props.getFrontendBaseUrl()).isEqualTo("https://app.example.com");
     }
 }
