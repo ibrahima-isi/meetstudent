@@ -8,10 +8,16 @@ class HostComponent {}
 class FakeObserver {
   static last: FakeObserver | null = null;
   disconnected = false;
-  constructor(public callback: (entries: { isIntersecting: boolean }[]) => void) {
+  observed: Element[] = [];
+  constructor(
+    public callback: (entries: { isIntersecting: boolean }[]) => void,
+    public options?: IntersectionObserverInit,
+  ) {
     FakeObserver.last = this;
   }
-  observe(): void {}
+  observe(target: Element): void {
+    this.observed.push(target);
+  }
   disconnect(): void {
     this.disconnected = true;
   }
@@ -30,8 +36,11 @@ describe('RevealDirective', () => {
     window.IntersectionObserver = original;
   });
 
+  let lastFixture: ComponentFixture<HostComponent>;
+
   async function render(top: number): Promise<HTMLElement> {
     const fixture: ComponentFixture<HostComponent> = TestBed.createComponent(HostComponent);
+    lastFixture = fixture;
     const el = fixture.nativeElement.querySelector('#target') as HTMLElement;
     spyOn(el, 'getBoundingClientRect').and.returnValue({ top } as DOMRect);
     fixture.detectChanges();
@@ -57,6 +66,21 @@ describe('RevealDirective', () => {
     FakeObserver.last!.callback([{ isIntersecting: true }]);
 
     expect(el.getAttribute('data-reveal')).toBe('done');
+    expect(FakeObserver.last!.disconnected).toBeTrue();
+  });
+
+  it('observes the host element exactly once with the expected threshold', async () => {
+    useFakeObserver();
+    const el = await render(5000);
+    expect(FakeObserver.last!.observed).toEqual([el]);
+    expect(FakeObserver.last!.options?.threshold).toBe(0.12);
+  });
+
+  it('stops watching when destroyed before it ever intersected', async () => {
+    useFakeObserver();
+    await render(5000);
+    expect(FakeObserver.last!.disconnected).toBeFalse();
+    lastFixture.destroy();
     expect(FakeObserver.last!.disconnected).toBeTrue();
   });
 
