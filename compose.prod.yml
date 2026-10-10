@@ -133,6 +133,18 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD in .env}
       FILE_UPLOAD_DIR: /data/uploads
       FILE_PRIVATE_DIR: /data/private
+      # Account emails. Off unless MAIL_ENABLED=true; none of these is required, see docs/DEPLOY.md.
+      MAIL_ENABLED: ${MAIL_ENABLED:-false}
+      MAIL_FROM: ${MAIL_FROM:-}
+      # Origin used for the links in emails (https is enforced in prod when mail is on).
+      FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-https://${DOMAIN}}
+      # Unset values are not passed to the container; set them in .env to enable SMTP.
+      SPRING_MAIL_HOST:
+      SPRING_MAIL_PORT:
+      SPRING_MAIL_USERNAME:
+      SPRING_MAIL_PASSWORD:
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH:
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE:
       # Cap the heap relative to the container/VPS memory.
       JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=65
     volumes:

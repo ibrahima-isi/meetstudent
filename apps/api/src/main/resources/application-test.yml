@@ -19,3 +19,9 @@ file:
 security:
   jwt:
     secret-key: ThisIsASecretKeyForIntegrationTestingOnly!12345
+
+app:
+  frontend-base-url: http://localhost:4200
+  mail:
+    enabled: false
+    async: false

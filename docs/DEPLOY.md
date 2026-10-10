@@ -67,10 +67,21 @@ Fill in every variable (the file documents them):
 | `BO_API_URL` | optional, defaults to `https://${DOMAIN}/api/v1` |
 | `POSTGRES_DB`, `POSTGRES_USER` | optional, default `meetstudent` |
 | `ACME_CA_SERVER` | optional, Let's Encrypt staging while testing |
+| `MAIL_ENABLED` | optional, `true` to send account emails; default `false` (nothing is sent) |
+| `MAIL_FROM` | sender address, required when `MAIL_ENABLED=true` |
+| `FRONTEND_BASE_URL` | optional, origin used in email links; default `https://${DOMAIN}` (must be https) |
+| `SPRING_MAIL_HOST`, `SPRING_MAIL_PORT` | SMTP server; the host is required when `MAIL_ENABLED=true` |
+| `SPRING_MAIL_USERNAME`, `SPRING_MAIL_PASSWORD` | SMTP credentials (secret) |
+| `SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH`, `SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE` | `true`/`false`, typical for port 587 |
 | `BACKUP_DIR`, `BACKUP_KEEP_DAYS` | optional, used by `scripts/backup.sh` |
 
 Do not use `$` in secrets: compose would try to interpolate it.
 `POSTGRES_PASSWORD` is applied only when the database volume is first created.
+
+Email is optional and off by default: leave the `MAIL_*` / `SPRING_MAIL_*` variables unset and the API
+starts and runs without sending anything. If `MAIL_ENABLED=true` with a missing SMTP host, sender address or
+a non-https `FRONTEND_BASE_URL`, the API refuses to start and names the variable. The health check does not
+contact the SMTP server. Details: `apps/api/docs/production.md`.
 
 Validate before starting (prints nothing on success, names the missing variable otherwise):
 

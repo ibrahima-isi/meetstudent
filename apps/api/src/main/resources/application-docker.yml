@@ -8,3 +8,8 @@ spring:
 security:
   jwt:
     secret-key: ${JWT_SECRET_KEY}
+
+app:
+  mail:
+    # Print account emails, links included, to the log (no SMTP server needed locally).
+    dev-log: true
