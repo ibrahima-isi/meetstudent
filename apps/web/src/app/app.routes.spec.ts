@@ -13,6 +13,8 @@ import { routes } from './app.routes';
 
 describe('routes', () => {
   let harness: RouterTestingHarness;
+  let authenticated: ReturnType<typeof signal<boolean>>;
+  let currentUser: ReturnType<typeof signal<unknown>>;
   const navbar = () => (harness.fixture.nativeElement as HTMLElement).querySelector('app-dock-navbar');
 
   beforeEach(async () => {
@@ -29,6 +31,9 @@ describe('routes', () => {
       active: signal('fr' as const),
     };
 
+    authenticated = signal(false);
+    currentUser = signal<unknown>(null);
+
     TestBed.configureTestingModule({
       providers: [
         provideZonelessChangeDetection(),
@@ -37,7 +42,10 @@ describe('routes', () => {
         provideHttpClientTesting(),
         provideTransloco(translocoOptions),
         { provide: LocaleService, useValue: locale },
-        { provide: TokenService, useValue: { isAuthenticated: signal(false), user: signal(null) } },
+        {
+          provide: TokenService,
+          useValue: { isAuthenticated: authenticated, user: currentUser, setUser: () => undefined, clear: () => undefined },
+        },
       ],
     });
 
@@ -145,5 +153,40 @@ describe('routes', () => {
     await harness.navigateByUrl('/fr/schools/7');
 
     expect(TestBed.inject(Router).url).toContain('/fr/login');
+  });
+
+  describe('the signed-in pages', () => {
+    const host = () => harness.fixture.nativeElement as HTMLElement;
+
+    beforeEach(() => {
+      authenticated.set(true);
+      currentUser.set({ id: 3, firstname: 'Awa', lastname: 'Diop', email: 'a@b.sn', role: { name: 'ROLE_STUDENT' } });
+    });
+
+    for (const url of ['/fr/home', '/fr/profile', '/fr/schools/1']) {
+      it(`renders ${url} inside the shell, under the navbar`, async () => {
+        await harness.navigateByUrl(url);
+
+        expect(TestBed.inject(Router).url).toBe(url);
+        expect(navbar()).toBeTruthy();
+        expect(host().querySelector('main#main')).toBeTruthy();
+      });
+    }
+
+    for (const url of ['/fr/home', '/fr/profile', '/fr/schools/1']) {
+      it(`shows exactly one theme toggle on ${url}: the navbar one`, async () => {
+        await harness.navigateByUrl(url);
+
+        expect(host().querySelectorAll('app-theme-toggle').length).toBe(1);
+        expect(navbar()?.querySelector('app-theme-toggle')).toBeTruthy();
+      });
+    }
+
+    it('sends an anonymous visitor to the login with the returnUrl of the guarded page', async () => {
+      authenticated.set(false);
+      await harness.navigateByUrl('/fr/home');
+
+      expect(TestBed.inject(Router).url).toBe('/fr/login?returnUrl=%2Ffr%2Fhome');
+    });
   });
 });

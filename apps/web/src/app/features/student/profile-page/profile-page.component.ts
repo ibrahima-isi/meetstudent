@@ -10,7 +10,6 @@ import { ProfileUpdate, UserService } from '@services/user.service';
 import { WishlistService } from '@services/wishlist.service';
 import { User } from '@models/entities';
 import { ROLE_EXPERT, ROLE_STUDENT } from '@models/roles';
-import { ThemeToggleComponent } from '@shared/components/theme-toggle/theme-toggle.component';
 import { UserDocumentsComponent } from '../user-documents/user-documents.component';
 import { TranslocoDirective } from '@jsverse/transloco';
 
@@ -23,7 +22,7 @@ type SaveStatus = 'saved' | 'fieldErrors' | 'failed' | null;
 
 @Component({
   selector: 'app-profile-page',
-  imports: [CommonModule, ReactiveFormsModule, LucideAngularModule, UserDocumentsComponent, TranslocoDirective, ThemeToggleComponent],
+  imports: [CommonModule, ReactiveFormsModule, LucideAngularModule, UserDocumentsComponent, TranslocoDirective],
   templateUrl: './profile-page.component.html'
 })
 export class ProfilePageComponent implements OnInit {

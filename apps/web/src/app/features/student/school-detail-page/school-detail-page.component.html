@@ -1,6 +1,6 @@
 <div class="min-h-screen bg-muted/50" *transloco="let t">
   @if (showLoginPrompt()) {
-    <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
       <div class="bg-card rounded-xl shadow-xl max-w-md w-full p-6">
         <h3 class="text-foreground mb-2 font-bold text-lg">{{ t('schoolDetail.loginRequired') }}</h3>
         <p class="text-muted-foreground mb-6">
@@ -26,7 +26,7 @@
 
   @if (school(); as detail) {
 
-  <div class="relative h-64 md:h-80">
+  <div class="relative h-80 md:h-96">
     <app-image-with-fallback
       [src]="detail.coverImageUrl || ''"
       [alt]="detail.name"
@@ -34,7 +34,7 @@
     ></app-image-with-fallback>
     <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
     
-    <div class="absolute top-4 left-4 flex items-center gap-2 z-10">
+    <div class="absolute top-24 left-4 flex items-center gap-2 z-10">
       <button
         (click)="goBack()"
         class="flex items-center gap-2 px-4 py-2 bg-card text-foreground rounded-lg shadow-md hover:bg-accent transition-colors cursor-pointer"
@@ -42,7 +42,6 @@
         <lucide-icon [img]="ArrowLeft" class="w-5 h-5"></lucide-icon>
         <span class="font-medium">{{ t('schoolDetail.back') }}</span>
       </button>
-      <app-theme-toggle class="rounded-lg bg-card shadow-md" />
     </div>
 
     <button
@@ -52,21 +51,21 @@
       [attr.aria-label]="t(wishlist.has(detail.id) ? 'wishlist.removeAction' : 'wishlist.addAction')"
       [disabled]="wishlist.isPending(detail.id)"
       (click)="toggleWishlist(detail)"
-      class="absolute top-16 left-4 p-3 rounded-full shadow-md transition-colors cursor-pointer z-10 disabled:opacity-60"
+      class="absolute top-36 left-4 p-3 rounded-full shadow-md transition-colors cursor-pointer z-10 disabled:opacity-60"
       [class]="wishlist.has(detail.id) ? 'bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-400' : 'bg-card text-muted-foreground'"
     >
       <lucide-icon [img]="Heart" class="w-5 h-5" [class.fill-current]="wishlist.has(detail.id)"></lucide-icon>
     </button>
 
     @if (wishlist.error()) {
-      <div role="alert" data-testid="wishlist-error" class="absolute top-28 left-4 right-4 sm:right-auto z-10 flex items-center gap-3 px-4 py-3 bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-400 rounded-lg shadow-md text-sm">
+      <div role="alert" data-testid="wishlist-error" class="absolute top-52 left-4 right-4 sm:right-auto z-10 flex items-center gap-3 px-4 py-3 bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-400 rounded-lg shadow-md text-sm">
         <span>{{ t('wishlist.updateError') }}</span>
         <button type="button" (click)="wishlist.dismissError()" class="font-medium underline cursor-pointer">{{ t('wishlist.dismiss') }}</button>
       </div>
     }
 
     <!-- Tags at Top Right -->
-    <div class="absolute top-4 right-4 flex flex-wrap gap-2 justify-end max-w-[60%] z-10">
+    <div class="absolute top-24 right-4 flex flex-wrap gap-2 justify-end max-w-[60%] z-10">
       @for (tag of detail.tags; track tag.id) {
         <span class="px-3 py-1 bg-card/90 backdrop-blur-sm text-indigo-700 dark:text-indigo-300 text-xs font-bold rounded-full shadow-sm border border-indigo-100 dark:border-indigo-500/30">
           {{ tag.name }}
@@ -356,14 +355,14 @@
     </div>
   }
   } @else if (schoolStatus() === 'error') {
-    <div class="max-w-6xl mx-auto px-4 py-16">
+    <div class="max-w-6xl mx-auto px-4 pt-24 pb-16">
       <app-error-state [message]="t('schoolDetail.loadError')" (retry)="retry()" />
     </div>
   } @else {
     <div
       role="status"
       aria-busy="true"
-      class="max-w-6xl mx-auto px-4 py-16 text-center text-muted-foreground animate-pulse"
+      class="max-w-6xl mx-auto px-4 pt-24 pb-16 text-center text-muted-foreground animate-pulse"
     >
       {{ t('schoolDetail.loading') }}
     </div>

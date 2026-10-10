@@ -181,6 +181,74 @@ describe('WishlistService', () => {
     expect(service.error()).toBeFalse();
   });
 
+  it('does not ask twice while a load is in flight', () => {
+    userService.getUser.and.returnValue(new Subject<User>());
+
+    service.load();
+    service.load();
+
+    expect(userService.getUser).toHaveBeenCalledTimes(1);
+  });
+
+  it('loads again after a failure, and for a new user while the old answer is pending', () => {
+    userService.getUser.and.returnValues(throwError(() => new Error('x')), new Subject<User>(), new Subject<User>());
+    service.load();
+    expect(service.status()).toBe('error');
+
+    service.load();
+    user.set({ id: 10 });
+    TestBed.tick();
+    service.load();
+
+    expect(userService.getUser).toHaveBeenCalledTimes(3);
+  });
+
+  it('loads for a user set a moment ago, before the owner effect has flushed', () => {
+    const reply = new Subject<User>();
+    userService.getUser.and.returnValue(reply);
+
+    user.set({ id: 10 });
+    service.load();
+    reply.next(userWith([b]));
+    TestBed.tick();
+
+    expect(userService.getUser).toHaveBeenCalledWith(10);
+    expect(service.schools()).toEqual([b]);
+  });
+
+  it('shows only the new user\'s list when the user changes while a load is in flight', () => {
+    const first = new Subject<User>();
+    const second = new Subject<User>();
+    userService.getUser.and.returnValues(first, second);
+    service.load();
+
+    user.set({ id: 10 });
+    service.load();
+    first.next(userWith([a]));
+    second.next(userWith([b]));
+    TestBed.tick();
+
+    expect(userService.getUser).toHaveBeenCalledTimes(2);
+    expect(service.schools()).toEqual([b]);
+  });
+
+  it('gives up on a load that never answers, so a retry is possible', () => {
+    // Zoneless suite: no fakeAsync, the Jasmine clock drives rxjs' timer.
+    jasmine.clock().install();
+    try {
+      userService.getUser.and.returnValues(new Subject<User>(), of(userWith([a])));
+      service.load();
+
+      jasmine.clock().tick(15000);
+      expect(service.status()).toBe('error');
+
+      service.load();
+      expect(service.schools()).toEqual([a]);
+    } finally {
+      jasmine.clock().uninstall();
+    }
+  });
+
   it('ignores a load answer that arrives after clear', () => {
     const reply = new Subject<User>();
     userService.getUser.and.returnValue(reply);

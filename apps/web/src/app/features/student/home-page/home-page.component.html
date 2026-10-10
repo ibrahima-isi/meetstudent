@@ -1,36 +1,7 @@
 <div class="min-h-screen bg-muted/50" *transloco="let t">
-  <header class="bg-card border-b border-border sticky top-0 z-50">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-      <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-        <div class="min-w-0">
-          <h1 class="text-foreground font-bold text-xl">MeetStudent</h1>
-          <p class="text-muted-foreground text-sm truncate">{{ t('schools.tagline') }}</p>
-        </div>
-        <div class="flex items-center gap-1 sm:gap-2">
-          <app-theme-toggle />
-          <app-wishlist-cart />
-          <button
-            (click)="goTo('profile')"
-            [attr.aria-label]="t('home.profile')"
-            class="flex items-center gap-2 px-3 sm:px-4 py-2 text-foreground hover:bg-accent rounded-lg transition-colors cursor-pointer"
-          >
-            <lucide-icon [img]="UserIcon" class="w-5 h-5"></lucide-icon>
-            <span class="hidden sm:inline">{{ t('home.profile') }}</span>
-          </button>
-          <button
-            (click)="logout()"
-            [attr.aria-label]="t('home.logout')"
-            class="flex items-center gap-2 px-3 sm:px-4 py-2 text-foreground hover:bg-accent rounded-lg transition-colors cursor-pointer"
-          >
-            <lucide-icon [img]="LogOut" class="w-5 h-5"></lucide-icon>
-            <span class="hidden sm:inline">{{ t('home.logout') }}</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  </header>
+  <h1 class="sr-only">{{ t('pageTitle.home') }}</h1>
 
-  <div class="bg-card border-b border-border">
+  <div class="bg-card border-b border-border pt-24">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
       <div class="space-y-4">
         <div class="relative">

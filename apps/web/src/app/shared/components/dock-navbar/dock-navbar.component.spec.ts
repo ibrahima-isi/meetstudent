@@ -48,6 +48,8 @@ describe('DockNavbarComponent', () => {
     scrollTo(900);
   };
 
+  afterEach(() => document.body.removeAttribute('ng-server-context'));
+
   beforeEach(async () => {
     authenticated = signal(false);
     scrollY = 0;
@@ -105,10 +107,20 @@ describe('DockNavbarComponent', () => {
     expect(link('/fr/register')).toBeNull();
   });
 
-  it('renders the anonymous markup first even for a signed-in visitor, so hydration matches the server', () => {
+  it('renders the anonymous markup first on a server-rendered document, so hydration matches the server', () => {
     authenticated.set(true);
+    document.body.setAttribute('ng-server-context', 'ssr');
     fixture = TestBed.createComponent(DockNavbarComponent);
     expect((fixture.componentInstance as unknown as { signedIn(): boolean }).signedIn()).toBeFalse();
+  });
+
+  it('renders the signed-in bar at once on a client-only document (no server markup to match)', () => {
+    authenticated.set(true);
+    fixture = TestBed.createComponent(DockNavbarComponent);
+    fixture.detectChanges();
+
+    expect((fixture.componentInstance as unknown as { signedIn(): boolean }).signedIn()).toBeTrue();
+    expect(root().querySelector('button.avatar')).toBeTruthy();
   });
 
   it('starts visible without reading the scroll position at construction', () => {

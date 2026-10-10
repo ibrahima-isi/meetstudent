@@ -4,11 +4,9 @@ import { Observable, Subject, catchError, debounceTime, distinctUntilChanged, ma
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { LucideAngularModule, Search, MapPin, Star, Filter, LogOut, User, ArrowUpDown, Heart } from 'lucide-angular';
+import { LucideAngularModule, Search, MapPin, Star, Filter, ArrowUpDown, Heart } from 'lucide-angular';
 import { ImageWithFallbackComponent } from '@shared/components/image-with-fallback/image-with-fallback.component';
 import { StarRatingComponent } from '@shared/components/star-rating/star-rating.component';
-import { WishlistCartComponent } from '@shared/components/wishlist-cart/wishlist-cart.component';
-import { ThemeToggleComponent } from '@shared/components/theme-toggle/theme-toggle.component';
 import { ErrorStateComponent } from '@shared/components/error-state/error-state.component';
 import { Page, School } from '@models/entities';
 import { SchoolService } from '@services/school.service';
@@ -24,7 +22,7 @@ const PAGE_SIZE = 12;
 
 @Component({
   selector: 'app-home-page',
-  imports: [CommonModule, FormsModule, LucideAngularModule, ImageWithFallbackComponent, StarRatingComponent, WishlistCartComponent, TranslocoDirective, ErrorStateComponent, ThemeToggleComponent],
+  imports: [CommonModule, FormsModule, LucideAngularModule, ImageWithFallbackComponent, StarRatingComponent, TranslocoDirective, ErrorStateComponent],
   templateUrl: './home-page.component.html'
 })
 export class HomePageComponent {
@@ -32,15 +30,17 @@ export class HomePageComponent {
   private readonly tokenService = inject(TokenService);
   private readonly router = inject(Router);
   private readonly locale = inject(LocaleService);
-  /** Loaded by the header cart on init; the cards only read and toggle it. */
+  /**
+   * Loaded by this page on entry too: at login the tokens are set before the
+   * user, so the navbar cart's own load can run with no user id and do nothing.
+   * Concurrent loads are collapsed by the service.
+   */
   protected readonly wishlist = inject(WishlistService);
 
   readonly Search = Search;
   readonly MapPin = MapPin;
   readonly Star = Star;
   readonly Filter = Filter;
-  readonly LogOut = LogOut;
-  readonly UserIcon = User;
   readonly ArrowUpDown = ArrowUpDown;
   readonly Heart = Heart;
 
@@ -79,6 +79,10 @@ export class HomePageComponent {
   );
 
   constructor() {
+    if (this.tokenService.isAuthenticated()) {
+      this.wishlist.load();
+    }
+
     this.typed$
       .pipe(debounceTime(SEARCH_DEBOUNCE_MS), map((v) => v.trim()), distinctUntilChanged(), takeUntilDestroyed())
       .subscribe((term) => this.term.set(term));
@@ -202,11 +206,6 @@ export class HomePageComponent {
     const narrowedOnClient = this.selectedType() !== '' || (this.selectedCity() !== '' && this.term() !== '');
     return narrowedOnClient ? this.sortedSchools().length : (this.totalElements() ?? this.sortedSchools().length);
   });
-
-  protected logout(): void {
-    this.tokenService.clear();
-    this.goTo();
-  }
 
   /**
    * A school the API returned always carries an id; the type says otherwise

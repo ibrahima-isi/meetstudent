@@ -151,10 +151,6 @@
     "loadMore": "Voir plus",
     "loadMoreError": "Impossible de charger d'autres établissements."
   },
-  "home": {
-    "profile": "Profil",
-    "logout": "Déconnexion"
-  },
   "schoolDetail": {
     "loginRequired": "Connexion requise",
     "loginRequiredText": "Vous devez être connecté pour effectuer cette action.",

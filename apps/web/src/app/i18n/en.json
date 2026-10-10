@@ -151,10 +151,6 @@
     "loadMore": "Load more",
     "loadMoreError": "More schools could not be loaded."
   },
-  "home": {
-    "profile": "Profile",
-    "logout": "Log out"
-  },
   "schoolDetail": {
     "loginRequired": "Sign-in required",
     "loginRequiredText": "You need to be signed in to do this.",

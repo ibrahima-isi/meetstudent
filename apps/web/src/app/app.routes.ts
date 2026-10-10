@@ -20,41 +20,43 @@ export const routes: Routes = [
     canActivate: [localeGuard],
     children: [
       {
-        path: 'home',
-        title: 'pageTitle.home',
-        canActivate: [authGuard],
-        loadComponent: () =>
-          import('./features/student/home-page/home-page.component').then(
-            (m) => m.HomePageComponent,
-          ),
-      },
-      {
-        path: 'schools/:id',
-        title: 'pageTitle.school',
-        canActivate: [authGuard],
-        loadComponent: () =>
-          import(
-            './features/student/school-detail-page/school-detail-page.component'
-          ).then((m) => m.SchoolDetailPageComponent),
-      },
-      {
-        path: 'profile',
-        title: 'pageTitle.profile',
-        canActivate: [authGuard],
-        loadComponent: () =>
-          import('./features/student/profile-page/profile-page.component').then(
-            (m) => m.ProfilePageComponent,
-          ),
-      },
-      {
-        // Pathless, prefix match: the public pages share one frame (skip link + navbar).
-        // Tried after the guarded routes above; the router backtracks out of it for `home` etc.
+        // Pathless, prefix match: every page except the 404 shares one frame (skip
+        // link + navbar), the signed-in ones included. They sit before the landing
+        // `''` so `home`, `profile` and `schools/:id` are tried first; each carries
+        // its own `authGuard`, which still yields a `returnUrl` under this lazy parent.
         path: '',
         loadComponent: () =>
           import('./shared/layouts/public-shell/public-shell.component').then(
             (m) => m.PublicShellComponent,
           ),
         children: [
+          {
+            path: 'home',
+            title: 'pageTitle.home',
+            canActivate: [authGuard],
+            loadComponent: () =>
+              import('./features/student/home-page/home-page.component').then(
+                (m) => m.HomePageComponent,
+              ),
+          },
+          {
+            path: 'schools/:id',
+            title: 'pageTitle.school',
+            canActivate: [authGuard],
+            loadComponent: () =>
+              import(
+                './features/student/school-detail-page/school-detail-page.component'
+              ).then((m) => m.SchoolDetailPageComponent),
+          },
+          {
+            path: 'profile',
+            title: 'pageTitle.profile',
+            canActivate: [authGuard],
+            loadComponent: () =>
+              import('./features/student/profile-page/profile-page.component').then(
+                (m) => m.ProfilePageComponent,
+              ),
+          },
           {
             path: '',
             pathMatch: 'full',

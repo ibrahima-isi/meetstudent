@@ -317,14 +317,10 @@ describe('dark mode: no light-only palette classes', () => {
   });
 
   it('puts the theme toggle on every screen a visitor can reach', async () => {
-    for (const type of [PublicShellComponent, HomePageComponent, ProfilePageComponent]) {
+    for (const type of [PublicShellComponent]) {
       const root = await render(type as Type<unknown>);
       expect(root.querySelector('app-theme-toggle button')).withContext(type.name).not.toBeNull();
     }
   });
 
-  it('puts the theme toggle on the school detail page', async () => {
-    const root = await render(SchoolDetailPageComponent, detailSetup());
-    expect(root.querySelector('app-theme-toggle button')).not.toBeNull();
-  });
 });

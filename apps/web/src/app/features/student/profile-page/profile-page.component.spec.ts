@@ -75,6 +75,15 @@ describe('ProfilePageComponent translations', () => {
     expect(text()).toContain('My documents');
   });
 
+  it('has no theme toggle of its own (the shell navbar has it) but keeps the back button', async () => {
+    await render('en');
+    const root = fixture.nativeElement as HTMLElement;
+
+    expect(root.querySelector('app-theme-toggle')).toBeNull();
+    expect(text()).toContain('Back');
+    expect(root.querySelectorAll('h1').length).toBe(1);
+  });
+
   it('shows the translated role, never the raw API name', async () => {
     await render('fr');
     expect(text()).toContain('Étudiant');
