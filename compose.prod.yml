@@ -133,6 +133,20 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD in .env}
       FILE_UPLOAD_DIR: /data/uploads
       FILE_PRIVATE_DIR: /data/private
+      # Account emails. Off unless MAIL_ENABLED=true; none of these is required, see docs/DEPLOY.md.
+      MAIL_ENABLED: ${MAIL_ENABLED:-false}
+      MAIL_FROM: ${MAIL_FROM:-}
+      # Origin used for the links in emails (https is enforced in prod when mail is on).
+      FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-https://${DOMAIN}}
+      # Unset values are not passed to the container; set them in .env to enable SMTP.
+      SPRING_MAIL_HOST:
+      SPRING_MAIL_PORT:
+      SPRING_MAIL_USERNAME:
+      SPRING_MAIL_PASSWORD:
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH:
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE:
+      # Defaults to the STARTTLS_ENABLE value, so enabling STARTTLS also makes it mandatory (no silent downgrade).
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED:-${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE:-}}
       # Cap the heap relative to the container/VPS memory.
       JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=65
     volumes:
@@ -161,8 +175,9 @@ services:
       - traefik.enable=true
       - traefik.docker.network=meetstudent-edge
       - traefik.http.services.api.loadbalancer.server.port=8080
-      # Auth endpoints and registration: strict rate limit.
-      - traefik.http.routers.api-auth.rule=Host(`${DOMAIN:?set DOMAIN in .env}`) && (PathPrefix(`/api/v1/auth`) || (Path(`/api/v1/users`) && Method(`POST`)))
+      # Auth endpoints and registration: strict rate limit. /auth/capabilities is excluded: the web
+      # calls it on page loads and it must not eat the login/refresh budget (it falls to the api router).
+      - traefik.http.routers.api-auth.rule=Host(`${DOMAIN:?set DOMAIN in .env}`) && (PathPrefix(`/api/v1/auth`) || (Path(`/api/v1/users`) && Method(`POST`))) && !Path(`/api/v1/auth/capabilities`)
       - traefik.http.routers.api-auth.priority=30
       - traefik.http.routers.api-auth.entrypoints=websecure
       - traefik.http.routers.api-auth.tls=true

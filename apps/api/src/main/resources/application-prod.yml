@@ -22,6 +22,10 @@ app:
   admin:
     email: ${ADMIN_EMAIL:}
     password: ${ADMIN_PASSWORD:}
+  # No localhost default in production. Only checked when MAIL_ENABLED=true (https required then).
+  frontend-base-url: ${FRONTEND_BASE_URL:}
+  mail:
+    dev-log: false
 
 springdoc:
   api-docs:
