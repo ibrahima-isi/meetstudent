@@ -11,6 +11,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Every task ends the same way: commit, push, open a PR from the working branch to `dev`.** Do not open feature, fix, docs, chore, refactor, test, perf or CI PRs directly against `main`; `main` is updated only by a separate `dev` → `main` promotion PR after `dev` is green. Since `required_approving_review_count` is `0` (see `docs/MONOREPO.md`), the PR is yours to merge once both checks pass.
 - **"Merge" means squash merge.** Working-branch PRs into `dev` are always merged with *Squash and merge* — never a merge commit, never rebase-and-merge.
 - **`main` must stay identical to `dev`.** A PR merge commit on `main` would be missing from `dev`, and syncing it back creates yet another one, forever. So never merge `main` back into `dev`; promote by fast-forwarding `main` to `dev` (`git push origin dev:main`, which needs the ruleset bypass), and never with a merge commit, squash or rebase.
+- **A PR must be up to date with `dev` to merge** (the ruleset requires it): if `dev` moved, update the branch from `dev` (a merge commit on the working branch is fine, it is squashed away), wait for CI again, then squash. Expect to repeat this when several PRs are open at once.
+- Remote branch deletion is **blocked from agent sessions** (HTTP 403 on `git push --delete`; there is no delete-branch tool). Delete local branches yourself, and leave the remote ones to the owner (GitHub → Branches, or enable "Automatically delete head branches").
 - When a branch is cut from another unmerged branch, open its PR **against that branch**, not `dev` or `main`, or the diff shows the parent's commits too. Retarget or merge onward to `dev` only after the parent branch lands.
 
 **Scope**
@@ -34,7 +36,7 @@ MeetStudent is a monorepo assembled with `git subtree`. Each app keeps its own b
 
 - `apps/api/` — Spring Boot 3 / Java 21 REST API (Maven). **Read `apps/api/CLAUDE.md` before touching backend code** — it documents the layered architecture, media/storage split, Flyway rules, and test conventions in detail.
 - `apps/web/` — Angular 20 SSR frontend (npm). **Read `apps/web/.claude/CLAUDE.md`** for the mandatory Angular/TypeScript style rules (signals, `inject()`, native control flow, no `ngClass`/`ngStyle`, etc.).
-- `apps/backoffice/` — placeholder, empty. Planned as a deliberately light ADMIN-only CRUD surface; `apps/web` serves STUDENT and EXPERT. There is no manager role — `V2__data.sql` seeds only `ROLE_ADMIN`, `ROLE_EXPERT`, `ROLE_STUDENT`.
+- `apps/backoffice/` — ADMIN-only back office (Angular 20 SPA, no SSR, UI in French), **live and feature-complete for launch**: login (non-admins refused), moderation of documents, schools, programs/courses (+ accreditation links), tags and accreditations. `apps/web` serves STUDENT and EXPERT. There is no manager role — `V2__data.sql` seeds only `ROLE_ADMIN`, `ROLE_EXPERT`, `ROLE_STUDENT`. **A rewrite in vanilla TypeScript + Vite is planned: read `docs/plans/2026-10-10-backoffice-vite-rewrite.md` before touching or replacing it.** Read `apps/backoffice/README.md` for its commands and conventions.
 - `docs/MONOREPO.md` — subtree provenance, branch topology, CI and ruleset conventions. **Read it before touching branches, CI job names or subtree history.**
 - `infra/`, `shared/` — empty placeholders reserved for future cross-app content.
 - `compose.yml` / `compose.dev.yml` — full local stack, and the hot-reload override for the API.
@@ -97,13 +99,30 @@ The front is deliberately absent from the dev override: `ng serve` on the host h
 
 ## Frontend structure notes
 
-- **The app does not use the router.** `app.routes.ts` is an empty array; navigation is a signal-based state machine in `app.ts` (`view()` over `'landing' | 'login' | 'register' | 'verify' | 'home' | 'school-detail' | 'profile'`), with `app.html` switching on it via `@if`. There is no `<router-outlet>`, so there are no URLs per screen, no deep links and no browser history. Introducing the router means rewriting that switch — do not assume routes exist.
-
+- **The app uses the Angular router, with the locale in the URL.** Every screen lives under `/:lang` (`fr` default, `en`); `localeGuard` validates the segment and `authGuard` protects `home`, `schools/:id` and `profile` (redirect to `/<lang>/login?returnUrl=…`). Guarded routes are rendered **client-side** (`RenderMode.Client` in `app.routes.server.ts`, listed before `**`): the guard cannot see `localStorage` during SSR, so server-rendering them would bounce every reload to the login. A spec fails if a guarded route is missing from the server routes. Landing, login and register stay server-rendered.
+- i18n is Transloco (runtime, `src/app/i18n/fr.json` + `en.json`, **keys in English**, French is the source language, both files must be updated together). Dark/light is `ThemeService` + a `dark` class on `<html>` (Tailwind `@custom-variant dark`), set before first paint by a script in `index.html`; style with the semantic tokens in `styles.css` (`bg-card`, `text-foreground`, `border-border`…) or pair every raw palette class with a `dark:` class — `shared/dark-mode.guard.spec.ts` fails otherwise.
 - `src/app/features/<area>/<page>/` holds page components grouped by audience (`auth`, `public`, `student`); `src/app/services/` holds one service per backend resource; `src/app/shared/components/` holds reusable UI.
-- TS path aliases are configured: `@services/*`, `@models/*`, `@shared/*`, `@data/*`. Use them instead of deep relative imports.
+- TS path aliases are configured: `@services/*`, `@models/*`, `@shared/*`, `@i18n/*`. Use them instead of deep relative imports. There is **no mock data**: a failing API shows the shared `error-state` with a retry, never fake schools.
+- Roles reach the client as `ROLE_STUDENT` / `ROLE_EXPERT` / `ROLE_ADMIN` (`models/roles.ts`); the wishlist is by **school**; ratings: students rate schools, experts also programs and courses (the server enforces it).
 - The app is **zoneless** (`provideZonelessChangeDetection`) with client hydration and event replay — state must flow through signals; code relying on Zone.js change detection will not update the view.
 - `apps/web/meetstudent/` is a separate legacy React/Vite prototype (the design source for the Angular pages). Only modify it when a task explicitly targets it.
 - Angular styling is Tailwind v4 via `@tailwindcss/postcss` (`.postcssrc.json`), no `tailwind.config` file.
+
+## Project state (2026-10-10) and lessons
+
+**Shipped on `dev` = `main`** (commit `75294df` at the time of writing): API hardened for production, web (landing, auth, home with API search/filters/paging, school detail with ratings and wishlist, profile with real save, documents with progress/validation/moderation badge, dark/light, fr/en), backoffice (see layout above), production kit (`compose.prod.yml` with Traefik/TLS/rate limits, backoffice image, `scripts/backup.sh`/`restore.sh`, `docs/DEPLOY.md` runbook, `apps/api/docs/production.md` env list). Two full live smoke tests (real Postgres + prod-profile API + SSR web + backoffice + Traefik replica, Playwright, **no shims**) ended in GO. Not covered by any test: real TLS/Let's Encrypt, the api/web Docker image builds (the sandbox proxy blocks Maven/npm inside containers — run natively instead), real phones.
+
+**Known gaps (decisions, not bugs):** no email verification and no password reset (the register flow goes straight to login); schools/programs have no capacity, tuition, level, description or contact data (the API has none); the program photo is returned but not rendered in the web; `MediaDTO` has no owner or upload date, so moderation shows filename/category/type/size/status only; the backoffice sidebar Escape handler only fires when focus is inside the menu.
+
+**API contract quirks every client must respect:**
+- Single reads answer **200** (they used to answer 302 and broke login); errors are `{field: message}` on 400 validation, and the standard `ErrorResponse` for 401/403/404/405/413/415. Anonymous access to private or unknown media is 401; a non-admin gets 403.
+- `PUT` on schools/programs/courses behaves like a **PATCH** (null = keep): codes, photos and the school of a program can be changed but never cleared; `tags: []` does clear tags. Create requests need `name`.
+- Limits: school `code` ≤5, `name` ≤50, address fields ≤255; accreditation name ≤50, code ≤5, description ≤255; tag name ≤255; uploads ≤10 MB, extensions pdf/jpg/jpeg/png/webp/mp4/webm/mov with a matching MIME type.
+- Tags have **no update** endpoint and are not paged; accreditations and schools are paged; programs have no school filter and no list-courses-by-program endpoint (courses are embedded in each program); accreditation links to a program need start/end years as query params; deleting a program deletes its courses; deleting a tag/accreditation still in use, or a duplicate code/name, comes back as a generic 500.
+- Schools are searched by name with `/schools/name/{term}` (a term containing `/` cannot work); the city filter is `/schools/search?city=`.
+- Admin account: in production it is created from `ADMIN_EMAIL`/`ADMIN_PASSWORD` at boot (12+ chars); the seeded `admin@meetstudent.com`/`password` row is neutralised.
+
+**Process lessons:** run the whole stack natively (Postgres in Docker, API jar, SSR server, static backoffice, a Traefik replica of `compose.prod.yml`) and drive it with Playwright before promoting — unit tests missed the 302 login blocker, the SSR guard bounce and the role-name mismatch. Subagents work best one task per branch in isolated worktrees (`isolation: worktree`) with explicit TDD and a report format; remove `.claude/worktrees/*` when they finish or the stop hook keeps flagging untracked files.
 
 ## Agent instruction files
 
