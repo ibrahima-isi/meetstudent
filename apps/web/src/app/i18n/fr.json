@@ -306,7 +306,8 @@
       "title": "Établissements à la une",
       "subtitle": "Une sélection du catalogue.",
       "all": "Voir tous les établissements",
-      "error": "Les établissements n'ont pas pu être chargés."
+      "error": "Les établissements n'ont pas pu être chargés.",
+      "rating": "Note : {{value}} sur 5"
     }
   }
 }

@@ -306,7 +306,8 @@
       "title": "Featured schools",
       "subtitle": "A selection from the catalogue.",
       "all": "See all schools",
-      "error": "Schools could not be loaded."
+      "error": "Schools could not be loaded.",
+      "rating": "Rating: {{value}} out of 5"
     }
   }
 }

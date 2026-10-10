@@ -56,7 +56,7 @@ describe('FeaturedSchoolsComponent', () => {
     const card = cards()[0];
     expect(card.textContent).toContain('Harvard');
     expect(card.textContent).toContain('Dakar');
-    expect(card.querySelector('[data-testid="rating"]')?.textContent?.trim()).toBe('4.3');
+    expect(card.querySelector('[data-testid="rating"] span[aria-hidden="true"]')?.textContent?.trim()).toBe('4.3');
     expect(card.querySelector('[data-testid="city"]')?.textContent?.trim()).toBe('Dakar');
   });
 
@@ -143,6 +143,47 @@ describe('FeaturedSchoolsComponent', () => {
 
   it('puts the reveal on the card link, not on an inner wrapper', async () => {
     await create(page([school(1)]));
-    expect(cards()[0].closest('li')?.classList.contains('reveal') || cards()[0].classList.contains('reveal')).toBeTrue();
+    expect(cards()[0].closest('li')?.classList.contains('reveal')).toBeTrue();
+  });
+
+  it('announces the rating once, through a labelled sr-only text, in French', async () => {
+    await create(page([school(1, { rating: 4.26 })]));
+    const rating = cards()[0].querySelector('[data-testid="rating"]')!;
+    expect(rating.querySelector('.sr-only')?.textContent?.trim()).toBe('Note : 4.3 sur 5');
+    const visible = Array.from(rating.querySelectorAll('[aria-hidden="true"]')).filter((e) => e.textContent?.includes('4.3'));
+    expect(visible.length).toBe(1);
+    expect((rating.textContent ?? '').match(/4\.3/g)?.length).toBe(2); // one visible (hidden from AT), one sr-only
+  });
+
+  it('announces the rating in English', async () => {
+    await firstValueFrom(TestBed.inject(TranslocoService).load('en'));
+    TestBed.inject(TranslocoService).setActiveLang('en');
+    await create(page([school(1, { rating: 4 })]));
+    expect(cards()[0].querySelector('[data-testid="rating"] .sr-only')?.textContent?.trim()).toBe('Rating: 4 out of 5');
+  });
+
+  it('renders no section when no returned school has an id', async () => {
+    await create(page([school(undefined), school(undefined)]));
+    expect(root().querySelector('section')).toBeNull();
+    expect(root().querySelector('h2')).toBeNull();
+  });
+
+  it('shows a visible focus outline on the card link', async () => {
+    await create(page([school(1)]));
+    const link = cards()[0];
+    link.focus();
+    const rules = Array.from(document.styleSheets)
+      .flatMap((sheet) => Array.from(sheet.cssRules))
+      .map((r) => r.cssText)
+      .join('\n');
+    expect(getComputedStyle(link).outlineStyle).not.toBe('none');
+    expect(/school-link[^{,]*:focus-visible\s*\{[^}]*outline:[^;}]*solid[^}]*outline-offset/.test(rules)).toBeTrue();
+  });
+
+  it('keeps long unbroken names inside the card', async () => {
+    await create(page([school(1, { name: 'X'.repeat(300) })]));
+    const card = cards()[0];
+    expect(card.querySelector('h3')?.classList.contains('break-words')).toBeTrue();
+    expect(card.querySelector('[data-testid="city"]')?.parentElement?.classList.contains('min-w-0') || card.querySelector('[data-testid="city"]')?.classList.contains('min-w-0')).toBeTrue();
   });
 });

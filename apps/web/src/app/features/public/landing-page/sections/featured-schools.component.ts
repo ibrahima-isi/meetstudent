@@ -26,6 +26,11 @@ const FEATURED_COUNT = 6;
   host: { class: 'block' },
   styles: [
     `
+      .school-link:focus-visible {
+        outline: 2px solid var(--brand);
+        outline-offset: 2px;
+        border-radius: inherit;
+      }
       @media (hover: hover) {
         .school-card-inner {
           transition:
@@ -88,60 +93,63 @@ const FEATURED_COUNT = 6;
             @default {
               <ul role="list" class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 @for (school of schools(); track school.id) {
-                  @if (school.id !== undefined) {
-                    <li appReveal>
-                      <a
-                        class="school-link block rounded-2xl"
-                        [routerLink]="['/', lang(), 'schools', school.id]"
+                  <li appReveal>
+                    <a
+                      class="school-link block rounded-2xl"
+                      [routerLink]="['/', lang(), 'schools', school.id]"
+                    >
+                      <div
+                        class="school-card-inner overflow-hidden rounded-2xl border border-border bg-card"
                       >
-                        <div
-                          class="school-card-inner overflow-hidden rounded-2xl border border-border bg-card"
-                        >
-                          @if (coverOf(school); as cover) {
-                            <app-image-with-fallback
-                              [src]="cover"
-                              [alt]="''"
-                              class="block h-44 w-full object-cover"
-                            />
-                          } @else {
-                            <div
-                              data-testid="cover-placeholder"
-                              aria-hidden="true"
-                              class="h-44 w-full bg-brand-soft"
-                            ></div>
-                          }
-                          <div class="p-5">
-                            <h3 class="line-clamp-2 text-lg font-semibold text-foreground">
-                              {{ school.name }}
-                            </h3>
-                            <div
-                              class="mt-3 flex items-center justify-between gap-3 text-sm text-muted-foreground"
-                            >
-                              @if (cityOf(school); as city) {
-                                <span data-testid="city" class="flex items-center gap-1.5">
-                                  <lucide-icon [img]="MapPin" class="h-4 w-4" aria-hidden="true" />
-                                  {{ city }}
-                                </span>
-                              }
-                              @if (hasRating(school)) {
-                                <span
-                                  data-testid="rating"
-                                  class="ml-auto flex items-center gap-1 font-medium text-foreground"
-                                >
-                                  <lucide-icon
-                                    [img]="Star"
-                                    class="h-4 w-4 fill-yellow-400 text-yellow-400"
-                                    aria-hidden="true"
-                                  />
-                                  {{ roundRating(school.rating) }}
-                                </span>
-                              }
-                            </div>
+                        @if (coverOf(school); as cover) {
+                          <app-image-with-fallback
+                            [src]="cover"
+                            [alt]="''"
+                            class="block h-44 w-full object-cover"
+                          />
+                        } @else {
+                          <div
+                            data-testid="cover-placeholder"
+                            aria-hidden="true"
+                            class="h-44 w-full bg-brand-soft"
+                          ></div>
+                        }
+                        <div class="p-5">
+                          <h3
+                            class="line-clamp-2 break-words text-lg font-semibold text-foreground"
+                          >
+                            {{ school.name }}
+                          </h3>
+                          <div
+                            class="mt-3 flex min-w-0 items-center justify-between gap-3 text-sm text-muted-foreground"
+                          >
+                            @if (cityOf(school); as city) {
+                              <span data-testid="city" class="flex min-w-0 items-center gap-1.5">
+                                <lucide-icon [img]="MapPin" class="h-4 w-4" aria-hidden="true" />
+                                {{ city }}
+                              </span>
+                            }
+                            @if (hasRating(school)) {
+                              <span
+                                data-testid="rating"
+                                class="ml-auto flex items-center gap-1 font-medium text-foreground"
+                              >
+                                <lucide-icon
+                                  [img]="Star"
+                                  class="h-4 w-4 fill-yellow-400 text-yellow-400"
+                                  aria-hidden="true"
+                                />
+                                <span aria-hidden="true">{{ roundRating(school.rating) }}</span>
+                                <span class="sr-only">{{
+                                  t('lp.featured.rating', { value: roundRating(school.rating) })
+                                }}</span>
+                              </span>
+                            }
                           </div>
                         </div>
-                      </a>
-                    </li>
-                  }
+                      </div>
+                    </a>
+                  </li>
                 }
               </ul>
             }
@@ -171,7 +179,7 @@ export class FeaturedSchoolsComponent implements OnInit {
     this.status.set('loading');
     this.schoolService.getSchools(0, FEATURED_COUNT).subscribe({
       next: (page) => {
-        this.schools.set(page.content ?? []);
+        this.schools.set((page.content ?? []).filter((school) => school.id !== undefined));
         this.status.set('loaded');
       },
       error: () => this.status.set('error'),
