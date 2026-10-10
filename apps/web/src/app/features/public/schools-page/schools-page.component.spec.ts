@@ -9,7 +9,8 @@ import { signal } from '@angular/core';
 import { Subject } from 'rxjs';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
-import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
 import { provideTransloco } from '@jsverse/transloco';
 import { translocoOptions } from '@i18n/transloco.config';
 
@@ -290,44 +291,80 @@ describe('SchoolsPageComponent data states', () => {
   });
 });
 
-
 describe('SchoolsPageComponent search prefill', () => {
-  async function renderWith(params: Record<string, string>) {
-    const schoolService = jasmine.createSpyObj('SchoolService', ['getSchools']);
-    schoolService.getSchools.and.returnValue(of({ content: [] }));
+  let harness: RouterTestingHarness;
+  const schools = [
+    { id: 1, name: 'Harvard', description: '', type: 'Univ', address: { city: 'Cambridge' } },
+    { id: 2, name: 'Lagos Tech', description: '', type: 'Univ', address: { city: 'Lagos' } },
+  ];
+
+  async function open(url: string) {
     await TestBed.configureTestingModule({
-      imports: [SchoolsPageComponent],
       providers: [
         provideZonelessChangeDetection(),
         provideHttpClient(),
         provideHttpClientTesting(),
-        provideRouter([]),
+        provideRouter([{ path: 'schools', component: SchoolsPageComponent }]),
         provideTransloco(translocoOptions),
-        { provide: SchoolService, useValue: schoolService },
-        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap(params) } } },
+        { provide: SchoolService, useValue: { getSchools: () => of({ content: schools }), schools: () => [] } },
       ],
     }).compileComponents();
-    const fixture = TestBed.createComponent(SchoolsPageComponent);
-    fixture.detectChanges();
-    return fixture;
+    await firstValueFrom(TestBed.inject(LocaleService).use('en'));
+    harness = await RouterTestingHarness.create();
+    const component = await harness.navigateByUrl(url, SchoolsPageComponent);
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+    return component;
   }
+  const input = () => harness.routeNativeElement!.querySelector('input[type="search"], input[type="text"]') as HTMLInputElement;
+  const settle = async () => {
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+    await harness.fixture.whenStable();
+  };
 
-  it('prefills the search from ?q=', async () => {
-    const fixture = await renderWith({ q: 'dak' });
-    expect(fixture.componentInstance.searchQuery()).toBe('dak');
+  it('prefills the search from ?q= on arrival', async () => {
+    const component = await open('/schools?q=dakar');
+    await settle();
+    expect(component.searchQuery()).toBe('dakar');
+    expect(input().value).toBe('dakar');
+  });
+
+  it('follows ?q= when the URL changes on the same route', async () => {
+    const component = await open('/schools?q=dakar');
+    await TestBed.inject(Router).navigateByUrl('/schools?q=lagos');
+    await settle();
+    expect(component.searchQuery()).toBe('lagos');
+    expect(input().value).toBe('lagos');
+  });
+
+  it('clears the search when ?q= disappears', async () => {
+    const component = await open('/schools?q=dakar');
+    await TestBed.inject(Router).navigateByUrl('/schools');
+    await settle();
+    expect(component.searchQuery()).toBe('');
+    expect(input().value).toBe('');
   });
 
   it('starts empty without ?q=', async () => {
-    const fixture = await renderWith({});
-    expect(fixture.componentInstance.searchQuery()).toBe('');
+    const component = await open('/schools');
+    expect(component.searchQuery()).toBe('');
+  });
+
+  it('applies the prefilled query to the list', async () => {
+    const component = await open('/schools?q=lagos');
+    await settle();
+    expect(component.sortedSchools().map((x) => x.name)).toEqual(['Lagos Tech']);
+    const text = harness.routeNativeElement!.textContent ?? '';
+    expect(text).toContain('Lagos Tech');
+    expect(text).not.toContain('Harvard');
   });
 
   it('keeps a hostile ?q= as plain text', async () => {
     const hostile = '<img src=x onerror=alert(1)>';
-    const fixture = await renderWith({ q: hostile });
-    await fixture.whenStable();
-    fixture.detectChanges();
-    expect(fixture.componentInstance.searchQuery()).toBe(hostile);
-    expect((fixture.nativeElement as HTMLElement).querySelector('img[src="x"]')).toBeNull();
+    const component = await open('/schools?q=' + encodeURIComponent(hostile));
+    await settle();
+    expect(component.searchQuery()).toBe(hostile);
+    expect(harness.routeNativeElement!.querySelector('img[src="x"]')).toBeNull();
   });
 });

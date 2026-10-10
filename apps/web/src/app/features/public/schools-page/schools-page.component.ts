@@ -1,4 +1,5 @@
-import { Component, signal, computed, inject, OnInit } from '@angular/core';
+import { Component, signal, computed, inject, OnInit, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -28,6 +29,7 @@ export class SchoolsPageComponent implements OnInit {
   private schoolService = inject(SchoolService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly locale = inject(LocaleService);
 
   readonly Search = Search;
@@ -50,6 +52,10 @@ export class SchoolsPageComponent implements OnInit {
   protected readonly skeletons = [0, 1, 2];
 
   ngOnInit() {
+    // Follows ?q= on later navigations to the same route entry; the initial value above keeps SSR prefilled.
+    this.route.queryParamMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((params) => this.searchQuery.set(params.get('q') ?? ''));
     this.load();
   }
 
