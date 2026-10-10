@@ -76,6 +76,18 @@ describe('LandingHeroComponent', () => {
     }
   });
 
+  it('has a short placeholder that fits a phone, in French and English', async () => {
+    expect(input().placeholder).toBe('École, ville…');
+
+    const transloco = TestBed.inject(TranslocoService);
+    await firstValueFrom(transloco.load('en'));
+    transloco.setActiveLang('en');
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(input().placeholder).toBe('School, city…');
+  });
+
   it('has exactly one h1, with the hero title', () => {
     const headings = root().querySelectorAll('h1');
     expect(headings.length).toBe(1);

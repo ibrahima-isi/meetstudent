@@ -37,6 +37,9 @@ export const appConfig: ApplicationConfig = {
     // Subscribes to the router, so it has to be told to start — nothing else
     // injects it, and a service nobody injects is never constructed.
     provideEnvironmentInitializer(() => inject(AlternateLinksService).start()),
+    // Covers router-driven anchor navigation (the router scrolls with window.scrollTo and ignores CSS
+    // scroll-padding); styles.css `html { scroll-padding-top }` covers the paths it does not see
+    // (the skip link `href="#main"` and a hash present on first load).
     // The router scrolls to anchors with an explicit offset and ignores CSS scroll-padding/margin
     // (`scrollOffset` is not an option of provideRouter). The Dock pill is ~68px tall, plus breathing room.
     provideEnvironmentInitializer(() => inject(ViewportScroller).setOffset([0, 96])),
