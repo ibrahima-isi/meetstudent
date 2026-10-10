@@ -187,6 +187,19 @@ describe('SchoolDetailPageComponent', () => {
     expect(component.selectedProgram()).toBeNull();
   });
 
+  it('has no theme toggle (the shell navbar has it) but keeps the back button and the heart', async () => {
+    const transloco = TestBed.inject(TranslocoService);
+    await firstValueFrom(transloco.load('fr'));
+    transloco.setActiveLang('fr');
+    await renderAt('/schools/7');
+    harness.detectChanges();
+    const root = harness.routeNativeElement as HTMLElement;
+
+    expect(root.querySelector('app-theme-toggle')).toBeNull();
+    expect(root.textContent).toMatch(/Retour|Back/);
+    expect(root.querySelector('[data-testid="wishlist-toggle"]')).not.toBeNull();
+  });
+
   describe('wishlist', () => {
     const button = () => harness.routeNativeElement?.querySelector('[data-testid="wishlist-toggle"]') as HTMLButtonElement | null;
     async function settle() {

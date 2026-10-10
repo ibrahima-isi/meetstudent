@@ -4,7 +4,7 @@ import { RouterOutlet } from '@angular/router';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { DockNavbarComponent } from '@shared/components/dock-navbar/dock-navbar.component';
 
-/** Frame of every public page: skip link, floating navbar, and the page itself. */
+/** Frame of every page but the 404 (public and signed-in): skip link, floating navbar, and the page itself. */
 @Component({
   selector: 'app-public-shell',
   imports: [RouterOutlet, TranslocoDirective, DockNavbarComponent],

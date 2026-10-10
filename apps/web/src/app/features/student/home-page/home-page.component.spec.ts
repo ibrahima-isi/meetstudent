@@ -50,17 +50,24 @@ describe('HomePageComponent translations', () => {
   it('renders in French, the source language', async () => {
     await render('fr');
 
-    expect(text()).toContain('Déconnexion');
-    expect(text()).toContain('Souhaits');
     expect(text()).toContain('0 établissement trouvé');
   });
 
   it('renders in English when English is active', async () => {
     await render('en');
 
-    expect(text()).toContain('Log out');
-    expect(text()).toContain('Wishlist');
     expect(text()).toContain('0 schools found');
+  });
+
+  it('has no header of its own: the shell navbar owns the title, theme, wishlist and logout', async () => {
+    await render('en');
+    const root = fixture.nativeElement as HTMLElement;
+
+    expect(root.querySelector('header')).toBeNull();
+    expect(root.querySelector('app-wishlist-cart')).toBeNull();
+    expect(root.querySelector('app-theme-toggle')).toBeNull();
+    expect(Array.from(root.querySelectorAll('button')).some((b) => /log out/i.test(b.getAttribute('aria-label') ?? ''))).toBeFalse();
+    expect(root.querySelectorAll('h1').length).toBe(1);
   });
 
   it('names an untyped, undescribed school in the active language', async () => {
@@ -171,12 +178,14 @@ describe('HomePageComponent wishlist', () => {
   let saved: ReturnType<typeof signal<unknown[]>>;
   let error: ReturnType<typeof signal<boolean>>;
   let toggle: jasmine.Spy;
+  let load: jasmine.Spy;
   const q = (sel: string) => (fixture.nativeElement as HTMLElement).querySelector(sel);
 
   beforeEach(async () => {
     saved = signal<unknown[]>([]);
     error = signal(false);
     toggle = jasmine.createSpy('toggle');
+    load = jasmine.createSpy('load');
     TestBed.configureTestingModule({
       imports: [HomePageComponent],
       providers: [
@@ -193,7 +202,7 @@ describe('HomePageComponent wishlist', () => {
             schools: saved,
             error,
             status: signal('loaded'),
-            load: () => {},
+            load,
             toggle,
             has: (id: number) => (saved() as { id: number }[]).some((s) => s.id === id),
             isPending: () => false,
@@ -206,6 +215,10 @@ describe('HomePageComponent wishlist', () => {
     fixture = TestBed.createComponent(HomePageComponent);
     fixture.detectChanges();
     await fixture.whenStable();
+  });
+
+  it('loads the wishlist itself, since the navbar cart only mounts after hydration', () => {
+    expect(load).toHaveBeenCalledTimes(1);
   });
 
   it('puts an unpressed add-to-wishlist button on each card and toggles on click', () => {
