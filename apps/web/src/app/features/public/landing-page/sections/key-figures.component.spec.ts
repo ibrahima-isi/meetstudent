@@ -1,7 +1,7 @@
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideTransloco, TranslocoService } from '@jsverse/transloco';
-import { firstValueFrom, Observable, of, throwError } from 'rxjs';
+import { firstValueFrom, Observable, of, Subject, throwError } from 'rxjs';
 import { translocoOptions } from '@i18n/transloco.config';
 import { LocaleService } from '@services/locale.service';
 import { ProgramService } from '@services/program.service';
@@ -130,6 +130,16 @@ describe('KeyFiguresComponent', () => {
     expect(text('.sr-only').filter((t) => t !== 'La plateforme en chiffres')).toEqual([fmt(0), fmt(9)]);
   });
 
+  it('puts each label before its number in the source order', async () => {
+    await create(page(12), page(34));
+    const groups = Array.from(root().querySelectorAll('dl > div'));
+    expect(groups.length).toBe(2);
+    for (const g of groups) {
+      expect(g.children[0].tagName).toBe('DT');
+      expect(g.children[1].tagName).toBe('DD');
+    }
+  });
+
   describe('visible numbers', () => {
     const visible = () => text('dd [aria-hidden="true"]');
 
@@ -161,7 +171,7 @@ describe('KeyFiguresComponent', () => {
       expect(text('.sr-only').filter((t) => t !== 'La plateforme en chiffres')).toEqual([fmt(1234), fmt(34)]);
     });
 
-    it('are never zero when the data arrives after the observer is set up (no flash for animation-less visitors)', async () => {
+    it('show the final numbers without IntersectionObserver', async () => {
       (window as { IntersectionObserver?: unknown }).IntersectionObserver = undefined;
       await create(page(7), page(8));
       expect(visible()).toEqual([fmt(7), fmt(8)]);
@@ -179,6 +189,59 @@ describe('KeyFiguresComponent', () => {
       fixture.detectChanges();
       expect(visible()).toEqual([fmt(1234), fmt(34)]);
       expect(own().disconnected).toBeTrue();
+    });
+
+    describe('when the data arrives late', () => {
+      let schools$: Subject<unknown>;
+      let programs$: Subject<unknown>;
+      let frames: ((t: number) => void)[];
+      let now: number;
+
+      const arrive = () => {
+        schools$.next({ content: [], totalElements: 1234 });
+        schools$.complete();
+        programs$.next({ content: [], totalElements: 34 });
+        programs$.complete();
+        fixture.detectChanges();
+      };
+      const flushFrames = () => {
+        now = 5000;
+        frames.splice(0).forEach((cb) => cb(now));
+        fixture.detectChanges();
+      };
+
+      beforeEach(async () => {
+        frames = [];
+        now = 0;
+        spyOn(window, 'requestAnimationFrame').and.callFake((cb: FrameRequestCallback) => frames.push(cb));
+        spyOn(performance, 'now').and.callFake(() => now);
+        schools$ = new Subject();
+        programs$ = new Subject();
+        await create(schools$, programs$);
+      });
+
+      it('holds at 0 when it arrives after the animation is set up, then counts up on intersection', () => {
+        arrive();
+        expect(visible()).toEqual([fmt(0), fmt(0)]);
+        expect(text('.sr-only').filter((t) => t !== 'La plateforme en chiffres')).toEqual([fmt(1234), fmt(34)]);
+        own().fire(true);
+        flushFrames();
+        expect(visible()).toEqual([fmt(1234), fmt(34)]);
+      });
+
+      it('shows the final numbers at once when the section intersected before the data arrived', () => {
+        own().fire(true);
+        arrive();
+        expect(visible()).toEqual([fmt(1234), fmt(34)]);
+        expect(own().disconnected).toBeTrue();
+      });
+
+      it('still ends on the final numbers if frames run after a late arrival', () => {
+        own().fire(true);
+        arrive();
+        flushFrames();
+        expect(visible()).toEqual([fmt(1234), fmt(34)]);
+      });
     });
 
     it('ignores a non-intersecting notification', async () => {

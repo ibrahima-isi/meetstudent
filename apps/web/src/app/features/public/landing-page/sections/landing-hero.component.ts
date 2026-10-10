@@ -107,7 +107,7 @@ export class LandingHeroComponent {
 
   protected onSubmit(event: Event): void {
     event.preventDefault();
-    const q = wellFormed(this.query.value.trim().slice(0, MAX_TERM_LENGTH));
+    const q = wellFormed(this.query.value.slice(0, MAX_TERM_LENGTH).trim());
     void this.router.navigate(['/', this.lang(), 'schools'], { queryParams: q ? { q } : {} });
   }
 

@@ -90,6 +90,11 @@ describe('LandingHeroComponent', () => {
     });
   });
 
+  it('does not let a trailing space survive the length cut', () => {
+    submit('x'.repeat(99) + ' y');
+    expect(navigate).toHaveBeenCalledWith(['/', 'fr', 'schools'], { queryParams: { q: 'x'.repeat(99) } });
+  });
+
   it('prevents the native form submission', () => {
     const event = new Event('submit', { cancelable: true });
     form().dispatchEvent(event);

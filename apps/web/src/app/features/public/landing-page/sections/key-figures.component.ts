@@ -25,19 +25,19 @@ const DURATION_MS = 1200;
       <section class="mx-auto max-w-5xl px-4 py-16" appReveal *transloco="let t">
         <h2 class="sr-only">{{ t('lp.figures.title') }}</h2>
         <dl class="grid gap-6 sm:grid-cols-2">
-          <div class="rounded-2xl border border-border bg-card p-8 text-center">
+          <div class="flex flex-col-reverse rounded-2xl border border-border bg-card p-8 text-center">
+            <dt class="mt-2 text-muted-foreground">{{ t('lp.figures.schools') }}</dt>
             <dd class="text-5xl font-semibold tracking-tight text-brand">
               <span aria-hidden="true">{{ format(displayed()?.schools ?? f.schools) }}</span>
               <span class="sr-only">{{ format(f.schools) }}</span>
             </dd>
-            <dt class="mt-2 text-muted-foreground">{{ t('lp.figures.schools') }}</dt>
           </div>
-          <div class="rounded-2xl border border-border bg-card p-8 text-center">
+          <div class="flex flex-col-reverse rounded-2xl border border-border bg-card p-8 text-center">
+            <dt class="mt-2 text-muted-foreground">{{ t('lp.figures.programs') }}</dt>
             <dd class="text-5xl font-semibold tracking-tight text-brand">
               <span aria-hidden="true">{{ format(displayed()?.programs ?? f.programs) }}</span>
               <span class="sr-only">{{ format(f.programs) }}</span>
             </dd>
-            <dt class="mt-2 text-muted-foreground">{{ t('lp.figures.programs') }}</dt>
           </div>
         </dl>
       </section>
