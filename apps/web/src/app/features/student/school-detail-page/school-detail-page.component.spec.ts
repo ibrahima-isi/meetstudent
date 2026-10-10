@@ -515,6 +515,23 @@ describe('SchoolDetailPageComponent', () => {
       expect(text()).not.toContain('verified reviews');
     });
 
+    describe('the programme photo', () => {
+      const photo = () => harness.routeNativeElement!.querySelector('[data-testid="programme-photo"] img') as HTMLImageElement | null;
+
+      it('is shown on the programme card, with the programme name as its alt text', async () => {
+        await renderWith(mockSchool, [{ id: 1, name: 'Prog', duration: 3, photoImageUrl: '/uploads/public/prog.jpg' }]);
+
+        expect(photo()?.getAttribute('src')).toBe('/uploads/public/prog.jpg');
+        expect(photo()?.alt).toBe('Prog');
+      });
+
+      it('leaves no empty frame for a programme without one', async () => {
+        await renderWith(mockSchool, [{ id: 1, name: 'Prog', duration: 3 }]);
+
+        expect(harness.routeNativeElement!.querySelector('[data-testid="programme-photo"]')).toBeNull();
+      });
+    });
+
     describe('the aggregate stars', () => {
       const filledStars = () =>
         Array.from(
