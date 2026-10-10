@@ -18,7 +18,7 @@ const NEXT: Record<ThemeChoice, ThemeChoice> = {
     <ng-container *transloco="let t">
       <button
         type="button"
-        class="inline-flex items-center rounded-md p-1.5 text-gray-600 hover:bg-gray-100 cursor-pointer dark:text-gray-300 dark:hover:bg-gray-800"
+        class="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer transition-colors"
         [attr.data-theme]="choice()"
         [attr.aria-label]="t('theme.switch', { current: t('theme.' + choice()), next: t('theme.' + next()) })"
         [attr.title]="t('theme.' + choice())"

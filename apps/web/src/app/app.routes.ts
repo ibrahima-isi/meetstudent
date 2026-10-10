@@ -20,15 +20,6 @@ export const routes: Routes = [
     canActivate: [localeGuard],
     children: [
       {
-        path: '',
-        pathMatch: 'full',
-        title: 'pageTitle.landing',
-        loadComponent: () =>
-          import('./features/public/landing-page/landing-page.component').then(
-            (m) => m.LandingPageComponent,
-          ),
-      },
-      {
         path: 'home',
         title: 'pageTitle.home',
         canActivate: [authGuard],
@@ -56,28 +47,57 @@ export const routes: Routes = [
           ),
       },
       {
-        // Prefix match, so the two auth screens render inside the shared shell.
+        // Pathless, prefix match: the public pages share one frame (skip link + navbar).
+        // Tried after the guarded routes above; the router backtracks out of it for `home` etc.
         path: '',
         loadComponent: () =>
-          import('./shared/layouts/auth-layout/auth-layout.component').then(
-            (m) => m.AuthLayoutComponent,
+          import('./shared/layouts/public-shell/public-shell.component').then(
+            (m) => m.PublicShellComponent,
           ),
         children: [
           {
-            path: 'login',
-            title: 'pageTitle.login',
+            path: '',
+            pathMatch: 'full',
+            title: 'pageTitle.landing',
             loadComponent: () =>
-              import('./features/auth/login-form/login-form.component').then(
-                (m) => m.LoginFormComponent,
+              import('./features/public/landing-page/landing-page.component').then(
+                (m) => m.LandingPageComponent,
               ),
           },
           {
-            path: 'register',
-            title: 'pageTitle.register',
+            // Interim: the navbar links here; PR 2 renames and retitles the catalogue.
+            path: 'schools',
+            pathMatch: 'full',
+            title: 'pageTitle.landing',
             loadComponent: () =>
-              import('./features/auth/register-form/register-form.component').then(
-                (m) => m.RegisterFormComponent,
+              import('./features/public/landing-page/landing-page.component').then(
+                (m) => m.LandingPageComponent,
               ),
+          },
+          {
+            path: '',
+            loadComponent: () =>
+              import('./shared/layouts/auth-layout/auth-layout.component').then(
+                (m) => m.AuthLayoutComponent,
+              ),
+            children: [
+              {
+                path: 'login',
+                title: 'pageTitle.login',
+                loadComponent: () =>
+                  import('./features/auth/login-form/login-form.component').then(
+                    (m) => m.LoginFormComponent,
+                  ),
+              },
+              {
+                path: 'register',
+                title: 'pageTitle.register',
+                loadComponent: () =>
+                  import('./features/auth/register-form/register-form.component').then(
+                    (m) => m.RegisterFormComponent,
+                  ),
+              },
+            ],
           },
         ],
       },

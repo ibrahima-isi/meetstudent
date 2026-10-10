@@ -94,4 +94,15 @@ describe('LanguageSwitcherComponent', () => {
     expect(navigate).not.toHaveBeenCalled();
     expect(remember).not.toHaveBeenCalled();
   });
+
+  it('shows short codes in compact mode while keeping the full names for assistive technology', async () => {
+    await render('/fr/login');
+    fixture.componentRef.setInput('compact', true);
+    fixture.detectChanges();
+
+    expect(buttonFor('fr').textContent?.trim()).toBe('FR');
+    expect(buttonFor('en').textContent?.trim()).toBe('EN');
+    expect(buttonFor('fr').getAttribute('aria-label')).toBe('Français (FR)');
+    expect(buttonFor('en').getAttribute('aria-label')).toBe('English (EN)');
+  });
 });

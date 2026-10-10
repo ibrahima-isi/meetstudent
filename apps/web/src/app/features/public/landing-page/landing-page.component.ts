@@ -2,10 +2,8 @@ import { Component, signal, computed, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { LucideAngularModule, Search, MapPin, Star, Filter, LogIn, UserPlus, ArrowUpDown } from 'lucide-angular';
+import { LucideAngularModule, Search, MapPin, Star, Filter, ArrowUpDown } from 'lucide-angular';
 import { ImageWithFallbackComponent } from '@shared/components/image-with-fallback/image-with-fallback.component';
-import { LanguageSwitcherComponent } from '@shared/components/language-switcher/language-switcher.component';
-import { ThemeToggleComponent } from '@shared/components/theme-toggle/theme-toggle.component';
 import { ErrorStateComponent } from '@shared/components/error-state/error-state.component';
 import { School } from '@models/entities';
 import { SchoolService } from '@services/school.service';
@@ -21,8 +19,6 @@ import { roundRating } from '@shared/format-rating';
     FormsModule,
     LucideAngularModule,
     ImageWithFallbackComponent,
-    LanguageSwitcherComponent,
-    ThemeToggleComponent,
     TranslocoDirective,
     ErrorStateComponent,
   ],
@@ -37,8 +33,6 @@ export class LandingPageComponent implements OnInit {
   readonly MapPin = MapPin;
   readonly Star = Star;
   readonly Filter = Filter;
-  readonly LogIn = LogIn;
-  readonly UserPlus = UserPlus;
   readonly ArrowUpDown = ArrowUpDown;
 
   schools = signal<School[]>([]);

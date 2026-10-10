@@ -19,12 +19,15 @@ import { HomePageComponent } from '../features/student/home-page/home-page.compo
 import { ProfilePageComponent } from '../features/student/profile-page/profile-page.component';
 import { SchoolDetailPageComponent } from '../features/student/school-detail-page/school-detail-page.component';
 import { UserDocumentsComponent } from '../features/student/user-documents/user-documents.component';
+import { PublicShellComponent } from './layouts/public-shell/public-shell.component';
 import { AuthLayoutComponent } from './layouts/auth-layout/auth-layout.component';
+import { DockNavbarComponent } from './components/dock-navbar/dock-navbar.component';
 import { ErrorStateComponent } from './components/error-state/error-state.component';
 import { ImageWithFallbackComponent } from './components/image-with-fallback/image-with-fallback.component';
 import { LanguageSwitcherComponent } from './components/language-switcher/language-switcher.component';
 import { NotFoundComponent } from './components/not-found/not-found.component';
 import { StarRatingComponent } from './components/star-rating/star-rating.component';
+import { MeshBackgroundComponent } from './components/mesh-background/mesh-background.component';
 import { ThemeToggleComponent } from './components/theme-toggle/theme-toggle.component';
 import { WishlistCartComponent } from './components/wishlist-cart/wishlist-cart.component';
 
@@ -183,6 +186,7 @@ describe('dark mode: no light-only palette classes', () => {
 
   const cases: [string, Type<unknown>, ((component: any, fixture: ComponentFixture<any>) => void)?][] = [
     ['auth layout', AuthLayoutComponent],
+    ['public shell', PublicShellComponent],
     ['login form', LoginFormComponent],
     [
       'login form with error and success',
@@ -226,6 +230,8 @@ describe('dark mode: no light-only palette classes', () => {
     ['language switcher', LanguageSwitcherComponent],
     ['not found', NotFoundComponent],
     ['theme toggle', ThemeToggleComponent],
+    ['dock navbar', DockNavbarComponent],
+    ['mesh background', MeshBackgroundComponent],
     ['wishlist cart', WishlistCartComponent, (c) => c.isOpen.set(true)],
     ['home with schools, filters and load more', HomePageComponent, (c) => c.showFilters.set(true)],
     ['home with a failed load more', HomePageComponent, (c) => c.loadMoreFailed.set(true)],
@@ -291,7 +297,7 @@ describe('dark mode: no light-only palette classes', () => {
   });
 
   it('puts the theme toggle on every screen a visitor can reach', async () => {
-    for (const type of [AuthLayoutComponent, LandingPageComponent, HomePageComponent, ProfilePageComponent]) {
+    for (const type of [PublicShellComponent, HomePageComponent, ProfilePageComponent]) {
       const root = await render(type as Type<unknown>);
       expect(root.querySelector('app-theme-toggle button')).withContext(type.name).not.toBeNull();
     }

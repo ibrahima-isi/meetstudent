@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { Locale, SUPPORTED_LOCALES, urlInLocale } from '@i18n/locale';
@@ -21,14 +21,15 @@ import { LocaleService } from '@services/locale.service';
           type="button"
           [lang]="locale"
           [attr.aria-current]="locale === activeLocale() ? 'true' : null"
+          [attr.aria-label]="compact() ? t('language.' + locale) + ' (' + locale.toUpperCase() + ')' : null"
           [class]="
             locale === activeLocale()
-              ? 'rounded-md px-2 py-1 text-sm font-semibold text-indigo-700 bg-indigo-50 dark:text-indigo-300 dark:bg-indigo-500/20'
-              : 'rounded-md px-2 py-1 text-sm text-muted-foreground hover:bg-accent cursor-pointer'
+              ? 'rounded-full px-2.5 py-1 text-sm font-semibold bg-brand-soft text-brand-soft-foreground'
+              : 'rounded-full px-2.5 py-1 text-sm text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer transition-colors'
           "
           (click)="switchTo(locale)"
         >
-          {{ t('language.' + locale) }}
+          {{ compact() ? locale.toUpperCase() : t('language.' + locale) }}
         </button>
       }
     </div>
@@ -37,6 +38,9 @@ import { LocaleService } from '@services/locale.service';
 export class LanguageSwitcherComponent {
   private readonly locale = inject(LocaleService);
   private readonly router = inject(Router);
+
+  /** Two-letter codes instead of full names, for tight spaces such as the dock navbar. */
+  readonly compact = input(false);
 
   protected readonly locales = SUPPORTED_LOCALES;
   protected readonly activeLocale = this.locale.active;

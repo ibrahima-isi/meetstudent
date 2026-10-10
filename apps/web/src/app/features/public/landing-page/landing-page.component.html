@@ -1,39 +1,7 @@
 <div class="min-h-screen bg-muted/50" *transloco="let t">
-  <!-- Header -->
-  <header class="bg-card border-b border-border sticky top-0 z-50">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-      <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-        <div class="min-w-0">
-          <h1 class="text-foreground font-bold text-xl">MeetStudent</h1>
-          <p class="text-muted-foreground text-sm truncate">{{ t('schools.tagline') }}</p>
-        </div>
-        <div class="flex items-center gap-1 sm:gap-3">
-          <app-language-switcher />
-          <app-theme-toggle />
-          <button
-            (click)="goTo('login')"
-            [attr.aria-label]="t('landing.login')"
-            class="flex items-center gap-2 px-3 sm:px-4 py-2 text-foreground hover:bg-accent rounded-lg transition-colors cursor-pointer"
-          >
-            <lucide-icon [img]="LogIn" class="w-5 h-5"></lucide-icon>
-            <span class="hidden sm:inline">{{ t('landing.login') }}</span>
-          </button>
-          <button
-            (click)="goTo('register')"
-            [attr.aria-label]="t('landing.register')"
-            class="flex items-center gap-2 px-3 sm:px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors cursor-pointer"
-          >
-            <lucide-icon [img]="UserPlus" class="w-5 h-5"></lucide-icon>
-            <span class="hidden sm:inline">{{ t('landing.register') }}</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  </header>
-
   <!-- Hero Section -->
   <div class="bg-gradient-to-br from-indigo-600 to-purple-700 text-white">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16">
       <div class="text-center max-w-3xl mx-auto">
         <h2 class="mb-4 text-3xl font-bold">
           {{ t('landing.heroTitle') }}

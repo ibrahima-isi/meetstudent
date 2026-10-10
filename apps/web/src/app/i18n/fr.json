@@ -16,6 +16,19 @@
     "fr": "Français",
     "en": "English"
   },
+  "nav": {
+    "primary": "Navigation principale",
+    "brandHome": "MeetStudent, retour à l'accueil",
+    "schools": "Établissements",
+    "howItWorks": "Comment ça marche",
+    "reviews": "Avis",
+    "login": "Se connecter",
+    "register": "Créer un compte",
+    "mySpace": "Mon espace",
+    "openMenu": "Ouvrir le menu",
+    "closeMenu": "Fermer le menu",
+    "skipToContent": "Aller au contenu"
+  },
   "pageTitle": {
     "landing": "Trouvez l'école qui vous correspond",
     "login": "Connexion",
