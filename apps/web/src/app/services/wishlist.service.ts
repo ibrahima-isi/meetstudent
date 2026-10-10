@@ -72,6 +72,11 @@ export class WishlistService {
       this.state.set([]);
       return;
     }
+    // Home and the navbar cart both ask on entry; one request answers both.
+    // clear() resets the status, so a new user is never held back by an old load.
+    if (this.status() === 'loading') {
+      return;
+    }
     const generation = this.generation;
     this.status.set('loading');
     this.userService.getUser(userId).subscribe({

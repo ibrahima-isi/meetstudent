@@ -355,14 +355,14 @@
     </div>
   }
   } @else if (schoolStatus() === 'error') {
-    <div class="max-w-6xl mx-auto px-4 py-16">
+    <div class="max-w-6xl mx-auto px-4 pt-24 pb-16">
       <app-error-state [message]="t('schoolDetail.loadError')" (retry)="retry()" />
     </div>
   } @else {
     <div
       role="status"
       aria-busy="true"
-      class="max-w-6xl mx-auto px-4 py-16 text-center text-muted-foreground animate-pulse"
+      class="max-w-6xl mx-auto px-4 pt-24 pb-16 text-center text-muted-foreground animate-pulse"
     >
       {{ t('schoolDetail.loading') }}
     </div>

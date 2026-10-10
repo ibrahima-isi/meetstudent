@@ -68,6 +68,7 @@ describe('HomePageComponent translations', () => {
     expect(root.querySelector('app-theme-toggle')).toBeNull();
     expect(Array.from(root.querySelectorAll('button')).some((b) => /log out/i.test(b.getAttribute('aria-label') ?? ''))).toBeFalse();
     expect(root.querySelectorAll('h1').length).toBe(1);
+    expect(root.querySelector('h1')?.textContent?.trim()).toBe('Home');
   });
 
   it('names an untyped, undescribed school in the active language', async () => {

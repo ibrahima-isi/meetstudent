@@ -181,6 +181,28 @@ describe('WishlistService', () => {
     expect(service.error()).toBeFalse();
   });
 
+  it('does not ask twice while a load is in flight', () => {
+    userService.getUser.and.returnValue(new Subject<User>());
+
+    service.load();
+    service.load();
+
+    expect(userService.getUser).toHaveBeenCalledTimes(1);
+  });
+
+  it('loads again after a failure, and for a new user while the old answer is pending', () => {
+    userService.getUser.and.returnValues(throwError(() => new Error('x')), new Subject<User>(), new Subject<User>());
+    service.load();
+    expect(service.status()).toBe('error');
+
+    service.load();
+    user.set({ id: 10 });
+    TestBed.tick();
+    service.load();
+
+    expect(userService.getUser).toHaveBeenCalledTimes(3);
+  });
+
   it('ignores a load answer that arrives after clear', () => {
     const reply = new Subject<User>();
     userService.getUser.and.returnValue(reply);

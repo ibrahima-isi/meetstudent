@@ -173,12 +173,14 @@ describe('routes', () => {
       });
     }
 
-    it('shows exactly one theme toggle on the home page: the navbar one', async () => {
-      await harness.navigateByUrl('/fr/home');
+    for (const url of ['/fr/home', '/fr/profile', '/fr/schools/1']) {
+      it(`shows exactly one theme toggle on ${url}: the navbar one`, async () => {
+        await harness.navigateByUrl(url);
 
-      expect(host().querySelectorAll('app-theme-toggle').length).toBe(1);
-      expect(navbar()?.querySelector('app-theme-toggle')).toBeTruthy();
-    });
+        expect(host().querySelectorAll('app-theme-toggle').length).toBe(1);
+        expect(navbar()?.querySelector('app-theme-toggle')).toBeTruthy();
+      });
+    }
 
     it('sends an anonymous visitor to the login with the returnUrl of the guarded page', async () => {
       authenticated.set(false);

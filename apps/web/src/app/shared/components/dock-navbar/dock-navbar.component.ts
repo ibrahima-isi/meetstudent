@@ -1,4 +1,4 @@
-import { DOCUMENT } from '@angular/common';
+import { DOCUMENT, isPlatformBrowser } from '@angular/common';
 import {
   afterNextRender,
   ChangeDetectionStrategy,
@@ -8,6 +8,7 @@ import {
   ElementRef,
   inject,
   Injector,
+  PLATFORM_ID,
   signal,
   viewChild,
 } from '@angular/core';
@@ -179,8 +180,15 @@ export class DockNavbarComponent {
    * server always renders the anonymous bar. Reading the token before the first
    * client render would produce different markup and break hydration; `hydrated`
    * flips after it.
+   *
+   * Exception: a pure client bootstrap (RenderMode.Client routes) has no server
+   * markup to match. Angular stamps `ng-server-context` on server-rendered
+   * documents only, so in the browser without it the session can be read at once
+   * and the signed-in bar never flashes the anonymous one.
    */
-  private readonly hydrated = signal(false);
+  private readonly hydrated = signal(
+    isPlatformBrowser(inject(PLATFORM_ID)) && !inject(DOCUMENT).querySelector('[ng-server-context]'),
+  );
   protected readonly signedIn = computed(() => this.hydrated() && this.token.isAuthenticated());
   protected readonly initials = computed(() => {
     const user = this.token.user();

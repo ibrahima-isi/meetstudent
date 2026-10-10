@@ -30,7 +30,11 @@ export class HomePageComponent {
   private readonly tokenService = inject(TokenService);
   private readonly router = inject(Router);
   private readonly locale = inject(LocaleService);
-  /** Loaded by this page on entry (the navbar cart only mounts after hydration); the cards read and toggle it. */
+  /**
+   * Loaded by this page on entry too: at login the tokens are set before the
+   * user, so the navbar cart's own load can run with no user id and do nothing.
+   * Concurrent loads are collapsed by the service.
+   */
   protected readonly wishlist = inject(WishlistService);
 
   readonly Search = Search;

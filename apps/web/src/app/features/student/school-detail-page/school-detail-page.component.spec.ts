@@ -5,7 +5,7 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter, withComponentInputBinding, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { Title } from '@angular/platform-browser';
-import { firstValueFrom, of, Subject, throwError } from 'rxjs';
+import { firstValueFrom, of, Subject, throwError, NEVER } from 'rxjs';
 import { provideTransloco, TranslocoService } from '@jsverse/transloco';
 import { translocoOptions } from '@i18n/transloco.config';
 import { School, Program, Course, Page } from '@models/entities';
@@ -198,6 +198,18 @@ describe('SchoolDetailPageComponent', () => {
     expect(root.querySelector('app-theme-toggle')).toBeNull();
     expect(root.textContent).toMatch(/Retour|Back/);
     expect(root.querySelector('[data-testid="wishlist-toggle"]')).not.toBeNull();
+  });
+
+  it('clears the dock above the loading block', async () => {
+    const transloco = TestBed.inject(TranslocoService);
+    await firstValueFrom(transloco.load('fr'));
+    transloco.setActiveLang('fr');
+    schoolServiceSpy.getSchool.and.returnValue(NEVER);
+    await renderAt('/schools/7');
+    harness.detectChanges();
+
+    const block = harness.routeNativeElement?.querySelector('[role="status"]');
+    expect(block?.classList.contains('pt-24')).toBeTrue();
   });
 
   describe('wishlist', () => {
