@@ -110,4 +110,10 @@ describe('design tokens', () => {
       expect(getComputedStyle(el).opacity).toBe('1');
     });
   });
+
+  it('keeps anchor targets clear of the floating navbar', () => {
+    const padding = getComputedStyle(document.documentElement).scrollPaddingTop;
+    expect(padding).not.toBe('auto');
+    expect(parseFloat(padding)).toBeGreaterThanOrEqual(80);
+  });
 });

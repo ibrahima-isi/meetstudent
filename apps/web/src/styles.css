@@ -124,6 +124,7 @@
   }
   html {
     font-size: var(--font-size);
+    scroll-padding-top: 6rem;
   }
 }
 

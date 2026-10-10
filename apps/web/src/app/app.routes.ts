@@ -65,6 +65,16 @@ export const routes: Routes = [
               ),
           },
           {
+            // Interim: the navbar links here; PR 2 renames and retitles the catalogue.
+            path: 'schools',
+            pathMatch: 'full',
+            title: 'pageTitle.landing',
+            loadComponent: () =>
+              import('./features/public/landing-page/landing-page.component').then(
+                (m) => m.LandingPageComponent,
+              ),
+          },
+          {
             path: '',
             loadComponent: () =>
               import('./shared/layouts/auth-layout/auth-layout.component').then(

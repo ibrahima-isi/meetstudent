@@ -1,6 +1,6 @@
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { provideTransloco, TranslocoService } from '@jsverse/transloco';
 import { firstValueFrom } from 'rxjs';
 import { translocoOptions } from '@i18n/transloco.config';
@@ -39,5 +39,17 @@ describe('PublicShellComponent', () => {
     expect(skip).not.toBeNull();
     expect(skip.textContent?.trim()).toBe('Aller au contenu');
     expect(skip.classList).toContain('sr-only');
+  });
+
+  it('moves focus to the main landmark on click without navigating', () => {
+    const skip = root.querySelector('a[href="#main"]') as HTMLElement;
+    const router = TestBed.inject(Router);
+    const before = router.url;
+    const event = new MouseEvent('click', { bubbles: true, cancelable: true });
+    skip.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBeTrue();
+    expect(document.activeElement).toBe(root.querySelector('main#main'));
+    expect(router.url).toBe(before);
   });
 });

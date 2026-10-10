@@ -116,4 +116,18 @@ describe('routes', () => {
     expect(harness.routeNativeElement?.textContent).toContain('404');
     expect(navbar()).toBeNull();
   });
+
+  it('serves the catalogue at /schools inside the shell', async () => {
+    await harness.navigateByUrl('/fr/schools');
+
+    expect(TestBed.inject(Router).url).toBe('/fr/schools');
+    expect(navbar()).toBeTruthy();
+    expect((harness.fixture.nativeElement as HTMLElement).querySelector('app-landing-page')).toBeTruthy();
+  });
+
+  it('still guards a school detail', async () => {
+    await harness.navigateByUrl('/fr/schools/7');
+
+    expect(TestBed.inject(Router).url).toContain('/fr/login');
+  });
 });
