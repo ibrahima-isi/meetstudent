@@ -8,7 +8,7 @@ import { School } from '@models/entities';
 import { signal } from '@angular/core';
 import { Subject } from 'rxjs';
 import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { provideTransloco } from '@jsverse/transloco';
@@ -44,34 +44,6 @@ describe('SchoolsPageComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
-  });
-
-  it('should filter schools by search query', () => {
-    const mockSchools = [
-      { id: 1, name: 'Harvard', description: 'Ivy League', address: { city: 'Cambridge' }, type: 'Univ' },
-      { id: 2, name: 'MIT', description: 'Tech school', address: { city: 'Cambridge' }, type: 'Univ' }
-    ];
-    component.schools.set(mockSchools as any);
-    
-    component.searchQuery.set('Harvard');
-    fixture.detectChanges();
-    
-    expect(component.sortedSchools().length).toBe(1);
-    expect(component.sortedSchools()[0].name).toBe('Harvard');
-  });
-
-  it('should filter schools by city', () => {
-    const mockSchools = [
-      { id: 1, name: 'Harvard', address: { city: 'Cambridge' }, type: 'Univ' },
-      { id: 2, name: 'Stanford', address: { city: 'Stanford' }, type: 'Univ' }
-    ];
-    component.schools.set(mockSchools as any);
-    
-    component.selectedCity.set('Stanford');
-    fixture.detectChanges();
-    
-    expect(component.sortedSchools().length).toBe(1);
-    expect(component.sortedSchools()[0].name).toBe('Stanford');
   });
 });
 
@@ -183,20 +155,6 @@ describe('SchoolsPageComponent translations', () => {
 
     expect(text()).toContain('(12 reviews)');
   });
-
-  it('sorts names with the collation of the active language', async () => {
-    await render('en');
-    const compare = spyOn(String.prototype, 'localeCompare').and.callThrough();
-    fixture.componentInstance.schools.set([
-      { id: 1, name: 'Zeta', address: { city: 'Dakar' } },
-      { id: 2, name: 'Alpha', address: { city: 'Thiès' } },
-    ] as School[]);
-
-    fixture.componentInstance.sortedSchools();
-
-    expect(compare).toHaveBeenCalledWith(jasmine.any(String), 'en');
-    expect(compare).not.toHaveBeenCalledWith(jasmine.any(String), 'fr');
-  });
 });
 
 describe('SchoolsPageComponent data states', () => {
@@ -289,80 +247,419 @@ describe('SchoolsPageComponent data states', () => {
   });
 });
 
-describe('SchoolsPageComponent search prefill', () => {
+describe('SchoolsPageComponent server search', () => {
   let harness: RouterTestingHarness;
-  const schools = [
-    { id: 1, name: 'Harvard', description: '', type: 'Univ', address: { city: 'Cambridge' } },
-    { id: 2, name: 'Lagos Tech', description: '', type: 'Univ', address: { city: 'Lagos' } },
-  ];
+  let router: Router;
+  let getSchools: jasmine.Spy;
+  let searchSchools: jasmine.Spy;
+  let searchSchoolsByName: jasmine.Spy;
 
-  async function open(url: string) {
-    await TestBed.configureTestingModule({
+  const school = (id: number, name: string, city = 'Dakar', type = 'Public') => ({
+    id,
+    name,
+    type,
+    address: { city, location: 'L', country: 'SN' },
+  });
+  const page = (content: unknown[], number = 0, last = true, totalElements = content.length) => ({
+    content,
+    number,
+    last,
+    totalElements,
+  });
+  const el = () => harness.routeNativeElement as HTMLElement;
+  const text = () => el().textContent ?? '';
+  const input = () => el().querySelector('input[type="text"]') as HTMLInputElement;
+  const q = (sel: string) => el().querySelector(sel);
+
+  async function settle(): Promise<void> {
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+  }
+
+  function type(value: string): void {
+    input().value = value;
+    input().dispatchEvent(new Event('input'));
+    harness.detectChanges();
+  }
+
+  function pick(selector: string, value: string): void {
+    const select = q(selector) as HTMLSelectElement;
+    select.value = value;
+    select.dispatchEvent(new Event('change'));
+    harness.detectChanges();
+  }
+
+  async function open(url: string, service: Partial<Record<'getSchools' | 'searchSchools' | 'searchSchoolsByName', unknown>> = {}) {
+    TestBed.configureTestingModule({
       providers: [
         provideZonelessChangeDetection(),
         provideHttpClient(),
         provideHttpClientTesting(),
         provideRouter([{ path: 'schools', component: SchoolsPageComponent }]),
         provideTransloco(translocoOptions),
-        { provide: SchoolService, useValue: { getSchools: () => of({ content: schools }) } },
+        { provide: SchoolService, useValue: { getSchools, searchSchools, searchSchoolsByName, ...service } },
       ],
-    }).compileComponents();
+    });
     await firstValueFrom(TestBed.inject(LocaleService).use('en'));
+    router = TestBed.inject(Router);
     harness = await RouterTestingHarness.create();
     const component = await harness.navigateByUrl(url, SchoolsPageComponent);
-    await harness.fixture.whenStable();
-    harness.detectChanges();
+    await settle();
     return component;
   }
-  const input = () => harness.routeNativeElement!.querySelector('input[type="search"], input[type="text"]') as HTMLInputElement;
-  const settle = async () => {
-    await harness.fixture.whenStable();
-    harness.detectChanges();
-    await harness.fixture.whenStable();
-  };
 
-  it('prefills the search from ?q= on arrival', async () => {
+  beforeEach(() => {
+    jasmine.clock().install();
+    jasmine.clock().mockDate();
+    getSchools = jasmine.createSpy('getSchools').and.returnValue(of(page([school(1, 'Alpha'), school(2, 'Beta', 'Thiès')])));
+    searchSchools = jasmine.createSpy('searchSchools').and.returnValue(of(page([])));
+    searchSchoolsByName = jasmine.createSpy('searchSchoolsByName').and.returnValue(of(page([school(3, 'Dakar Tech')])));
+  });
+
+  afterEach(() => jasmine.clock().uninstall());
+
+  it('without ?q= lists one page of 12 and never searches by name', async () => {
+    await open('/schools');
+
+    expect(getSchools).toHaveBeenCalledTimes(1);
+    expect(getSchools.calls.mostRecent().args.slice(0, 2)).toEqual([0, 12]);
+    expect(getSchools.calls.mostRecent().args[3]).toBe('name,asc');
+    expect(searchSchoolsByName).not.toHaveBeenCalled();
+    expect(text()).toContain('Alpha');
+  });
+
+  it('?q=dakar searches on the server once, with no debounce, and prefills the input', async () => {
     const component = await open('/schools?q=dakar');
-    await settle();
+
+    expect(searchSchoolsByName).toHaveBeenCalledTimes(1);
+    expect(searchSchoolsByName).toHaveBeenCalledWith('dakar', 0, 12, 'name,asc');
+    expect(getSchools).not.toHaveBeenCalled();
     expect(component.searchQuery()).toBe('dakar');
     expect(input().value).toBe('dakar');
+    expect(text()).toContain('Dakar Tech');
   });
 
-  it('follows ?q= when the URL changes on the same route', async () => {
-    const component = await open('/schools?q=dakar');
-    await TestBed.inject(Router).navigateByUrl('/schools?q=lagos');
-    await settle();
-    expect(component.searchQuery()).toBe('lagos');
-    expect(input().value).toBe('lagos');
+  it('does not filter the server answer again on the client', async () => {
+    searchSchoolsByName.and.returnValue(of(page([school(3, 'Unrelated Name')])));
+    await open('/schools?q=dakar');
+
+    expect(text()).toContain('Unrelated Name');
   });
 
-  it('clears the search when ?q= disappears', async () => {
-    const component = await open('/schools?q=dakar');
-    await TestBed.inject(Router).navigateByUrl('/schools');
+  it('removing ?q= restarts with the plain listing and clears the input', async () => {
+    await open('/schools?q=dakar');
+    await router.navigateByUrl('/schools');
     await settle();
-    expect(component.searchQuery()).toBe('');
+
+    expect(getSchools).toHaveBeenCalledTimes(1);
     expect(input().value).toBe('');
   });
 
-  it('starts empty without ?q=', async () => {
+  it('navigating to ?q=lyon cancels the request in flight and drops its late answer', async () => {
+    const slow = new Subject<unknown>();
+    searchSchoolsByName.and.callFake((term: string) =>
+      term === 'dakar' ? slow : of(page([school(9, 'Lyon School')])),
+    );
+    await open('/schools?q=dakar');
+    expect(q('[aria-busy="true"]')).not.toBeNull();
+
+    await router.navigateByUrl('/schools?q=lyon');
+    await settle();
+    slow.next(page([school(8, 'Stale Dakar School')]));
+    slow.complete();
+    await settle();
+
+    expect(searchSchoolsByName).toHaveBeenCalledWith('lyon', 0, 12, 'name,asc');
+    expect(text()).toContain('Lyon School');
+    expect(text()).not.toContain('Stale Dakar School');
+  });
+
+  it('typing d, da, dak makes no request until 300ms, then one navigation carrying q', async () => {
+    await open('/schools');
+    const navigate = spyOn(router, 'navigate').and.callThrough();
+    getSchools.calls.reset();
+
+    type('d');
+    type('da');
+    type('dak');
+    jasmine.clock().tick(299);
+    await settle();
+    expect(navigate).not.toHaveBeenCalled();
+    expect(searchSchoolsByName).not.toHaveBeenCalled();
+
+    jasmine.clock().tick(1);
+    await settle();
+
+    expect(navigate).toHaveBeenCalledTimes(1);
+    const [commands, extras] = navigate.calls.mostRecent().args;
+    expect(commands).toEqual([]);
+    expect(extras).toEqual(
+      jasmine.objectContaining({ queryParams: { q: 'dak' }, queryParamsHandling: 'merge', replaceUrl: true }),
+    );
+    expect(router.url).toBe('/schools?q=dak');
+    expect(searchSchoolsByName).toHaveBeenCalledTimes(1);
+    expect(searchSchoolsByName.calls.mostRecent().args[0]).toBe('dak');
+  });
+
+  it('does not overwrite what the visitor keeps typing when the URL catches up', async () => {
+    await open('/schools');
+    type('dak');
+    jasmine.clock().tick(300);
+    type('dako');
+    await settle();
+
+    expect(router.url).toBe('/schools?q=dak');
+    expect(input().value).toBe('dako');
+  });
+
+  it('typing the same term again after the URL cleared it still searches', async () => {
+    await open('/schools');
+    type('dak');
+    jasmine.clock().tick(300);
+    await settle();
+    await router.navigateByUrl('/schools');
+    await settle();
+    searchSchoolsByName.calls.reset();
+
+    type('dak');
+    jasmine.clock().tick(300);
+    await settle();
+
+    expect(searchSchoolsByName).toHaveBeenCalledTimes(1);
+  });
+
+  it('clearing the input removes q from the URL', async () => {
+    await open('/schools?q=dakar');
+    type('');
+    jasmine.clock().tick(300);
+    await settle();
+
+    expect(router.url).toBe('/schools');
+    expect(getSchools).toHaveBeenCalledTimes(1);
+  });
+
+  for (const hostile of ['<img src=x onerror=alert(1)>', 'a&b=c#d']) {
+    it(`keeps a hostile ?q= as plain text: ${hostile}`, async () => {
+      const component = await open('/schools?q=' + encodeURIComponent(hostile));
+
+      expect(component.searchQuery()).toBe(hostile);
+      expect(input().value).toBe(hostile);
+      expect(searchSchoolsByName.calls.mostRecent().args[0]).toBe(hostile);
+      expect(q('img[src="x"]')).toBeNull();
+    });
+  }
+
+  it('shows "no results", not an error, for a term the path cannot carry', async () => {
+    // The real service over the testing HTTP layer: the term must not reach the network.
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([{ path: 'schools', component: SchoolsPageComponent }]),
+        provideTransloco(translocoOptions),
+        SchoolService,
+      ],
+    });
+    await firstValueFrom(TestBed.inject(LocaleService).use('en'));
+    harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/schools?q=' + encodeURIComponent('a/b'), SchoolsPageComponent);
+    await settle();
+
+    expect(q('app-error-state')).toBeNull();
+    expect(text()).toContain('No school matches');
+    const http = TestBed.inject(HttpTestingController);
+    http.expectNone((r) => r.url.includes('/schools/name'));
+  });
+
+  it('load more appends the next page and disappears on the last one', async () => {
+    getSchools.and.callFake((n: number) =>
+      of(n === 0 ? page([school(1, 'Alpha')], 0, false, 2) : page([school(2, 'Beta')], 1, true, 2)),
+    );
+    await open('/schools');
+    expect(q('[data-testid="load-more"]')).not.toBeNull();
+
+    (q('[data-testid="load-more"]') as HTMLButtonElement).click();
+    await settle();
+
+    expect(getSchools.calls.mostRecent().args.slice(0, 2)).toEqual([1, 12]);
+    expect(text()).toContain('Alpha');
+    expect(text()).toContain('Beta');
+    expect(q('[data-testid="load-more"]')).toBeNull();
+  });
+
+  it('a failed load more keeps the cards and offers a retry that works', async () => {
+    let fail = true;
+    getSchools.and.callFake((n: number) =>
+      n === 0
+        ? of(page([school(1, 'Alpha')], 0, false, 2))
+        : fail
+          ? throwError(() => new Error('down'))
+          : of(page([school(2, 'Beta')], 1, true, 2)),
+    );
+    await open('/schools');
+    (q('[data-testid="load-more"]') as HTMLButtonElement).click();
+    await settle();
+
+    expect(q('[data-testid="load-more-error"]')).not.toBeNull();
+    expect(q('app-error-state')).toBeNull();
+    expect(text()).toContain('Alpha');
+
+    fail = false;
+    (q('[data-testid="load-more-error"] button') as HTMLButtonElement).click();
+    await settle();
+
+    expect(q('[data-testid="load-more-error"]')).toBeNull();
+    expect(text()).toContain('Alpha');
+    expect(text()).toContain('Beta');
+  });
+
+  it('a failed first page shows the error state and retry recovers', async () => {
+    let fail = true;
+    getSchools.and.callFake(() => (fail ? throwError(() => new Error('down')) : of(page([school(1, 'Alpha')]))));
+    await open('/schools');
+    expect(q('app-error-state')).not.toBeNull();
+
+    fail = false;
+    (q('app-error-state button') as HTMLButtonElement).click();
+    await settle();
+
+    expect(q('app-error-state')).toBeNull();
+    expect(text()).toContain('Alpha');
+  });
+
+  it('a city alone is sent to /search, paged and sorted', async () => {
     const component = await open('/schools');
-    expect(component.searchQuery()).toBe('');
+    component.selectedCity.set('Thiès');
+    await settle();
+
+    expect(searchSchools).toHaveBeenCalledWith('Thiès', undefined, undefined, undefined, 0, 12, 'name,asc');
   });
 
-  it('applies the prefilled query to the list', async () => {
-    const component = await open('/schools?q=lagos');
+  it('a term wins over a city: the name endpoint is used', async () => {
+    const component = await open('/schools?q=dakar');
+    searchSchoolsByName.calls.reset();
+    component.selectedCity.set('Thiès');
     await settle();
-    expect(component.sortedSchools().map((x) => x.name)).toEqual(['Lagos Tech']);
-    const text = harness.routeNativeElement!.textContent ?? '';
-    expect(text).toContain('Lagos Tech');
-    expect(text).not.toContain('Harvard');
+
+    expect(searchSchools).not.toHaveBeenCalled();
+    expect(searchSchoolsByName).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps a hostile ?q= as plain text', async () => {
-    const hostile = '<img src=x onerror=alert(1)>';
-    const component = await open('/schools?q=' + encodeURIComponent(hostile));
+  it('changing the sort restarts at page 0 with the server sort', async () => {
+    getSchools.and.callFake((n: number) => of(page([school(1, 'Alpha')], n, false, 30)));
+    const component = await open('/schools');
+    (q('[data-testid="load-more"]') as HTMLButtonElement).click();
     await settle();
-    expect(component.searchQuery()).toBe(hostile);
-    expect(harness.routeNativeElement!.querySelector('img[src="x"]')).toBeNull();
+    expect(getSchools.calls.mostRecent().args[0]).toBe(1);
+
+    component.sortBy.set('city');
+    await settle();
+
+    expect(getSchools.calls.mostRecent().args.slice(0, 2)).toEqual([0, 12]);
+    expect(getSchools.calls.mostRecent().args[3]).toBe('address.city,asc');
+    expect(component.schools().length).toBe(1);
+  });
+
+  it('keeps every city seen as a choice after a city narrows the list', async () => {
+    const component = await open('/schools');
+    searchSchools.and.returnValue(of(page([school(2, 'Beta', 'Thiès')])));
+    component.selectedCity.set('Thiès');
+    component.showFilters.set(true);
+    await settle();
+
+    expect(component.cities()).toEqual(['Dakar', 'Thiès']);
+  });
+
+  it('shows the server total, not the loaded count', async () => {
+    getSchools.and.returnValue(of(page([school(1, 'Alpha')], 0, false, 40)));
+    await open('/schools');
+
+    expect(text()).toContain('40 schools found');
+  });
+
+  it('filters by type on the pages already loaded', async () => {
+    const component = await open('/schools');
+    getSchools.calls.reset();
+    component.selectedType.set('Private');
+    await settle();
+
+    expect(getSchools).not.toHaveBeenCalled();
+    expect(component.sortedSchools()).toEqual([]);
+  });
+
+  it('says nothing is listed without a term, and "no results" with one', async () => {
+    getSchools.and.returnValue(of(page([])));
+    await open('/schools');
+    expect(text()).toContain('No schools are listed yet');
+
+    searchSchoolsByName.and.returnValue(of(page([])));
+    await router.navigateByUrl('/schools?q=zzz');
+    await settle();
+    expect(text()).toContain('No school matches');
+  });
+
+  it('does not duplicate a school a later page repeats', async () => {
+    getSchools.and.callFake((n: number) =>
+      of(n === 0 ? page([school(1, 'Alpha')], 0, false, 3) : page([school(1, 'Alpha'), school(2, 'Beta')], 1, true, 3)),
+    );
+    const component = await open('/schools');
+    (q('[data-testid="load-more"]') as HTMLButtonElement).click();
+    await settle();
+
+    expect(component.schools().map((x) => x.id)).toEqual([1, 2]);
+    expect(el().querySelectorAll('h3').length).toBe(2);
+  });
+
+  it('explains an empty client-side filter while more pages remain, and keeps Load more', async () => {
+    getSchools.and.returnValue(of(page([school(1, 'Alpha')], 0, false, 40)));
+    const component = await open('/schools');
+    component.selectedType.set('Private');
+    await settle();
+
+    expect(text()).toContain('No school matches');
+    expect(q('[data-testid="load-more"]')).not.toBeNull();
+    expect(text()).not.toContain('40 schools found');
+  });
+
+  it('resets a type that the new search no longer offers', async () => {
+    const component = await open('/schools');
+    component.selectedType.set('Public');
+    searchSchoolsByName.and.returnValue(of(page([school(3, 'Other', 'Dakar', 'Private')])));
+    await router.navigateByUrl('/schools?q=other');
+    await settle();
+
+    expect(component.selectedType()).toBe('');
+    expect(text()).toContain('Other');
+  });
+
+  it('limits the input to 50 characters and names it for assistive technology', async () => {
+    await open('/schools');
+
+    expect(input().getAttribute('maxlength')).toBe('50');
+    expect(input().getAttribute('aria-label')).toBe('Search for a school...');
+  });
+
+  it('announces the result count politely', async () => {
+    await open('/schools');
+
+    expect(q('[aria-live="polite"]')?.textContent).toContain('2 schools found');
+  });
+
+  it('keeps Load more focusable and ignores clicks while loading', async () => {
+    const slow = new Subject<unknown>();
+    getSchools.and.callFake((n: number) => (n === 0 ? of(page([school(1, 'Alpha')], 0, false, 2)) : slow));
+    await open('/schools');
+    const button = q('[data-testid="load-more"]') as HTMLButtonElement;
+    button.click();
+    await settle();
+
+    expect(button.disabled).toBeFalse();
+    expect(button.getAttribute('aria-disabled')).toBe('true');
+    button.click();
+    await settle();
+    expect(getSchools.calls.allArgs().filter((a) => a[0] === 1).length).toBe(1);
   });
 });
