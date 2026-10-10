@@ -1,23 +1,33 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { RouterLink, RouterOutlet } from '@angular/router';
+import { TranslocoDirective } from '@jsverse/transloco';
+import { ArrowLeft, LucideAngularModule } from 'lucide-angular';
+import { LocaleService } from '@services/locale.service';
+import { AuthBrandPanelComponent } from './auth-brand-panel.component';
 
 /**
- * The gradient shell around login and register. It was the same block
- * written twice in `app.html`; as a layout route it is written once and
- * the child route decides what fills it.
+ * Split-screen shell around login and register: brand panel on the left
+ * (large screens only), the routed form on the right.
  */
 @Component({
   selector: 'app-auth-layout',
-  imports: [RouterOutlet],
+  imports: [RouterOutlet, RouterLink, TranslocoDirective, LucideAngularModule, AuthBrandPanelComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div
-      class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-950 dark:to-indigo-950 flex items-center justify-center px-4 pb-8 pt-24"
-    >
-      <div class="w-full max-w-md">
-        <router-outlet />
+    <div class="grid min-h-screen lg:grid-cols-2" *transloco="let t">
+      <div class="hidden lg:flex"><app-auth-brand-panel class="flex-1" /></div>
+      <div class="flex flex-col justify-center px-4 pb-10 pt-24 sm:px-8 lg:px-16">
+        <div class="mx-auto w-full max-w-md">
+          <a class="mb-6 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground" [routerLink]="['/', lang()]">
+            <lucide-icon [img]="ArrowLeft" class="h-4 w-4" aria-hidden="true" /> {{ t('nav.backHome') }}
+          </a>
+          <router-outlet />
+        </div>
       </div>
     </div>
   `,
 })
-export class AuthLayoutComponent {}
+export class AuthLayoutComponent {
+  protected readonly lang = inject(LocaleService).active;
+  protected readonly ArrowLeft = ArrowLeft;
+}

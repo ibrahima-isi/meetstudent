@@ -144,4 +144,41 @@ describe('LoginFormComponent translations', () => {
       expect(navigate).not.toHaveBeenCalledWith('//evil.example.com');
     });
   });
+
+  describe('design system', () => {
+    it('uses the shared field-input class on both inputs', async () => {
+      await render('en');
+      const el = fixture.nativeElement as HTMLElement;
+
+      expect(el.querySelector('#email')?.classList).toContain('field-input');
+      expect(el.querySelector('#password')?.classList).toContain('field-input');
+    });
+
+    it('renders the submit as a full-width large primary button', async () => {
+      await render('en');
+      const submit = (fixture.nativeElement as HTMLElement).querySelector('button[type="submit"]');
+
+      for (const c of ['btn', 'btn-primary', 'btn-lg', 'w-full']) {
+        expect(submit?.classList).toContain(c);
+      }
+    });
+
+    it('flags an invalid touched email with aria-invalid', async () => {
+      await render('en');
+      const email = (fixture.nativeElement as HTMLElement).querySelector('#email') as HTMLInputElement;
+      expect(email.getAttribute('aria-invalid')).toBeNull();
+
+      fixture.componentInstance.loginForm.get('email')?.setValue('nope');
+      fixture.componentInstance.loginForm.get('email')?.markAsTouched();
+      fixture.detectChanges();
+
+      expect(email.getAttribute('aria-invalid')).toBe('true');
+    });
+
+    it('no longer centres a lone 64px icon', async () => {
+      await render('en');
+
+      expect((fixture.nativeElement as HTMLElement).querySelector('.w-16')).toBeNull();
+    });
+  });
 });

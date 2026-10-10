@@ -29,6 +29,7 @@ import { SchoolDetailPageComponent } from '../features/student/school-detail-pag
 import { UserDocumentsComponent } from '../features/student/user-documents/user-documents.component';
 import { PublicShellComponent } from './layouts/public-shell/public-shell.component';
 import { AuthLayoutComponent } from './layouts/auth-layout/auth-layout.component';
+import { AuthBrandPanelComponent } from './layouts/auth-layout/auth-brand-panel.component';
 import { DockNavbarComponent } from './components/dock-navbar/dock-navbar.component';
 import { ErrorStateComponent } from './components/error-state/error-state.component';
 import { ImageWithFallbackComponent } from './components/image-with-fallback/image-with-fallback.component';
@@ -194,6 +195,7 @@ describe('dark mode: no light-only palette classes', () => {
 
   const cases: [string, Type<unknown>, ((component: any, fixture: ComponentFixture<any>) => void)?][] = [
     ['auth layout', AuthLayoutComponent],
+    ['auth brand panel', AuthBrandPanelComponent],
     ['public shell', PublicShellComponent],
     ['login form', LoginFormComponent],
     [
