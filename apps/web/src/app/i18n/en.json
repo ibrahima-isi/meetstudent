@@ -31,6 +31,7 @@
   },
   "pageTitle": {
     "landing": "Find the school that suits you",
+    "schools": "Schools and universities in Senegal",
     "login": "Sign in",
     "register": "Create account",
     "home": "Home",
@@ -112,6 +113,8 @@
     }
   },
   "schools": {
+    "heroTitle": "Discover the best schools in Senegal",
+    "heroText": "Explore our catalogue of schools, high schools and universities. Compare programmes and find the one that suits you.",
     "tagline": "Find the school that suits you",
     "searchPlaceholder": "Search for a school...",
     "filters": "Filters",
@@ -135,12 +138,6 @@
     "loadError": "Schools could not be loaded.",
     "loadMore": "Load more",
     "loadMoreError": "More schools could not be loaded."
-  },
-  "landing": {
-    "login": "Log in",
-    "register": "Sign up",
-    "heroTitle": "Discover the best schools in Senegal",
-    "heroText": "Explore our catalogue of schools, high schools and universities. Compare programmes and find the one that suits you."
   },
   "home": {
     "profile": "Profile",
@@ -280,6 +277,62 @@
       "typeNotAllowed": "This file type is not allowed.",
       "uploadFailed": "This document could not be uploaded. Please try again.",
       "deleteFailed": "This document could not be deleted. Please try again."
+    }
+  },
+  "lp": {
+    "meta": {
+      "description": "Compare schools, programmes and reviews from students and experts in Senegal, and find the school that suits you."
+    },
+    "hero": {
+      "eyebrow": "Orientation platform for Senegal",
+      "title": "Find the school that fits you",
+      "subtitle": "Compare schools, programmes and reviews from students and experts, all in one place.",
+      "searchLabel": "Search for a school",
+      "searchPlaceholder": "School, city…",
+      "searchSubmit": "Search",
+      "ctaExplore": "Explore schools",
+      "ctaRegister": "Create a free account"
+    },
+    "figures": {
+      "title": "The platform in numbers",
+      "schools": "schools listed",
+      "programs": "programmes to compare"
+    },
+    "steps": {
+      "title": "How it works",
+      "subtitle": "Three steps to choose with confidence.",
+      "search": { "title": "Search", "text": "Filter by city, type of school or programme to find what fits." },
+      "compare": { "title": "Compare", "text": "Read reviews from students and experts, browse programmes and accreditations." },
+      "choose": { "title": "Decide", "text": "Save your favourites and keep your application documents in one place." }
+    },
+    "featured": {
+      "title": "Featured schools",
+      "subtitle": "A selection from the catalogue.",
+      "all": "See all schools",
+      "error": "Schools could not be loaded.",
+      "rating": "Rating: {{value}} out of 5"
+    },
+    "reviews": {
+      "title": "Example reviews",
+      "example": "Example",
+      "note": "Examples until the first verified reviews arrive.",
+      "items": {
+        "a": { "quote": "I compared three schools in one evening, without running between fairs.", "who": "Undergraduate student · Dakar" },
+        "b": { "quote": "Expert reviews helped me pick the right track.", "who": "Final-year pupil · Thiès" },
+        "c": { "quote": "Having my whole file in one place saves so much time.", "who": "Master's student · Saint-Louis" }
+      }
+    },
+    "cta": {
+      "title": "Ready to find your path?",
+      "text": "Create your free account and save your favourite schools.",
+      "primary": "Create a free account",
+      "secondary": "Browse schools"
+    },
+    "footer": {
+      "tagline": "Find the school that suits you.",
+      "product": "Product",
+      "account": "Account",
+      "rights": "All rights reserved."
     }
   }
 }

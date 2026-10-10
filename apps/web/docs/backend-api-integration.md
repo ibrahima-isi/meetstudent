@@ -137,7 +137,7 @@ export const environment = {
 
 - `src/app/features/student/home-page/home-page.component.html:112` — `school.coverPhotoUrl`
 - `src/app/features/student/school-detail-page/school-detail-page.component.html:29` — `school().coverPhotoUrl`
-- `src/app/features/public/landing-page/landing-page.component.html:136` — `school.coverPhotoUrl`
+- `src/app/features/public/schools-page/schools-page.component.html:136` — `school.coverPhotoUrl`
 
 All become `undefined`. Replace with the resolved media, e.g.
 `school.cover?.publicUrl` run through a helper that prefixes `serverUrl`.

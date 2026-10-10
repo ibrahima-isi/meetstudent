@@ -14,7 +14,15 @@ import { TokenService } from '@services/token.service';
 import { WishlistService } from '@services/wishlist.service';
 import { LoginFormComponent } from '../features/auth/login-form/login-form.component';
 import { RegisterFormComponent } from '../features/auth/register-form/register-form.component';
+import { KeyFiguresComponent } from '../features/public/landing-page/sections/key-figures.component';
+import { FeaturedSchoolsComponent } from '../features/public/landing-page/sections/featured-schools.component';
+import { HowItWorksComponent } from '../features/public/landing-page/sections/how-it-works.component';
+import { CtaBandComponent } from '../features/public/landing-page/sections/cta-band.component';
+import { SiteFooterComponent } from '../features/public/landing-page/sections/site-footer.component';
+import { TestimonialsComponent } from '../features/public/landing-page/sections/testimonials.component';
 import { LandingPageComponent } from '../features/public/landing-page/landing-page.component';
+import { LandingHeroComponent } from '../features/public/landing-page/sections/landing-hero.component';
+import { SchoolsPageComponent } from '../features/public/schools-page/schools-page.component';
 import { HomePageComponent } from '../features/student/home-page/home-page.component';
 import { ProfilePageComponent } from '../features/student/profile-page/profile-page.component';
 import { SchoolDetailPageComponent } from '../features/student/school-detail-page/school-detail-page.component';
@@ -208,16 +216,16 @@ describe('dark mode: no light-only palette classes', () => {
     ],
     ['register step 2', RegisterFormComponent, (c) => c.step.set(2)],
     [
-      'landing page with schools',
-      LandingPageComponent,
+      'schools page with schools',
+      SchoolsPageComponent,
       (c) => {
         c.schools.set([school]);
         c.status.set('loaded');
         c.showFilters.set(true);
       },
     ],
-    ['landing page loading', LandingPageComponent, (c) => c.status.set('loading')],
-    ['landing page error', LandingPageComponent, (c) => c.status.set('error')],
+    ['schools page loading', SchoolsPageComponent, (c) => c.status.set('loading')],
+    ['schools page error', SchoolsPageComponent, (c) => c.status.set('error')],
     ['error state', ErrorStateComponent, undefined],
     [
       'image with fallback',
@@ -232,6 +240,16 @@ describe('dark mode: no light-only palette classes', () => {
     ['theme toggle', ThemeToggleComponent],
     ['dock navbar', DockNavbarComponent],
     ['mesh background', MeshBackgroundComponent],
+    ['landing page', LandingPageComponent],
+    ['landing hero', LandingHeroComponent],
+    ['key figures', KeyFiguresComponent],
+    ['how it works', HowItWorksComponent],
+    ['featured schools', FeaturedSchoolsComponent],
+    ['featured schools loading', FeaturedSchoolsComponent, () => spyOn(TestBed.inject(SchoolService), 'getSchools').and.returnValue(NEVER)],
+    ['featured schools error', FeaturedSchoolsComponent, () => spyOn(TestBed.inject(SchoolService), 'getSchools').and.returnValue(throwError(() => new Error('x')))],
+    ['testimonials', TestimonialsComponent],
+    ['cta band', CtaBandComponent],
+    ['site footer', SiteFooterComponent],
     ['wishlist cart', WishlistCartComponent, (c) => c.isOpen.set(true)],
     ['home with schools, filters and load more', HomePageComponent, (c) => c.showFilters.set(true)],
     ['home with a failed load more', HomePageComponent, (c) => c.loadMoreFailed.set(true)],

@@ -124,7 +124,9 @@
   }
   html {
     font-size: var(--font-size);
-    scroll-padding-top: 6rem;
+    /* Paths the router does not see (skip link `#main`, a hash on first load); router-driven
+       anchors use ViewportScroller.setOffset in app.config.ts. Keep both at 96px. */
+    scroll-padding-top: 96px;
   }
 }
 

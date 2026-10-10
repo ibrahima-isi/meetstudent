@@ -31,6 +31,7 @@
   },
   "pageTitle": {
     "landing": "Trouvez l'école qui vous correspond",
+    "schools": "Établissements et universités au Sénégal",
     "login": "Connexion",
     "register": "Inscription",
     "home": "Accueil",
@@ -112,6 +113,8 @@
     }
   },
   "schools": {
+    "heroTitle": "Découvrez les meilleurs établissements du Sénégal",
+    "heroText": "Explorez notre catalogue d'écoles, lycées et universités. Comparez les formations et trouvez celle qui vous correspond.",
     "tagline": "Trouvez votre établissement idéal",
     "searchPlaceholder": "Rechercher un établissement...",
     "filters": "Filtres",
@@ -135,12 +138,6 @@
     "loadError": "Les établissements n'ont pas pu être chargés.",
     "loadMore": "Voir plus",
     "loadMoreError": "Impossible de charger d'autres établissements."
-  },
-  "landing": {
-    "login": "Connexion",
-    "register": "S'inscrire",
-    "heroTitle": "Découvrez les meilleurs établissements du Sénégal",
-    "heroText": "Explorez notre catalogue d'écoles, lycées et universités. Comparez les formations et trouvez celle qui vous correspond."
   },
   "home": {
     "profile": "Profil",
@@ -280,6 +277,62 @@
       "typeNotAllowed": "Ce type de fichier n'est pas autorisé.",
       "uploadFailed": "Impossible d'envoyer ce document. Veuillez réessayer.",
       "deleteFailed": "Impossible de supprimer ce document. Veuillez réessayer."
+    }
+  },
+  "lp": {
+    "meta": {
+      "description": "Comparez les établissements, formations et avis d'étudiants et d'experts au Sénégal, et trouvez l'école qui vous correspond."
+    },
+    "hero": {
+      "eyebrow": "Plateforme d'orientation au Sénégal",
+      "title": "Trouvez l'école qui vous ressemble",
+      "subtitle": "Comparez établissements, formations et avis d'étudiants et d'experts, au même endroit.",
+      "searchLabel": "Rechercher un établissement",
+      "searchPlaceholder": "École, ville…",
+      "searchSubmit": "Rechercher",
+      "ctaExplore": "Explorer les établissements",
+      "ctaRegister": "Créer un compte gratuit"
+    },
+    "figures": {
+      "title": "La plateforme en chiffres",
+      "schools": "établissements référencés",
+      "programs": "formations à comparer"
+    },
+    "steps": {
+      "title": "Comment ça marche",
+      "subtitle": "Trois étapes pour choisir sereinement.",
+      "search": { "title": "Cherchez", "text": "Filtrez par ville, type d'établissement ou formation pour cibler ce qui vous convient." },
+      "compare": { "title": "Comparez", "text": "Lisez les avis d'étudiants et d'experts, consultez les formations et les accréditations." },
+      "choose": { "title": "Décidez", "text": "Enregistrez vos favoris et préparez votre dossier avec vos documents au même endroit." }
+    },
+    "featured": {
+      "title": "Établissements à la une",
+      "subtitle": "Une sélection du catalogue.",
+      "all": "Voir tous les établissements",
+      "error": "Les établissements n'ont pas pu être chargés.",
+      "rating": "Note : {{value}} sur 5"
+    },
+    "reviews": {
+      "title": "Exemples d'avis",
+      "example": "Exemple",
+      "note": "Exemples en attendant les premiers avis vérifiés.",
+      "items": {
+        "a": { "quote": "J'ai pu comparer trois écoles en une soirée, sans courir d'un salon à l'autre.", "who": "Étudiante en licence · Dakar" },
+        "b": { "quote": "Les avis d'experts m'ont aidé à choisir la bonne filière.", "who": "Élève de terminale · Thiès" },
+        "c": { "quote": "Tout mon dossier au même endroit, c'est un vrai gain de temps.", "who": "Étudiant en master · Saint-Louis" }
+      }
+    },
+    "cta": {
+      "title": "Prêt à trouver votre voie ?",
+      "text": "Créez votre compte gratuitement et enregistrez vos établissements favoris.",
+      "primary": "Créer un compte gratuit",
+      "secondary": "Parcourir les établissements"
+    },
+    "footer": {
+      "tagline": "Trouvez l'école qui vous correspond.",
+      "product": "Produit",
+      "account": "Compte",
+      "rights": "Tous droits réservés."
     }
   }
 }

@@ -13,6 +13,7 @@ import { routes } from './app.routes';
 
 describe('routes', () => {
   let harness: RouterTestingHarness;
+  const navbar = () => (harness.fixture.nativeElement as HTMLElement).querySelector('app-dock-navbar');
 
   beforeEach(async () => {
     // LocaleService is stubbed on purpose. The real one negotiates from
@@ -67,6 +68,23 @@ describe('routes', () => {
     expect(TestBed.inject(Router).url).toBe('/fr');
   });
 
+  it('renders the landing, not the catalogue, at the locale root inside the shell', async () => {
+    await harness.navigateByUrl('/fr');
+
+    const host = harness.fixture.nativeElement as HTMLElement;
+    expect(host.querySelector('app-landing-page')).toBeTruthy();
+    expect(host.querySelector('app-schools-page')).toBeNull();
+    expect(navbar()).toBeTruthy();
+  });
+
+  it('resolves the #reviews fragment to the landing', async () => {
+    await harness.navigateByUrl('/fr#reviews');
+
+    expect(TestBed.inject(Router).url).toBe('/fr#reviews');
+    expect((harness.fixture.nativeElement as HTMLElement).querySelector('app-landing-page')).toBeTruthy();
+    expect(harness.routeNativeElement?.textContent).not.toContain('404');
+  });
+
   it('renders an unknown path under a valid locale as the 404', async () => {
     await harness.navigateByUrl('/fr/nope');
 
@@ -86,8 +104,6 @@ describe('routes', () => {
     await harness.navigateByUrl('/fr/login');
     expect(TestBed.inject(Router).url).toBe('/fr/login');
   });
-
-  const navbar = () => (harness.fixture.nativeElement as HTMLElement).querySelector('app-dock-navbar');
 
   it('frames the locale root with the navbar', async () => {
     await harness.navigateByUrl('/fr');
@@ -122,7 +138,7 @@ describe('routes', () => {
 
     expect(TestBed.inject(Router).url).toBe('/fr/schools');
     expect(navbar()).toBeTruthy();
-    expect((harness.fixture.nativeElement as HTMLElement).querySelector('app-landing-page')).toBeTruthy();
+    expect((harness.fixture.nativeElement as HTMLElement).querySelector('app-schools-page')).toBeTruthy();
   });
 
   it('still guards a school detail', async () => {
