@@ -472,6 +472,13 @@ describe('RegisterFormComponent restyle', () => {
     expect(root().innerHTML).not.toMatch(/(indigo|gray)-\d/);
     component.step.set(1);
     await settle();
+    component.filteredSpecialties.set(['Mathématiques']);
+    component.showSuggestions.set(true);
+    await settle();
+    expect(root().querySelector('button[type="button"].w-full.text-left')).not.toBeNull();
+    expect(root().innerHTML).not.toMatch(/(indigo|gray)-\d/);
+    component.step.set(1);
+    await settle();
     expect(root().innerHTML).not.toMatch(/(indigo|gray)-\d/);
   });
 
@@ -490,5 +497,35 @@ describe('RegisterFormComponent restyle', () => {
     fixture.componentInstance.step.set(2);
     await settle();
     expect(root().querySelector('#terms')?.classList.contains('accent-brand')).toBeTrue();
+  });
+  it('announces the failure banner with role="alert"', async () => {
+    await render();
+    const component = fixture.componentInstance;
+    component.step1Form.patchValue({ firstname: 'Awa', lastname: 'Diop', email: 'awa@example.com', town: 'Dakar' });
+    component.step.set(2);
+    await settle();
+    component.step2Form.setValue({ password: 'sup3rsecret', confirmPassword: 'sup3rsecret', terms: true });
+    component.handleSubmit();
+    TestBed.inject(HttpTestingController)
+      .expectOne(`${environment.apiUrl}/users`)
+      .flush({}, { status: 500, statusText: 'Server Error' });
+    await settle();
+
+    const banner = Array.from(root().querySelectorAll('[role="alert"]')).find((b) =>
+      b.textContent?.includes("L'inscription a échoué"),
+    );
+    expect(banner).toBeDefined();
+  });
+
+  it('gives the browser autocomplete hints', async () => {
+    await render();
+    const ac = (id: string) => root().querySelector(`#${id}`)?.getAttribute('autocomplete');
+    expect(ac('firstname')).toBe('given-name');
+    expect(ac('lastname')).toBe('family-name');
+    expect(ac('email')).toBe('email');
+    fixture.componentInstance.step.set(2);
+    await settle();
+    expect(ac('password')).toBe('new-password');
+    expect(ac('confirmPassword')).toBe('new-password');
   });
 });

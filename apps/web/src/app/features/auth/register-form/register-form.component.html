@@ -27,7 +27,7 @@
   </div>
 
   @if (error()) {
-    <div class="bg-red-50 border border-red-200 dark:bg-red-950/40 dark:border-red-900 rounded-lg p-4 flex items-start gap-3 mb-5">
+    <div role="alert" class="bg-red-50 border border-red-200 dark:bg-red-950/40 dark:border-red-900 rounded-lg p-4 flex items-start gap-3 mb-5">
       <lucide-icon [img]="AlertCircle" class="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5"></lucide-icon>
       <p class="text-red-800 dark:text-red-200">{{ t(error()) }}</p>
     </div>
@@ -42,6 +42,7 @@
             <lucide-icon [img]="UserIcon" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground"></lucide-icon>
             <input
               id="firstname"
+              autocomplete="given-name"
               type="text"
               formControlName="firstname"
               [attr.aria-invalid]="fieldError('firstname') ? 'true' : null"
@@ -60,6 +61,7 @@
             <lucide-icon [img]="UserIcon" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground"></lucide-icon>
             <input
               id="lastname"
+              autocomplete="family-name"
               type="text"
               formControlName="lastname"
               [attr.aria-invalid]="fieldError('lastname') ? 'true' : null"
@@ -80,10 +82,11 @@
           <lucide-icon [img]="Mail" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground"></lucide-icon>
           <input
             id="email"
+            autocomplete="email"
             type="email"
             formControlName="email"
             [attr.aria-invalid]="fieldError('email') ? 'true' : null"
-              [attr.aria-describedby]="fieldError('email') ? 'email-error' : null"
+            [attr.aria-describedby]="fieldError('email') ? 'email-error' : null"
             class="field-input pl-11"
             [placeholder]="t('auth.fields.emailPlaceholder')"
           />
@@ -210,10 +213,11 @@
           <lucide-icon [img]="Lock" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground"></lucide-icon>
           <input
             id="password"
+            autocomplete="new-password"
             type="password"
             formControlName="password"
             [attr.aria-invalid]="fieldError('password') ? 'true' : null"
-              [attr.aria-describedby]="fieldError('password') ? 'password-error' : null"
+            [attr.aria-describedby]="fieldError('password') ? 'password-error' : null"
             class="field-input pl-11"
             placeholder="••••••••"
           />
@@ -230,10 +234,11 @@
           <lucide-icon [img]="Lock" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground"></lucide-icon>
           <input
             id="confirmPassword"
+            autocomplete="new-password"
             type="password"
             formControlName="confirmPassword"
             [attr.aria-invalid]="fieldError('confirmedPassword') ? 'true' : null"
-              [attr.aria-describedby]="fieldError('confirmedPassword') ? 'confirmPassword-error' : null"
+            [attr.aria-describedby]="fieldError('confirmedPassword') ? 'confirmPassword-error' : null"
             class="field-input pl-11"
             placeholder="••••••••"
           />

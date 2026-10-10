@@ -195,6 +195,28 @@ describe('LoginFormComponent translations', () => {
       }
     });
 
+    it('announces the failure banner with role="alert"', async () => {
+      await render('en');
+      const el = fixture.nativeElement as HTMLElement;
+      fixture.componentInstance.loginForm.setValue({ email: 'awa@example.com', password: 'wrong' });
+      fixture.componentInstance.handleSubmit();
+      httpMock.expectOne(`${environment.apiUrl}/auth`).flush({}, { status: 401, statusText: 'Unauthorized' });
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      const banner = Array.from(el.querySelectorAll('[role="alert"]')).find((b) =>
+        b.textContent?.includes('Login failed'),
+      );
+      expect(banner).toBeDefined();
+    });
+
+    it('gives the browser autocomplete hints', async () => {
+      await render('en');
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.querySelector('#email')?.getAttribute('autocomplete')).toBe('username');
+      expect(el.querySelector('#password')?.getAttribute('autocomplete')).toBe('current-password');
+    });
+
     it('no longer centres a lone 64px icon', async () => {
       await render('en');
 

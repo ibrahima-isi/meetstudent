@@ -6,7 +6,7 @@
 
   <form [formGroup]="loginForm" (ngSubmit)="handleSubmit()" class="space-y-5">
     @if (error()) {
-      <div class="bg-red-50 border border-red-200 dark:bg-red-950/40 dark:border-red-900 rounded-lg p-4 flex items-start gap-3">
+      <div role="alert" class="bg-red-50 border border-red-200 dark:bg-red-950/40 dark:border-red-900 rounded-lg p-4 flex items-start gap-3">
         <lucide-icon [img]="AlertCircle" class="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5"></lucide-icon>
         <p class="text-red-800 dark:text-red-200">{{ t(error()) }}</p>
       </div>
@@ -25,6 +25,7 @@
         <lucide-icon [img]="Mail" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground"></lucide-icon>
         <input
           id="email"
+          autocomplete="username"
           type="email"
           formControlName="email"
           [attr.aria-invalid]="loginForm.get('email')?.touched && loginForm.get('email')?.invalid ? 'true' : null"
@@ -44,6 +45,7 @@
         <lucide-icon [img]="Lock" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground"></lucide-icon>
         <input
           id="password"
+          autocomplete="current-password"
           type="password"
           formControlName="password"
           [attr.aria-invalid]="loginForm.get('password')?.touched && loginForm.get('password')?.invalid ? 'true' : null"
