@@ -17,6 +17,9 @@ import { RegisterFormComponent } from '../features/auth/register-form/register-f
 import { KeyFiguresComponent } from '../features/public/landing-page/sections/key-figures.component';
 import { FeaturedSchoolsComponent } from '../features/public/landing-page/sections/featured-schools.component';
 import { HowItWorksComponent } from '../features/public/landing-page/sections/how-it-works.component';
+import { CtaBandComponent } from '../features/public/landing-page/sections/cta-band.component';
+import { SiteFooterComponent } from '../features/public/landing-page/sections/site-footer.component';
+import { TestimonialsComponent } from '../features/public/landing-page/sections/testimonials.component';
 import { LandingHeroComponent } from '../features/public/landing-page/sections/landing-hero.component';
 import { SchoolsPageComponent } from '../features/public/schools-page/schools-page.component';
 import { HomePageComponent } from '../features/student/home-page/home-page.component';
@@ -242,6 +245,9 @@ describe('dark mode: no light-only palette classes', () => {
     ['featured schools', FeaturedSchoolsComponent],
     ['featured schools loading', FeaturedSchoolsComponent, () => spyOn(TestBed.inject(SchoolService), 'getSchools').and.returnValue(NEVER)],
     ['featured schools error', FeaturedSchoolsComponent, () => spyOn(TestBed.inject(SchoolService), 'getSchools').and.returnValue(throwError(() => new Error('x')))],
+    ['testimonials', TestimonialsComponent],
+    ['cta band', CtaBandComponent],
+    ['site footer', SiteFooterComponent],
     ['wishlist cart', WishlistCartComponent, (c) => c.isOpen.set(true)],
     ['home with schools, filters and load more', HomePageComponent, (c) => c.showFilters.set(true)],
     ['home with a failed load more', HomePageComponent, (c) => c.loadMoreFailed.set(true)],

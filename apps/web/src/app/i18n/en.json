@@ -308,6 +308,28 @@
       "all": "See all schools",
       "error": "Schools could not be loaded.",
       "rating": "Rating: {{value}} out of 5"
+    },
+    "reviews": {
+      "title": "What people say",
+      "example": "Example",
+      "note": "Examples until the first verified reviews arrive.",
+      "items": {
+        "a": { "quote": "I compared three schools in one evening, without running between fairs.", "who": "Undergraduate student · Dakar" },
+        "b": { "quote": "Expert reviews helped me pick the right track.", "who": "Final-year pupil · Thiès" },
+        "c": { "quote": "Having my whole file in one place saves so much time.", "who": "Master's student · Saint-Louis" }
+      }
+    },
+    "cta": {
+      "title": "Ready to find your path?",
+      "text": "Create your free account and save your favourite schools.",
+      "primary": "Create a free account",
+      "secondary": "Browse schools"
+    },
+    "footer": {
+      "tagline": "Find the school that suits you.",
+      "product": "Product",
+      "account": "Account",
+      "rights": "All rights reserved."
     }
   }
 }

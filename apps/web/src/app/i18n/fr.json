@@ -308,6 +308,28 @@
       "all": "Voir tous les établissements",
       "error": "Les établissements n'ont pas pu être chargés.",
       "rating": "Note : {{value}} sur 5"
+    },
+    "reviews": {
+      "title": "Ils en parlent",
+      "example": "Exemple",
+      "note": "Exemples en attendant les premiers avis vérifiés.",
+      "items": {
+        "a": { "quote": "J'ai pu comparer trois écoles en une soirée, sans courir d'un salon à l'autre.", "who": "Étudiante en licence · Dakar" },
+        "b": { "quote": "Les avis d'experts m'ont aidé à choisir la bonne filière.", "who": "Élève de terminale · Thiès" },
+        "c": { "quote": "Tout mon dossier au même endroit, c'est un vrai gain de temps.", "who": "Étudiant en master · Saint-Louis" }
+      }
+    },
+    "cta": {
+      "title": "Prêt à trouver votre voie ?",
+      "text": "Créez votre compte gratuitement et enregistrez vos établissements favoris.",
+      "primary": "Créer un compte gratuit",
+      "secondary": "Parcourir les établissements"
+    },
+    "footer": {
+      "tagline": "Trouvez l'école qui vous correspond.",
+      "product": "Produit",
+      "account": "Compte",
+      "rights": "Tous droits réservés."
     }
   }
 }
