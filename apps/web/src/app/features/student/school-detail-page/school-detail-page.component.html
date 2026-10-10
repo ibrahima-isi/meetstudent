@@ -150,6 +150,14 @@
           }
           @for (programme of sortedProgrammes(); track programme.id) {
             <div class="bg-card rounded-xl shadow-sm border border-border p-6 hover:shadow-md transition-shadow">
+              @if (programme.photoImageUrl) {
+                <app-image-with-fallback
+                  data-testid="programme-photo"
+                  [src]="programme.photoImageUrl"
+                  [alt]="programme.name"
+                  class="w-full h-40 object-cover rounded-lg mb-4 block"
+                ></app-image-with-fallback>
+              }
               <div class="flex items-start justify-between mb-4">
                 <div class="flex-1">
                   <div class="flex items-start justify-between mb-2">
