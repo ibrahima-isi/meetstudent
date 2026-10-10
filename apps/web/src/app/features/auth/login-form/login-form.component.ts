@@ -2,7 +2,7 @@ import { Component, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { LucideAngularModule, Mail, Lock, LogIn, AlertCircle, CheckCircle } from 'lucide-angular';
+import { LucideAngularModule, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-angular';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { AuthService } from '../../../services/auth.service';
 import { LocaleService } from '@services/locale.service';
@@ -33,7 +33,6 @@ export class LoginFormComponent {
 
   readonly Mail = Mail;
   readonly Lock = Lock;
-  readonly LogIn = LogIn;
   readonly AlertCircle = AlertCircle;
   readonly CheckCircle = CheckCircle;
 

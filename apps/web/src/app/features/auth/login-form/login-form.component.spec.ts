@@ -175,6 +175,48 @@ describe('LoginFormComponent translations', () => {
       expect(email.getAttribute('aria-invalid')).toBe('true');
     });
 
+    it('links each input to its error message only while the error is shown', async () => {
+      await render('en');
+      const el = fixture.nativeElement as HTMLElement;
+      const email = el.querySelector('#email') as HTMLInputElement;
+      const password = el.querySelector('#password') as HTMLInputElement;
+      expect(email.getAttribute('aria-describedby')).toBeNull();
+      expect(password.getAttribute('aria-describedby')).toBeNull();
+
+      fixture.componentInstance.loginForm.get('email')?.setValue('nope');
+      fixture.componentInstance.loginForm.markAllAsTouched();
+      fixture.detectChanges();
+
+      for (const input of [email, password]) {
+        const id = input.getAttribute('aria-describedby');
+        expect(id).withContext(input.id).toBeTruthy();
+        const message = el.querySelector(`#${id}`);
+        expect(message?.getAttribute('role')).withContext(input.id).toBe('alert');
+      }
+    });
+
+    it('announces the failure banner with role="alert"', async () => {
+      await render('en');
+      const el = fixture.nativeElement as HTMLElement;
+      fixture.componentInstance.loginForm.setValue({ email: 'awa@example.com', password: 'wrong' });
+      fixture.componentInstance.handleSubmit();
+      httpMock.expectOne(`${environment.apiUrl}/auth`).flush({}, { status: 401, statusText: 'Unauthorized' });
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      const banner = Array.from(el.querySelectorAll('[role="alert"]')).find((b) =>
+        b.textContent?.includes('Login failed'),
+      );
+      expect(banner).toBeDefined();
+    });
+
+    it('gives the browser autocomplete hints', async () => {
+      await render('en');
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.querySelector('#email')?.getAttribute('autocomplete')).toBe('username');
+      expect(el.querySelector('#password')?.getAttribute('autocomplete')).toBe('current-password');
+    });
+
     it('no longer centres a lone 64px icon', async () => {
       await render('en');
 
