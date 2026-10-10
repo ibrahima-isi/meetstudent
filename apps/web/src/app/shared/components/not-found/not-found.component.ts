@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, RESPONSE_INIT, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { LocaleService } from '@services/locale.service';
@@ -24,4 +24,14 @@ import { LocaleService } from '@services/locale.service';
 })
 export class NotFoundComponent {
   protected readonly locale = inject(LocaleService);
+
+  constructor() {
+    // `@angular/ssr` provides RESPONSE_INIT only under RenderMode.Server and
+    // builds the Response from it after rendering, so this sets the HTTP status.
+    // Absent in the browser and in tests: nothing to patch.
+    const responseInit = inject(RESPONSE_INIT, { optional: true });
+    if (responseInit) {
+      responseInit.status = 404;
+    }
+  }
 }
