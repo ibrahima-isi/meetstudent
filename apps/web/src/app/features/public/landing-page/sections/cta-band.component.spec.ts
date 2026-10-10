@@ -61,6 +61,18 @@ describe('CtaBandComponent', () => {
     expect(root().textContent).toContain('Create your free account and save your favourite schools.');
   });
 
+  it('puts the horizontal gutter on the host and centres the section', async () => {
+    await render('fr');
+    const host = root();
+    for (const cls of ['px-4', 'sm:px-6', 'lg:px-8']) {
+      expect(host.classList).withContext(cls).toContain(cls);
+    }
+    const section = root().querySelector('section')!;
+    expect(section.classList).toContain('mx-auto');
+    expect(section.classList).toContain('max-w-7xl');
+    expect(section.className).not.toMatch(/(^|\s)(mx-4|sm:mx-6|lg:mx-auto)(\s|$)/);
+  });
+
   it('creates a stacking context for the mesh backdrop', async () => {
     await render('fr');
     const container = root().querySelector('app-mesh-background')!.parentElement!;

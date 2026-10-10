@@ -58,6 +58,24 @@ describe('TestimonialsComponent', () => {
     }
   });
 
+  it('shows the example badge visibly on every card, not hidden or screen-reader only', async () => {
+    await render('fr');
+    expect(figures().length).toBe(3);
+    for (const figure of figures()) {
+      const badge = Array.from(figure.querySelectorAll<HTMLElement>('span')).find(
+        (s) => s.textContent!.trim() === 'Exemple',
+      );
+      expect(badge).withContext('badge span').toBeDefined();
+      expect(badge!.classList).not.toContain('sr-only');
+      expect(badge!.hasAttribute('hidden')).toBeFalse();
+      expect(badge!.closest('[aria-hidden="true"]')).toBeNull();
+      const style = getComputedStyle(badge!);
+      expect(style.display).not.toBe('none');
+      expect(style.visibility).toBe('visible');
+      expect(badge!.getBoundingClientRect().width).toBeGreaterThan(0);
+    }
+  });
+
   it('shows the note that these are examples', async () => {
     await render('fr');
     expect(root().textContent).toContain('Exemples en attendant les premiers avis vérifiés.');
@@ -82,7 +100,12 @@ describe('TestimonialsComponent', () => {
     await render('fr');
     expect(root().querySelectorAll('h1').length).toBe(0);
     expect(root().querySelectorAll('h2').length).toBe(1);
-    expect(root().querySelector('h2')!.textContent!.trim()).toBe('Ils en parlent');
+    expect(root().querySelector('h2')!.textContent!.trim()).toBe("Exemples d'avis");
+  });
+
+  it('titles the section as example reviews in English', async () => {
+    await render('en');
+    expect(root().querySelector('h2')!.textContent!.trim()).toBe('Example reviews');
   });
 
   it('keeps the section in the DOM with its anchor id', async () => {

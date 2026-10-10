@@ -29,7 +29,6 @@ const FEATURED_COUNT = 6;
       .school-link:focus-visible {
         outline: 2px solid var(--brand);
         outline-offset: 2px;
-        border-radius: inherit;
       }
       @media (hover: hover) {
         .school-card-inner {
@@ -139,9 +138,9 @@ const FEATURED_COUNT = 6;
                                   class="h-4 w-4 fill-yellow-400 text-yellow-400"
                                   aria-hidden="true"
                                 />
-                                <span aria-hidden="true">{{ roundRating(school.rating) }}</span>
+                                <span aria-hidden="true">{{ ratingText(school.rating) }}</span>
                                 <span class="sr-only">{{
-                                  t('lp.featured.rating', { value: roundRating(school.rating) })
+                                  t('lp.featured.rating', { value: ratingText(school.rating) })
                                 }}</span>
                               </span>
                             }
@@ -170,6 +169,11 @@ export class FeaturedSchoolsComponent implements OnInit {
   protected readonly MapPin = MapPin;
   protected readonly Star = Star;
   protected readonly roundRating = roundRating;
+
+  /** The rounded average in the reader's number format (4,3 in French, 4.3 in English). */
+  protected ratingText(value: number | null | undefined): string {
+    return roundRating(value).toLocaleString(this.lang(), { maximumFractionDigits: 1 });
+  }
 
   ngOnInit(): void {
     this.load();

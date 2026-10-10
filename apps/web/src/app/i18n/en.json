@@ -310,7 +310,7 @@
       "rating": "Rating: {{value}} out of 5"
     },
     "reviews": {
-      "title": "What people say",
+      "title": "Example reviews",
       "example": "Example",
       "note": "Examples until the first verified reviews arrive.",
       "items": {

@@ -8,10 +8,10 @@ import { MeshBackgroundComponent } from '@shared/components/mesh-background/mesh
   selector: 'app-cta-band',
   imports: [TranslocoDirective, RouterLink, MeshBackgroundComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'block py-20' },
+  host: { class: 'block px-4 py-20 sm:px-6 lg:px-8' },
   template: `
     <section
-      class="relative isolate mx-4 max-w-7xl overflow-hidden rounded-3xl border border-border px-8 py-16 text-center sm:mx-6 lg:mx-auto"
+      class="relative isolate mx-auto max-w-7xl overflow-hidden rounded-3xl border border-border px-8 py-16 text-center"
       *transloco="let t"
     >
       <app-mesh-background />

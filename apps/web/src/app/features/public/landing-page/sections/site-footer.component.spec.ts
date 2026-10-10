@@ -14,9 +14,20 @@ describe('SiteFooterComponent', () => {
   const hrefs = () =>
     Array.from(root().querySelectorAll('a')).map((a) => a.getAttribute('href'));
 
-  async function render(lang: 'fr' | 'en') {
+  async function render(lang: 'fr' | 'en', now?: Date) {
     await firstValueFrom(TestBed.inject(LocaleService).use(lang));
-    fixture = TestBed.createComponent(SiteFooterComponent);
+    if (now) {
+      // Mock the clock only around construction, never while Transloco loads.
+      jasmine.clock().install();
+      jasmine.clock().mockDate(now);
+    }
+    try {
+      fixture = TestBed.createComponent(SiteFooterComponent);
+    } finally {
+      if (now) {
+        jasmine.clock().uninstall();
+      }
+    }
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
@@ -71,9 +82,7 @@ describe('SiteFooterComponent', () => {
   });
 
   it('shows the current year', async () => {
-    jasmine.clock().install();
-    jasmine.clock().mockDate(new Date('2030-05-01T12:00:00Z'));
-    await render('fr');
+    await render('fr', new Date('2030-05-01T12:00:00Z'));
     expect(root().textContent).toContain('2030');
   });
 

@@ -310,7 +310,7 @@
       "rating": "Note : {{value}} sur 5"
     },
     "reviews": {
-      "title": "Ils en parlent",
+      "title": "Exemples d'avis",
       "example": "Exemple",
       "note": "Exemples en attendant les premiers avis vérifiés.",
       "items": {

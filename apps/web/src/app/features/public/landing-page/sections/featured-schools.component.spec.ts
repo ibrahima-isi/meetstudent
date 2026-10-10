@@ -56,7 +56,7 @@ describe('FeaturedSchoolsComponent', () => {
     const card = cards()[0];
     expect(card.textContent).toContain('Harvard');
     expect(card.textContent).toContain('Dakar');
-    expect(card.querySelector('[data-testid="rating"] span[aria-hidden="true"]')?.textContent?.trim()).toBe('4.3');
+    expect(card.querySelector('[data-testid="rating"] span[aria-hidden="true"]')?.textContent?.trim()).toBe('4,3');
     expect(card.querySelector('[data-testid="city"]')?.textContent?.trim()).toBe('Dakar');
   });
 
@@ -149,10 +149,10 @@ describe('FeaturedSchoolsComponent', () => {
   it('announces the rating once, through a labelled sr-only text, in French', async () => {
     await create(page([school(1, { rating: 4.26 })]));
     const rating = cards()[0].querySelector('[data-testid="rating"]')!;
-    expect(rating.querySelector('.sr-only')?.textContent?.trim()).toBe('Note : 4.3 sur 5');
-    const visible = Array.from(rating.querySelectorAll('[aria-hidden="true"]')).filter((e) => e.textContent?.includes('4.3'));
+    expect(rating.querySelector('.sr-only')?.textContent?.trim()).toBe('Note : 4,3 sur 5');
+    const visible = Array.from(rating.querySelectorAll('[aria-hidden="true"]')).filter((e) => e.textContent?.includes('4,3'));
     expect(visible.length).toBe(1);
-    expect((rating.textContent ?? '').match(/4\.3/g)?.length).toBe(2); // one visible (hidden from AT), one sr-only
+    expect((rating.textContent ?? '').match(/4,3/g)?.length).toBe(2); // one visible (hidden from AT), one sr-only
   });
 
   it('announces the rating in English', async () => {
@@ -160,6 +160,16 @@ describe('FeaturedSchoolsComponent', () => {
     TestBed.inject(TranslocoService).setActiveLang('en');
     await create(page([school(1, { rating: 4 })]));
     expect(cards()[0].querySelector('[data-testid="rating"] .sr-only')?.textContent?.trim()).toBe('Rating: 4 out of 5');
+  });
+
+  it('formats the rating with the English decimal point', async () => {
+    await firstValueFrom(TestBed.inject(TranslocoService).load('en'));
+    TestBed.inject(TranslocoService).setActiveLang('en');
+    (TestBed.inject(LocaleService) as unknown as { active: ReturnType<typeof signal<string>> }).active.set('en');
+    await create(page([school(1, { rating: 4.26 })]));
+    const rating = root().querySelector('[data-testid="rating"]')!;
+    expect(rating.querySelector('.sr-only')?.textContent?.trim()).toBe('Rating: 4.3 out of 5');
+    expect(rating.querySelector('span[aria-hidden="true"]')?.textContent?.trim()).toBe('4.3');
   });
 
   it('renders no section when no returned school has an id', async () => {
@@ -172,12 +182,19 @@ describe('FeaturedSchoolsComponent', () => {
     await create(page([school(1)]));
     const link = cards()[0];
     link.focus();
-    const rules = Array.from(document.styleSheets)
+    const focusRules = Array.from(document.styleSheets)
       .flatMap((sheet) => Array.from(sheet.cssRules))
-      .map((r) => r.cssText)
-      .join('\n');
+      .filter(
+        (r): r is CSSStyleRule =>
+          r instanceof CSSStyleRule &&
+          r.selectorText.includes('school-link') &&
+          r.selectorText.endsWith(':focus-visible'),
+      );
+    expect(focusRules.length).toBe(1);
+    expect(focusRules[0].cssText).toContain('outline: 2px solid var(--brand)');
+    expect(focusRules[0].style.borderRadius).toBe('');
     expect(getComputedStyle(link).outlineStyle).not.toBe('none');
-    expect(/school-link[^{,]*:focus-visible\s*\{[^}]*outline:[^;}]*solid[^}]*outline-offset/.test(rules)).toBeTrue();
+    expect(parseFloat(getComputedStyle(link).borderTopLeftRadius)).toBeGreaterThanOrEqual(16);
   });
 
   it('keeps long unbroken names inside the card', async () => {
