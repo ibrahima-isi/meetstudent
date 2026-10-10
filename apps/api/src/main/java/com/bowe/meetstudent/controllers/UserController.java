@@ -8,6 +8,7 @@ import com.bowe.meetstudent.entities.Role;
 import com.bowe.meetstudent.entities.UserEntity;
 import com.bowe.meetstudent.mappers.Mapper;
 import com.bowe.meetstudent.security.UserPrincipal;
+import com.bowe.meetstudent.services.EmailVerificationService;
 import com.bowe.meetstudent.services.RoleService;
 import com.bowe.meetstudent.services.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -41,6 +42,7 @@ public class UserController {
     private final PasswordEncoder encoder;
     private final Mapper<UserEntity, UserDTO> userMapper;
     private final RoleService roleService;
+    private final EmailVerificationService emailVerificationService;
 
     @PostMapping
     @Operation(summary = "Create a new user", description = "Registers a new student account.")
@@ -64,6 +66,8 @@ public class UserController {
                 .qualification(request.getQualification())
                 .build();
         UserEntity savedUser = this.userService.registerStudent(userEntity, encoder);
+        // Only publishes an event handled after commit: a mail failure can never fail the registration.
+        emailVerificationService.sendVerification(savedUser, request.getLang());
         UserDTO savedUserDto = this.userMapper.toDTO(savedUser);
         return new ResponseEntity<>(savedUserDto, HttpStatus.CREATED);
     }

@@ -40,6 +40,11 @@ public class UserEntity extends AbstractEntity {
     @JsonIgnore
     private String password;
 
+    /** Optional: unverified accounts can sign in. Set once the user opens the link sent to {@code email}. */
+    @Builder.Default
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified = false;
+
     @ManyToOne
     @JoinColumn(name = "role_id")
     @ToString.Include

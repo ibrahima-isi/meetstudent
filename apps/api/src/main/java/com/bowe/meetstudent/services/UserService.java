@@ -32,6 +32,7 @@ public class UserService {
     private final SchoolRepository schoolRepository;
     private final RoleRepository roleRepository;
     private final MediaService mediaService;
+    private final EmailVerificationService emailVerificationService;
 
     public UserEntity saveUser(UserEntity userEntity, PasswordEncoder passwordEncoder ) {
         userEntity.setPassword(
@@ -111,6 +112,7 @@ public class UserService {
             // through MediaController and owned via the media table, not through the user patch.
             if (updates.getFirstname() != null) existing.setFirstname(updates.getFirstname());
             if (updates.getLastname() != null) existing.setLastname(updates.getLastname());
+            boolean emailChanged = updates.getEmail() != null && !updates.getEmail().equalsIgnoreCase(existing.getEmail());
             if (updates.getEmail() != null) existing.setEmail(updates.getEmail());
             if (updates.getBirthday() != null) existing.setBirthday(updates.getBirthday());
             if (updates.getQualification() != null) existing.setQualification(updates.getQualification());
@@ -120,7 +122,15 @@ public class UserService {
                 existing.setPassword(encoder.encode(updates.getPassword()));
             }
             
-            return userRepository.save(existing);
+            if (emailChanged) {
+                // The new address is unproven: old verification links die, the new address gets its own.
+                existing.setEmailVerified(false);
+            }
+            var saved = userRepository.save(existing);
+            if (emailChanged) {
+                emailVerificationService.restartVerification(saved);
+            }
+            return saved;
         }).orElseThrow(() -> new com.bowe.meetstudent.exceptions.ResourceNotFoundException("User not found"));
     }
 

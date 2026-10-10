@@ -7,6 +7,7 @@ import com.bowe.meetstudent.exceptions.ResourceNotFoundException;
 import com.bowe.meetstudent.repositories.RoleRepository;
 import com.bowe.meetstudent.repositories.UserRepository;
 import com.bowe.meetstudent.repositories.SchoolRepository;
+import com.bowe.meetstudent.services.EmailVerificationService;
 import com.bowe.meetstudent.services.MediaService;
 import com.bowe.meetstudent.services.UserService;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,6 +44,9 @@ class UserServiceTest {
 
     @Mock
     private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private EmailVerificationService emailVerificationService;
 
     @InjectMocks
     private UserService userService;
@@ -119,6 +123,46 @@ class UserServiceTest {
         assertEquals("Data Science", user.getQualification());
         // Media is no longer managed through the user patch.
         Mockito.verifyNoInteractions(mediaService);
+    }
+
+    @Test
+    void patch_shouldResetVerificationAndRestartIt_whenTheEmailChanges() {
+        user.setEmail("old@example.com");
+        user.setEmailVerified(true);
+        Mockito.when(userRepository.findById(1)).thenReturn(Optional.of(user));
+        Mockito.when(userRepository.save(any(UserEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        UserEntity saved = userService.patch(1, UserEntity.builder().email("new@example.com").build(), passwordEncoder);
+
+        assertEquals("new@example.com", saved.getEmail());
+        assertFalse(saved.isEmailVerified());
+        Mockito.verify(emailVerificationService).restartVerification(saved);
+    }
+
+    @Test
+    void patch_shouldKeepVerification_whenOnlyTheCaseOfTheEmailChanges() {
+        user.setEmail("old@example.com");
+        user.setEmailVerified(true);
+        Mockito.when(userRepository.findById(1)).thenReturn(Optional.of(user));
+        Mockito.when(userRepository.save(any(UserEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        UserEntity saved = userService.patch(1, UserEntity.builder().email("OLD@example.com").build(), passwordEncoder);
+
+        assertTrue(saved.isEmailVerified());
+        Mockito.verifyNoInteractions(emailVerificationService);
+    }
+
+    @Test
+    void patch_shouldNotTouchVerification_whenTheEmailIsNotSent() {
+        user.setEmail("old@example.com");
+        user.setEmailVerified(true);
+        Mockito.when(userRepository.findById(1)).thenReturn(Optional.of(user));
+        Mockito.when(userRepository.save(any(UserEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        userService.patch(1, UserEntity.builder().firstname("Johnny").build(), passwordEncoder);
+
+        assertTrue(user.isEmailVerified());
+        Mockito.verifyNoInteractions(emailVerificationService);
     }
 
     @Test
