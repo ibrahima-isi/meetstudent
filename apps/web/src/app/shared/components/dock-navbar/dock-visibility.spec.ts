@@ -44,4 +44,12 @@ describe('nextDockVisible', () => {
   it('stays visible while the mobile menu is open', () => {
     expect(at({ menuOpen: true, previousScrollY: 600, scrollY: 900 })).toBeTrue();
   });
+
+  it('hides on scroll down once the pointer has left or never existed (pointerY null)', () => {
+    expect(at({ visible: true, pointerY: null, previousScrollY: 600, scrollY: 700 })).toBeFalse();
+  });
+
+  it('a pointer lingering inside the zone keeps the bar shown while scrolling down', () => {
+    expect(at({ visible: false, pointerY: REVEAL_ZONE_PX - 10, previousScrollY: 600, scrollY: 900 })).toBeTrue();
+  });
 });
