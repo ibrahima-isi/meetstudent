@@ -1,3 +1,4 @@
+import { firstValueFrom } from 'rxjs';
 import { TestBed, ComponentFixture } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { provideTransloco, TranslocoService } from '@jsverse/transloco';
@@ -8,7 +9,7 @@ describe('ImageWithFallbackComponent', () => {
   let transloco: TranslocoService;
 
   async function render(lang: 'fr' | 'en', alt?: string): Promise<ComponentFixture<ImageWithFallbackComponent>> {
-    await transloco.load(lang).toPromise();
+    await firstValueFrom(transloco.load(lang));
     transloco.setActiveLang(lang);
     const fixture = TestBed.createComponent(ImageWithFallbackComponent);
     fixture.componentRef.setInput('src', 'broken.png');
@@ -45,6 +46,12 @@ describe('ImageWithFallbackComponent', () => {
     const fixture = await render('fr', 'Harvard');
 
     expect((await failToLoad(fixture)).getAttribute('alt')).toBe('Harvard');
+  });
+
+  it('keeps an explicit empty alt (decorative image) on the fallback image', async () => {
+    const fixture = await render('fr', '');
+
+    expect((await failToLoad(fixture)).getAttribute('alt')).toBe('');
   });
 
   it('describes the failure in French when no alt was passed', async () => {

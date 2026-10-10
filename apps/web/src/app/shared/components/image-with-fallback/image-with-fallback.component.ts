@@ -12,18 +12,19 @@ const ERROR_IMG_SRC = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODgiIGhlaWdodD0
     @if (didError()) {
       <div [class]="'inline-block bg-muted text-center align-middle ' + customClass()">
         <div class="flex items-center justify-center w-full h-full">
-          <img class="dark:invert" [src]="errorSrc" [alt]="alt() || t('common.imageError')" [attr.data-original-url]="src()" />
+          <img class="dark:invert" [src]="errorSrc" [alt]="alt() ?? t('common.imageError')" [attr.data-original-url]="src()" />
         </div>
       </div>
     } @else {
-      <img [src]="src()" [alt]="alt()" [class]="customClass()" (error)="handleError()" />
+      <img [src]="src()" [alt]="alt() ?? ''" [class]="customClass()" (error)="handleError()" />
     }
     </ng-container>
   `
 })
 export class ImageWithFallbackComponent {
   src = input.required<string>();
-  alt = input<string>('');
+  // undefined = not passed (fallback gets a translated label); '' = decorative, kept as is.
+  alt = input<string | undefined>(undefined);
   customClass = input<string>('', { alias: 'class' });
 
   didError = signal(false);

@@ -1,3 +1,4 @@
+import { firstValueFrom } from 'rxjs';
 import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, RESPONSE_INIT } from '@angular/core';
 import { provideRouter } from '@angular/router';
@@ -19,7 +20,7 @@ describe('NotFoundComponent', () => {
 
   it('links home through the active locale rather than a bare slash', async () => {
     const transloco = TestBed.inject(TranslocoService);
-    await transloco.load('fr').toPromise();
+    await firstValueFrom(transloco.load('fr'));
 
     const fixture = TestBed.createComponent(NotFoundComponent);
     fixture.detectChanges();
@@ -39,7 +40,7 @@ describe('NotFoundComponent', () => {
   });
 
   it('still renders the 404 page when there is no server response to patch', async () => {
-    await TestBed.inject(TranslocoService).load('fr').toPromise();
+    await firstValueFrom(TestBed.inject(TranslocoService).load('fr'));
 
     const fixture = TestBed.createComponent(NotFoundComponent);
     fixture.detectChanges();

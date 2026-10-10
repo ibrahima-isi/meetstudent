@@ -92,9 +92,8 @@ describe('SchoolsPageComponent translations', () => {
   }
 
   beforeEach(() => {
-    const schoolService = jasmine.createSpyObj('SchoolService', ['getSchools', 'schools']);
+    const schoolService = jasmine.createSpyObj('SchoolService', ['getSchools']);
     schoolService.getSchools.and.returnValue(of({ content: [] }));
-    schoolService.schools.and.returnValue([]);
 
     TestBed.configureTestingModule({
       imports: [SchoolsPageComponent],
@@ -217,7 +216,7 @@ describe('SchoolsPageComponent data states', () => {
         provideHttpClientTesting(),
         provideRouter([]),
         provideTransloco(translocoOptions),
-        { provide: SchoolService, useValue: { getSchools, schools: () => [] } },
+        { provide: SchoolService, useValue: { getSchools } },
       ],
     });
     await firstValueFrom(TestBed.inject(LocaleService).use('en'));
@@ -305,7 +304,7 @@ describe('SchoolsPageComponent search prefill', () => {
         provideHttpClientTesting(),
         provideRouter([{ path: 'schools', component: SchoolsPageComponent }]),
         provideTransloco(translocoOptions),
-        { provide: SchoolService, useValue: { getSchools: () => of({ content: schools }), schools: () => [] } },
+        { provide: SchoolService, useValue: { getSchools: () => of({ content: schools }) } },
       ],
     }).compileComponents();
     await firstValueFrom(TestBed.inject(LocaleService).use('en'));
