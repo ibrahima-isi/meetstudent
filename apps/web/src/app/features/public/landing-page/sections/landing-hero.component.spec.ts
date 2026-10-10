@@ -56,6 +56,26 @@ describe('LandingHeroComponent', () => {
     fixture.detectChanges();
   });
 
+  it('fits a 375px screen: nothing is clipped on the right', () => {
+    const wrapper = document.createElement('div');
+    wrapper.style.width = '375px';
+    document.body.append(wrapper);
+    wrapper.append(root());
+    try {
+      const column = root().querySelector('.grid')!.firstElementChild as HTMLElement;
+      const subtitle = root().querySelector('h1 + p') as HTMLElement;
+      const button = root().querySelector('form button') as HTMLElement;
+      const limit = wrapper.getBoundingClientRect().left + 375;
+
+      for (const [name, el] of Object.entries({ column, h1: root().querySelector('h1')!, subtitle, button })) {
+        expect(el.getBoundingClientRect().right).withContext(name).toBeLessThanOrEqual(limit);
+      }
+      expect(form().getBoundingClientRect().width).toBeLessThanOrEqual(341);
+    } finally {
+      wrapper.remove();
+    }
+  });
+
   it('has exactly one h1, with the hero title', () => {
     const headings = root().querySelectorAll('h1');
     expect(headings.length).toBe(1);

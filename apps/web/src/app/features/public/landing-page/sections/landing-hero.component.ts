@@ -38,7 +38,7 @@ function wellFormed(value: string): string {
   template: `
     <section class="relative isolate overflow-hidden" *transloco="let t">
       <app-mesh-background />
-      <div class="mx-auto grid max-w-7xl items-center gap-12 px-4 pb-20 pt-32 sm:px-6 lg:grid-cols-2 lg:px-8 lg:pb-28 lg:pt-40">
+      <div class="mx-auto grid max-w-7xl grid-cols-1 items-center gap-12 px-4 pb-20 pt-32 sm:px-6 lg:grid-cols-2 lg:px-8 lg:pb-28 lg:pt-40">
         <div>
           <p class="mb-4 inline-flex rounded-full bg-brand-soft px-3 py-1 text-sm font-medium text-brand-soft-foreground">{{ t('lp.hero.eyebrow') }}</p>
           <h1 class="text-4xl font-semibold tracking-tight text-foreground sm:text-5xl lg:text-6xl">{{ t('lp.hero.title') }}</h1>
@@ -54,9 +54,9 @@ function wellFormed(value: string): string {
               autocomplete="off"
               [formControl]="query"
               [placeholder]="t('lp.hero.searchPlaceholder')"
-              class="min-w-0 flex-1 bg-transparent px-1 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none"
+              class="w-full min-w-0 flex-1 bg-transparent px-1 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none"
             />
-            <button type="submit" class="btn btn-primary">{{ t('lp.hero.searchSubmit') }}</button>
+            <button type="submit" class="btn btn-primary shrink-0">{{ t('lp.hero.searchSubmit') }}</button>
           </form>
 
           <div class="mt-6 flex flex-wrap gap-3">
