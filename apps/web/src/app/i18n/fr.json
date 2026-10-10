@@ -294,6 +294,13 @@
       "title": "La plateforme en chiffres",
       "schools": "établissements référencés",
       "programs": "formations à comparer"
+    },
+    "steps": {
+      "title": "Comment ça marche",
+      "subtitle": "Trois étapes pour choisir sereinement.",
+      "search": { "title": "Cherchez", "text": "Filtrez par ville, type d'établissement ou formation pour cibler ce qui vous convient." },
+      "compare": { "title": "Comparez", "text": "Lisez les avis d'étudiants et d'experts, consultez les formations et les accréditations." },
+      "choose": { "title": "Décidez", "text": "Enregistrez vos favoris et préparez votre dossier avec vos documents au même endroit." }
     }
   }
 }
