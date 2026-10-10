@@ -175,6 +175,26 @@ describe('LoginFormComponent translations', () => {
       expect(email.getAttribute('aria-invalid')).toBe('true');
     });
 
+    it('links each input to its error message only while the error is shown', async () => {
+      await render('en');
+      const el = fixture.nativeElement as HTMLElement;
+      const email = el.querySelector('#email') as HTMLInputElement;
+      const password = el.querySelector('#password') as HTMLInputElement;
+      expect(email.getAttribute('aria-describedby')).toBeNull();
+      expect(password.getAttribute('aria-describedby')).toBeNull();
+
+      fixture.componentInstance.loginForm.get('email')?.setValue('nope');
+      fixture.componentInstance.loginForm.markAllAsTouched();
+      fixture.detectChanges();
+
+      for (const input of [email, password]) {
+        const id = input.getAttribute('aria-describedby');
+        expect(id).withContext(input.id).toBeTruthy();
+        const message = el.querySelector(`#${id}`);
+        expect(message?.getAttribute('role')).withContext(input.id).toBe('alert');
+      }
+    });
+
     it('no longer centres a lone 64px icon', async () => {
       await render('en');
 

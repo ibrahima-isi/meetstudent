@@ -420,4 +420,75 @@ describe('RegisterFormComponent restyle', () => {
     expect(root().querySelector('#email')?.getAttribute('aria-invalid')).toBe('true');
     expect(root().querySelector('#town')?.getAttribute('aria-invalid')).toBeNull();
   });
+  async function submitWithErrors(body: Record<string, string>) {
+    const component = fixture.componentInstance;
+    component.step1Form.patchValue({ firstname: 'Awa', lastname: 'Diop', email: 'awa@example.com', town: 'Dakar' });
+    component.step.set(2);
+    await settle();
+    component.step2Form.setValue({ password: 'sup3rsecret', confirmPassword: 'sup3rsecret', terms: true });
+    component.handleSubmit();
+    TestBed.inject(HttpTestingController)
+      .expectOne(`${environment.apiUrl}/users`)
+      .flush(body, { status: 400, statusText: 'Bad Request' });
+    await settle();
+  }
+
+  it('wires aria-describedby to the rendered error on step 1 and drops it otherwise', async () => {
+    await render();
+    expect(root().querySelector('#email')?.getAttribute('aria-describedby')).toBeNull();
+
+    await submitWithErrors({ email: 'Cet email est déjà utilisé', firstname: 'Prénom invalide', lastname: 'Nom invalide' });
+    expect(fixture.componentInstance.step()).toBe(1);
+
+    for (const field of ['firstname', 'lastname', 'email']) {
+      const describedBy = root().querySelector(`#${field}`)?.getAttribute('aria-describedby');
+      expect(describedBy).withContext(field).toBeTruthy();
+      const target = root().querySelector(`#${describedBy}`);
+      expect(target?.getAttribute('data-testid')).withContext(field).toBe(`error-${field}`);
+    }
+    expect(root().querySelector('#town')?.getAttribute('aria-describedby')).toBeNull();
+  });
+
+  it('wires aria-describedby to the rendered error on step 2', async () => {
+    await render();
+    await submitWithErrors({ password: 'Trop court', confirmedPassword: 'Différent' });
+    expect(fixture.componentInstance.step()).toBe(2);
+
+    const password = root().querySelector('#password')?.getAttribute('aria-describedby');
+    const confirm = root().querySelector('#confirmPassword')?.getAttribute('aria-describedby');
+    expect(password).toBeTruthy();
+    expect(confirm).toBeTruthy();
+    expect(root().querySelector(`#${password}`)?.getAttribute('data-testid')).toBe('error-password');
+    expect(root().querySelector(`#${confirm}`)?.getAttribute('data-testid')).toBe('error-confirmedPassword');
+  });
+
+  it('uses no raw indigo or gray palette classes', async () => {
+    await render();
+    const component = fixture.componentInstance;
+    component.userType.set('teacher');
+    await settle();
+    component.step.set(2);
+    await settle();
+    expect(root().innerHTML).not.toMatch(/(indigo|gray)-\d/);
+    component.step.set(1);
+    await settle();
+    expect(root().innerHTML).not.toMatch(/(indigo|gray)-\d/);
+  });
+
+  it('keeps the selected user type visually distinct from the other', async () => {
+    await render();
+    fixture.componentInstance.setUserType('student');
+    await settle();
+    const [student, teacher] = Array.from(root().querySelectorAll<HTMLElement>('button[type="button"]')).slice(0, 2);
+    expect(student.className).not.toBe(teacher.className);
+    expect(student.classList.contains('border-brand')).toBeTrue();
+    expect(teacher.classList.contains('border-brand')).toBeFalse();
+  });
+
+  it('tints the terms checkbox with the brand colour', async () => {
+    await render();
+    fixture.componentInstance.step.set(2);
+    await settle();
+    expect(root().querySelector('#terms')?.classList.contains('accent-brand')).toBeTrue();
+  });
 });

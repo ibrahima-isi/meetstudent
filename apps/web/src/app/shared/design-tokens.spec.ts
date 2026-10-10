@@ -136,4 +136,13 @@ describe('design tokens: field input', () => {
     });
     expect(invalid).not.toBe(normal);
   });
+  it('keeps an outline on focus so forced-colors mode still shows it', () => {
+    inPage('input', 'field-input', (el) => {
+      el.focus();
+      expect(document.activeElement).toBe(el);
+      const style = getComputedStyle(el);
+      expect(style.outlineStyle).not.toBe('none');
+      expect(parseFloat(style.outlineWidth)).toBeGreaterThan(0);
+    });
+  });
 });

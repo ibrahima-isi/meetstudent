@@ -28,12 +28,13 @@
           type="email"
           formControlName="email"
           [attr.aria-invalid]="loginForm.get('email')?.touched && loginForm.get('email')?.invalid ? 'true' : null"
+          [attr.aria-describedby]="loginForm.get('email')?.touched && loginForm.get('email')?.invalid ? 'email-error' : null"
           class="field-input pl-11"
           [placeholder]="t('auth.fields.emailPlaceholder')"
         />
       </div>
       @if (loginForm.get('email')?.touched && loginForm.get('email')?.invalid) {
-        <p class="text-red-600 dark:text-red-400 text-sm mt-1">{{ t('auth.fields.emailInvalid') }}</p>
+        <p id="email-error" role="alert" class="text-red-600 dark:text-red-400 text-sm mt-1">{{ t('auth.fields.emailInvalid') }}</p>
       }
     </div>
 
@@ -46,12 +47,13 @@
           type="password"
           formControlName="password"
           [attr.aria-invalid]="loginForm.get('password')?.touched && loginForm.get('password')?.invalid ? 'true' : null"
+          [attr.aria-describedby]="loginForm.get('password')?.touched && loginForm.get('password')?.invalid ? 'password-error' : null"
           class="field-input pl-11"
           placeholder="••••••••"
         />
       </div>
       @if (loginForm.get('password')?.touched && loginForm.get('password')?.invalid) {
-        <p class="text-red-600 dark:text-red-400 text-sm mt-1">{{ t('auth.fields.passwordRequired') }}</p>
+        <p id="password-error" role="alert" class="text-red-600 dark:text-red-400 text-sm mt-1">{{ t('auth.fields.passwordRequired') }}</p>
       }
     </div>
 
