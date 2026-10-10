@@ -25,6 +25,7 @@ import { ImageWithFallbackComponent } from './components/image-with-fallback/ima
 import { LanguageSwitcherComponent } from './components/language-switcher/language-switcher.component';
 import { NotFoundComponent } from './components/not-found/not-found.component';
 import { StarRatingComponent } from './components/star-rating/star-rating.component';
+import { MeshBackgroundComponent } from './components/mesh-background/mesh-background.component';
 import { ThemeToggleComponent } from './components/theme-toggle/theme-toggle.component';
 import { WishlistCartComponent } from './components/wishlist-cart/wishlist-cart.component';
 
@@ -226,6 +227,7 @@ describe('dark mode: no light-only palette classes', () => {
     ['language switcher', LanguageSwitcherComponent],
     ['not found', NotFoundComponent],
     ['theme toggle', ThemeToggleComponent],
+    ['mesh background', MeshBackgroundComponent],
     ['wishlist cart', WishlistCartComponent, (c) => c.isOpen.set(true)],
     ['home with schools, filters and load more', HomePageComponent, (c) => c.showFilters.set(true)],
     ['home with a failed load more', HomePageComponent, (c) => c.loadMoreFailed.set(true)],
