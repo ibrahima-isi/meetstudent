@@ -82,3 +82,15 @@ export function readAllowedHosts(vars: Record<string, string | undefined>): stri
 
   return hosts.length > 0 ? hosts : defaults;
 }
+
+/**
+ * Paths that belong to the API server (`/api/*`, `/uploads/*`), never to the
+ * application. A reverse proxy routes them before they reach this process; if
+ * one arrives anyway the routing in front is missing, and it must fail loudly
+ * rather than be rendered: `:lang` matches any first segment, so the app would
+ * answer a redirect to `/<lang>/api/...` and then an HTML page, which a browser
+ * shows as two requests and the caller reads as a broken API.
+ */
+export function isBackendPath(path: string): boolean {
+  return /^\/(api|uploads)(\/|$)/.test(path);
+}
