@@ -1,4 +1,4 @@
-import { applyServerEnvironment, readAllowedHosts, RuntimeEnvironment } from './server-environment';
+import { applyServerEnvironment, isBackendPath, readAllowedHosts, RuntimeEnvironment } from './server-environment';
 
 describe('applyServerEnvironment', () => {
   let env: RuntimeEnvironment;
@@ -77,5 +77,22 @@ describe('readAllowedHosts', () => {
     expect(readAllowedHosts({ ALLOWED_HOSTS: ',' })).toEqual(['localhost', 'web']);
     expect(readAllowedHosts({ ALLOWED_HOSTS: ' , ' })).toEqual(['localhost', 'web']);
     expect(readAllowedHosts({ ALLOWED_HOSTS: ',,' })).toEqual(['localhost', 'web']);
+  });
+});
+
+describe('isBackendPath', () => {
+  it('recognises the API and the uploads, which belong to the API server', () => {
+    expect(isBackendPath('/api/v1/users')).toBeTrue();
+    expect(isBackendPath('/api')).toBeTrue();
+    expect(isBackendPath('/uploads/public/logo.png')).toBeTrue();
+    expect(isBackendPath('/uploads')).toBeTrue();
+  });
+
+  it('leaves the pages to the application, even when they merely start alike', () => {
+    expect(isBackendPath('/')).toBeFalse();
+    expect(isBackendPath('/fr/schools')).toBeFalse();
+    expect(isBackendPath('/apiary')).toBeFalse();
+    expect(isBackendPath('/uploadsomething')).toBeFalse();
+    expect(isBackendPath('/fr/api/v1/users')).toBeFalse();
   });
 });
