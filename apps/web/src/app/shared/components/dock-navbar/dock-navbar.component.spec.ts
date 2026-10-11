@@ -93,11 +93,176 @@ describe('DockNavbarComponent', () => {
     expect(link('/fr#reviews')).toBeTruthy();
   });
 
-  it('offers log in and sign up to an anonymous visitor', async () => {
+  describe('anonymous account button', () => {
+    const trigger = () => root().querySelector('nav.dock button.account-trigger') as HTMLButtonElement;
+    const menu = () => root().querySelector('#account-menu') as HTMLElement | null;
+
+    it('shows a single "Log in" button, closed, and no sign-up link in the bar', async () => {
+      await render();
+
+      expect(trigger().textContent?.trim()).toBe('Se connecter');
+      expect(trigger().getAttribute('aria-expanded')).toBe('false');
+      expect(menu()).toBeNull();
+      expect(root().querySelector('nav.dock a[href="/fr/login"]')).toBeNull();
+      expect(root().querySelector('nav.dock a[href="/fr/register"]')).toBeNull();
+      expect(link('/fr/home')).toBeNull();
+    });
+
+    it('opens a menu with log in, then sign up for those without an account', async () => {
+      await render();
+      trigger().click();
+      fixture.detectChanges();
+
+      expect(trigger().getAttribute('aria-expanded')).toBe('true');
+      expect(trigger().getAttribute('aria-controls')).toBe('account-menu');
+      const links = Array.from(menu()!.querySelectorAll('a')).map((a) => a.getAttribute('href'));
+      expect(links).toEqual(['/fr/login', '/fr/register']);
+      expect(menu()!.textContent).toContain('Pas encore de compte ?');
+    });
+
+    it('closes on Escape and gives focus back to the button', async () => {
+      await render();
+      // Wide enough for the button to be on screen, hence focusable.
+      const frame = document.createElement('div');
+      frame.style.cssText = 'position:relative;transform:translateZ(0);height:240px;width:1280px;';
+      document.body.appendChild(frame);
+      frame.appendChild(fixture.nativeElement);
+      trigger().click();
+      fixture.detectChanges();
+      (menu()!.querySelector('a') as HTMLElement).focus();
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      fixture.detectChanges();
+
+      expect(menu()).toBeNull();
+      expect(document.activeElement).toBe(trigger());
+      document.body.appendChild(fixture.nativeElement);
+      frame.remove();
+    });
+
+    it('closes when the language list opens, and the other way round', async () => {
+      await render();
+      trigger().click();
+      fixture.detectChanges();
+      languageButton().click();
+      fixture.detectChanges();
+      expect(menu()).toBeNull();
+      expect(root().querySelector('#language-menu')).toBeTruthy();
+
+      trigger().click();
+      fixture.detectChanges();
+      expect(menu()).toBeTruthy();
+      expect(root().querySelector('#language-menu')).toBeNull();
+    });
+  });
+
+  it('keeps the bar visible while the language list is open, even after a scroll down', async () => {
     await render();
-    expect(link('/fr/login')).toBeTruthy();
-    expect(link('/fr/register')).toBeTruthy();
-    expect(link('/fr/home')).toBeNull();
+    languageButton().click();
+    fixture.detectChanges();
+
+    hide();
+
+    expect(isHidden()).toBeFalse();
+  });
+
+  it('shows one language button in the bar, never one per language', async () => {
+    await render();
+    expect(root().querySelectorAll('nav.dock app-language-switcher button').length).toBe(1);
+  });
+
+  describe('layout', () => {
+    let frame: HTMLElement;
+    const dock = () => root().querySelector('nav.dock') as HTMLElement;
+    /** Rendered at all: an element inside a hidden parent keeps its own `display`. */
+    const shown = (el: Element | null) => !!el && el.getClientRects().length > 0;
+
+    /** A transformed ancestor is the containing block of the fixed bar, so its width is the bar's "viewport". */
+    const widen = (px: number) => {
+      frame.style.width = `${px}px`;
+      void frame.offsetWidth;
+    };
+
+    beforeEach(() => {
+      frame = document.createElement('div');
+      frame.style.cssText = 'position:relative;transform:translateZ(0);height:240px;';
+      document.body.appendChild(frame);
+    });
+    afterEach(() => frame.remove());
+
+    const mount = async (lang: 'fr' | 'en', signedIn: boolean) => {
+      authenticated.set(signedIn);
+      const transloco = TestBed.inject(TranslocoService);
+      await firstValueFrom(transloco.load(lang));
+      transloco.setActiveLang(lang);
+      await render();
+      frame.appendChild(fixture.nativeElement);
+    };
+
+    const problems = (px: number): string[] => {
+      widen(px);
+      const bar = dock().getBoundingClientRect();
+      const found: string[] = [];
+      for (const child of Array.from(dock().querySelectorAll('.brand, .links a, .actions > *'))) {
+        const box = child.getBoundingClientRect();
+        if (box.width === 0) continue;
+        if (box.right > bar.right + 0.5 || box.left < bar.left - 0.5) found.push(`${px}px: ${child.className} leaves the bar`);
+        if (box.height > bar.height) found.push(`${px}px: ${child.className} wraps`);
+      }
+      if (bar.right > frame.getBoundingClientRect().right + 0.5) found.push(`${px}px: the bar is wider than the screen`);
+      return found;
+    };
+
+    for (const lang of ['fr', 'en'] as const) {
+      for (const signedIn of [false, true]) {
+        it(`never lets anything leave the bar or wrap, from 320 to 1440px (${lang}, ${signedIn ? 'signed in' : 'anonymous'})`, async () => {
+          await mount(lang, signedIn);
+          const found: string[] = [];
+          for (let px = 320; px <= 1440; px += 20) found.push(...problems(px));
+          expect(found).toEqual([]);
+        });
+      }
+    }
+
+    it('keeps only the brand and the menu button on a phone or a tablet', async () => {
+      await mount('fr', false);
+      for (const px of [320, 375, 768, 1000]) {
+        widen(px);
+        expect(shown(root().querySelector('.menu-btn'))).withContext(`${px}`).toBeTrue();
+        expect(shown(root().querySelector('.links'))).withContext(`${px}`).toBeFalse();
+        expect(shown(root().querySelector('nav.dock app-language-switcher'))).withContext(`${px}`).toBeFalse();
+        expect(shown(root().querySelector('nav.dock app-theme-toggle'))).withContext(`${px}`).toBeFalse();
+        expect(shown(root().querySelector('nav.dock .account-trigger'))).withContext(`${px}`).toBeFalse();
+      }
+    });
+
+    it('shows the whole menu and no menu button on a wide screen', async () => {
+      await mount('fr', false);
+      widen(1280);
+      expect(shown(root().querySelector('.menu-btn'))).toBeFalse();
+      expect(shown(root().querySelector('.links'))).toBeTrue();
+      expect(shown(root().querySelector('nav.dock .account-trigger'))).toBeTrue();
+    });
+
+    it('stops shrinking at the width of its content', async () => {
+      await mount('fr', false);
+      widen(120);
+      const bar = dock();
+      expect(bar.scrollWidth).toBeLessThanOrEqual(bar.clientWidth);
+    });
+  });
+
+  it('puts the links, the language, the theme and both account actions in the menu panel', async () => {
+    await render();
+    (root().querySelector('button.menu-btn') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    const panel = root().querySelector('#dock-menu') as HTMLElement;
+
+    const hrefs = Array.from(panel.querySelectorAll('a')).map((a) => a.getAttribute('href'));
+    expect(hrefs).toEqual(['/fr/schools', '/fr#how-it-works', '/fr#reviews', '/fr/login', '/fr/register']);
+    expect(panel.querySelector('app-language-switcher')).toBeTruthy();
+    expect(panel.querySelector('app-theme-toggle')).toBeTruthy();
+    expect(panel.textContent).toContain('Pas encore de compte ?');
   });
 
   it('shows "My space" instead once the visitor is signed in', async () => {
@@ -549,26 +714,16 @@ describe('DockNavbarComponent', () => {
       expect(getComputedStyle(nav()).position).toBe('relative');
     });
 
-    it('collapses the brand text and moves the switchers into the mobile menu below sm when signed in', async () => {
+    it('collapses the brand text on a phone and offers the switchers in the menu panel when signed in', async () => {
       authenticated.set(true);
       await render();
       expect(root().querySelector('.brand-text')!.classList).toContain('collapse-xs');
-      expect(root().querySelector('.switchers')!.classList).toContain('hide-xs');
 
       (root().querySelector('button.menu-btn') as HTMLButtonElement).click();
       fixture.detectChanges();
       const panel = root().querySelector('#dock-menu') as HTMLElement;
       expect(panel.querySelector('app-language-switcher')).toBeTruthy();
       expect(panel.querySelector('app-theme-toggle')).toBeTruthy();
-    });
-
-    it('keeps the anonymous bar as it was: brand text and switchers always shown, none in the panel', async () => {
-      await render();
-      expect(root().querySelector('.brand-text')!.classList).not.toContain('collapse-xs');
-      expect(root().querySelector('.switchers')!.classList).not.toContain('hide-xs');
-      (root().querySelector('button.menu-btn') as HTMLButtonElement).click();
-      fixture.detectChanges();
-      expect(root().querySelector('#dock-menu app-theme-toggle')).toBeNull();
     });
 
     describe('one overlay at a time', () => {
