@@ -11,6 +11,7 @@ name: meetstudent
 #   docker compose up --build
 #
 #   front   http://localhost:4200
+#   admin   http://localhost:4300  (back office, ADMIN accounts only)
 #   api     http://localhost:8080/api/v1
 #   swagger http://localhost:8080/swagger-ui.html
 
@@ -47,7 +48,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-meetstudent}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:?set JWT_SECRET_KEY in .env}
-      CORS_ALLOWED_ORIGINS: http://localhost:${WEB_PORT:-4200}
+      # The front is same-origin behind `proxy`; the back office calls the API directly.
+      CORS_ALLOWED_ORIGINS: http://localhost:${WEB_PORT:-4200},http://localhost:${BO_PORT:-4300}
       # Media lives on named volumes so a rebuild does not wipe uploads.
       FILE_UPLOAD_DIR: /data/uploads
       FILE_PRIVATE_DIR: /data/private
@@ -86,6 +88,22 @@ services:
     # Not published: the browser reaches it through `proxy`.
     expose:
       - "4200"
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - meetstudent
+
+  backoffice:
+    build:
+      context: ./apps/backoffice
+      args:
+        DIST_DIR: dist/backoffice/browser
+    environment:
+      # Rendered into /config.json at container start; the browser calls it directly.
+      BO_API_URL: http://localhost:8080/api/v1
+    ports:
+      - "${BO_PORT:-4300}:8080"
     depends_on:
       api:
         condition: service_healthy

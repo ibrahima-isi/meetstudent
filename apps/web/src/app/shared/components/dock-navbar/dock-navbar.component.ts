@@ -57,7 +57,7 @@ import { nextDockVisible, SCROLL_DELTA_PX } from './dock-visibility';
       /* The bar measures itself, not the window: the full menu shows only where it fits. */
       .wrap { container-type: inline-size; position: fixed; inset: 0 0 auto 0; z-index: 50; display: flex; flex-direction: column; align-items: center; padding: 0.75rem 1rem 0; pointer-events: none; }
       .dock {
-        position: relative; pointer-events: auto; display: flex; align-items: center; gap: 0.5rem; width: 100%; min-width: max-content; max-width: 64rem; height: 3.5rem;
+        position: relative; pointer-events: auto; display: flex; align-items: center; gap: 0.5rem; width: 100%; min-width: max-content; max-width: 72rem; height: 3.5rem;
         padding: 0 0.5rem 0 1rem; border-radius: 9999px; background: var(--glass); border: 1px solid var(--glass-border);
         backdrop-filter: blur(16px) saturate(1.6); box-shadow: 0 8px 32px -12px rgb(0 0 0 / 0.25);
         transition: transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1), opacity 0.25s;
@@ -82,10 +82,10 @@ import { nextDockVisible, SCROLL_DELTA_PX } from './dock-visibility';
       .hint { padding: 0.5rem 0.9rem 0; font-size: 0.8rem; color: var(--muted-foreground); }
       .account-panel .hint { margin-top: 0.25rem; border-top: 1px solid var(--border); }
       .settings { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; padding: 0.5rem 0.25rem; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); margin: 0.25rem 0; }
-      .panel { pointer-events: auto; width: 100%; max-width: 64rem; max-height: calc(100dvh - 5.5rem); overflow-y: auto; margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.25rem; padding: 0.75rem; border-radius: 1.5rem; background: var(--card); border: 1px solid var(--border-strong); box-shadow: 0 16px 48px -16px rgb(0 0 0 / 0.35); }
+      .panel { pointer-events: auto; width: 100%; max-width: 72rem; max-height: calc(100dvh - 5.5rem); overflow-y: auto; margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.25rem; padding: 0.75rem; border-radius: 1.5rem; background: var(--card); border: 1px solid var(--border-strong); box-shadow: 0 16px 48px -16px rgb(0 0 0 / 0.35); }
       .brand:focus-visible, .links a:focus-visible, .panel a.item:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
       .panel a.item { font-size: 1rem; padding: 0.75rem 1rem; }
-      @container (min-width: 60rem) { .links { display: flex; } .wide-only { display: inline-flex; } .menu-btn, .panel { display: none; } }
+      @container (min-width: 68rem) { .links { display: flex; } .wide-only { display: inline-flex; } .menu-btn, .panel { display: none; } }
       @media (prefers-reduced-motion: reduce) { .dock { transition: none; } }
     `,
   ],
@@ -100,6 +100,8 @@ import { nextDockVisible, SCROLL_DELTA_PX } from './dock-visibility';
           <a [routerLink]="['/', lang(), 'schools']">{{ t('nav.schools') }}</a>
           <a [routerLink]="['/', lang()]" fragment="how-it-works">{{ t('nav.howItWorks') }}</a>
           <a [routerLink]="['/', lang()]" fragment="reviews">{{ t('nav.reviews') }}</a>
+          <a [routerLink]="['/', lang(), 'about']">{{ t('nav.about') }}</a>
+          <a [routerLink]="['/', lang(), 'contact']">{{ t('nav.contact') }}</a>
         </div>
         <div class="actions">
           <span class="wide-only switchers">
@@ -161,6 +163,8 @@ import { nextDockVisible, SCROLL_DELTA_PX } from './dock-visibility';
           <a class="item" [routerLink]="['/', lang(), 'schools']">{{ t('nav.schools') }}</a>
           <a class="item" [routerLink]="['/', lang()]" fragment="how-it-works">{{ t('nav.howItWorks') }}</a>
           <a class="item" [routerLink]="['/', lang()]" fragment="reviews">{{ t('nav.reviews') }}</a>
+          <a class="item" [routerLink]="['/', lang(), 'about']">{{ t('nav.about') }}</a>
+          <a class="item" [routerLink]="['/', lang(), 'contact']">{{ t('nav.contact') }}</a>
           <div class="settings"><app-language-switcher (openChange)="onLanguageOpen($event)" /><app-theme-toggle /></div>
           @if (signedIn()) {
             <a class="btn btn-primary btn-lg" [routerLink]="['/', lang(), 'home']">{{ t('nav.mySpace') }}</a>

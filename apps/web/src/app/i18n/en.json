@@ -23,6 +23,8 @@
     "schools": "Schools",
     "howItWorks": "How it works",
     "reviews": "Reviews",
+    "about": "About",
+    "contact": "Contact",
     "language": "Language",
     "noAccount": "No account yet?",
     "login": "Log in",
@@ -51,9 +53,21 @@
     "home": "Home",
     "school": "School",
     "profile": "My profile",
+    "about": "About",
+    "contact": "Contact",
     "notFound": "Page not found",
     "forgotPassword": "Forgot password",
     "resetPassword": "New password"
+  },
+  "about": {
+    "title": "About MeetStudent",
+    "error": "This page could not be loaded."
+  },
+  "contact": {
+    "title": "Contact",
+    "intro": "A question, a suggestion, a school to report? Write to us and we will get back to you.",
+    "emailLabel": "By email",
+    "error": "The contact address could not be loaded."
   },
   "theme": {
     "light": "light",

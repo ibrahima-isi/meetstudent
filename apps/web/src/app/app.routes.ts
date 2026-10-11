@@ -76,6 +76,18 @@ export const routes: Routes = [
               ),
           },
           {
+            path: 'about',
+            title: 'pageTitle.about',
+            loadComponent: () =>
+              import('./features/public/about-page/about-page.component').then((m) => m.AboutPageComponent),
+          },
+          {
+            path: 'contact',
+            title: 'pageTitle.contact',
+            loadComponent: () =>
+              import('./features/public/contact-page/contact-page.component').then((m) => m.ContactPageComponent),
+          },
+          {
             path: '',
             loadComponent: () =>
               import('./shared/layouts/auth-layout/auth-layout.component').then(
