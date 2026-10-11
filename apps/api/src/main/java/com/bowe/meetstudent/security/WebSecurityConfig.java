@@ -56,6 +56,8 @@ public class WebSecurityConfig {
                                 // Container error dispatch target: must stay reachable or every
                                 // sendError() (403, 404, ...) is rewritten into a 401.
                                 .requestMatchers("/error").permitAll()
+                                // The one authenticated endpoint under /auth: must precede the permitAll below.
+                                .requestMatchers(HttpMethod.POST, "/api/v1/auth/email-verification/resend").authenticated()
                                 .requestMatchers("/api/v1/auth/**").permitAll()
                                 .requestMatchers("/uploads/public/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/v1/media/mine").authenticated()

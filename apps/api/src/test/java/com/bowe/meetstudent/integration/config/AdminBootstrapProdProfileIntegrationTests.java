@@ -1,6 +1,7 @@
 package com.bowe.meetstudent.integration.config;
 
 import com.bowe.meetstudent.config.AdminBootstrapRunner;
+import com.bowe.meetstudent.repositories.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -12,6 +13,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -47,6 +49,9 @@ class AdminBootstrapProdProfileIntegrationTests {
     @Autowired
     private ApplicationContext context;
 
+    @Autowired
+    private UserRepository userRepository;
+
     private void login(String username, String password, int expectedStatus) throws Exception {
         mockMvc.perform(post("/api/v1/auth")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -66,6 +71,12 @@ class AdminBootstrapProdProfileIntegrationTests {
                         .content("{\"username\":\"owner@meetstudent.example\",\"password\":\"S3cure-admin-pass\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.accessToken").exists());
+    }
+
+    @Test
+    void bootstrappedAdminIsEmailVerified() {
+        var admin = userRepository.findByEmailIgnoreCase("owner@meetstudent.example").orElseThrow();
+        assertTrue(admin.isEmailVerified());
     }
 
     @Test

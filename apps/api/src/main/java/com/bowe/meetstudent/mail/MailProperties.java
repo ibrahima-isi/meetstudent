@@ -43,5 +43,7 @@ public class MailProperties {
         private int verifyTtlHours = 24;
         private int cooldownSeconds = 60;
         private int maxPerDay = 5;
+        /** Tokens (any user, any purpose) issued for one address per 24 h; stops mail-bombing a third party. */
+        private int maxPerAddressPerDay = 3;
     }
 }

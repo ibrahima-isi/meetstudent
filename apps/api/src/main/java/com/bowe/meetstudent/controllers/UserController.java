@@ -6,8 +6,10 @@ import com.bowe.meetstudent.dto.UpdateProfileRequest;
 import com.bowe.meetstudent.dto.UserDTO;
 import com.bowe.meetstudent.entities.Role;
 import com.bowe.meetstudent.entities.UserEntity;
+import com.bowe.meetstudent.exceptions.TooManyRequestsException;
 import com.bowe.meetstudent.mappers.Mapper;
 import com.bowe.meetstudent.security.UserPrincipal;
+import com.bowe.meetstudent.services.EmailVerificationService;
 import com.bowe.meetstudent.services.RoleService;
 import com.bowe.meetstudent.services.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -15,6 +17,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -31,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+@Slf4j
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = "/api/v1/users")
@@ -41,6 +45,7 @@ public class UserController {
     private final PasswordEncoder encoder;
     private final Mapper<UserEntity, UserDTO> userMapper;
     private final RoleService roleService;
+    private final EmailVerificationService emailVerificationService;
 
     @PostMapping
     @Operation(summary = "Create a new user", description = "Registers a new student account.")
@@ -64,6 +69,15 @@ public class UserController {
                 .qualification(request.getQualification())
                 .build();
         UserEntity savedUser = this.userService.registerStudent(userEntity, encoder);
+        // The account exists at this point: whatever goes wrong while preparing the mail must not fail it.
+        try {
+            emailVerificationService.sendVerification(savedUser, request.getLang());
+        } catch (TooManyRequestsException ex) {
+            log.info("Verification email not queued after registration (rate limit) userId={}", savedUser.getId());
+        } catch (Exception ex) {
+            // Exception last so the stack trace is kept; messages here never carry a token or a link.
+            log.warn("Verification email not queued after registration userId={}", savedUser.getId(), ex);
+        }
         UserDTO savedUserDto = this.userMapper.toDTO(savedUser);
         return new ResponseEntity<>(savedUserDto, HttpStatus.CREATED);
     }
