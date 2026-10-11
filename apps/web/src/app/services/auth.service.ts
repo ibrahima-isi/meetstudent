@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, tap, switchMap, map, catchError, of, shareReplay, EMPTY } from 'rxjs';
 import { TokenService } from './token.service';
 import { User, LoginResponse } from '@models/entities';
@@ -80,9 +80,9 @@ export class AuthService {
     return this.http.post<void>(`${this.apiUrl}/email-verification/confirm`, { token });
   }
 
-  /** Needs the session: 202; 409 already verified; 429 daily limit or cooldown; 503 mail off. */
-  resendEmailVerification(): Observable<unknown> {
-    return this.http.post(`${this.apiUrl}/email-verification/resend`, {});
+  /** Needs the session; `lang` picks the language of the email. 202; 409 already verified; 429 daily limit or cooldown; 503 mail off. */
+  resendEmailVerification(lang: string): Observable<unknown> {
+    return this.http.post(`${this.apiUrl}/email-verification/resend`, {}, { params: new HttpParams().set('lang', lang) });
   }
 
   /** Reloads the signed-in user into the cache, to pick up `emailVerified`. */
@@ -91,7 +91,12 @@ export class AuthService {
     if (id === undefined) {
       return EMPTY;
     }
-    return this.http.get<User>(`${this.usersUrl}/id/${id}`).pipe(tap(user => this.tokenService.setUser(user)));
+    return this.http.get<User>(`${this.usersUrl}/id/${id}`).pipe(tap(user => {
+      // Not if the session ended, or changed hands, while the request was in flight.
+      if (this.tokenService.isAuthenticated() && this.tokenService.user()?.id === id) {
+        this.tokenService.setUser(user);
+      }
+    }));
   }
 
   /**

@@ -156,6 +156,17 @@ describe('VerifyEmailComponent', () => {
       expect(el().querySelector('a[href="/en/login"]')).not.toBeNull();
     });
 
+    it('sends a signed-in visitor home, not to the login, when the link is expired or invalid', async () => {
+      const tokens = TestBed.inject(TokenService);
+      tokens.setTokens('access', 'refresh');
+      await render('en');
+      httpMock.expectOne(url).flush({ token: 'x' }, { status: 400, statusText: 'Bad Request' });
+      await settle();
+
+      expect(el().querySelector('a[href="/en/login"]')).toBeNull();
+      expect(el().querySelector('a[href="/en/home"]')?.textContent).toContain('Go to my space');
+    });
+
     it('says something went wrong, with a retry, on any other failure', async () => {
       await render('en');
       httpMock.expectOne(url).flush(null, { status: 500, statusText: 'Server Error' });

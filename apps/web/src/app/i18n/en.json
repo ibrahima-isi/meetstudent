@@ -157,7 +157,8 @@
       "errorTitle": "Something went wrong",
       "errorText": "We could not confirm your address right now. Please try again.",
       "retry": "Try again",
-      "signInForNew": "Sign in to get a new email"
+      "signInForNew": "Sign in to get a new email",
+      "goToSpace": "Go to my space"
     },
     "register": {
       "title": "Create Account",

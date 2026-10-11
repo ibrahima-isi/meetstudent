@@ -37,7 +37,11 @@
       <p class="text-muted-foreground mb-6">
         {{ t(state() === 'expired' ? 'auth.verify.expiredText' : 'auth.verify.invalidText') }}
       </p>
-      <a [routerLink]="['/', locale.active(), 'login']" class="btn btn-primary btn-lg w-full">{{ t('auth.verify.signInForNew') }}</a>
+      @if (tokens.isAuthenticated()) {
+        <a [routerLink]="['/', locale.active(), 'home']" class="btn btn-primary btn-lg w-full">{{ t('auth.verify.goToSpace') }}</a>
+      } @else {
+        <a [routerLink]="['/', locale.active(), 'login']" class="btn btn-primary btn-lg w-full">{{ t('auth.verify.signInForNew') }}</a>
+      }
     }
   }
 </div>

@@ -18,6 +18,7 @@ describe('EmailVerificationBannerComponent', () => {
   let authenticated: ReturnType<typeof signal<boolean>>;
   let user: ReturnType<typeof signal<User | null>>;
   const base = `${environment.apiUrl}/auth`;
+  const resendUrl = `${base}/email-verification/resend?lang=en`;
 
   const el = () => fixture.nativeElement as HTMLElement;
   const banner = () => el().querySelector('[data-testid="email-verification-banner"]');
@@ -117,14 +118,47 @@ describe('EmailVerificationBannerComponent', () => {
     });
   });
 
+  it('clears the floating dock navbar instead of hiding under it', async () => {
+    await render();
+
+    expect(banner()?.classList).toContain('mt-[4.75rem]');
+  });
+
   describe('resending', () => {
+    it('hides the resend button once the address turns out to be confirmed already', async () => {
+      await render();
+
+      button(/resend/i).click();
+      await settle();
+      httpMock.expectOne(resendUrl).flush({}, { status: 409, statusText: 'Conflict' });
+      httpMock.expectOne(`${environment.apiUrl}/users/id/7`).flush({ id: 7, emailVerified: true });
+      await settle();
+
+      expect(button(/resend/i)).toBeUndefined();
+    });
+
+    it('starts afresh when another user signs in', async () => {
+      await render();
+      button(/resend/i).click();
+      await settle();
+      httpMock.expectOne(resendUrl).flush({}, { status: 429, statusText: 'Too Many Requests' });
+      await settle();
+      expect(status()).toContain('Too many requests');
+
+      user.set({ id: 8, email: 'bob@example.com', emailVerified: false } as User);
+      await settle();
+
+      expect(status()).toBe('');
+      expect(banner()).not.toBeNull();
+    });
+
     it('asks for a new email and confirms politely in a status region', async () => {
       await render();
 
       button(/resend/i).click();
       await settle();
       httpMock
-        .expectOne(`${base}/email-verification/resend`)
+        .expectOne(resendUrl)
         .flush({ status: 'accepted' }, { status: 202, statusText: 'Accepted' });
       await settle();
 
@@ -139,7 +173,7 @@ describe('EmailVerificationBannerComponent', () => {
       await settle();
 
       expect(el().querySelector('button[disabled]')).not.toBeNull();
-      httpMock.expectOne(`${base}/email-verification/resend`).flush({}, { status: 202, statusText: 'Accepted' });
+      httpMock.expectOne(resendUrl).flush({}, { status: 202, statusText: 'Accepted' });
     });
 
     it('says the daily limit is reached on 429', async () => {
@@ -148,7 +182,7 @@ describe('EmailVerificationBannerComponent', () => {
       button(/resend/i).click();
       await settle();
       httpMock
-        .expectOne(`${base}/email-verification/resend`)
+        .expectOne(resendUrl)
         .flush({ message: 'x' }, { status: 429, statusText: 'Too Many Requests', headers: { 'Retry-After': '60' } });
       await settle();
 
@@ -162,7 +196,7 @@ describe('EmailVerificationBannerComponent', () => {
       button(/resend/i).click();
       await settle();
       httpMock
-        .expectOne(`${base}/email-verification/resend`)
+        .expectOne(resendUrl)
         .flush({ message: 'x' }, { status: 409, statusText: 'Conflict' });
       httpMock
         .expectOne(`${environment.apiUrl}/users/id/7`)
@@ -180,7 +214,7 @@ describe('EmailVerificationBannerComponent', () => {
       button(/resend/i).click();
       await settle();
       httpMock
-        .expectOne(`${base}/email-verification/resend`)
+        .expectOne(resendUrl)
         .flush({ message: 'x' }, { status: 503, statusText: 'Unavailable' });
       await settle();
 
@@ -207,6 +241,11 @@ describe('EmailVerificationBannerComponent', () => {
         fixture = TestBed.createComponent(EmailVerificationBannerComponent);
         await settle();
         expect(banner()).toBeNull();
+
+        // Someone else on the same tab still gets their reminder.
+        user.set({ id: 8, email: 'bob@example.com', emailVerified: false } as User);
+        await settle();
+        expect(banner()).not.toBeNull();
       } finally {
         main.remove();
       }
