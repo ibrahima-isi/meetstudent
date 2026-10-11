@@ -57,10 +57,10 @@ public class EmailVerificationService {
     @Transactional
     public void confirm(String rawToken) {
         var token = userTokenService.consume(rawToken, UserTokenPurpose.EMAIL_VERIFICATION);
-        var user = token.getUser();
-        if (!user.isEmailVerified()) {
-            user.setEmailVerified(true);
-            userRepository.save(user);
+        // Targeted update (not save): flushing the whole loaded row could overwrite a concurrent profile update.
+        var userId = token.getUser().getId();
+        if (userRepository.markEmailVerified(userId, token.getEmail()) == 0) {
+            log.info("Email verification matched no account row userId={}", userId);
         }
     }
 

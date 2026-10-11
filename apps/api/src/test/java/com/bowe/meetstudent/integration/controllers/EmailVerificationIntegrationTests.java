@@ -370,6 +370,155 @@ class EmailVerificationIntegrationTests {
         assertThat(mailbox.all()).isEmpty();
     }
 
+    // ---- email uniqueness (case-insensitive) ----
+
+    @Test
+    void registeringACaseVariantOfAnExistingEmailIs400() throws Exception {
+        var email = "Case.Variant." + UUID.randomUUID().toString().substring(0, 6) + "@Example.com";
+        register(email, null);
+
+        mockMvc.perform(post("/api/v1/users").contentType(MediaType.APPLICATION_JSON)
+                        .content(registrationJson(email.toLowerCase(), null)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.email").exists());
+    }
+
+    @Test
+    void changingTheEmailToAnotherAccountsAddressInADifferentCaseIs400AndChangesNothing() throws Exception {
+        var taken = uniqueEmail();
+        register(taken, null);
+        var mine = uniqueEmail();
+        var me = register(mine, null);
+        var accessToken = login(mine);
+        mailbox.clear();
+
+        mockMvc.perform(put("/api/v1/users/" + me.get("id").asInt())
+                        .header("Authorization", "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"" + taken.toUpperCase() + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.email").exists());
+
+        assertThat(userRepository.findByEmailIgnoreCase(mine)).isPresent();
+        assertThat(mailbox.all()).isEmpty();
+    }
+
+    // ---- per-address cap ----
+
+    @Test
+    void severalAccountsCannotMakeUsMailOneThirdPartyMoreThanThreeTimesADay() throws Exception {
+        var target = "Victim." + UUID.randomUUID().toString().substring(0, 6) + "@example.com";
+        for (int i = 0; i < 5; i++) {
+            var own = uniqueEmail();
+            var u = register(own, null);
+            var accessToken = login(own);
+            // move onto the victim's address (alternating case), then away so the next account can do the same
+            var onto = i % 2 == 0 ? target : target.toUpperCase();
+            mockMvc.perform(put("/api/v1/users/" + u.get("id").asInt()).header("Authorization", "Bearer " + accessToken)
+                    .contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"" + onto + "\"}")).andExpect(status().isOk());
+            mockMvc.perform(put("/api/v1/users/" + u.get("id").asInt()).header("Authorization", "Bearer " + accessToken)
+                    .contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"" + uniqueEmail() + "\"}")).andExpect(status().isOk());
+        }
+
+        var toVictim = mailbox.all().stream().filter(m -> m.to().equalsIgnoreCase(target)).count();
+        assertThat(toVictim).isEqualTo(3);
+    }
+
+    // ---- a refusal inside a profile update must not roll it back ----
+
+    @Test
+    void anEmailChangeStillSucceedsWhenTheUsersDailyTokenCapIsReached() throws Exception {
+        var own = uniqueEmail();
+        var u = register(own, null);
+        var accessToken = login(own);
+        var last = own;
+        // 1 token at registration + 4 changes = the per-user cap of 5; changes 5 and 6 are refused by the cap.
+        for (int i = 1; i <= 6; i++) {
+            last = uniqueEmail();
+            mockMvc.perform(put("/api/v1/users/" + u.get("id").asInt()).header("Authorization", "Bearer " + accessToken)
+                            .contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"" + last + "\"}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.email").value(last));
+        }
+
+        assertThat(userRepository.findById(u.get("id").asInt()).orElseThrow().getEmail()).isEqualTo(last);
+        assertThat(mailbox.all()).hasSize(5);
+        assertThat(mailbox.last().to()).isNotEqualTo(last);
+    }
+
+    // ---- real JWT through the real filter ----
+
+    @Test
+    void resendWorksWithARealBearerToken() throws Exception {
+        var email = uniqueEmail();
+        directUser(email);
+        var accessToken = login(email);
+
+        mockMvc.perform(post("/api/v1/auth/email-verification/resend").header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.status").value("accepted"));
+        assertThat(mailbox.last().to()).isEqualTo(email);
+    }
+
+    // ---- the address cap survives account deletion ----
+
+    @Test
+    void registerDeleteRegisterCannotResetThePerAddressCap() throws Exception {
+        var email = uniqueEmail();
+        for (int i = 0; i < 4; i++) {
+            var u = register(email, null);
+            userService.deleteUser(u.get("id").asInt());
+        }
+
+        // 3 mails in 24 h for the address; the 4th registration got none, although every account was deleted.
+        assertThat(mailbox.all()).hasSize(3);
+        assertThat(userTokenRepository.count()).isEqualTo(3);
+    }
+
+    @Test
+    void aTokenOfADeletedAccountCanNoLongerBeConsumed() throws Exception {
+        var u = register(uniqueEmail(), null);
+        var token = CapturingEmailSender.extractToken(mailbox.last());
+        userService.deleteUser(u.get("id").asInt());
+
+        assertThat(userTokenRepository.findAll()).hasSize(1).allSatisfy(t -> assertThat(t.getUser()).isNull());
+        mockMvc.perform(confirm(token)).andExpect(status().isBadRequest()).andExpect(jsonPath("$.token").value(INVALID));
+    }
+
+    @Test
+    void resendIsRefusedWith429AndALongRetryAfterOnceTheAddressCapIsReached() throws Exception {
+        var user = directUser(uniqueEmail());
+        var auth = TestDataUtil.mockUser(user.getId(), "ROLE_STUDENT");
+        for (int i = 0; i < 3; i++) {
+            mockMvc.perform(post("/api/v1/auth/email-verification/resend").with(auth)).andExpect(status().isAccepted());
+            for (var row : userTokenRepository.findAll()) { // pass the per-user cooldown without waiting
+                row.setIssuedAt(row.getIssuedAt().minusSeconds(120));
+                userTokenRepository.save(row);
+            }
+        }
+
+        var retryAfter = mockMvc.perform(post("/api/v1/auth/email-verification/resend").with(auth))
+                .andExpect(status().isTooManyRequests())
+                .andReturn().getResponse().getHeader("Retry-After");
+
+        assertThat(Long.parseLong(retryAfter)).isGreaterThan(3600L);
+        assertThat(mailbox.all()).hasSize(3);
+    }
+
+    @Test
+    void changingOnlyTheCaseOfOwnEmailIsAllowedAndKeepsVerification() throws Exception {
+        var email = "Own." + UUID.randomUUID().toString().substring(0, 6) + "@example.com";
+        var u = register(email, null);
+        mockMvc.perform(confirm(CapturingEmailSender.extractToken(mailbox.last()))).andExpect(status().isNoContent());
+        var accessToken = login(email);
+
+        mockMvc.perform(put("/api/v1/users/" + u.get("id").asInt()).header("Authorization", "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"" + email.toUpperCase() + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value(email.toUpperCase()))
+                .andExpect(jsonPath("$.emailVerified").value(true));
+    }
+
     // ---- logging ----
 
     @Test

@@ -24,9 +24,10 @@ import java.time.Instant;
 @ToString(callSuper = true, onlyExplicitlyIncluded = true)
 public class UserToken extends AbstractEntity {
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = false)
-    @OnDelete(action = OnDeleteAction.CASCADE)
+    /** Null once the account is deleted: the row stays as evidence for the per-address cap until the retention purge. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    @OnDelete(action = OnDeleteAction.SET_NULL)
     private UserEntity user;
 
     @Enumerated(EnumType.STRING)

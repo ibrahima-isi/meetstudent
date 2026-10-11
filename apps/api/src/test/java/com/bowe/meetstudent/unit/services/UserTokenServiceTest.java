@@ -135,7 +135,7 @@ class UserTokenServiceTest {
     void issuingPurgesThisUsersRowsOlderThanSevenDays() {
         service.issue(user, VERIFY, TTL);
 
-        verify(repository).deleteIssuedBefore(7, NOW.minus(Duration.ofDays(7)));
+        verify(repository).deleteIssuedBefore(NOW.minus(Duration.ofDays(7)));
     }
 
     @Test
@@ -173,6 +173,49 @@ class UserTokenServiceTest {
         when(repository.findByUserIdAndPurposeAndIssuedAtAfterOrderByIssuedAtAsc(eq(7), eq(VERIFY), any())).thenReturn(List.of(sameAddress));
 
         assertThrows(TooManyRequestsException.class, () -> service.issue(user, VERIFY, TTL));
+    }
+
+    @Test
+    void thirdTokenForTheSameAddressInADayIsAcceptedButTheFourthIsRefusedWhoeverAsks() {
+        var other = UserEntity.builder().email("JANE@Example.com").build();
+        other.setId(8);
+        List<UserToken> three = List.of(issuedAt(NOW.minusSeconds(7200)), issuedAt(NOW.minusSeconds(5400)), issuedAt(NOW.minusSeconds(3600)));
+        three.get(0).setEmail("jane@example.com");
+        three.get(1).setEmail("Jane@example.com");
+        three.get(2).setEmail("jane@example.com");
+        when(repository.findAddressTokens(eq("JANE@Example.com"), eq(VERIFY), any())).thenReturn(three);
+
+        var ex = assertThrows(TooManyRequestsException.class, () -> service.issue(other, VERIFY, TTL));
+
+        // oldest token is 2 h old: it leaves the 24 h window in 22 h
+        assertEquals(79_200, ex.getRetryAfterSeconds());
+        verify(repository, never()).save(any(UserToken.class));
+        verify(repository, never()).consumeOpen(any(), any(), any());
+    }
+
+    @Test
+    void twoTokensForTheAddressLeaveRoomForAThird() {
+        List<UserToken> two = List.of(issuedAt(NOW.minusSeconds(7200)), issuedAt(NOW.minusSeconds(3600)));
+        when(repository.findAddressTokens(eq("jane@example.com"), eq(VERIFY), any())).thenReturn(two);
+
+        assertNotNull(service.issue(user, VERIFY, TTL));
+    }
+
+    @Test
+    void theAddressCapIsCountedPerPurpose() {
+        service.issue(user, UserTokenPurpose.PASSWORD_RESET, Duration.ofHours(1));
+
+        verify(repository).findAddressTokens(eq("jane@example.com"), eq(UserTokenPurpose.PASSWORD_RESET), any());
+        verify(repository, never()).findAddressTokens(any(), eq(VERIFY), any());
+    }
+
+    @Test
+    void consumeRejectsAnOrphanedTokenWhoseAccountWasDeleted() throws Exception {
+        var token = storedToken("raw-token-1");
+        token.setUser(null);
+
+        assertThrows(InvalidActionTokenException.class, () -> service.consume("raw-token-1", VERIFY));
+        verify(repository, never()).consumeIfOpen(any(), any());
     }
 
     @Test

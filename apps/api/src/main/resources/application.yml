@@ -64,6 +64,7 @@ app:
     verify-ttl-hours: 24
     cooldown-seconds: 60
     max-per-day: 5
+    max-per-address-per-day: 3
 
 management:
   health:

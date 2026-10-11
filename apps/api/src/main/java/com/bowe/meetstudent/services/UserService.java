@@ -2,6 +2,7 @@ package com.bowe.meetstudent.services;
 
 import com.bowe.meetstudent.entities.UserEntity;
 import com.bowe.meetstudent.entities.School;
+import com.bowe.meetstudent.exceptions.DuplicateEmailException;
 import com.bowe.meetstudent.exceptions.ResourceNotFoundException;
 import com.bowe.meetstudent.repositories.RoleRepository;
 import com.bowe.meetstudent.repositories.UserRepository;
@@ -89,7 +90,7 @@ public class UserService {
     }
 
     public boolean emailNotExists(String email){
-        return !this.userRepository.existsByEmail(email);
+        return !this.userRepository.existsByEmailIgnoreCase(email);
     }
 
     public boolean isPasswordConfirmed(String password, String confirmedPassword) {
@@ -108,6 +109,9 @@ public class UserService {
 
     private UserEntity patch(Integer id, UserEntity updates, PasswordEncoder encoder, boolean allowRoleUpdate) {
         return userRepository.findById(id).map(existing -> {
+            if (updates.getEmail() != null && userRepository.existsByEmailIgnoreCaseAndIdNot(updates.getEmail(), id)) {
+                throw new DuplicateEmailException();
+            }
             // Profile fields only. Media (diplomas, certificates, videos, photo) are managed
             // through MediaController and owned via the media table, not through the user patch.
             if (updates.getFirstname() != null) existing.setFirstname(updates.getFirstname());

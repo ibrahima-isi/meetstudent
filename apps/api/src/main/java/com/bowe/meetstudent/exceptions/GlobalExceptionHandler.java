@@ -109,6 +109,12 @@ public class GlobalExceptionHandler {
                 .body(response.getBody());
     }
 
+    /** Same body as the registration check: {"email": "Cet email est déjà utilisé"}. */
+    @ExceptionHandler(DuplicateEmailException.class)
+    public ResponseEntity<Map<String, String>> handleDuplicateEmail(DuplicateEmailException ex) {
+        return new ResponseEntity<>(Map.of("email", ex.getMessage()), HttpStatus.BAD_REQUEST);
+    }
+
     @ExceptionHandler(ConflictException.class)
     public ResponseEntity<ErrorResponse> handleConflict(ConflictException ex, WebRequest request) {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request);

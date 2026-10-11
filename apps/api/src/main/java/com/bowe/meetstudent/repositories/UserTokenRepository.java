@@ -20,6 +20,18 @@ public interface UserTokenRepository extends JpaRepository<UserToken, Integer> {
     /** Tokens issued to the user for the purpose since the given instant, oldest first. */
     List<UserToken> findByUserIdAndPurposeAndIssuedAtAfterOrderByIssuedAtAsc(Integer userId, UserTokenPurpose purpose, Instant since);
 
+    /**
+     * Tokens of one purpose issued for the address (any user, case-insensitive) since the instant, oldest first.
+     * Explicit lower() so the lower(email), issued_at index (V18) is usable.
+     */
+    @Query("select t from UserToken t where lower(t.email) = lower(:email) and t.purpose = :purpose and t.issuedAt > :since order by t.issuedAt asc")
+    List<UserToken> findAddressTokens(@Param("email") String email, @Param("purpose") UserTokenPurpose purpose, @Param("since") Instant since);
+
+    /** Global retention purge, orphaned rows (deleted users) included. */
+    @Modifying(flushAutomatically = true)
+    @Query("delete from UserToken t where t.issuedAt < :before")
+    int deleteIssuedBefore(@Param("before") Instant before);
+
     @Modifying(flushAutomatically = true)
     @Query("update UserToken t set t.consumedAt = :now where t.user.id = :userId and t.purpose = :purpose and t.consumedAt is null")
     int consumeOpen(@Param("userId") Integer userId, @Param("purpose") UserTokenPurpose purpose, @Param("now") Instant now);
@@ -29,7 +41,4 @@ public interface UserTokenRepository extends JpaRepository<UserToken, Integer> {
     @Query("update UserToken t set t.consumedAt = :now where t.id = :id and t.consumedAt is null")
     int consumeIfOpen(@Param("id") Integer id, @Param("now") Instant now);
 
-    @Modifying(flushAutomatically = true)
-    @Query("delete from UserToken t where t.user.id = :userId and t.issuedAt < :before")
-    int deleteIssuedBefore(@Param("userId") Integer userId, @Param("before") Instant before);
 }

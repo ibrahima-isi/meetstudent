@@ -51,8 +51,9 @@ public class UserTokenService {
     @Transactional(noRollbackFor = TooManyRequestsException.class)
     public String issue(UserEntity user, UserTokenPurpose purpose, Duration ttl) {
         var now = Instant.now(clock);
-        repository.deleteIssuedBefore(user.getId(), now.minus(RETENTION));
+        repository.deleteIssuedBefore(now.minus(RETENTION));
         enforceLimits(user, purpose, now);
+        enforceAddressCap(user.getEmail(), purpose, now);
         repository.consumeOpen(user.getId(), purpose, now);
 
         var bytes = new byte[TOKEN_BYTES];
@@ -83,6 +84,9 @@ public class UserTokenService {
         var token = repository.findByTokenHash(hash(rawToken.strip()))
                 .filter(t -> t.getPurpose() == purpose)
                 .orElseThrow(InvalidActionTokenException::new);
+        if (token.getUser() == null) { // account deleted: the row only remains as cap evidence
+            throw new InvalidActionTokenException();
+        }
         var currentEmail = token.getUser().getEmail();
         if (token.getConsumedAt() != null
                 || !token.getExpiresAt().isAfter(now)
@@ -125,6 +129,17 @@ public class UserTokenService {
         if (recent.size() >= properties.getTokens().getMaxPerDay()) {
             var oldest = recent.get(0).getIssuedAt();
             throw new TooManyRequestsException("Daily limit of emails reached", secondsUntil(oldest.plus(CAP_WINDOW), now));
+        }
+    }
+
+    /**
+     * Mail-bombing guard: at most {@code max-per-address-per-day} tokens per address per purpose in 24 h, counted
+     * case-insensitively across every user (deleted accounts included, their rows are kept), so several accounts cannot aim at one third party.
+     */
+    private void enforceAddressCap(String email, UserTokenPurpose purpose, Instant now) {
+        var forAddress = repository.findAddressTokens(email, purpose, now.minus(CAP_WINDOW));
+        if (forAddress.size() >= properties.getTokens().getMaxPerAddressPerDay()) {
+            throw new TooManyRequestsException("Too many emails for this address", secondsUntil(forAddress.get(0).getIssuedAt().plus(CAP_WINDOW), now));
         }
     }
 

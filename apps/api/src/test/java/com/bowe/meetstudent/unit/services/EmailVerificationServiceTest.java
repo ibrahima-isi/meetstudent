@@ -103,25 +103,23 @@ class EmailVerificationServiceTest {
     }
 
     @Test
-    void confirmMarksTheTokenOwnerVerified() {
-        var token = UserToken.builder().user(user).build();
+    void confirmMarksTheTokenOwnerVerifiedWithATargetedUpdateOnTheAddressItWasIssuedFor() {
+        var token = UserToken.builder().user(user).email("jane@example.com").build();
         when(userTokenService.consume("raw", UserTokenPurpose.EMAIL_VERIFICATION)).thenReturn(token);
 
         service.confirm("raw");
 
-        assertTrue(user.isEmailVerified());
-        verify(userRepository).save(user);
+        verify(userRepository).markEmailVerified(7, "jane@example.com");
+        verify(userRepository, never()).save(any());
     }
 
     @Test
-    void confirmIsIdempotentForAnAlreadyVerifiedUser() {
-        user.setEmailVerified(true);
-        when(userTokenService.consume("raw", UserTokenPurpose.EMAIL_VERIFICATION)).thenReturn(UserToken.builder().user(user).build());
+    void confirmStillSucceedsWhenNoRowWasUpdated() {
+        var token = UserToken.builder().user(user).email("jane@example.com").build();
+        when(userTokenService.consume("raw", UserTokenPurpose.EMAIL_VERIFICATION)).thenReturn(token);
+        when(userRepository.markEmailVerified(7, "jane@example.com")).thenReturn(0);
 
-        service.confirm("raw");
-
-        assertTrue(user.isEmailVerified());
-        verify(userRepository, never()).save(any());
+        assertDoesNotThrow(() -> service.confirm("raw"));
     }
 
     @Test
