@@ -43,4 +43,5 @@ public class UserDTO extends AbstractDTO {
     private MediaDTO presentationVideo;
     private List<SchoolDTO> wishlist;
     private String photoUrl;
+    private boolean emailVerified;
 }

@@ -86,6 +86,11 @@ public class AdminBootstrapRunner implements ApplicationRunner {
             admin.setPassword(passwordEncoder.encode(adminPassword));
             changed = true;
         }
+        if (!admin.isEmailVerified()) {
+            // The operator owns this address by construction; the admin never goes through the email flow.
+            admin.setEmailVerified(true);
+            changed = true;
+        }
         if (changed) {
             userRepository.save(admin);
             log.info("Admin account bootstrapped/updated for {}", email);

@@ -1,6 +1,7 @@
 package com.bowe.meetstudent.exceptions;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
@@ -86,6 +87,42 @@ public class GlobalExceptionHandler {
                 request.getDescription(false).replace("uri=", "")
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
+    }
+
+    /**
+     * Email-verification / password-reset token that cannot be used. One identical body whatever the
+     * reason (unknown, expired, used, address changed), so the response reveals nothing.
+     */
+    @ExceptionHandler(InvalidActionTokenException.class)
+    public ResponseEntity<Map<String, String>> handleInvalidActionToken(InvalidActionTokenException ex) {
+        return new ResponseEntity<>(Map.of("token", "Lien invalide ou expiré"), HttpStatus.BAD_REQUEST);
+    }
+
+    /**
+     * Per-account limit hit: 429 with a Retry-After header (seconds).
+     */
+    @ExceptionHandler(TooManyRequestsException.class)
+    public ResponseEntity<ErrorResponse> handleTooManyRequests(TooManyRequestsException ex, WebRequest request) {
+        var response = build(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage(), request);
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header(HttpHeaders.RETRY_AFTER, String.valueOf(ex.getRetryAfterSeconds()))
+                .body(response.getBody());
+    }
+
+    /** Same body as the registration check: {"email": "Cet email est déjà utilisé"}. */
+    @ExceptionHandler(DuplicateEmailException.class)
+    public ResponseEntity<Map<String, String>> handleDuplicateEmail(DuplicateEmailException ex) {
+        return new ResponseEntity<>(Map.of("email", ex.getMessage()), HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<ErrorResponse> handleConflict(ConflictException ex, WebRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(ServiceUnavailableException.class)
+    public ResponseEntity<ErrorResponse> handleServiceUnavailable(ServiceUnavailableException ex, WebRequest request) {
+        return build(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage(), request);
     }
 
     /**

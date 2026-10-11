@@ -81,6 +81,7 @@ class AdminBootstrapIntegrationTests {
         assertEquals(ADMIN_EMAIL, admin.getEmail());
         assertTrue(passwordEncoder.matches(ADMIN_PASSWORD, admin.getPassword()));
         assertEquals("ROLE_ADMIN", admin.getRole().getName());
+        assertTrue(admin.isEmailVerified(), "the bootstrapped admin must not be asked to verify its email");
         assertTrue(userRepository.findByEmailIgnoreCase(AdminBootstrapRunner.DEFAULT_ADMIN_EMAIL).isEmpty());
     }
 
@@ -91,6 +92,19 @@ class AdminBootstrapIntegrationTests {
         var admin = userRepository.findByEmailIgnoreCase(ADMIN_EMAIL).orElseThrow();
         assertTrue(passwordEncoder.matches(ADMIN_PASSWORD, admin.getPassword()));
         assertEquals("ROLE_ADMIN", admin.getRole().getName());
+        assertTrue(admin.isEmailVerified());
+    }
+
+    @Test
+    void marksAnExistingUnverifiedAdminVerified_evenWhenNothingElseChanges() throws Exception {
+        runner(ADMIN_EMAIL, ADMIN_PASSWORD).run(null);
+        var admin = userRepository.findByEmailIgnoreCase(ADMIN_EMAIL).orElseThrow();
+        admin.setEmailVerified(false);
+        userRepository.save(admin);
+
+        runner(ADMIN_EMAIL, ADMIN_PASSWORD).run(null);
+
+        assertTrue(userRepository.findByEmailIgnoreCase(ADMIN_EMAIL).orElseThrow().isEmailVerified());
     }
 
     @Test

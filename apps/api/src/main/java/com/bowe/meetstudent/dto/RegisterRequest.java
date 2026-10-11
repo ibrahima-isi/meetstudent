@@ -2,6 +2,7 @@ package com.bowe.meetstudent.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -38,4 +39,8 @@ public class RegisterRequest {
     private Date birthday;
 
     private String qualification;
+
+    /** Language of the verification email; defaults to French when absent. */
+    @Pattern(regexp = "fr|en", message = "Langue non supportée")
+    private String lang;
 }
