@@ -288,3 +288,20 @@ shapes before coding against them.
   disallows these pages.
 - `refreshInterceptor` now skips only `/auth`, `/auth/refresh` and
   `/auth/password-reset/*`; other authenticated calls under `/auth` are refreshed on 401.
+
+## 8. Email verification (web side)
+
+- `POST /auth/email-verification/confirm` `{token}` → 204; 400 `{token}` for any bad
+  link (one message for unknown, expired, used). Mails link to
+  `/<lang>/verify-email#token=…`; same handling as the reset link (fragment read
+  once into memory, stripped from the URL, `noindex` + `no-referrer`, client-rendered).
+- `POST /auth/email-verification/resend` (Bearer) → 202; 409 already verified,
+  429 cooldown/daily cap, 503 mail disabled. The banner in `PublicShellComponent`
+  shows only when signed in, `user.emailVerified === false` and
+  `capabilities.emailEnabled`; dismissal is kept in `sessionStorage`.
+- `User.emailVerified` is optional on the client: only an explicit `false` counts
+  as unverified. After a successful confirmation (or a 409) the cached user is
+  reloaded with `GET /users/id/{id}`.
+- `POST /users` now also sends `lang` (`fr`|`en`, the locale being read); the
+  login notice after registration mentions the confirmation email only when
+  `emailEnabled`.

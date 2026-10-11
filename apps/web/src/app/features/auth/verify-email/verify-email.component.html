@@ -1,0 +1,43 @@
+<div *transloco="let t">
+  <div class="mb-8">
+    <h1 #heading tabindex="-1" class="text-3xl font-semibold tracking-tight text-foreground mb-2 outline-none">
+      @switch (state()) {
+        @case ('verifying') { {{ t('auth.verify.verifyingTitle') }} }
+        @case ('success') { {{ t('auth.verify.successTitle') }} }
+        @case ('expired') { {{ t('auth.verify.expiredTitle') }} }
+        @case ('error') { {{ t('auth.verify.errorTitle') }} }
+        @default { {{ t('auth.verify.invalidTitle') }} }
+      }
+    </h1>
+  </div>
+
+  @switch (state()) {
+    @case ('verifying') {
+      <p role="status" class="text-muted-foreground">{{ t('auth.verify.verifyingText') }}</p>
+    }
+    @case ('success') {
+      <div role="status" class="bg-green-50 border border-green-200 dark:bg-green-950/40 dark:border-green-900 rounded-lg p-4 flex items-start gap-3 mb-6">
+        <lucide-icon [img]="CheckCircle" class="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" aria-hidden="true"></lucide-icon>
+        <p class="text-green-800 dark:text-green-200">{{ t('auth.verify.successText') }}</p>
+      </div>
+      @if (tokens.isAuthenticated()) {
+        <a [routerLink]="['/', locale.active(), 'home']" class="btn btn-primary btn-lg w-full">{{ t('auth.verify.goHome') }}</a>
+      } @else {
+        <a [routerLink]="['/', locale.active(), 'login']" class="btn btn-primary btn-lg w-full">{{ t('auth.verify.signIn') }}</a>
+      }
+    }
+    @case ('error') {
+      <div role="alert" class="bg-red-50 border border-red-200 dark:bg-red-950/40 dark:border-red-900 rounded-lg p-4 flex items-start gap-3 mb-6">
+        <lucide-icon [img]="AlertCircle" class="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" aria-hidden="true"></lucide-icon>
+        <p class="text-red-800 dark:text-red-200">{{ t('auth.verify.errorText') }}</p>
+      </div>
+      <button type="button" (click)="retry()" class="btn btn-primary btn-lg w-full">{{ t('auth.verify.retry') }}</button>
+    }
+    @default {
+      <p class="text-muted-foreground mb-6">
+        {{ t(state() === 'expired' ? 'auth.verify.expiredText' : 'auth.verify.invalidText') }}
+      </p>
+      <a [routerLink]="['/', locale.active(), 'login']" class="btn btn-primary btn-lg w-full">{{ t('auth.verify.signInForNew') }}</a>
+    }
+  }
+</div>

@@ -57,6 +57,7 @@
     "contact": "Contact",
     "notFound": "Page not found",
     "forgotPassword": "Forgot password",
+    "verifyEmail": "Confirm your email",
     "resetPassword": "New password"
   },
   "about": {
@@ -68,6 +69,17 @@
     "intro": "A question, a suggestion, a school to report? Write to us and we will get back to you.",
     "emailLabel": "By email",
     "error": "The contact address could not be loaded."
+  },
+  "emailBanner": {
+    "title": "Confirm your email address",
+    "text": "Check your inbox for the confirmation link. Your account works in the meantime.",
+    "resend": "Resend the email",
+    "resending": "Sending...",
+    "sent": "A new email is on its way. Check your inbox.",
+    "limited": "Too many requests today. Please try again later.",
+    "alreadyVerified": "Your email address is already confirmed.",
+    "failed": "Something went wrong. Please try again.",
+    "dismiss": "Dismiss"
   },
   "theme": {
     "light": "light",
@@ -100,7 +112,8 @@
       "success": "Login successful! Welcome back.",
       "registered": "Account created! Sign in to continue.",
       "failed": "Login failed. Please try again.",
-      "reset": "Password reset! Sign in with your new password."
+      "reset": "Password reset! Sign in with your new password.",
+      "registeredEmail": "Account created! We sent you a confirmation email; you can sign in now."
     },
     "forgot": {
       "title": "Forgot your password?",
@@ -129,6 +142,22 @@
       "expiredText": "This link has expired or has already been used. Request a new one.",
       "requestNew": "Request a new link",
       "failed": "Something went wrong. Please try again."
+    },
+    "verify": {
+      "verifyingTitle": "Confirming your email",
+      "verifyingText": "One moment, we are confirming your address...",
+      "successTitle": "Email confirmed",
+      "successText": "Thank you, your email address is confirmed.",
+      "goHome": "Continue",
+      "signIn": "Sign in",
+      "expiredTitle": "Link expired",
+      "expiredText": "This link has expired or has already been used. Sign in to request a new confirmation email.",
+      "invalidTitle": "Invalid link",
+      "invalidText": "This confirmation link is incomplete or invalid. Sign in to request a new confirmation email.",
+      "errorTitle": "Something went wrong",
+      "errorText": "We could not confirm your address right now. Please try again.",
+      "retry": "Try again",
+      "signInForNew": "Sign in to get a new email"
     },
     "register": {
       "title": "Create Account",
