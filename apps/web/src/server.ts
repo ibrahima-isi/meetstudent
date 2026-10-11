@@ -7,7 +7,7 @@ import {
 import express from 'express';
 import { join } from 'node:path';
 import { environment } from './environments/environment';
-import { applyServerEnvironment, readAllowedHosts } from './environments/server-environment';
+import { applyServerEnvironment, isBackendPath, readAllowedHosts } from './environments/server-environment';
 
 /**
  * Applies the override to *this* bundle's copy of `environment`, for anything
@@ -28,16 +28,19 @@ const angularApp = new AngularNodeAppEngine({
 });
 
 /**
- * Example Express Rest API endpoints can be defined here.
- * Uncomment and define endpoints as necessary.
- *
- * Example:
- * ```ts
- * app.get('/api/{*splat}', (req, res) => {
- *   // Handle API request
- * });
- * ```
+ * API paths are not pages. Reaching this server with one means nothing in front
+ * routes `/api` and `/uploads` to the API (see `isBackendPath`).
  */
+app.use((req, res, next) => {
+  if (!isBackendPath(req.path)) {
+    next();
+    return;
+  }
+  res
+    .status(404)
+    .type('text/plain')
+    .send('Not served here: /api and /uploads belong to the API. Check the reverse proxy in front of the web server.');
+});
 
 /**
  * Serve static files from /browser

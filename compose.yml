@@ -1,6 +1,10 @@
 name: meetstudent
 
-# Full local stack: Postgres + Spring Boot API + Angular SSR front.
+# Full local stack: Postgres + Spring Boot API + Angular SSR front, behind one
+# origin like production: the `proxy` service answers on the front's port and
+# sends /api and /uploads/public to the API, everything else to the web server.
+# The browser bundle calls relative URLs, so without it every API call would
+# land on the web server.
 # Fully isolated from the cloud database — the data here is disposable.
 #
 #   cp .env.example .env   # then fill in the two secrets
@@ -79,13 +83,55 @@ services:
       # @angular/ssr renders only for hostnames on this list; anything else
       # silently degrades to client-side rendering.
       ALLOWED_HOSTS: localhost,web
-    ports:
-      - "${WEB_PORT:-4200}:4200"
+    # Not published: the browser reaches it through `proxy`.
+    expose:
+      - "4200"
     depends_on:
       api:
         condition: service_healthy
     networks:
       - meetstudent
+
+  proxy:
+    image: traefik:v3.6
+    command:
+      - --entryPoints.web.address=:80
+      - --providers.file.filename=/etc/traefik/routes.yml
+      - --api.dashboard=false
+      - --global.checkNewVersion=false
+      - --global.sendAnonymousUsage=false
+    configs:
+      - source: proxy-routes
+        target: /etc/traefik/routes.yml
+    ports:
+      - "${WEB_PORT:-4200}:80"
+    depends_on:
+      - api
+      - web
+    networks:
+      - meetstudent
+
+# Same split as compose.prod.yml, without TLS, rate limits or the Docker socket.
+configs:
+  proxy-routes:
+    content: |
+      http:
+        routers:
+          api:
+            rule: PathPrefix(`/api`) || PathPrefix(`/uploads/public`)
+            service: api
+          web:
+            rule: PathPrefix(`/`)
+            service: web
+        services:
+          api:
+            loadBalancer:
+              servers:
+                - url: http://api:8080
+          web:
+            loadBalancer:
+              servers:
+                - url: http://web:4200
 
 volumes:
   pgdata:
