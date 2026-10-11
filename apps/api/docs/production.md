@@ -26,7 +26,7 @@ the prod profile has no fallbacks for the required ones, so a missing value stop
 
 ## Email
 
-Account emails are **off by default** (this is the sending layer only; the email verification and password reset endpoints that use it arrive in later changes, so the launch limitations in `docs/DEPLOY.md` still stand):
+Account emails are **off by default** (the email verification and password reset endpoints use this layer; the web pages for them are still to come):
 `MAIL_ENABLED=false`, no SMTP setting is needed to start, and the endpoints that would send mail still
 answer. With `MAIL_ENABLED=true` the API validates the mail configuration at boot and refuses to start on
 a missing `SPRING_MAIL_HOST` or `MAIL_FROM`, or on a `FRONTEND_BASE_URL` that is not an `https` origin.
@@ -44,6 +44,20 @@ a missing `SPRING_MAIL_HOST` or `MAIL_FROM`, or on a `FRONTEND_BASE_URL` that is
   claiming an email was sent while mail is off.
 - `app.mail.dev-log` (set in the `dev` and `docker` profiles) prints emails, links included, to the log.
   The `prod` profile refuses to start with it.
+
+## Password reset
+
+`POST /api/v1/auth/password-reset/request` (`{"email","lang"?}`) always answers `202 {"status":"accepted"}` for a
+well-formed address, so it reveals nothing about accounts, limits or whether mail is enabled; a link valid for
+`app.tokens.reset-ttl-minutes` (60) is mailed when the account exists, mail is on and the limits allow it
+(60 s cooldown and 5 per day per account, 3 per day per address and purpose across accounts; a refused request
+is silent). `POST /api/v1/auth/password-reset/confirm` (`{"token","password","confirmedPassword"}`) answers `204`,
+or `400` with `{"password"}`, `{"confirmedPassword"}` or `{"token":"Lien invalide ou expiré"}`; the password and
+confirmation are checked before the token is consumed. On success the token and every other open reset token of the
+account are burned, all refresh tokens of the account are deleted and the address is marked verified.
+**Access tokens already issued remain valid until they expire** (`JWT_ACCESS_TTL_MINUTES`, default 60 in the API,
+set to 15 by `compose.prod.yml`): there is no access-token revocation list. With `MAIL_ENABLED=false` the request
+endpoint still answers `202` but nothing is sent and no token is created.
 
 ## Profile must be set explicitly
 

@@ -29,4 +29,15 @@ public interface UserRepository extends JpaRepository<UserEntity, Integer> {
     @Modifying
     @Query("update UserEntity u set u.emailVerified = true where u.id = :id and lower(u.email) = lower(:email)")
     int markEmailVerified(@Param("id") Integer id, @Param("email") String email);
+
+    /**
+     * Every user whose address matches ignoring case, oldest first. A list, not an Optional: legacy data may
+     * hold case-variant duplicates and a throwing lookup would turn into a 500 that reveals the address exists.
+     */
+    List<UserEntity> findAllByEmailIgnoreCaseOrderByIdAsc(String email);
+
+    /** Targeted write of an already encoded password, for the same reason as {@link #markEmailVerified}. */
+    @Modifying
+    @Query("update UserEntity u set u.password = :password where u.id = :id")
+    int updatePassword(@Param("id") Integer id, @Param("password") String password);
 }
