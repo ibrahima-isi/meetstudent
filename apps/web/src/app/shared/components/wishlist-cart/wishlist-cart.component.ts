@@ -79,7 +79,9 @@ import { pluralKey } from '@i18n/plural';
                     <lucide-icon [img]="GraduationCap" class="w-5 h-5 text-indigo-600 dark:text-indigo-400 flex-shrink-0 mt-1"></lucide-icon>
                     <div class="flex-1 min-w-0">
                       <h4 class="text-foreground line-clamp-2 mb-1 text-sm font-medium">{{ school.name }}</h4>
-                      <p class="text-muted-foreground text-xs font-semibold">{{ school.address.city }}</p>
+                      @if (school.address; as address) {
+                        <p class="text-muted-foreground text-xs font-semibold">{{ address.city }}</p>
+                      }
                     </div>
                     <button
                       data-testid="wishlist-remove"

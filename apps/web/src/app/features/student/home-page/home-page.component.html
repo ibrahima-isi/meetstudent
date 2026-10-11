@@ -164,13 +164,15 @@
               ></app-star-rating>
             </div>
 
-            <div class="flex items-start gap-2 mb-3 text-sm">
-              <lucide-icon [img]="MapPin" class="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5"></lucide-icon>
-              <div class="text-muted-foreground">
-                <p>{{ school.address.location }}</p>
-                <p>{{ school.address.city }}</p>
+            @if (school.address; as address) {
+              <div class="flex items-start gap-2 mb-3 text-sm">
+                <lucide-icon [img]="MapPin" class="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5"></lucide-icon>
+                <div class="text-muted-foreground">
+                  <p>{{ address.location }}</p>
+                  <p>{{ address.city }}</p>
+                </div>
               </div>
-            </div>
+            }
 
             <p class="text-muted-foreground line-clamp-2 mb-4 text-sm flex-1">
               {{ school.description || t('common.noDescription') }}

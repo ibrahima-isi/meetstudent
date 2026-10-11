@@ -1,3 +1,4 @@
+import { School } from '@models/entities';
 import { TestBed, ComponentFixture } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
@@ -245,6 +246,15 @@ describe('WishlistCartComponent data states', () => {
     expect(text()).toContain('Real School');
     expect(text()).toContain('1 school');
     expect(text()).not.toContain('Licence en Mathématiques');
+  });
+
+  it('lists a wishlisted school the API sends without an address', async () => {
+    await open();
+    saved.set([{ id: 5, name: 'No address', address: null } as unknown as School]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(text()).toContain('No address');
   });
 
   it('removes a school through the shared service', async () => {
