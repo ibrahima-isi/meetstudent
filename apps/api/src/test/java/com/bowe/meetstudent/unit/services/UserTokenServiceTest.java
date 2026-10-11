@@ -7,6 +7,7 @@ import com.bowe.meetstudent.exceptions.InvalidActionTokenException;
 import com.bowe.meetstudent.exceptions.TooManyRequestsException;
 import com.bowe.meetstudent.mail.MailProperties;
 import com.bowe.meetstudent.repositories.UserTokenRepository;
+import com.bowe.meetstudent.services.AddressIssueLock;
 import com.bowe.meetstudent.services.UserTokenService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -44,6 +46,9 @@ class UserTokenServiceTest {
     @Mock
     private UserTokenRepository repository;
 
+    @Mock
+    private AddressIssueLock addressLock;
+
     private MailProperties properties;
     private UserTokenService service;
     private UserEntity user;
@@ -51,7 +56,7 @@ class UserTokenServiceTest {
     @BeforeEach
     void setUp() {
         properties = new MailProperties();
-        service = new UserTokenService(repository, properties, Clock.fixed(NOW, ZoneOffset.UTC));
+        service = new UserTokenService(repository, properties, Clock.fixed(NOW, ZoneOffset.UTC), addressLock);
         user = UserEntity.builder().email("jane@example.com").firstname("Jane").build();
         user.setId(7);
         lenient().when(repository.save(any(UserToken.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -120,6 +125,22 @@ class UserTokenServiceTest {
         assertEquals(VERIFY, saved.getPurpose());
         assertSame(user, saved.getUser());
         assertNull(saved.getConsumedAt());
+    }
+
+    @Test
+    void issuingSerialisesOnTheAddressBeforeAnyLimitCheck() {
+        service.issue(user, VERIFY, TTL);
+
+        var order = inOrder(addressLock, repository);
+        order.verify(addressLock).acquire("jane@example.com");
+        order.verify(repository).findByUserIdAndPurposeAndIssuedAtAfterOrderByIssuedAtAsc(eq(7), eq(VERIFY), any());
+    }
+
+    @Test
+    void issuingAResetTokenKeepsEarlierResetLinksAlive() {
+        service.issue(user, UserTokenPurpose.PASSWORD_RESET, Duration.ofHours(1));
+
+        verify(repository, never()).consumeOpen(any(), any(), any());
     }
 
     @Test

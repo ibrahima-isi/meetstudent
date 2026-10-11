@@ -83,6 +83,30 @@ Email is optional and off by default: leave the `MAIL_*` / `SPRING_MAIL_*` varia
 starts and runs without sending anything. If `MAIL_ENABLED=true` with a missing SMTP host, sender address or
 a non-https `FRONTEND_BASE_URL`, the API refuses to start and names the variable. The health check does not
 contact the SMTP server. Details: `apps/api/docs/production.md`.
+Two account flows use the mail layer, both single-use links valid for a limited time:
+
+- **Email verification** is optional: unverified accounts sign in normally. A link (24 h) is mailed at
+  registration and when the address changes; `POST /api/v1/auth/email-verification/resend` sends a new one.
+- **Password reset**: `POST /api/v1/auth/password-reset/request` mails a link (1 h) and
+  `POST /api/v1/auth/password-reset/confirm` sets the new password. The request always answers `202` for a
+  well-formed address, whether or not an account exists, a limit applies or mail is disabled. Limits: one mail
+  per 60 s per account and at most 3 per day per address and purpose (across accounts; this binds before the
+  per-account daily cap of 5). A refused request stays silent, and issuance is serialised per address so parallel
+  requests cannot exceed them. Asking again does not cancel links already sent (they all go to the owner's
+  mailbox); using one burns the others. Passwords are 8 to 72 bytes (UTF-8). Using the link ends every
+  refresh-token session of the account; access tokens already issued
+  stay valid until they expire (`JWT_ACCESS_TTL_MINUTES`, so up to the configured lifetime, 15 minutes in the
+  production kit, after a reset).
+- Residual risks, accepted for launch: anyone can exhaust an address's 3-per-day reset budget, after which that
+  owner can only rely on links already sent (valid 1 h) or an admin resetting the password by hand in the
+  database; an unknown address answers a few milliseconds faster than a known one (Traefik's per-IP rate limit
+  bounds how often that can be probed); a reset does not evict an attacker who already holds an access token
+  (valid until it expires), and `PATCH /users/{id}` changes the password or email without asking for the current
+  password (pre-existing). Follow-ups: a `password_changed_at` or token-version check in the JWT filter, and
+  requiring the current password for password and email changes.
+- With `MAIL_ENABLED=false` forgot-password still answers `202` but nothing is sent and no token is created:
+  recovery is impossible until SMTP is configured.
+
 Never run the API without `SPRING_PROFILES_ACTIVE=prod` (compose sets it): the default `dev` profile prints
 emails and their one-time links to the log.
 
@@ -249,9 +273,9 @@ Keep the host patched (`unattended-upgrades`) and the Traefik image current.
 
 ## Known launch limitations
 
-- No email verification: accounts are usable immediately with any email address.
-- No password reset: a user who forgets a password cannot recover it (an admin
-  must intervene in the database).
+- The web pages for email verification and password reset are not built yet (the API endpoints exist):
+  until they ship, users cannot complete either flow from the site, and without SMTP (`MAIL_ENABLED=false`)
+  a user who forgets a password still cannot recover it (an admin must intervene in the database).
 - Single server, single database: no high availability; recovery depends on
   your off-site backups.
 - No full CSP, and no WAF or CDN in front.
