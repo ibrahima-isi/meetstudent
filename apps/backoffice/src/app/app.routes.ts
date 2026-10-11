@@ -28,6 +28,10 @@ export const routes: Routes = [
         path: 'tags',
         loadComponent: () => import('./features/tags/tags-page').then((m) => m.TagsPage),
       },
+      {
+        path: 'settings',
+        loadComponent: () => import('./features/settings/settings-page').then((m) => m.SettingsPage),
+      },
     ],
   },
   {
