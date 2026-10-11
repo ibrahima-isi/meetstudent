@@ -4,6 +4,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
+import { TokenService } from './token.service';
 
 describe('AuthService password reset and capabilities', () => {
   let service: AuthService;
@@ -56,5 +57,54 @@ describe('AuthService password reset and capabilities', () => {
     backend.expectOne(`${base}/capabilities`).flush(null, { status: 500, statusText: 'Server Error' });
 
     expect(result).toEqual({ emailEnabled: false });
+  });
+
+  it('confirms an email with the token alone', () => {
+    service.confirmEmailVerification('tok').subscribe();
+
+    const req = backend.expectOne(`${base}/email-verification/confirm`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ token: 'tok' });
+    req.flush(null, { status: 204, statusText: 'No Content' });
+  });
+
+  it('asks for a new confirmation email with no body of its own', () => {
+    service.resendEmailVerification('fr').subscribe();
+
+    const req = backend.expectOne(`${base}/email-verification/resend?lang=fr`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.params.get('lang')).toBe('fr');
+    expect(req.request.body).toEqual({});
+    req.flush({ status: 'accepted' }, { status: 202, statusText: 'Accepted' });
+  });
+
+  it('does not put a refreshed user back after the session ended meanwhile', () => {
+    const tokens = TestBed.inject(TokenService);
+    tokens.token.set('access');
+    tokens.user.set({ id: 7, emailVerified: false } as never);
+    const setUser = spyOn(tokens, 'setUser');
+
+    service.refreshCurrentUser().subscribe();
+    tokens.user.set(null);
+    backend.expectOne(`${environment.apiUrl}/users/id/7`).flush({ id: 7, emailVerified: true });
+
+    expect(setUser).not.toHaveBeenCalled();
+  });
+
+  it('refreshes the cached user from the server', () => {
+    const tokens = TestBed.inject(TokenService);
+    tokens.token.set('access');
+    tokens.user.set({ id: 7, email: 'awa@example.com', emailVerified: false } as never);
+    const setUser = spyOn(tokens, 'setUser');
+    let result: unknown;
+
+    service.refreshCurrentUser().subscribe((u) => (result = u));
+
+    const req = backend.expectOne(`${environment.apiUrl}/users/id/7`);
+    expect(req.request.method).toBe('GET');
+    const fresh = { id: 7, email: 'awa@example.com', emailVerified: true };
+    req.flush(fresh);
+    expect(setUser).toHaveBeenCalledWith(fresh as never);
+    expect(result).toEqual(fresh);
   });
 });

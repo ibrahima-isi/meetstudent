@@ -64,6 +64,8 @@ export interface User extends AbstractEntity {
   lastname: string;
   birthday?: string;
   email: string;
+  /** Absent from older payloads; only an explicit `false` means "to confirm". */
+  emailVerified?: boolean;
   role: Role;
   qualification?: string;
   /** Private media — fetch content via MediaService.blobUrl(id), not <img src>. */

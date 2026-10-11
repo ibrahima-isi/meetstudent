@@ -3,11 +3,12 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { DockNavbarComponent } from '@shared/components/dock-navbar/dock-navbar.component';
+import { EmailVerificationBannerComponent } from '@shared/components/email-verification-banner/email-verification-banner.component';
 
 /** Frame of every page but the 404 (public and signed-in): skip link, floating navbar, and the page itself. */
 @Component({
   selector: 'app-public-shell',
-  imports: [RouterOutlet, TranslocoDirective, DockNavbarComponent],
+  imports: [RouterOutlet, TranslocoDirective, DockNavbarComponent, EmailVerificationBannerComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ng-container *transloco="let t">
@@ -19,6 +20,7 @@ import { DockNavbarComponent } from '@shared/components/dock-navbar/dock-navbar.
       >
     </ng-container>
     <app-dock-navbar />
+    <app-email-verification-banner />
     <main id="main" tabindex="-1"><router-outlet /></main>
   `,
 })

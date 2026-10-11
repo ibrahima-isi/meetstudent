@@ -91,18 +91,63 @@ describe('LoginFormComponent translations', () => {
       } as ActivatedRouteSnapshot;
     }
 
-    it('welcomes a new account in French', async () => {
+    async function renderAnswering(lang: 'fr' | 'en', emailEnabled: boolean) {
       arriveFromRegistration(true);
-      await render('fr');
+      await render(lang);
+      httpMock.expectOne(`${environment.apiUrl}/auth/capabilities`).flush({ emailEnabled });
+      fixture.detectChanges();
+      await fixture.whenStable();
+    }
+
+    it('welcomes a new account in French', async () => {
+      await renderAnswering('fr', false);
 
       expect(text()).toContain('Compte créé');
     });
 
     it('welcomes a new account in English', async () => {
-      arriveFromRegistration(true);
-      await render('en');
+      await renderAnswering('en', false);
 
       expect(text()).toContain('Account created');
+    });
+
+    it('mentions the confirmation email, in French, when email is enabled', async () => {
+      await renderAnswering('fr', true);
+
+      expect(text()).toContain('Compte créé');
+      expect(text()).toContain('e-mail de confirmation');
+    });
+
+    it('mentions the confirmation email, in English, when email is enabled', async () => {
+      await renderAnswering('en', true);
+
+      expect(text()).toContain('confirmation email');
+    });
+
+    it('does not claim an email was sent when email is disabled', async () => {
+      await renderAnswering('en', false);
+
+      expect(text()).not.toContain('confirmation email');
+    });
+
+    it('does not claim an email was sent when the capabilities call fails', async () => {
+      arriveFromRegistration(true);
+      await render('en');
+      httpMock
+        .expectOne(`${environment.apiUrl}/auth/capabilities`)
+        .flush(null, { status: 500, statusText: 'Server Error' });
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(text()).toContain('Account created');
+      expect(text()).not.toContain('confirmation email');
+    });
+
+    it('asks nothing of the server on a plain visit', async () => {
+      arriveFromRegistration(false);
+      await render('en');
+
+      httpMock.expectNone(`${environment.apiUrl}/auth/capabilities`);
     });
 
     it('shows no notice on a plain visit', async () => {

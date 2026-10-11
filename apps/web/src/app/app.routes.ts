@@ -127,6 +127,15 @@ export const routes: Routes = [
                     (m) => m.ResetPasswordComponent,
                   ),
               },
+              {
+                // Same as reset-password: public, token in the fragment, rendered in the browser.
+                path: 'verify-email',
+                title: 'pageTitle.verifyEmail',
+                loadComponent: () =>
+                  import('./features/auth/verify-email/verify-email.component').then(
+                    (m) => m.VerifyEmailComponent,
+                  ),
+              },
             ],
           },
         ],

@@ -1,5 +1,7 @@
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter, Router } from '@angular/router';
 import { provideTransloco, TranslocoService } from '@jsverse/transloco';
 import { firstValueFrom } from 'rxjs';
@@ -15,6 +17,8 @@ describe('PublicShellComponent', () => {
     TestBed.configureTestingModule({
       providers: [
         provideZonelessChangeDetection(),
+        provideHttpClient(),
+        provideHttpClientTesting(),
         provideRouter([]),
         provideTransloco(translocoOptions),
         { provide: LocaleService, useValue: { active: signal('fr'), remember: () => undefined } },
@@ -32,6 +36,14 @@ describe('PublicShellComponent', () => {
   it('frames the page with the navbar and a main landmark holding the outlet', () => {
     expect(root.querySelector('app-dock-navbar')).not.toBeNull();
     expect(root.querySelector('main#main router-outlet')).not.toBeNull();
+  });
+
+  it('puts the email-verification banner between the navbar and the page', () => {
+    const banner = root.querySelector('app-email-verification-banner') as HTMLElement;
+    expect(banner).not.toBeNull();
+    const order = Array.from(root.children).map((c) => c.tagName.toLowerCase());
+    expect(order.indexOf('app-email-verification-banner')).toBeGreaterThan(order.indexOf('app-dock-navbar'));
+    expect(order.indexOf('app-email-verification-banner')).toBeLessThan(order.indexOf('main'));
   });
 
   it('offers a skip link that is hidden until focused', () => {

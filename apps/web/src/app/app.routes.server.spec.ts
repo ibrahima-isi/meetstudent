@@ -46,6 +46,18 @@ describe('server routes', () => {
     expect(modeOf(':lang/forgot-password')).toBeUndefined();
   });
 
+  it('renders the verification page in the browser although it is public: its token lives in the URL fragment too', () => {
+    expect(modeOf(':lang/verify-email')).toBe(RenderMode.Client);
+    expect(guardedPaths(routes)).not.toContain(':lang/verify-email');
+  });
+
+  it('declares the verification page as a route of its own, open to anonymous visitors', () => {
+    const route = allRoutes(routes).find((r) => r.path === ':lang/verify-email')?.route;
+
+    expect(route).toBeDefined();
+    expect(route?.canActivate).toBeUndefined();
+  });
+
   it('keeps the public pages server-rendered for SEO', () => {
     expect(modeOf('**')).toBe(RenderMode.Server);
   });

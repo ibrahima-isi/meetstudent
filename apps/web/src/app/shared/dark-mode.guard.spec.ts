@@ -15,6 +15,8 @@ import { WishlistService } from '@services/wishlist.service';
 import { LoginFormComponent } from '../features/auth/login-form/login-form.component';
 import { ForgotPasswordComponent } from '../features/auth/forgot-password/forgot-password.component';
 import { ResetPasswordComponent } from '../features/auth/reset-password/reset-password.component';
+import { VerifyEmailComponent } from '../features/auth/verify-email/verify-email.component';
+import { EmailVerificationBannerComponent } from './components/email-verification-banner/email-verification-banner.component';
 import { RegisterFormComponent } from '../features/auth/register-form/register-form.component';
 import { KeyFiguresComponent } from '../features/public/landing-page/sections/key-figures.component';
 import { FeaturedSchoolsComponent } from '../features/public/landing-page/sections/featured-schools.component';
@@ -230,6 +232,12 @@ describe('dark mode: no light-only palette classes', () => {
     ],
     ['reset password, invalid link', ResetPasswordComponent, (c) => c.state.set('invalid')],
     ['reset password, expired link', ResetPasswordComponent, (c) => c.state.set('expired')],
+    ['verify email, verifying', VerifyEmailComponent, (c) => c.state.set('verifying')],
+    ['verify email, confirmed', VerifyEmailComponent, (c) => c.state.set('success')],
+    ['verify email, expired link', VerifyEmailComponent, (c) => c.state.set('expired')],
+    ['verify email, invalid link', VerifyEmailComponent, (c) => c.state.set('invalid')],
+    ['verify email, failure', VerifyEmailComponent, (c) => c.state.set('error')],
+    ['email verification banner', EmailVerificationBannerComponent, (c) => c.feedback.set('alreadyVerified')],
     ['register step 1 (student)', RegisterFormComponent, (c) => c.userType.set('student')],
     [
       'register step 1 (teacher, suggestions)',

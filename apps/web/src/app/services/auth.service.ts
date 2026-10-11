@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, tap, switchMap, map, catchError, of, shareReplay } from 'rxjs';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Observable, tap, switchMap, map, catchError, of, shareReplay, EMPTY } from 'rxjs';
 import { TokenService } from './token.service';
 import { User, LoginResponse } from '@models/entities';
 import { environment } from '../../environments/environment';
@@ -17,6 +17,8 @@ export interface RegisterPayload {
   confirmedPassword: string;
   birthday?: string;
   qualification?: string;
+  /** The language of the confirmation email. */
+  lang?: string;
 }
 
 /** What the server can do right now; only the mail switch matters to the web. */
@@ -71,6 +73,30 @@ export class AuthService {
   /** 204 on success; 400 `{token}` for a bad link, `{password}` / `{confirmedPassword}` otherwise. */
   confirmPasswordReset(token: string, password: string, confirmedPassword: string): Observable<void> {
     return this.http.post<void>(`${this.apiUrl}/password-reset/confirm`, { token, password, confirmedPassword });
+  }
+
+  /** 204 on success; 400 `{token}` for any bad link (unknown, expired, used). */
+  confirmEmailVerification(token: string): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/email-verification/confirm`, { token });
+  }
+
+  /** Needs the session; `lang` picks the language of the email. 202; 409 already verified; 429 daily limit or cooldown; 503 mail off. */
+  resendEmailVerification(lang: string): Observable<unknown> {
+    return this.http.post(`${this.apiUrl}/email-verification/resend`, {}, { params: new HttpParams().set('lang', lang) });
+  }
+
+  /** Reloads the signed-in user into the cache, to pick up `emailVerified`. */
+  refreshCurrentUser(): Observable<User> {
+    const id = this.tokenService.user()?.id;
+    if (id === undefined) {
+      return EMPTY;
+    }
+    return this.http.get<User>(`${this.usersUrl}/id/${id}`).pipe(tap(user => {
+      // Not if the session ended, or changed hands, while the request was in flight.
+      if (this.tokenService.isAuthenticated() && this.tokenService.user()?.id === id) {
+        this.tokenService.setUser(user);
+      }
+    }));
   }
 
   /**
