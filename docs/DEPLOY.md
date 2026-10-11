@@ -273,9 +273,11 @@ Keep the host patched (`unattended-upgrades`) and the Traefik image current.
 
 ## Known launch limitations
 
-- The web pages for email verification and password reset are not built yet (the API endpoints exist):
-  until they ship, users cannot complete either flow from the site, and without SMTP (`MAIL_ENABLED=false`)
-  a user who forgets a password still cannot recover it (an admin must intervene in the database).
+- Email verification and password reset work end to end (API and web pages) only with `MAIL_ENABLED=true`
+  and a working SMTP provider (Brevo, SES, ...). Without it nothing is sent: a user who forgets a password
+  cannot recover it (an admin must intervene in the database), and the web hides the verification banner.
+  Set `MAIL_FROM`, `FRONTEND_BASE_URL` (https) and the `SPRING_MAIL_*` variables above; the API refuses to
+  start if `MAIL_FROM` or `SPRING_MAIL_HOST` is missing while mail is enabled.
 - Single server, single database: no high availability; recovery depends on
   your off-site backups.
 - No full CSP, and no WAF or CDN in front.

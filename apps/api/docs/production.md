@@ -26,7 +26,7 @@ the prod profile has no fallbacks for the required ones, so a missing value stop
 
 ## Email
 
-Account emails are **off by default** (the email verification and password reset endpoints use this layer; the web pages for them are still to come):
+Account emails are **off by default** (the email verification and password reset endpoints use this layer, and the web pages for them are live: `/:lang/verify-email`, `/:lang/forgot-password`, `/:lang/reset-password`):
 `MAIL_ENABLED=false`, no SMTP setting is needed to start, and the endpoints that would send mail still
 answer. With `MAIL_ENABLED=true` the API validates the mail configuration at boot and refuses to start on
 a missing `SPRING_MAIL_HOST` or `MAIL_FROM`, or on a `FRONTEND_BASE_URL` that is not an `https` origin.
