@@ -1,3 +1,4 @@
+import { School } from '@models/entities';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
@@ -83,6 +84,16 @@ describe('HomePageComponent translations', () => {
     expect(badge?.textContent?.trim()).toBe('School');
     expect(text()).toContain('No description available');
     expect(text()).not.toContain('Établissement');
+  });
+
+  it('renders a school the API sends without an address', async () => {
+    // A JPA @Embeddable whose columns are all null is serialised as `address: null`.
+    await render('en');
+    fixture.componentInstance.schools.set([{ id: 1, name: 'No address', address: null } as unknown as School]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(text()).toContain('No address');
   });
 });
 

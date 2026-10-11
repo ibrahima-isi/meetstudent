@@ -132,6 +132,16 @@ describe('SchoolsPageComponent translations', () => {
     expect(text()).toContain('No description available');
     expect(text()).not.toContain('Établissement');
   });
+
+  it('renders a school the API sends without an address', async () => {
+    // A JPA @Embeddable whose columns are all null is serialised as `address: null`.
+    await render('en');
+    fixture.componentInstance.schools.set([{ id: 1, name: 'No address', address: null } as unknown as School]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(text()).toContain('No address');
+  });
   it('rounds the rating to one decimal and shows no review count the API did not send', async () => {
     await render('en');
     fixture.componentInstance.schools.set([
