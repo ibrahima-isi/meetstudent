@@ -57,6 +57,7 @@
     "contact": "Contact",
     "notFound": "Page introuvable",
     "forgotPassword": "Mot de passe oublié",
+    "verifyEmail": "Confirmer l’e-mail",
     "resetPassword": "Nouveau mot de passe"
   },
   "about": {
@@ -68,6 +69,17 @@
     "intro": "Une question, une suggestion, un établissement à signaler ? Écrivez-nous, nous vous répondrons.",
     "emailLabel": "Par e-mail",
     "error": "L'adresse de contact n'a pas pu être chargée."
+  },
+  "emailBanner": {
+    "title": "Confirmez votre adresse e-mail",
+    "text": "Consultez votre boîte de réception pour le lien de confirmation. Votre compte fonctionne en attendant.",
+    "resend": "Renvoyer l’e-mail",
+    "resending": "Envoi...",
+    "sent": "Un nouvel e-mail est en route. Consultez votre boîte de réception.",
+    "limited": "Trop de demandes aujourd’hui. Veuillez réessayer plus tard.",
+    "alreadyVerified": "Votre adresse e-mail est déjà confirmée.",
+    "failed": "Une erreur est survenue. Veuillez réessayer.",
+    "dismiss": "Fermer"
   },
   "theme": {
     "light": "clair",
@@ -100,7 +112,8 @@
       "success": "Connexion réussie ! Bon retour parmi nous.",
       "registered": "Compte créé ! Connectez-vous pour continuer.",
       "failed": "La connexion a échoué. Veuillez réessayer.",
-      "reset": "Mot de passe réinitialisé ! Connectez-vous avec votre nouveau mot de passe."
+      "reset": "Mot de passe réinitialisé ! Connectez-vous avec votre nouveau mot de passe.",
+      "registeredEmail": "Compte créé ! Nous vous avons envoyé un e-mail de confirmation ; vous pouvez vous connecter dès maintenant."
     },
     "forgot": {
       "title": "Mot de passe oublié ?",
@@ -129,6 +142,22 @@
       "expiredText": "Ce lien a expiré ou a déjà été utilisé. Demandez-en un nouveau.",
       "requestNew": "Demander un nouveau lien",
       "failed": "Une erreur est survenue. Veuillez réessayer."
+    },
+    "verify": {
+      "verifyingTitle": "Confirmation de votre e-mail",
+      "verifyingText": "Un instant, nous confirmons votre adresse...",
+      "successTitle": "Adresse e-mail confirmée",
+      "successText": "Merci, votre adresse e-mail est confirmée.",
+      "goHome": "Continuer",
+      "signIn": "Se connecter",
+      "expiredTitle": "Lien expiré",
+      "expiredText": "Ce lien a expiré ou a déjà été utilisé. Connectez-vous pour demander un nouvel e-mail de confirmation.",
+      "invalidTitle": "Lien invalide",
+      "invalidText": "Ce lien de confirmation est incomplet ou invalide. Connectez-vous pour demander un nouvel e-mail de confirmation.",
+      "errorTitle": "Une erreur est survenue",
+      "errorText": "Nous n’avons pas pu confirmer votre adresse pour le moment. Veuillez réessayer.",
+      "retry": "Réessayer",
+      "signInForNew": "Se connecter pour recevoir un nouvel e-mail"
     },
     "register": {
       "title": "Créer un compte",

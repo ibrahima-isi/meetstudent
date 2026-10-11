@@ -44,6 +44,12 @@ export class LoginFormComponent {
 
     if (this.route.snapshot.queryParamMap.get('registered') === '1') {
       this.success.set({ key: 'auth.login.registered' });
+      // Only claim an email was sent if the server can send one.
+      this.authService.getCapabilities().subscribe((c) => {
+        if (c.emailEnabled && this.success()?.key === 'auth.login.registered') {
+          this.success.set({ key: 'auth.login.registeredEmail' });
+        }
+      });
     } else if (this.route.snapshot.queryParamMap.get('reset') === '1') {
       this.success.set({ key: 'auth.login.reset' });
     }

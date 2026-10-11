@@ -221,7 +221,8 @@ export class RegisterFormComponent {
       lastname: this.step1Form.value.lastname,
       email,
       password,
-      confirmedPassword: confirmPassword
+      confirmedPassword: confirmPassword,
+      lang: this.locale.active()
     };
 
     this.authService.register(userData).subscribe({

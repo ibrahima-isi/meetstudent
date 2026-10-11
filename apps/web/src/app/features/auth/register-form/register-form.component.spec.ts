@@ -8,6 +8,7 @@ import { firstValueFrom } from 'rxjs';
 import { translocoOptions } from '@i18n/transloco.config';
 import { RegisterFormComponent } from './register-form.component';
 import { Router } from '@angular/router';
+import { LocaleService } from '@services/locale.service';
 import { environment } from '../../../../environments/environment';
 
 /**
@@ -89,6 +90,16 @@ describe('RegisterFormComponent registration payload', () => {
     expect((commands as string[]).at(-1)).toBe('login');
     expect(commands).not.toContain('verify');
     expect(extras).toEqual({ queryParams: { registered: '1' } });
+  });
+
+  it('sends the current locale as lang, so the confirmation email is in the language being read', () => {
+    spyOn(TestBed.inject(LocaleService), 'active').and.returnValue('en');
+    fillValidForm();
+    component.handleSubmit();
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/users`);
+    expect(req.request.body.lang).toBe('en');
+    req.flush({});
   });
 
   // Opposite of the rule: role must NOT be client-controlled. Registration
