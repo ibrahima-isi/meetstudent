@@ -157,7 +157,8 @@
       "errorTitle": "Une erreur est survenue",
       "errorText": "Nous n’avons pas pu confirmer votre adresse pour le moment. Veuillez réessayer.",
       "retry": "Réessayer",
-      "signInForNew": "Se connecter pour recevoir un nouvel e-mail"
+      "signInForNew": "Se connecter pour recevoir un nouvel e-mail",
+      "goToSpace": "Accéder à mon espace"
     },
     "register": {
       "title": "Créer un compte",

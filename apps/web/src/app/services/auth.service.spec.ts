@@ -69,16 +69,31 @@ describe('AuthService password reset and capabilities', () => {
   });
 
   it('asks for a new confirmation email with no body of its own', () => {
-    service.resendEmailVerification().subscribe();
+    service.resendEmailVerification('fr').subscribe();
 
-    const req = backend.expectOne(`${base}/email-verification/resend`);
+    const req = backend.expectOne(`${base}/email-verification/resend?lang=fr`);
     expect(req.request.method).toBe('POST');
+    expect(req.request.params.get('lang')).toBe('fr');
     expect(req.request.body).toEqual({});
     req.flush({ status: 'accepted' }, { status: 202, statusText: 'Accepted' });
   });
 
+  it('does not put a refreshed user back after the session ended meanwhile', () => {
+    const tokens = TestBed.inject(TokenService);
+    tokens.token.set('access');
+    tokens.user.set({ id: 7, emailVerified: false } as never);
+    const setUser = spyOn(tokens, 'setUser');
+
+    service.refreshCurrentUser().subscribe();
+    tokens.user.set(null);
+    backend.expectOne(`${environment.apiUrl}/users/id/7`).flush({ id: 7, emailVerified: true });
+
+    expect(setUser).not.toHaveBeenCalled();
+  });
+
   it('refreshes the cached user from the server', () => {
     const tokens = TestBed.inject(TokenService);
+    tokens.token.set('access');
     tokens.user.set({ id: 7, email: 'awa@example.com', emailVerified: false } as never);
     const setUser = spyOn(tokens, 'setUser');
     let result: unknown;

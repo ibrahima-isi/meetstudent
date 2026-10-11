@@ -295,7 +295,7 @@ shapes before coding against them.
   link (one message for unknown, expired, used). Mails link to
   `/<lang>/verify-email#token=…`; same handling as the reset link (fragment read
   once into memory, stripped from the URL, `noindex` + `no-referrer`, client-rendered).
-- `POST /auth/email-verification/resend` (Bearer) → 202; 409 already verified,
+- `POST /auth/email-verification/resend?lang=fr|en` (Bearer; the query `lang` is the locale being read, so the mail matches it) → 202; 409 already verified,
   429 cooldown/daily cap, 503 mail disabled. The banner in `PublicShellComponent`
   shows only when signed in, `user.emailVerified === false` and
   `capabilities.emailEnabled`; dismissal is kept in `sessionStorage`.

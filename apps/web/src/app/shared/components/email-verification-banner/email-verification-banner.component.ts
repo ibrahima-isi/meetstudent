@@ -1,9 +1,10 @@
 import { DOCUMENT } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { LucideAngularModule, Mail, X } from 'lucide-angular';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { AuthService } from '@services/auth.service';
+import { LocaleService } from '@services/locale.service';
 import { TokenService } from '@services/token.service';
 
 type Feedback = 'sent' | 'limited' | 'alreadyVerified' | 'failed';
@@ -25,9 +26,9 @@ const DISMISSED_KEY = 'email_verification_banner_dismissed';
         <section
           data-testid="email-verification-banner"
           [attr.aria-label]="t('emailBanner.title')"
-          class="bg-amber-50 border-b border-amber-200 dark:bg-amber-950/40 dark:border-amber-900"
+          class="mt-[4.75rem] mx-4 sm:mx-auto max-w-6xl rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/40 dark:border-amber-900"
         >
-          <div class="mx-auto max-w-6xl px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+          <div class="px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-2">
             <lucide-icon [img]="Mail" class="w-5 h-5 text-amber-700 dark:text-amber-300 flex-shrink-0" aria-hidden="true"></lucide-icon>
             <div class="flex-1 min-w-[16rem]">
               <p class="font-medium text-amber-900 dark:text-amber-100">{{ t('emailBanner.title') }}</p>
@@ -38,9 +39,11 @@ const DISMISSED_KEY = 'email_verification_banner_dismissed';
                 }
               </p>
             </div>
-            <button type="button" (click)="resend()" [disabled]="pending()" class="btn btn-primary">
-              {{ t(pending() ? 'emailBanner.resending' : 'emailBanner.resend') }}
-            </button>
+            @if (feedback() !== 'alreadyVerified') {
+              <button type="button" (click)="resend()" [disabled]="pending()" class="btn btn-primary">
+                {{ t(pending() ? 'emailBanner.resending' : 'emailBanner.resend') }}
+              </button>
+            }
             <button type="button" (click)="dismiss()" class="btn btn-ghost" [attr.aria-label]="t('emailBanner.dismiss')">
               <lucide-icon [img]="X" class="w-5 h-5" aria-hidden="true"></lucide-icon>
               <span class="sr-only">{{ t('emailBanner.dismiss') }}</span>
@@ -54,6 +57,7 @@ const DISMISSED_KEY = 'email_verification_banner_dismissed';
 export class EmailVerificationBannerComponent {
   private readonly auth = inject(AuthService);
   private readonly tokens = inject(TokenService);
+  private readonly locale = inject(LocaleService);
   private readonly document = inject(DOCUMENT);
 
   protected readonly Mail = Mail;
@@ -61,7 +65,13 @@ export class EmailVerificationBannerComponent {
 
   readonly feedback = signal<Feedback | null>(null);
   readonly pending = signal(false);
-  private readonly dismissed = signal(readDismissed());
+  private readonly userId = computed(() => this.tokens.user()?.id);
+  /** Dismissals made in this page; the ones from earlier pages of the session are in sessionStorage. */
+  private readonly dismissedIds = signal<ReadonlySet<number | undefined>>(new Set());
+  private readonly dismissed = computed(() => {
+    const id = this.userId();
+    return this.dismissedIds().has(id) || readDismissed(id);
+  });
   private readonly emailEnabled = signal(false);
   private asked = false;
 
@@ -78,6 +88,16 @@ export class EmailVerificationBannerComponent {
   );
 
   constructor() {
+    // Another account on the same tab starts afresh.
+    let previous = this.userId();
+    effect(() => {
+      const id = this.userId();
+      if (id !== previous) {
+        previous = id;
+        untracked(() => this.feedback.set(null));
+      }
+    });
+
     effect(() => {
       if (this.pendingConfirmation() && !this.dismissed() && !this.asked) {
         this.asked = true;
@@ -89,7 +109,7 @@ export class EmailVerificationBannerComponent {
   protected resend(): void {
     this.pending.set(true);
     this.feedback.set(null);
-    this.auth.resendEmailVerification().subscribe({
+    this.auth.resendEmailVerification(this.locale.active()).subscribe({
       next: () => {
         this.pending.set(false);
         this.feedback.set('sent');
@@ -108,9 +128,10 @@ export class EmailVerificationBannerComponent {
   }
 
   protected dismiss(): void {
-    this.dismissed.set(true);
+    const id = this.userId();
+    this.dismissedIds.update((ids) => new Set(ids).add(id));
     try {
-      sessionStorage.setItem(DISMISSED_KEY, '1');
+      sessionStorage.setItem(dismissedKey(id), '1');
     } catch {
       // Private mode or blocked storage: dismissed for this page only.
     }
@@ -119,9 +140,14 @@ export class EmailVerificationBannerComponent {
   }
 }
 
-function readDismissed(): boolean {
+/** Per account, so one person's dismissal never hides another's reminder. */
+function dismissedKey(id: number | undefined): string {
+  return `${DISMISSED_KEY}:${id ?? ''}`;
+}
+
+function readDismissed(id: number | undefined): boolean {
   try {
-    return typeof sessionStorage !== 'undefined' && sessionStorage.getItem(DISMISSED_KEY) === '1';
+    return typeof sessionStorage !== 'undefined' && sessionStorage.getItem(dismissedKey(id)) === '1';
   } catch {
     return false;
   }
