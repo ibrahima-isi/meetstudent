@@ -51,7 +51,9 @@
     "home": "Home",
     "school": "School",
     "profile": "My profile",
-    "notFound": "Page not found"
+    "notFound": "Page not found",
+    "forgotPassword": "Forgot password",
+    "resetPassword": "New password"
   },
   "theme": {
     "light": "light",
@@ -83,7 +85,36 @@
       "signUp": "Sign up",
       "success": "Login successful! Welcome back.",
       "registered": "Account created! Sign in to continue.",
-      "failed": "Login failed. Please try again."
+      "failed": "Login failed. Please try again.",
+      "reset": "Password reset! Sign in with your new password."
+    },
+    "forgot": {
+      "title": "Forgot your password?",
+      "subtitle": "Enter your account's email address and we will send you a reset link.",
+      "submit": "Send the link",
+      "submitting": "Sending...",
+      "sentTitle": "Check your inbox",
+      "sent": "If an account exists for this address, a reset link has been sent.",
+      "emailDisabled": "Email delivery is not available yet: no link will be sent for now.",
+      "backToLogin": "Back to sign in",
+      "failed": "Something went wrong. Please try again."
+    },
+    "reset": {
+      "title": "New password",
+      "subtitle": "Choose a new password for your account.",
+      "password": "New password",
+      "confirmPassword": "Confirm the new password",
+      "submit": "Reset password",
+      "submitting": "Resetting...",
+      "passwordTooShort": "The password must be at least 8 characters long.",
+      "passwordTooLong": "This password is too long (72 bytes maximum; some characters count for more than one).",
+      "passwordInvalid": "The password must be at least 8 characters long and at most 72 bytes.",
+      "invalidTitle": "Invalid link",
+      "invalidText": "This reset link is incomplete or invalid. Request a new one.",
+      "expiredTitle": "Link expired",
+      "expiredText": "This link has expired or has already been used. Request a new one.",
+      "requestNew": "Request a new link",
+      "failed": "Something went wrong. Please try again."
     },
     "register": {
       "title": "Create Account",

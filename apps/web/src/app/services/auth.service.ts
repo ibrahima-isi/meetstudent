@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, tap, switchMap, map } from 'rxjs';
+import { Observable, tap, switchMap, map, catchError, of, shareReplay } from 'rxjs';
 import { TokenService } from './token.service';
 import { User, LoginResponse } from '@models/entities';
 import { environment } from '../../environments/environment';
@@ -19,6 +19,11 @@ export interface RegisterPayload {
   qualification?: string;
 }
 
+/** What the server can do right now; only the mail switch matters to the web. */
+export interface Capabilities {
+  emailEnabled: boolean;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -27,6 +32,7 @@ export class AuthService {
   private tokenService = inject(TokenService);
   private apiUrl = `${environment.apiUrl}/auth`;
   private usersUrl = `${environment.apiUrl}/users`;
+  private capabilities$?: Observable<Capabilities>;
 
   login(username: string, password: string): Observable<User> {
     return this.http.post<LoginResponse>(this.apiUrl, { username, password }).pipe(
@@ -55,6 +61,28 @@ export class AuthService {
         this.tokenService.setTokens(res.accessToken, res.refreshToken);
       })
     );
+  }
+
+  /** Always 202 for a well-formed address, whether or not an account exists. */
+  requestPasswordReset(email: string, lang: string): Observable<unknown> {
+    return this.http.post(`${this.apiUrl}/password-reset/request`, { email, lang });
+  }
+
+  /** 204 on success; 400 `{token}` for a bad link, `{password}` / `{confirmedPassword}` otherwise. */
+  confirmPasswordReset(token: string, password: string, confirmedPassword: string): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/password-reset/confirm`, { token, password, confirmedPassword });
+  }
+
+  /**
+   * Read once and shared. Any failure means "assume no mail": the pages then
+   * say delivery is unavailable instead of promising an email that may never come.
+   */
+  getCapabilities(): Observable<Capabilities> {
+    this.capabilities$ ??= this.http.get<Capabilities>(`${this.apiUrl}/capabilities`).pipe(
+      catchError(() => of<Capabilities>({ emailEnabled: false })),
+      shareReplay({ bufferSize: 1, refCount: false })
+    );
+    return this.capabilities$;
   }
 
   logout() {

@@ -13,6 +13,13 @@ function guardedPaths(list: Route[], prefix = ''): string[] {
   });
 }
 
+function allRoutes(list: Route[], prefix = ''): { path: string; route: Route }[] {
+  return list.flatMap((route) => {
+    const path = [prefix, route.path].filter(Boolean).join('/');
+    return [{ path, route }, ...allRoutes(route.children ?? [], path)];
+  });
+}
+
 describe('server routes', () => {
   const modeOf = (path: string) => serverRoutes.find((r) => r.path === path)?.renderMode;
 
@@ -24,6 +31,19 @@ describe('server routes', () => {
     for (const path of guardedPaths(routes)) {
       expect(modeOf(path)).withContext(path).toBe(RenderMode.Client);
     }
+  });
+
+  it('renders the reset page in the browser although it is public: its token lives in the URL fragment, which the server never receives', () => {
+    expect(modeOf(':lang/reset-password')).toBe(RenderMode.Client);
+    expect(guardedPaths(routes)).not.toContain(':lang/reset-password');
+  });
+
+  it('declares the reset page as a route of its own, open to anonymous visitors', () => {
+    const paths = allRoutes(routes);
+
+    expect(paths.find((r) => r.path === ':lang/reset-password')?.route.canActivate).toBeUndefined();
+    expect(paths.map((r) => r.path)).toContain(':lang/forgot-password');
+    expect(modeOf(':lang/forgot-password')).toBeUndefined();
   });
 
   it('keeps the public pages server-rendered for SEO', () => {
