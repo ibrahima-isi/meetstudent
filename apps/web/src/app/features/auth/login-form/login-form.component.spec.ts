@@ -113,6 +113,52 @@ describe('LoginFormComponent translations', () => {
     });
   });
 
+  describe('forgotten password', () => {
+    it('links to the forgot-password page of the language being read', async () => {
+      await render('fr');
+      const link = (fixture.nativeElement as HTMLElement).querySelector('a[href="/fr/forgot-password"]');
+
+      expect(link?.textContent?.trim()).toBe('Mot de passe oublié ?');
+    });
+
+    it('is a real link, not a button that does nothing', async () => {
+      await render('en');
+      const el = fixture.nativeElement as HTMLElement;
+
+      expect(el.querySelector('a[href$="/forgot-password"]')).not.toBeNull();
+      expect(Array.from(el.querySelectorAll('button')).some((b) => b.textContent?.includes('Forgot'))).toBeFalse();
+    });
+  });
+
+  describe('after a password reset', () => {
+    function arriveFromReset(reset: boolean) {
+      TestBed.inject(ActivatedRoute).snapshot = {
+        queryParamMap: convertToParamMap(reset ? { reset: '1' } : {}),
+      } as ActivatedRouteSnapshot;
+    }
+
+    it('confirms the new password in French', async () => {
+      arriveFromReset(true);
+      await render('fr');
+
+      expect(text()).toContain('Mot de passe réinitialisé');
+    });
+
+    it('confirms the new password in English', async () => {
+      arriveFromReset(true);
+      await render('en');
+
+      expect(text()).toContain('Password reset');
+    });
+
+    it('shows nothing on a plain visit', async () => {
+      arriveFromReset(false);
+      await render('en');
+
+      expect(text()).not.toContain('Password reset');
+    });
+  });
+
   describe('returnUrl', () => {
     async function loginWith(returnUrl: string | null): Promise<jasmine.Spy> {
       TestBed.inject(ActivatedRoute).snapshot = {

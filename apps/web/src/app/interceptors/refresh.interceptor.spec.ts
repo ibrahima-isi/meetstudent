@@ -128,6 +128,33 @@ describe('refreshInterceptor', () => {
     expect(errors.length).toBe(2);
   });
 
+  it('refreshes and retries an authenticated call under /auth, such as the verification resend', () => {
+    const resend = `${environment.apiUrl}/auth/email-verification/resend`;
+    let result: unknown;
+    http.post(resend, {}).subscribe((r) => (result = r));
+
+    backend.expectOne(resend).flush(null, { status: 401, statusText: 'Unauthorized' });
+    backend.expectOne(refreshUrl).flush({ accessToken: 'new-access', refreshToken: 'new-refresh' });
+    const retry = backend.expectOne(resend);
+    expect(retry.request.headers.get('Authorization')).toBe('Bearer new-access');
+    retry.flush({ status: 'accepted' });
+
+    expect(result).toEqual({ status: 'accepted' });
+  });
+
+  it('never refreshes for the public password-reset calls, even with a stale session', () => {
+    const errors: unknown[] = [];
+    for (const path of ['request', 'confirm']) {
+      http.post(`${environment.apiUrl}/auth/password-reset/${path}`, {}).subscribe({ error: (e) => errors.push(e) });
+      backend
+        .expectOne(`${environment.apiUrl}/auth/password-reset/${path}`)
+        .flush(null, { status: 401, statusText: 'Unauthorized' });
+    }
+
+    backend.expectNone(refreshUrl);
+    expect(errors.length).toBe(2);
+  });
+
   it('passes non-401 errors through untouched', () => {
     let status = 0;
     http.get('/api/data').subscribe({ error: (e) => (status = e.status) });

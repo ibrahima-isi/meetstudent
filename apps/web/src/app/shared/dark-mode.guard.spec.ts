@@ -13,6 +13,8 @@ import { SchoolService } from '@services/school.service';
 import { TokenService } from '@services/token.service';
 import { WishlistService } from '@services/wishlist.service';
 import { LoginFormComponent } from '../features/auth/login-form/login-form.component';
+import { ForgotPasswordComponent } from '../features/auth/forgot-password/forgot-password.component';
+import { ResetPasswordComponent } from '../features/auth/reset-password/reset-password.component';
 import { RegisterFormComponent } from '../features/auth/register-form/register-form.component';
 import { KeyFiguresComponent } from '../features/public/landing-page/sections/key-figures.component';
 import { FeaturedSchoolsComponent } from '../features/public/landing-page/sections/featured-schools.component';
@@ -206,6 +208,28 @@ describe('dark mode: no light-only palette classes', () => {
         c.loginForm.markAllAsTouched();
       },
     ],
+    ['forgot password', ForgotPasswordComponent],
+    [
+      'forgot password, sent and email disabled',
+      ForgotPasswordComponent,
+      (c) => {
+        c.emailEnabled.set(false);
+        c.sent.set(true);
+        c.error.set('auth.forgot.failed');
+      },
+    ],
+    ['reset password', ResetPasswordComponent, (c) => c.state.set('form')],
+    [
+      'reset password with errors',
+      ResetPasswordComponent,
+      (c) => {
+        c.state.set('form');
+        c.error.set('auth.reset.failed');
+        c.form.markAllAsTouched();
+      },
+    ],
+    ['reset password, invalid link', ResetPasswordComponent, (c) => c.state.set('invalid')],
+    ['reset password, expired link', ResetPasswordComponent, (c) => c.state.set('expired')],
     ['register step 1 (student)', RegisterFormComponent, (c) => c.userType.set('student')],
     [
       'register step 1 (teacher, suggestions)',

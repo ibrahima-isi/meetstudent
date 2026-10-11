@@ -268,3 +268,23 @@ cd ../backend && ./mvnw spring-boot:run     # dev profile, Neon cloud DB
 Neon is the intended dev database — running against it is expected and safe.
 Swagger: http://localhost:8080/swagger-ui.html — use it to confirm live response
 shapes before coding against them.
+
+---
+
+## 7. Password reset (web side)
+
+- `POST /auth/password-reset/request` `{email, lang}` always answers 202 for a
+  well-formed address, so `/:lang/forgot-password` shows one neutral sentence
+  whatever the account state; 400 `{email}` becomes our own field message.
+- `POST /auth/password-reset/confirm` `{token, password, confirmedPassword}` → 204;
+  400 `{token}` (expired/consumed/unknown, one message for all), `{password}`,
+  `{confirmedPassword}`. The API's text is never displayed, the front has its own.
+- `GET /auth/capabilities` → `{emailEnabled}`, cached in `AuthService.getCapabilities()`;
+  any failure reads as `false`.
+- Reset mails link to `/<lang>/reset-password#token=…`. The token is in the
+  **fragment** so it never reaches a server or access log: the page is
+  client-rendered, reads it once into memory, strips it from the address bar
+  (`replaceUrl`) and sends `noindex` + `referrer: no-referrer`. `public/robots.txt`
+  disallows these pages.
+- `refreshInterceptor` now skips only `/auth`, `/auth/refresh` and
+  `/auth/password-reset/*`; other authenticated calls under `/auth` are refreshed on 401.

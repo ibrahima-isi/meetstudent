@@ -1,7 +1,7 @@
 import { Component, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { LucideAngularModule, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-angular';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { AuthService } from '../../../services/auth.service';
@@ -14,14 +14,14 @@ interface Notice {
 
 @Component({
   selector: 'app-login-form',
-  imports: [CommonModule, ReactiveFormsModule, LucideAngularModule, TranslocoDirective],
+  imports: [CommonModule, ReactiveFormsModule, LucideAngularModule, TranslocoDirective, RouterLink],
   templateUrl: './login-form.component.html'
 })
 export class LoginFormComponent {
   private fb = inject(FormBuilder);
   private authService = inject(AuthService);
   private readonly router = inject(Router);
-  private readonly locale = inject(LocaleService);
+  protected readonly locale = inject(LocaleService);
   private readonly route = inject(ActivatedRoute);
 
   loginForm: FormGroup;
@@ -44,6 +44,8 @@ export class LoginFormComponent {
 
     if (this.route.snapshot.queryParamMap.get('registered') === '1') {
       this.success.set({ key: 'auth.login.registered' });
+    } else if (this.route.snapshot.queryParamMap.get('reset') === '1') {
+      this.success.set({ key: 'auth.login.reset' });
     }
   }
 
