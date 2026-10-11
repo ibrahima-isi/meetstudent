@@ -15,6 +15,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Remote branch deletion is **blocked from agent sessions** (HTTP 403 on `git push --delete`; there is no delete-branch tool). Delete local branches yourself, and leave the remote ones to the owner (GitHub → Branches, or enable "Automatically delete head branches").
 - When a branch is cut from another unmerged branch, open its PR **against that branch**, not `dev` or `main`, or the diff shows the parent's commits too. Retarget or merge onward to `dev` only after the parent branch lands.
 
+**Sessions**
+- Every session works in its own git worktree (cut from `origin/dev`), never in the main checkout, which other sessions share.
+- Ask questions interactively, always: use the `AskUserQuestion` tool (with a recommended option first) instead of a wall of questions in prose, whenever a decision is the user's to make.
+
 **Scope**
 - Do not touch code that already works without explicit approval. Do not modify any file that is not strictly required by the assigned task.
 - Ask permission before editing more than 3 files, and say which files and why.
