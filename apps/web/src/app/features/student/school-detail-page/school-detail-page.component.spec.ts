@@ -329,6 +329,17 @@ describe('SchoolDetailPageComponent', () => {
       expect(text).toContain('No description available');
       expect(text).not.toContain('Établissement');
     });
+
+    it('renders a school the API sends without an address', async () => {
+      // A JPA @Embeddable whose columns are all null is serialised as `address: null`.
+      schoolServiceSpy.getSchool.and.returnValue(
+        of({ id: 7, name: 'No address', address: null } as unknown as School),
+      );
+      const text = await renderIn('en');
+
+      expect(text).toContain('No address');
+      expect(harness.routeNativeElement?.querySelector('[data-testid="school-address"]')).toBeNull();
+    });
   });
   describe('data states', () => {
     const text = () => harness.routeNativeElement?.textContent ?? '';
