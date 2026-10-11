@@ -1,5 +1,6 @@
 package com.bowe.meetstudent.dto;
 
+import com.bowe.meetstudent.dto.validation.MaxUtf8Bytes;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
@@ -32,6 +33,7 @@ public class UpdateProfileRequest {
 
     // Optional: null or empty means "leave the password unchanged" (see UserService.patch).
     @Pattern(regexp = "^(|.{8,})$", message = "Le mot de passe doit contenir au moins 8 caractères")
+    @MaxUtf8Bytes(72)
     private String password;
 
     private String qualification;

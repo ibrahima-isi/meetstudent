@@ -327,7 +327,7 @@ class PasswordResetIntegrationTests {
     }
 
     @Test
-    void aNewRequestKillsTheEarlierLink() throws Exception {
+    void aNewRequestDoesNotKillTheEarlierLinkButUsingOneKillsTheOther() throws Exception {
         var email = uniqueEmail();
         user(email);
         mockMvc.perform(forgot(email));
@@ -337,8 +337,94 @@ class PasswordResetIntegrationTests {
         var second = tokenOfLastMail();
 
         assertThat(second).isNotEqualTo(first);
-        mockMvc.perform(reset(first)).andExpect(status().isBadRequest()).andExpect(jsonPath("$.token").value(INVALID));
-        mockMvc.perform(reset(second)).andExpect(status().isNoContent());
+        // an attacker spending the address budget must not be able to kill the owner's live link
+        mockMvc.perform(reset(first)).andExpect(status().isNoContent());
+        mockMvc.perform(reset(second)).andExpect(status().isBadRequest()).andExpect(jsonPath("$.token").value(INVALID));
+    }
+
+    @Test
+    void parallelRequestsForOneAddressCannotBypassTheLimits() throws Exception {
+        var email = uniqueEmail();
+        user(email);
+        int threads = 12;
+        var pool = java.util.concurrent.Executors.newFixedThreadPool(threads);
+        var ready = new java.util.concurrent.CountDownLatch(threads);
+        var go = new java.util.concurrent.CountDownLatch(1);
+        try {
+            var futures = new java.util.ArrayList<java.util.concurrent.Future<Integer>>();
+            for (int i = 0; i < threads; i++) {
+                futures.add(pool.submit(() -> {
+                    ready.countDown();
+                    go.await();
+                    return mockMvc.perform(forgot(email)).andReturn().getResponse().getStatus();
+                }));
+            }
+            ready.await();
+            go.countDown();
+            for (var f : futures) {
+                assertThat(f.get(60, java.util.concurrent.TimeUnit.SECONDS)).isEqualTo(202);
+            }
+        } finally {
+            pool.shutdownNow();
+        }
+
+        // cooldown alone allows exactly one mail; the address cap (3) is the hard ceiling
+        assertThat(mailbox.all()).hasSize(1);
+        assertThat(userTokenRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    void aPasswordOver72BytesIsA400OnPasswordAndDoesNotBurnTheToken() throws Exception {
+        var email = uniqueEmail();
+        user(email);
+        mockMvc.perform(forgot(email));
+        var token = tokenOfLastMail();
+        var twoByte = "é".repeat(40);
+
+        mockMvc.perform(reset(token, twoByte, twoByte))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.password").value("Le mot de passe ne doit pas dépasser 72 octets"));
+        mockMvc.perform(reset(token, "a".repeat(73), "a".repeat(73)))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.password").exists());
+
+        var max = "a".repeat(72);
+        mockMvc.perform(reset(token, max, max)).andExpect(status().isNoContent());
+        login(email, max, 200);
+    }
+
+    @Test
+    void registrationAndProfileUpdateRejectPasswordsOver72Bytes() throws Exception {
+        var twoByte = "é".repeat(40);
+        mockMvc.perform(post("/api/v1/users").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"firstname\":\"A\",\"lastname\":\"B\",\"email\":\"" + uniqueEmail() + "\",\"password\":\"" + twoByte
+                                + "\",\"confirmedPassword\":\"" + twoByte + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.password").value("Le mot de passe ne doit pas dépasser 72 octets"));
+
+        var email = uniqueEmail();
+        var account = user(email);
+        var access = login(email, OLD_PASSWORD, 200).get("accessToken").asText();
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/v1/users/" + account.getId())
+                        .header("Authorization", "Bearer " + access).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"password\":\"" + twoByte + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.password").value("Le mot de passe ne doit pas dépasser 72 octets"));
+    }
+
+    @Test
+    void changingThePasswordFromTheProfileKillsOutstandingResetLinks() throws Exception {
+        var email = uniqueEmail();
+        var account = user(email);
+        mockMvc.perform(forgot(email));
+        var token = tokenOfLastMail();
+        var access = login(email, OLD_PASSWORD, 200).get("accessToken").asText();
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/v1/users/" + account.getId())
+                        .header("Authorization", "Bearer " + access).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"password\":\"Profile-new-pass1\"}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(reset(token)).andExpect(status().isBadRequest()).andExpect(jsonPath("$.token").value(INVALID));
     }
 
     @Test

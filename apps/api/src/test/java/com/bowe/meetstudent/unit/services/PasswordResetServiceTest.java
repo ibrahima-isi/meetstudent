@@ -195,6 +195,17 @@ class PasswordResetServiceTest {
     }
 
     @Test
+    void aPasswordOver72BytesIsRejectedBeforeTheTokenIsTouched() {
+        var twoByteChars = "é".repeat(40); // 40 characters, 80 UTF-8 bytes
+
+        var ex = assertThrows(FieldValidationException.class, () -> service.confirm("raw", twoByteChars, twoByteChars));
+
+        assertEquals("password", ex.getField());
+        assertEquals("Le mot de passe ne doit pas dépasser 72 octets", ex.getMessage());
+        verifyNoInteractions(userTokenService, refreshTokenService);
+    }
+
+    @Test
     void mismatchIsRejectedBeforeTheTokenIsTouched() {
         var ex = assertThrows(FieldValidationException.class, () -> service.confirm("raw", "brand-new-pass", "other-new-pass"));
 

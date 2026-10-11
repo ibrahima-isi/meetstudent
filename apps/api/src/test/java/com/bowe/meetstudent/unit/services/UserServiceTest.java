@@ -10,6 +10,8 @@ import com.bowe.meetstudent.repositories.SchoolRepository;
 import com.bowe.meetstudent.services.EmailVerificationService;
 import com.bowe.meetstudent.services.MediaService;
 import com.bowe.meetstudent.services.UserService;
+import com.bowe.meetstudent.services.UserTokenService;
+import com.bowe.meetstudent.entities.enums.UserTokenPurpose;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -47,6 +49,9 @@ class UserServiceTest {
 
     @Mock
     private EmailVerificationService emailVerificationService;
+
+    @Mock
+    private UserTokenService userTokenService;
 
     @InjectMocks
     private UserService userService;
@@ -105,6 +110,27 @@ class UserServiceTest {
 
         Mockito.verify(mediaService).deleteAllOwnedBy(1);
         Mockito.verify(userRepository).deleteById(1);
+    }
+
+    @Test
+    void patch_shouldBurnOutstandingResetLinks_whenThePasswordChanges() {
+        Mockito.when(userRepository.findById(1)).thenReturn(Optional.of(user));
+        Mockito.when(userRepository.save(any(UserEntity.class))).thenReturn(user);
+        Mockito.when(passwordEncoder.encode("brand-new-pass")).thenReturn("hash");
+
+        userService.patch(1, UserEntity.builder().password("brand-new-pass").build(), passwordEncoder);
+
+        Mockito.verify(userTokenService).consumeOutstanding(1, UserTokenPurpose.PASSWORD_RESET);
+    }
+
+    @Test
+    void patch_shouldLeaveResetLinksAlone_whenThePasswordIsNotChanged() {
+        Mockito.when(userRepository.findById(1)).thenReturn(Optional.of(user));
+        Mockito.when(userRepository.save(any(UserEntity.class))).thenReturn(user);
+
+        userService.patch(1, UserEntity.builder().firstname("Johnny").build(), passwordEncoder);
+
+        Mockito.verifyNoInteractions(userTokenService);
     }
 
     @Test

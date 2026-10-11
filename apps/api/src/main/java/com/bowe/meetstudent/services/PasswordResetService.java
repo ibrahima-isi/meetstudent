@@ -15,6 +15,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Locale;
 import java.util.UUID;
@@ -30,6 +31,8 @@ import java.util.UUID;
 public class PasswordResetService {
 
     static final int MIN_PASSWORD_LENGTH = 8;
+    /** BCrypt only handles 72 bytes and the encoder throws beyond that. */
+    static final int MAX_PASSWORD_BYTES = 72;
 
     private final UserRepository userRepository;
     private final UserTokenService userTokenService;
@@ -41,7 +44,9 @@ public class PasswordResetService {
 
     /**
      * Sends a reset link when the address belongs to an account and the limits allow it; otherwise does
-     * nothing. An unknown address (or disabled mail) does comparable work: one lookup and one hash.
+     * nothing. An unknown address (or disabled mail) does one lookup and one hash, which is only a rough
+     * stand-in: a known address also issues a token (several queries) so it stays a few milliseconds slower.
+     * That difference is the residual timing oracle; Traefik's per-IP rate limit bounds how often it can be probed.
      */
     @Transactional
     public void request(String email, String lang) {
@@ -73,6 +78,9 @@ public class PasswordResetService {
         if (password == null || password.length() < MIN_PASSWORD_LENGTH) {
             throw new FieldValidationException("password", "Le mot de passe doit contenir au moins 8 caractères");
         }
+        if (password.getBytes(StandardCharsets.UTF_8).length > MAX_PASSWORD_BYTES) {
+            throw new FieldValidationException("password", "Le mot de passe ne doit pas dépasser 72 octets");
+        }
         if (!password.equals(confirmedPassword)) {
             throw new FieldValidationException("confirmedPassword", "Les mots de passe ne correspondent pas");
         }
@@ -85,7 +93,7 @@ public class PasswordResetService {
         userRepository.markEmailVerified(userId, token.getEmail());
     }
 
-    /** Work comparable to issuing a token (random value plus a SHA-256), so an unknown address is not much faster. */
+    /** Cheap placeholder (a random value and a SHA-256); it narrows, but does not remove, the timing gap. */
     private static void dummyWork() {
         UserTokenService.hash(UUID.randomUUID().toString());
     }

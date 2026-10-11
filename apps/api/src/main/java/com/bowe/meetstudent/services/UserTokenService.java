@@ -39,6 +39,7 @@ public class UserTokenService {
     private final UserTokenRepository repository;
     private final MailProperties properties;
     private final Clock clock;
+    private final AddressIssueLock addressLock;
 
     /**
      * Creates a token for the user's current email address, consuming any older open token of the same
@@ -50,11 +51,17 @@ public class UserTokenService {
     // update that changes the email) rollback-only; the caller decides what a refusal means.
     @Transactional(noRollbackFor = TooManyRequestsException.class)
     public String issue(UserEntity user, UserTokenPurpose purpose, Duration ttl) {
+        addressLock.acquire(user.getEmail());
         var now = Instant.now(clock);
         repository.deleteIssuedBefore(now.minus(RETENTION));
         enforceLimits(user, purpose, now);
         enforceAddressCap(user.getEmail(), purpose, now);
-        repository.consumeOpen(user.getId(), purpose, now);
+        // A reset request must not kill a link the owner already holds: anyone can ask for one, and the
+        // per-address cap bounds how many exist. A successful reset burns all the others. Verification
+        // links are replaced as before.
+        if (purpose == UserTokenPurpose.EMAIL_VERIFICATION) {
+            repository.consumeOpen(user.getId(), purpose, now);
+        }
 
         var bytes = new byte[TOKEN_BYTES];
         RANDOM.nextBytes(bytes);

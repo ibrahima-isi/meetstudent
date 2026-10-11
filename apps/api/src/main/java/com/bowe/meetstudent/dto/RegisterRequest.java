@@ -1,5 +1,6 @@
 package com.bowe.meetstudent.dto;
 
+import com.bowe.meetstudent.dto.validation.MaxUtf8Bytes;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Pattern;
@@ -30,6 +31,7 @@ public class RegisterRequest {
 
     @NotEmpty(message = "mot de passe vide")
     @Size(min = 8, message = "Le mot de passe doit contenir au moins 8 caractères")
+    @MaxUtf8Bytes(72)
     private String password;
 
     @NotEmpty(message = "Confirmez le mot de passe")

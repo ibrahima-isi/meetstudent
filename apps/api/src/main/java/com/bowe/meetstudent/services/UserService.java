@@ -8,6 +8,7 @@ import com.bowe.meetstudent.repositories.RoleRepository;
 import com.bowe.meetstudent.repositories.UserRepository;
 import com.bowe.meetstudent.repositories.SchoolRepository;
 import com.bowe.meetstudent.entities.Role;
+import com.bowe.meetstudent.entities.enums.UserTokenPurpose;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -34,6 +35,7 @@ public class UserService {
     private final RoleRepository roleRepository;
     private final MediaService mediaService;
     private final EmailVerificationService emailVerificationService;
+    private final UserTokenService userTokenService;
 
     public UserEntity saveUser(UserEntity userEntity, PasswordEncoder passwordEncoder ) {
         userEntity.setPassword(
@@ -124,6 +126,8 @@ public class UserService {
 
             if (updates.getPassword() != null && !updates.getPassword().isEmpty()) {
                 existing.setPassword(encoder.encode(updates.getPassword()));
+                // A password chosen here makes any emailed reset link stale.
+                userTokenService.consumeOutstanding(existing.getId(), UserTokenPurpose.PASSWORD_RESET);
             }
             
             if (emailChanged) {

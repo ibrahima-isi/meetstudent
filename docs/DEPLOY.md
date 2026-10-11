@@ -89,11 +89,21 @@ Two account flows use the mail layer, both single-use links valid for a limited 
   registration and when the address changes; `POST /api/v1/auth/email-verification/resend` sends a new one.
 - **Password reset**: `POST /api/v1/auth/password-reset/request` mails a link (1 h) and
   `POST /api/v1/auth/password-reset/confirm` sets the new password. The request always answers `202` for a
-  well-formed address, whether or not an account exists, a limit applies or mail is disabled. Per account:
-  one mail per 60 s and 5 per day; per address, 3 per day and per purpose (across accounts). A refused request
-  stays silent. Using the link ends every refresh-token session of the account; access tokens already issued
+  well-formed address, whether or not an account exists, a limit applies or mail is disabled. Limits: one mail
+  per 60 s per account and at most 3 per day per address and purpose (across accounts; this binds before the
+  per-account daily cap of 5). A refused request stays silent, and issuance is serialised per address so parallel
+  requests cannot exceed them. Asking again does not cancel links already sent (they all go to the owner's
+  mailbox); using one burns the others. Passwords are 8 to 72 bytes (UTF-8). Using the link ends every
+  refresh-token session of the account; access tokens already issued
   stay valid until they expire (`JWT_ACCESS_TTL_MINUTES`, so up to the configured lifetime, 15 minutes in the
   production kit, after a reset).
+- Residual risks, accepted for launch: anyone can exhaust an address's 3-per-day reset budget, after which that
+  owner can only rely on links already sent (valid 1 h) or an admin resetting the password by hand in the
+  database; an unknown address answers a few milliseconds faster than a known one (Traefik's per-IP rate limit
+  bounds how often that can be probed); a reset does not evict an attacker who already holds an access token
+  (valid until it expires), and `PATCH /users/{id}` changes the password or email without asking for the current
+  password (pre-existing). Follow-ups: a `password_changed_at` or token-version check in the JWT filter, and
+  requiring the current password for password and email changes.
 - With `MAIL_ENABLED=false` forgot-password still answers `202` but nothing is sent and no token is created:
   recovery is impossible until SMTP is configured.
 
