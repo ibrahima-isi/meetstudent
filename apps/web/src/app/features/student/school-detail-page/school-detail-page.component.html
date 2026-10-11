@@ -80,10 +80,12 @@
         </span>
         <h1 class="text-white mb-3 text-2xl sm:text-3xl md:text-4xl font-bold line-clamp-2 break-words">{{ detail.name }}</h1>
         <div class="flex items-center gap-4 flex-wrap">
-          <div class="flex items-center gap-2">
-            <lucide-icon [img]="MapPin" class="w-5 h-5 text-indigo-300"></lucide-icon>
-            <span class="font-medium">{{ detail.address.location }}, {{ detail.address.city }}</span>
-          </div>
+          @if (detail.address; as address) {
+            <div class="flex items-center gap-2">
+              <lucide-icon [img]="MapPin" class="w-5 h-5 text-indigo-300"></lucide-icon>
+              <span class="font-medium">{{ address.location }}, {{ address.city }}</span>
+            </div>
+          }
         </div>
       </div>
     </div>
@@ -278,14 +280,16 @@
         <div class="bg-card rounded-xl shadow-sm border border-border p-6">
           <h3 class="text-foreground mb-4 font-bold">{{ t('schoolDetail.information') }}</h3>
           <div class="space-y-4 text-sm">
-            <div class="flex items-start gap-3">
-              <lucide-icon [img]="MapPin" class="w-5 h-5 text-muted-foreground shrink-0"></lucide-icon>
-              <div>
-                <p class="text-foreground font-medium">{{ t('schoolDetail.address') }}</p>
-                <p class="text-muted-foreground">{{ detail.address.location }}</p>
-                <p class="text-muted-foreground">{{ detail.address.city }}, {{ detail.address.country }}</p>
+            @if (detail.address; as address) {
+              <div data-testid="school-address" class="flex items-start gap-3">
+                <lucide-icon [img]="MapPin" class="w-5 h-5 text-muted-foreground shrink-0"></lucide-icon>
+                <div>
+                  <p class="text-foreground font-medium">{{ t('schoolDetail.address') }}</p>
+                  <p class="text-muted-foreground">{{ address.location }}</p>
+                  <p class="text-muted-foreground">{{ address.city }}, {{ address.country }}</p>
+                </div>
               </div>
-            </div>
+            }
           </div>
         </div>
       </div>
