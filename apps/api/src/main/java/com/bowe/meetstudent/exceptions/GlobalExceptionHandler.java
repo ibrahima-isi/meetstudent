@@ -98,6 +98,12 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(Map.of("token", "Lien invalide ou expiré"), HttpStatus.BAD_REQUEST);
     }
 
+    /** Same shape as bean validation: {"password": "Le mot de passe doit contenir au moins 8 caractères"}. */
+    @ExceptionHandler(FieldValidationException.class)
+    public ResponseEntity<Map<String, String>> handleFieldValidation(FieldValidationException ex) {
+        return new ResponseEntity<>(Map.of(ex.getField(), ex.getMessage()), HttpStatus.BAD_REQUEST);
+    }
+
     /**
      * Per-account limit hit: 429 with a Retry-After header (seconds).
      */
