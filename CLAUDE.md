@@ -73,7 +73,7 @@ Full stack (repo root):
 
 ```bash
 cp .env.example .env             # JWT_SECRET_KEY + POSTGRES_PASSWORD, both required
-docker compose up --build        # Postgres 18 + api + web
+docker compose up --build        # Postgres 18 + api + web + backoffice, behind one proxy
 docker compose up -d api         # api + its Postgres only; naming a service skips the rest
 
 # Hot-reloading API: recompile on the host (IDE or ./mvnw compile) and devtools
@@ -84,7 +84,7 @@ docker compose down              # ALWAYS run this once the tests are done
 docker compose down -v           # same, plus the Postgres volume — resets the database
 ```
 
-Front on `http://localhost:4200`, API on `http://localhost:8080/api/v1`, Swagger at `/swagger-ui.html`. Postgres is published on 5432.
+Front on `http://localhost:4200`, back office on `http://localhost:4300`, API on `http://localhost:8080/api/v1`, Swagger at `/swagger-ui.html`. Postgres is published on 5432.
 
 The front is deliberately absent from the dev override: `ng serve` on the host has far better HMR than a container, and reaches the API through `apps/web/proxy.conf.json`, which forwards `/api` and `/uploads` to `http://localhost:8080`.
 

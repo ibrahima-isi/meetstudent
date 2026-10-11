@@ -72,6 +72,7 @@ public class WebSecurityConfig {
                                 .requestMatchers(HttpMethod.GET, "/api/v1/courses/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/v1/accreditations/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/v1/tags/**").permitAll()
+                                .requestMatchers(HttpMethod.GET, "/api/v1/site-settings").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/v1/course-rates/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/v1/program-rates/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/v1/school-rates/**").permitAll()

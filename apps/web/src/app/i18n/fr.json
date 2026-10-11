@@ -23,6 +23,8 @@
     "schools": "Établissements",
     "howItWorks": "Comment ça marche",
     "reviews": "Avis",
+    "about": "À propos",
+    "contact": "Contact",
     "language": "Langue",
     "noAccount": "Pas encore de compte ?",
     "login": "Se connecter",
@@ -51,7 +53,19 @@
     "home": "Accueil",
     "school": "Établissement",
     "profile": "Mon profil",
+    "about": "À propos",
+    "contact": "Contact",
     "notFound": "Page introuvable"
+  },
+  "about": {
+    "title": "À propos de MeetStudent",
+    "error": "Cette page n'a pas pu être chargée."
+  },
+  "contact": {
+    "title": "Contact",
+    "intro": "Une question, une suggestion, un établissement à signaler ? Écrivez-nous, nous vous répondrons.",
+    "emailLabel": "Par e-mail",
+    "error": "L'adresse de contact n'a pas pu être chargée."
   },
   "theme": {
     "light": "clair",

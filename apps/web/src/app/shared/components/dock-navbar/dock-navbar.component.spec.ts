@@ -91,6 +91,8 @@ describe('DockNavbarComponent', () => {
     expect(link('/fr/schools')).toBeTruthy();
     expect(link('/fr#how-it-works')).toBeTruthy();
     expect(link('/fr#reviews')).toBeTruthy();
+    expect(link('/fr/about')?.textContent?.trim()).toBe('À propos');
+    expect(link('/fr/contact')?.textContent?.trim()).toBe('Contact');
   });
 
   describe('anonymous account button', () => {
@@ -226,7 +228,7 @@ describe('DockNavbarComponent', () => {
 
     it('keeps only the brand and the menu button on a phone or a tablet', async () => {
       await mount('fr', false);
-      for (const px of [320, 375, 768, 1000]) {
+      for (const px of [320, 375, 768, 1024]) {
         widen(px);
         expect(shown(root().querySelector('.menu-btn'))).withContext(`${px}`).toBeTrue();
         expect(shown(root().querySelector('.links'))).withContext(`${px}`).toBeFalse();
@@ -259,7 +261,7 @@ describe('DockNavbarComponent', () => {
     const panel = root().querySelector('#dock-menu') as HTMLElement;
 
     const hrefs = Array.from(panel.querySelectorAll('a')).map((a) => a.getAttribute('href'));
-    expect(hrefs).toEqual(['/fr/schools', '/fr#how-it-works', '/fr#reviews', '/fr/login', '/fr/register']);
+    expect(hrefs).toEqual(['/fr/schools', '/fr#how-it-works', '/fr#reviews', '/fr/about', '/fr/contact', '/fr/login', '/fr/register']);
     expect(panel.querySelector('app-language-switcher')).toBeTruthy();
     expect(panel.querySelector('app-theme-toggle')).toBeTruthy();
     expect(panel.textContent).toContain('Pas encore de compte ?');

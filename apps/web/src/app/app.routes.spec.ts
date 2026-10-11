@@ -149,6 +149,15 @@ describe('routes', () => {
     expect((harness.fixture.nativeElement as HTMLElement).querySelector('app-schools-page')).toBeTruthy();
   });
 
+  it('serves the About and Contact pages inside the shell, without a guard', async () => {
+    for (const [url, tag] of [['/fr/about', 'app-about-page'], ['/en/contact', 'app-contact-page']] as const) {
+      await harness.navigateByUrl(url);
+      expect(TestBed.inject(Router).url).toBe(url);
+      expect((harness.fixture.nativeElement as HTMLElement).querySelector(tag)).toBeTruthy();
+      expect(navbar()).toBeTruthy();
+    }
+  });
+
   it('still guards a school detail', async () => {
     await harness.navigateByUrl('/fr/schools/7');
 
