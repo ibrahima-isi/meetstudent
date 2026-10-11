@@ -64,7 +64,7 @@
         <input type="checkbox" class="w-4 h-4 accent-brand" />
         <span class="ml-2 text-foreground">{{ t('auth.login.rememberMe') }}</span>
       </label>
-      <button type="button" class="text-brand font-medium hover:underline">{{ t('auth.login.forgotPassword') }}</button>
+      <a [routerLink]="['/', locale.active(), 'forgot-password']" class="text-brand font-medium hover:underline">{{ t('auth.login.forgotPassword') }}</a>
     </div>
 
     <button

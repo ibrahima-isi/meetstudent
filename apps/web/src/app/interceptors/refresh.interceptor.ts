@@ -10,9 +10,16 @@ import { environment } from '../../environments/environment';
 
 const AUTH_URL = `${environment.apiUrl}/auth`;
 
-/** Login and refresh answer 401 for bad credentials; refreshing there would loop. */
+/**
+ * Login and refresh answer 401 for bad credentials; refreshing there would loop.
+ * The password-reset calls are public: a 401 there is never about our session.
+ * Everything else under `/auth` (the verification resend, say) is an ordinary
+ * authenticated call and is refreshed like any other.
+ */
 const isAuthEndpoint = (req: HttpRequest<unknown>): boolean =>
-  req.url === AUTH_URL || req.url.startsWith(`${AUTH_URL}/`);
+  req.url === AUTH_URL ||
+  req.url === `${AUTH_URL}/refresh` ||
+  req.url.startsWith(`${AUTH_URL}/password-reset/`);
 
 /** The refresh in flight, shared so a burst of 401s costs one call. */
 let refresh$: Observable<string> | null = null;

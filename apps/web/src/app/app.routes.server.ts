@@ -13,13 +13,19 @@ import { RenderMode, ServerRoute } from '@angular/ssr';
  * session is in `localStorage`, which the server cannot read, so a server
  * render would always see an anonymous visitor and redirect a logged-in one to
  * the login on every reload or deep link. They are private, so nothing is lost
- * for SEO; landing, login and register stay server-rendered. Keep these before
+ * for SEO; landing, login and register stay server-rendered.
+ *
+ * `reset-password` and `verify-email` are public but client-rendered too: their token travels in the
+ * URL fragment, which the server never receives, and the page must reach the
+ * browser as a shell with no token or state in it. Keep these before
  * the catch-all, and in step with the `authGuard` routes (a spec checks it).
  */
 export const serverRoutes: ServerRoute[] = [
   { path: ':lang/home', renderMode: RenderMode.Client },
   { path: ':lang/profile', renderMode: RenderMode.Client },
   { path: ':lang/schools/:id', renderMode: RenderMode.Client },
+  { path: ':lang/reset-password', renderMode: RenderMode.Client },
+  { path: ':lang/verify-email', renderMode: RenderMode.Client },
   {
     path: '**',
     renderMode: RenderMode.Server,

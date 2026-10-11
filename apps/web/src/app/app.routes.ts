@@ -110,6 +110,32 @@ export const routes: Routes = [
                     (m) => m.RegisterFormComponent,
                   ),
               },
+              {
+                path: 'forgot-password',
+                title: 'pageTitle.forgotPassword',
+                loadComponent: () =>
+                  import('./features/auth/forgot-password/forgot-password.component').then(
+                    (m) => m.ForgotPasswordComponent,
+                  ),
+              },
+              {
+                // Public, but rendered in the browser (see app.routes.server.ts).
+                path: 'reset-password',
+                title: 'pageTitle.resetPassword',
+                loadComponent: () =>
+                  import('./features/auth/reset-password/reset-password.component').then(
+                    (m) => m.ResetPasswordComponent,
+                  ),
+              },
+              {
+                // Same as reset-password: public, token in the fragment, rendered in the browser.
+                path: 'verify-email',
+                title: 'pageTitle.verifyEmail',
+                loadComponent: () =>
+                  import('./features/auth/verify-email/verify-email.component').then(
+                    (m) => m.VerifyEmailComponent,
+                  ),
+              },
             ],
           },
         ],

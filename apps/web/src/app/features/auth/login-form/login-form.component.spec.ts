@@ -91,18 +91,63 @@ describe('LoginFormComponent translations', () => {
       } as ActivatedRouteSnapshot;
     }
 
-    it('welcomes a new account in French', async () => {
+    async function renderAnswering(lang: 'fr' | 'en', emailEnabled: boolean) {
       arriveFromRegistration(true);
-      await render('fr');
+      await render(lang);
+      httpMock.expectOne(`${environment.apiUrl}/auth/capabilities`).flush({ emailEnabled });
+      fixture.detectChanges();
+      await fixture.whenStable();
+    }
+
+    it('welcomes a new account in French', async () => {
+      await renderAnswering('fr', false);
 
       expect(text()).toContain('Compte créé');
     });
 
     it('welcomes a new account in English', async () => {
-      arriveFromRegistration(true);
-      await render('en');
+      await renderAnswering('en', false);
 
       expect(text()).toContain('Account created');
+    });
+
+    it('mentions the confirmation email, in French, when email is enabled', async () => {
+      await renderAnswering('fr', true);
+
+      expect(text()).toContain('Compte créé');
+      expect(text()).toContain('e-mail de confirmation');
+    });
+
+    it('mentions the confirmation email, in English, when email is enabled', async () => {
+      await renderAnswering('en', true);
+
+      expect(text()).toContain('confirmation email');
+    });
+
+    it('does not claim an email was sent when email is disabled', async () => {
+      await renderAnswering('en', false);
+
+      expect(text()).not.toContain('confirmation email');
+    });
+
+    it('does not claim an email was sent when the capabilities call fails', async () => {
+      arriveFromRegistration(true);
+      await render('en');
+      httpMock
+        .expectOne(`${environment.apiUrl}/auth/capabilities`)
+        .flush(null, { status: 500, statusText: 'Server Error' });
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(text()).toContain('Account created');
+      expect(text()).not.toContain('confirmation email');
+    });
+
+    it('asks nothing of the server on a plain visit', async () => {
+      arriveFromRegistration(false);
+      await render('en');
+
+      httpMock.expectNone(`${environment.apiUrl}/auth/capabilities`);
     });
 
     it('shows no notice on a plain visit', async () => {
@@ -110,6 +155,52 @@ describe('LoginFormComponent translations', () => {
       await render('en');
 
       expect(text()).not.toContain('Account created');
+    });
+  });
+
+  describe('forgotten password', () => {
+    it('links to the forgot-password page of the language being read', async () => {
+      await render('fr');
+      const link = (fixture.nativeElement as HTMLElement).querySelector('a[href="/fr/forgot-password"]');
+
+      expect(link?.textContent?.trim()).toBe('Mot de passe oublié ?');
+    });
+
+    it('is a real link, not a button that does nothing', async () => {
+      await render('en');
+      const el = fixture.nativeElement as HTMLElement;
+
+      expect(el.querySelector('a[href$="/forgot-password"]')).not.toBeNull();
+      expect(Array.from(el.querySelectorAll('button')).some((b) => b.textContent?.includes('Forgot'))).toBeFalse();
+    });
+  });
+
+  describe('after a password reset', () => {
+    function arriveFromReset(reset: boolean) {
+      TestBed.inject(ActivatedRoute).snapshot = {
+        queryParamMap: convertToParamMap(reset ? { reset: '1' } : {}),
+      } as ActivatedRouteSnapshot;
+    }
+
+    it('confirms the new password in French', async () => {
+      arriveFromReset(true);
+      await render('fr');
+
+      expect(text()).toContain('Mot de passe réinitialisé');
+    });
+
+    it('confirms the new password in English', async () => {
+      arriveFromReset(true);
+      await render('en');
+
+      expect(text()).toContain('Password reset');
+    });
+
+    it('shows nothing on a plain visit', async () => {
+      arriveFromReset(false);
+      await render('en');
+
+      expect(text()).not.toContain('Password reset');
     });
   });
 
