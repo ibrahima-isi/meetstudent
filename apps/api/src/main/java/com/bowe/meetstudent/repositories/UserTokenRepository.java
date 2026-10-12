@@ -27,6 +27,10 @@ public interface UserTokenRepository extends JpaRepository<UserToken, Integer> {
     @Query("select t from UserToken t where lower(t.email) = lower(:email) and t.purpose = :purpose and t.issuedAt > :since order by t.issuedAt asc")
     List<UserToken> findAddressTokens(@Param("email") String email, @Param("purpose") UserTokenPurpose purpose, @Param("since") Instant since);
 
+    /** The newest token of the purpose that is still open (not consumed, not expired). */
+    Optional<UserToken> findFirstByUserIdAndPurposeAndConsumedAtIsNullAndExpiresAtAfterOrderByIssuedAtDesc(
+            Integer userId, UserTokenPurpose purpose, Instant now);
+
     /** Global retention purge, orphaned rows (deleted users) included. */
     @Modifying(flushAutomatically = true)
     @Query("delete from UserToken t where t.issuedAt < :before")

@@ -305,3 +305,26 @@ shapes before coding against them.
 - `POST /users` now also sends `lang` (`fr`|`en`, the locale being read); the
   login notice after registration mentions the confirmation email only when
   `emailEnabled`.
+
+## 9. Changing the email address (web side)
+
+- The address no longer changes through `PATCH /users/{id}`: a different `email`
+  there is 400 `{email}` (the same one, in any case, is ignored), so the profile
+  form has no email field and `ProfileUpdate` no longer has `email`.
+- `ProfileEmailSectionComponent` (profile page) is the one place for it:
+  - `POST /users/{id}/email-change` `{newEmail, currentPassword, lang}` → 202;
+    400 `{currentPassword}` / `{newEmail}` (shown under their field, API text as is),
+    429 cooldown/daily cap, 503 mail off. The account keeps its current address and
+    keeps signing in with it; the new one is only *pending*.
+  - `GET /users/{id}/email-change` → `{pendingEmail}` (absent when nothing is
+    pending); `DELETE` cancels (204); `POST …/resend?lang=` mails the link again
+    (202, 409 nothing pending, 429).
+  - Owner only (403 for anyone else, admins included).
+- The link mailed to the **new** address opens `/<lang>/verify-email#token=…&type=change`
+  (the same page as verification; `type=change` selects the endpoint and the wording).
+  `POST /auth/email-change/confirm` `{token}` → 204; 400 `{token}` for any bad link
+  (unknown, expired, used, or the address was taken meanwhile). On success, if
+  signed in, the cached user is reloaded so the new address shows everywhere.
+- The same section shows whether the current address is confirmed and offers the
+  confirmation email again (`POST /auth/email-verification/resend`), so dismissing
+  the banner never loses the way to confirm.

@@ -83,20 +83,6 @@ public class EmailVerificationService {
         sendVerification(user, lang);
     }
 
-    /**
-     * After an email change: the old links are dead and the new address gets its own. A cooldown here is
-     * not an error (the profile update must succeed); the user can resend later.
-     */
-    @Transactional
-    public void restartVerification(UserEntity user) {
-        userTokenService.consumeOutstanding(user.getId(), UserTokenPurpose.EMAIL_VERIFICATION);
-        try {
-            sendVerification(user, null);
-        } catch (TooManyRequestsException ex) {
-            log.info("Verification email after an address change skipped (rate limit) userId={}", user.getId());
-        }
-    }
-
     private static String normalizeLang(String lang) {
         return lang != null && "en".equals(lang.strip().toLowerCase(Locale.ROOT)) ? "en" : "fr";
     }

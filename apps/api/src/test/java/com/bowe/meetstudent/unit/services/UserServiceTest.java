@@ -7,7 +7,6 @@ import com.bowe.meetstudent.exceptions.ResourceNotFoundException;
 import com.bowe.meetstudent.repositories.RoleRepository;
 import com.bowe.meetstudent.repositories.UserRepository;
 import com.bowe.meetstudent.repositories.SchoolRepository;
-import com.bowe.meetstudent.services.EmailVerificationService;
 import com.bowe.meetstudent.services.MediaService;
 import com.bowe.meetstudent.services.UserService;
 import com.bowe.meetstudent.services.UserTokenService;
@@ -46,9 +45,6 @@ class UserServiceTest {
 
     @Mock
     private PasswordEncoder passwordEncoder;
-
-    @Mock
-    private EmailVerificationService emailVerificationService;
 
     @Mock
     private UserTokenService userTokenService;
@@ -152,29 +148,17 @@ class UserServiceTest {
     }
 
     @Test
-    void patch_shouldResetVerificationAndRestartIt_whenTheEmailChanges() {
+    void patch_shouldRefuseADifferentEmailAndPointToTheEmailChangeFlow() {
         user.setEmail("old@example.com");
         user.setEmailVerified(true);
         Mockito.when(userRepository.findById(1)).thenReturn(Optional.of(user));
-        Mockito.when(userRepository.save(any(UserEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        UserEntity saved = userService.patch(1, UserEntity.builder().email("new@example.com").build(), passwordEncoder);
+        var ex = assertThrows(com.bowe.meetstudent.exceptions.FieldValidationException.class,
+                () -> userService.patch(1, UserEntity.builder().email("new@example.com").build(), passwordEncoder));
 
-        assertEquals("new@example.com", saved.getEmail());
-        assertFalse(saved.isEmailVerified());
-        Mockito.verify(emailVerificationService).restartVerification(saved);
-    }
-
-    @Test
-    void patch_shouldRejectAnEmailThatBelongsToAnotherAccountInAnyCase() {
-        user.setEmail("old@example.com");
-        Mockito.when(userRepository.findById(1)).thenReturn(Optional.of(user));
-        Mockito.when(userRepository.existsByEmailIgnoreCaseAndIdNot("TAKEN@example.com", 1)).thenReturn(true);
-
-        assertThrows(com.bowe.meetstudent.exceptions.DuplicateEmailException.class,
-                () -> userService.patch(1, UserEntity.builder().email("TAKEN@example.com").build(), passwordEncoder));
-
+        assertEquals("email", ex.getField());
         assertEquals("old@example.com", user.getEmail());
+        assertTrue(user.isEmailVerified());
         Mockito.verify(userRepository, Mockito.never()).save(any(UserEntity.class));
     }
 
@@ -195,7 +179,6 @@ class UserServiceTest {
         UserEntity saved = userService.patch(1, UserEntity.builder().email("OLD@example.com").build(), passwordEncoder);
 
         assertTrue(saved.isEmailVerified());
-        Mockito.verifyNoInteractions(emailVerificationService);
     }
 
     @Test
@@ -208,7 +191,6 @@ class UserServiceTest {
         userService.patch(1, UserEntity.builder().firstname("Johnny").build(), passwordEncoder);
 
         assertTrue(user.isEmailVerified());
-        Mockito.verifyNoInteractions(emailVerificationService);
     }
 
     @Test

@@ -80,6 +80,11 @@ export class AuthService {
     return this.http.post<void>(`${this.apiUrl}/email-verification/confirm`, { token });
   }
 
+  /** 204 on success; 400 `{token}` for any bad link (unknown, expired, used, address taken meanwhile). */
+  confirmEmailChange(token: string): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/email-change/confirm`, { token });
+  }
+
   /** Needs the session; `lang` picks the language of the email. 202; 409 already verified; 429 daily limit or cooldown; 503 mail off. */
   resendEmailVerification(lang: string): Observable<unknown> {
     return this.http.post(`${this.apiUrl}/email-verification/resend`, {}, { params: new HttpParams().set('lang', lang) });

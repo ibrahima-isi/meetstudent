@@ -30,6 +30,11 @@ public interface UserRepository extends JpaRepository<UserEntity, Integer> {
     @Query("update UserEntity u set u.emailVerified = true where u.id = :id and lower(u.email) = lower(:email)")
     int markEmailVerified(@Param("id") Integer id, @Param("email") String email);
 
+    /** Targeted write of a confirmed new address (verified by definition: the link reached it), same reason as above. */
+    @Modifying
+    @Query("update UserEntity u set u.email = :email, u.emailVerified = true where u.id = :id")
+    int changeEmail(@Param("id") Integer id, @Param("email") String email);
+
     /**
      * Every user whose address matches ignoring case, oldest first. A list, not an Optional: legacy data may
      * hold case-variant duplicates and a throwing lookup would turn into a 500 that reveals the address exists.

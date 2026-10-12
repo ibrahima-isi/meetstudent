@@ -121,27 +121,7 @@
           </div>
         </div>
 
-        <div class="min-w-0">
-          <label class="block text-foreground mb-2 font-medium">{{ t('profile.email') }}</label>
-          @if (isEditing()) {
-            <div class="relative">
-              <lucide-icon [img]="Mail" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground"></lucide-icon>
-              <input
-                type="email"
-                [formControl]="form.controls.email"
-                data-testid="profile-email"
-                class="bg-card text-foreground placeholder:text-muted-foreground w-full pl-11 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                [placeholder]="t('profile.emailPlaceholder')"
-              />
-            </div>
-            <ng-container *ngTemplateOutlet="fieldErrors; context: { $implicit: 'email' }" />
-          } @else {
-            <div class="flex items-center gap-3 text-foreground">
-              <lucide-icon [img]="Mail" class="w-5 h-5 shrink-0 text-muted-foreground"></lucide-icon>
-              <span class="min-w-0 break-all">{{ profile().email || t('profile.notProvided') }}</span>
-            </div>
-          }
-        </div>
+        <app-profile-email-section />
 
         @if (isEditing()) {
           <div class="min-w-0">

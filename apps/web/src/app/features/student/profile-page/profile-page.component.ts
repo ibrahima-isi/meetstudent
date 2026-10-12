@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { LucideAngularModule, ArrowLeft, User as UserIcon, Mail, Phone, MapPin, GraduationCap, Book, Save, Heart, Briefcase } from 'lucide-angular';
+import { LucideAngularModule, ArrowLeft, User as UserIcon, Phone, MapPin, GraduationCap, Book, Save, Heart, Briefcase } from 'lucide-angular';
 import { LocaleService } from '@services/locale.service';
 import { TokenService } from '@services/token.service';
 import { ProfileUpdate, UserService } from '@services/user.service';
@@ -11,10 +11,11 @@ import { WishlistService } from '@services/wishlist.service';
 import { User } from '@models/entities';
 import { ROLE_EXPERT, ROLE_STUDENT } from '@models/roles';
 import { UserDocumentsComponent } from '../user-documents/user-documents.component';
+import { ProfileEmailSectionComponent } from './profile-email-section/profile-email-section.component';
 import { TranslocoDirective } from '@jsverse/transloco';
 
 /** The fields of the API's 400 body (`{ field: message }`) this form can show. */
-const FORM_FIELDS = ['firstname', 'lastname', 'email', 'qualification', 'password'] as const;
+const FORM_FIELDS = ['firstname', 'lastname', 'qualification', 'password'] as const;
 type FormField = (typeof FORM_FIELDS)[number];
 
 /** A translation key, so a language switch re-renders the message. */
@@ -22,7 +23,7 @@ type SaveStatus = 'saved' | 'fieldErrors' | 'failed' | null;
 
 @Component({
   selector: 'app-profile-page',
-  imports: [CommonModule, ReactiveFormsModule, LucideAngularModule, UserDocumentsComponent, TranslocoDirective],
+  imports: [CommonModule, ReactiveFormsModule, LucideAngularModule, UserDocumentsComponent, ProfileEmailSectionComponent, TranslocoDirective],
   templateUrl: './profile-page.component.html'
 })
 export class ProfilePageComponent implements OnInit {
@@ -34,7 +35,6 @@ export class ProfilePageComponent implements OnInit {
 
   readonly ArrowLeft = ArrowLeft;
   readonly UserIcon = UserIcon;
-  readonly Mail = Mail;
   readonly Phone = Phone;
   readonly MapPin = MapPin;
   readonly GraduationCap = GraduationCap;
@@ -54,15 +54,15 @@ export class ProfilePageComponent implements OnInit {
   protected readonly isExpert = computed(() => this.profile().role?.name === ROLE_EXPERT);
 
   /**
-   * The editable fields. `qualification` is the bac type for a student and the
-   * specialty for an expert — one backend field, two inputs. `password` is a
+   * The editable fields. The email is not one of them: it changes through its own
+   * section (current password + a link to the new address). `qualification` is the
+   * bac type for a student and the specialty for an expert — one backend field, two inputs. `password` is a
    * new password: empty means unchanged, otherwise 8 characters or more (the
    * backend rule).
    */
   protected readonly form = inject(NonNullableFormBuilder).group({
     firstname: ['', Validators.required],
     lastname: ['', Validators.required],
-    email: ['', [Validators.required, Validators.email]],
     qualification: [''],
     password: ['', Validators.minLength(8)],
   });
@@ -106,7 +106,6 @@ export class ProfilePageComponent implements OnInit {
       return null;
     }
     if (control.errors['required']) return 'profile.errors.required';
-    if (control.errors['email']) return 'profile.errors.email';
     if (control.errors['minlength']) return 'profile.errors.passwordMin';
     return null;
   }
@@ -175,11 +174,10 @@ export class ProfilePageComponent implements OnInit {
   }
 
   private resetForm(): void {
-    const { firstname, lastname, email, qualification } = this.profile();
+    const { firstname, lastname, qualification } = this.profile();
     this.form.reset({
       firstname: firstname ?? '',
       lastname: lastname ?? '',
-      email: email ?? '',
       qualification: qualification ?? '',
       password: '',
     });

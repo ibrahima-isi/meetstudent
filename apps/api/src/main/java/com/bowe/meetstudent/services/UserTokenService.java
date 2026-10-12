@@ -51,15 +51,25 @@ public class UserTokenService {
     // update that changes the email) rollback-only; the caller decides what a refusal means.
     @Transactional(noRollbackFor = TooManyRequestsException.class)
     public String issue(UserEntity user, UserTokenPurpose purpose, Duration ttl) {
-        addressLock.acquire(user.getEmail());
+        return issue(user, purpose, ttl, user.getEmail());
+    }
+
+    /**
+     * Same as {@link #issue(UserEntity, UserTokenPurpose, Duration)} for a token bound to {@code address}
+     * instead of the user's current one (an email change: the link goes to the address being claimed).
+     * The cooldown and the caps then apply to that address.
+     */
+    @Transactional(noRollbackFor = TooManyRequestsException.class)
+    public String issue(UserEntity user, UserTokenPurpose purpose, Duration ttl, String address) {
+        addressLock.acquire(address);
         var now = Instant.now(clock);
         repository.deleteIssuedBefore(now.minus(RETENTION));
-        enforceLimits(user, purpose, now);
-        enforceAddressCap(user.getEmail(), purpose, now);
+        enforceLimits(user, purpose, address, now);
+        enforceAddressCap(address, purpose, now);
         // A reset request must not kill a link the owner already holds: anyone can ask for one, and the
         // per-address cap bounds how many exist. A successful reset burns all the others. Verification
-        // links are replaced as before.
-        if (purpose == UserTokenPurpose.EMAIL_VERIFICATION) {
+        // and email-change links are replaced as before.
+        if (purpose != UserTokenPurpose.PASSWORD_RESET) {
             repository.consumeOpen(user.getId(), purpose, now);
         }
 
@@ -71,7 +81,7 @@ public class UserTokenService {
                 .user(user)
                 .purpose(purpose)
                 .tokenHash(hash(raw))
-                .email(user.getEmail())
+                .email(address)
                 .issuedAt(now)
                 .expiresAt(now.plus(ttl))
                 .build());
@@ -95,10 +105,12 @@ public class UserTokenService {
             throw new InvalidActionTokenException();
         }
         var currentEmail = token.getUser().getEmail();
+        // An email-change token is bound to the address being claimed, which by design is not the current one.
+        var addressStillMatches = purpose == UserTokenPurpose.EMAIL_CHANGE
+                || (currentEmail != null && currentEmail.equalsIgnoreCase(token.getEmail()));
         if (token.getConsumedAt() != null
                 || !token.getExpiresAt().isAfter(now)
-                || currentEmail == null
-                || !currentEmail.equalsIgnoreCase(token.getEmail())) {
+                || !addressStillMatches) {
             throw new InvalidActionTokenException();
         }
         if (repository.consumeIfOpen(token.getId(), now) != 1) {
@@ -106,6 +118,13 @@ public class UserTokenService {
         }
         token.setConsumedAt(now);
         return token;
+    }
+
+    /** The address the newest open token of the purpose was issued for, if any (the pending email change). */
+    @Transactional(readOnly = true)
+    public java.util.Optional<String> openAddress(Integer userId, UserTokenPurpose purpose) {
+        return repository.findFirstByUserIdAndPurposeAndConsumedAtIsNullAndExpiresAtAfterOrderByIssuedAtDesc(
+                userId, purpose, Instant.now(clock)).map(UserToken::getEmail);
     }
 
     /** Invalidates every open token of the user for the purpose (e.g. after an email change). */
@@ -119,14 +138,14 @@ public class UserTokenService {
      * user's current address (fixing a typo in the address right after registering still gets a mail).
      * The daily cap counts every token of the user for the purpose, whatever the address.
      */
-    private void enforceLimits(UserEntity user, UserTokenPurpose purpose, Instant now) {
+    private void enforceLimits(UserEntity user, UserTokenPurpose purpose, String address, Instant now) {
         var recent = repository.findByUserIdAndPurposeAndIssuedAtAfterOrderByIssuedAtAsc(user.getId(), purpose, now.minus(CAP_WINDOW));
         if (recent.isEmpty()) {
             return;
         }
         var cooldown = Duration.ofSeconds(properties.getTokens().getCooldownSeconds());
         var latestForAddress = recent.reversed().stream()
-                .filter(t -> t.getEmail() != null && t.getEmail().equalsIgnoreCase(user.getEmail()))
+                .filter(t -> t.getEmail() != null && t.getEmail().equalsIgnoreCase(address))
                 .map(UserToken::getIssuedAt)
                 .findFirst();
         if (latestForAddress.isPresent() && latestForAddress.get().plus(cooldown).isAfter(now)) {

@@ -220,4 +220,64 @@ describe('VerifyEmailComponent', () => {
       expect(meta.getTag('name="referrer"')).toBeNull();
     });
   });
+
+  describe('an email change link (type=change)', () => {
+    const changeUrl = `${environment.apiUrl}/auth/email-change/confirm`;
+    const fragment = `token=${TOKEN}&type=change`;
+
+    it('confirms the change instead of the verification, with the same token', async () => {
+      await render('en', fragment);
+
+      const req = httpMock.expectOne(changeUrl);
+      expect(req.request.body).toEqual({ token: TOKEN });
+      httpMock.expectNone(url);
+      req.flush(null, ok());
+    });
+
+    it('says the address was updated, in the language being read', async () => {
+      await render('en', fragment);
+      httpMock.expectOne(changeUrl).flush(null, ok());
+      await settle();
+
+      expect(title()).toBe('Email address updated');
+      expect(el().textContent).toContain('replaces the old one');
+    });
+
+    it('is in French too', async () => {
+      await render('fr', fragment);
+      httpMock.expectOne(changeUrl).flush(null, ok());
+      await settle();
+
+      expect(title()).toBe('Adresse e-mail mise à jour');
+    });
+
+    it('reloads the cached user when someone is signed in, so the new address shows everywhere', async () => {
+      localStorage.setItem('token', 'access');
+      localStorage.setItem('user', JSON.stringify({ id: 7, email: 'old@example.com' }));
+      TestBed.inject(TokenService).setTokens('access', 'refresh');
+      TestBed.inject(TokenService).setUser({ id: 7, email: 'old@example.com' } as never);
+      await render('en', fragment);
+      httpMock.expectOne(changeUrl).flush(null, ok());
+      httpMock.expectOne(`${environment.apiUrl}/users/id/7`).flush({ id: 7, email: 'new@example.com' });
+      await settle();
+
+      expect(TestBed.inject(TokenService).user()?.email).toBe('new@example.com');
+    });
+
+    it('explains a dead link with the change wording, not the verification one', async () => {
+      await render('en', fragment);
+      httpMock.expectOne(changeUrl).flush({ token: 'Lien invalide ou expiré' }, { status: 400, statusText: 'Bad Request' });
+      await settle();
+
+      expect(title()).toBe('Link expired');
+      expect(el().textContent).toContain('ask for a new change from your profile');
+    });
+
+    it('still treats a plain verification link as a verification', async () => {
+      await render('en', `token=${TOKEN}`);
+
+      httpMock.expectOne(url).flush(null, ok());
+      httpMock.expectNone(changeUrl);
+    });
+  });
 });

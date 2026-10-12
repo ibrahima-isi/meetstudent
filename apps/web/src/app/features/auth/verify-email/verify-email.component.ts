@@ -25,6 +25,16 @@ function tokenFrom(fragment: string | null): string | null {
   return (fragment && new URLSearchParams(fragment).get('token')) || null;
 }
 
+/** What the link confirms: the account's address (default), or a new address replacing it (`type=change`). */
+type Kind = 'verification' | 'change';
+
+function kindFrom(fragment: string | null): Kind {
+  return fragment && new URLSearchParams(fragment).get('type') === 'change' ? 'change' : 'verification';
+}
+
+/** The messages that read differently for an address change; the rest is shared. */
+const CHANGE_WORDING = new Set(['verifyingTitle', 'verifyingText', 'successTitle', 'successText', 'expiredText', 'invalidText']);
+
 /**
  * Confirms the email address. The token is read once from the fragment into
  * memory, removed from the address bar and history right after the first
@@ -49,6 +59,7 @@ export class VerifyEmailComponent {
 
   /** Memory only; kept after a failure of the network alone, so the visitor can retry. */
   private token: string | null;
+  private readonly kind: Kind;
   readonly state = signal<State>('verifying');
 
   protected readonly AlertCircle = AlertCircle;
@@ -65,6 +76,7 @@ export class VerifyEmailComponent {
     const route = inject(ActivatedRoute);
     const fragment = route.snapshot.fragment;
     this.token = tokenFrom(fragment);
+    this.kind = kindFrom(fragment);
 
     if (fragment) {
       // After the first render, not now: navigating while the router is still
@@ -88,6 +100,11 @@ export class VerifyEmailComponent {
     }
   }
 
+  /** Translation key of a message of this page, worded for the kind of link that was opened. */
+  protected key(name: string): string {
+    return `auth.verify.${this.kind === 'change' && CHANGE_WORDING.has(name) ? `change${name[0].toUpperCase()}${name.slice(1)}` : name}`;
+  }
+
   protected retry(): void {
     this.state.set('verifying');
     this.confirm();
@@ -100,12 +117,13 @@ export class VerifyEmailComponent {
       return;
     }
 
-    this.auth.confirmEmailVerification(token).subscribe({
+    const confirmation = this.kind === 'change' ? this.auth.confirmEmailChange(token) : this.auth.confirmEmailVerification(token);
+    confirmation.subscribe({
       next: () => {
         this.token = null;
         this.finish('success');
         if (this.tokens.isAuthenticated()) {
-          // Best effort: the cached copy only feeds the banner.
+          // Best effort: the cached copy feeds the banner and, after a change, the address shown everywhere.
           this.auth.refreshCurrentUser().subscribe({ error: () => undefined });
         }
       },

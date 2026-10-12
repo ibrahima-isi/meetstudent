@@ -1,5 +1,5 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { User } from '@models/entities';
@@ -9,12 +9,12 @@ import { MediaService } from './media.service';
  * The backend `UpdateProfileRequest`. Every field is optional: an omitted (null)
  * field is left unchanged, and so is an empty `password`, which otherwise must
  * be 8 characters or more. The role is deliberately absent — it only changes
- * through the admin-only `PATCH /users/{id}/role`.
+ * through the admin-only `PATCH /users/{id}/role` — and so is the email, which
+ * changes through {@link UserService.requestEmailChange}.
  */
 export interface ProfileUpdate {
   firstname?: string;
   lastname?: string;
-  email?: string;
   birthday?: string;
   password?: string;
   qualification?: string;
@@ -66,6 +66,31 @@ export class UserService {
   /** Self-service profile save: `PATCH /users/{id}` (the owner or an admin). */
   updateProfile(id: number, changes: ProfileUpdate): Observable<User> {
     return this.http.patch<User>(`${this.apiUrl}/${id}`, changes);
+  }
+
+  /**
+   * Asks to move the account to a new address. The address only changes once the link mailed to it is
+   * opened. 202; 400 `{currentPassword}` / `{newEmail}`; 429 limit or cooldown; 503 mail off.
+   */
+  requestEmailChange(id: number, newEmail: string, currentPassword: string, lang: string): Observable<unknown> {
+    return this.http.post(`${this.apiUrl}/${id}/email-change`, { newEmail, currentPassword, lang });
+  }
+
+  /** The address waiting for its link, or null when no change is pending. */
+  getPendingEmail(id: number): Observable<string | null> {
+    return this.http.get<{ pendingEmail?: string }>(`${this.apiUrl}/${id}/email-change`).pipe(
+      map(body => body.pendingEmail ?? null)
+    );
+  }
+
+  /** Drops the pending change; its link stops working. */
+  cancelEmailChange(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${id}/email-change`);
+  }
+
+  /** Mails the link of the pending change again. 202; 409 nothing pending; 429 limit or cooldown. */
+  resendEmailChange(id: number, lang: string): Observable<unknown> {
+    return this.http.post(`${this.apiUrl}/${id}/email-change/resend`, {}, { params: new HttpParams().set('lang', lang) });
   }
 
   addToWishlist(userId: number, schoolId: number): Observable<User> {

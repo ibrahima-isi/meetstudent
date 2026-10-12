@@ -158,7 +158,13 @@
       "errorText": "We could not confirm your address right now. Please try again.",
       "retry": "Try again",
       "signInForNew": "Sign in to get a new email",
-      "goToSpace": "Go to my space"
+      "goToSpace": "Go to my space",
+      "changeVerifyingTitle": "Confirming your new address",
+      "changeVerifyingText": "One moment, we are confirming your new address...",
+      "changeSuccessTitle": "Email address updated",
+      "changeSuccessText": "Your new email address is confirmed and replaces the old one. Use it from now on to sign in.",
+      "changeExpiredText": "This link has expired, was already used, or the address is no longer available. Sign in and ask for a new change from your profile.",
+      "changeInvalidText": "This link is incomplete or invalid. Sign in and ask for a new change from your profile."
     },
     "register": {
       "title": "Create Account",
@@ -320,6 +326,34 @@
     "fieldErrors": "Please correct the highlighted fields.",
     "newPassword": "New password",
     "newPasswordHint": "Leave empty to keep your current password. At least 8 characters.",
+    "emailSection": {
+      "title": "Email address",
+      "verified": "Confirmed",
+      "unverified": "Not confirmed yet",
+      "unverifiedHint": "Confirm your address to secure your account. Your account works in the meantime.",
+      "resendVerification": "Resend the confirmation email",
+      "change": "Change email address",
+      "newEmail": "New email address",
+      "currentPassword": "Current password",
+      "currentPasswordHint": "We ask for it to make sure it is you.",
+      "send": "Send the confirmation link",
+      "sending": "Sending…",
+      "cancel": "Cancel",
+      "pendingTitle": "Waiting for confirmation",
+      "pendingText": "We sent a link to {{ email }}. Your current address stays active until you open it.",
+      "resendPending": "Resend the link",
+      "cancelPending": "Cancel the change",
+      "unavailable": "Email delivery is not available right now, so the address cannot be changed.",
+      "feedback": {
+        "requested": "Link sent. Open it from your new inbox to confirm.",
+        "sent": "Email sent.",
+        "limited": "Too many attempts. Try again later.",
+        "failed": "Something went wrong. Please try again.",
+        "unavailable": "Email delivery is not available right now.",
+        "cancelled": "Change cancelled.",
+        "alreadyVerified": "Your address is already confirmed."
+      }
+    },
     "errors": {
       "required": "This field is required.",
       "email": "Please enter a valid email address.",

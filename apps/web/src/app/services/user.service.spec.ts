@@ -73,4 +73,44 @@ describe('UserService', () => {
     req.flush(saved);
     expect(result).toEqual(saved);
   });
+
+  describe('email change', () => {
+    const url = `${environment.apiUrl}/users/5/email-change`;
+
+    it('asks for a new address with the current password and the language', () => {
+      service.requestEmailChange(5, 'new@example.com', 'S3cure-pass', 'fr').subscribe();
+
+      const req = httpMock.expectOne(url);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ newEmail: 'new@example.com', currentPassword: 'S3cure-pass', lang: 'fr' });
+      req.flush({ status: 'accepted' }, { status: 202, statusText: 'Accepted' });
+    });
+
+    it('reads the pending address, or null when there is none', () => {
+      const results: (string | null)[] = [];
+      service.getPendingEmail(5).subscribe((e) => results.push(e));
+      httpMock.expectOne(url).flush({ pendingEmail: 'new@example.com' });
+      service.getPendingEmail(5).subscribe((e) => results.push(e));
+      httpMock.expectOne(url).flush({});
+
+      expect(results).toEqual(['new@example.com', null]);
+    });
+
+    it('cancels the pending change', () => {
+      service.cancelEmailChange(5).subscribe();
+
+      const req = httpMock.expectOne(url);
+      expect(req.request.method).toBe('DELETE');
+      req.flush(null, { status: 204, statusText: 'No Content' });
+    });
+
+    it('sends the link of the pending change again', () => {
+      service.resendEmailChange(5, 'en').subscribe();
+
+      const req = httpMock.expectOne(`${url}/resend?lang=en`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.params.get('lang')).toBe('en');
+      req.flush({ status: 'accepted' }, { status: 202, statusText: 'Accepted' });
+    });
+  });
 });

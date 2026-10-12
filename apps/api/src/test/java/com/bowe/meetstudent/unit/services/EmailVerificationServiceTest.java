@@ -167,32 +167,4 @@ class EmailVerificationServiceTest {
         var ex = assertThrows(TooManyRequestsException.class, () -> service.resend(7, "fr"));
         assertEquals(42, ex.getRetryAfterSeconds());
     }
-
-    @Test
-    void restartVerificationRevokesOldTokensAndSendsANewOne() {
-        when(emailSender.isEnabled()).thenReturn(true);
-        when(userTokenService.issue(any(), any(), any())).thenReturn("t");
-
-        service.restartVerification(user);
-
-        verify(userTokenService).consumeOutstanding(7, UserTokenPurpose.EMAIL_VERIFICATION);
-        publishedEvent();
-    }
-
-    @Test
-    void restartVerificationRevokesOldTokensEvenWhenMailIsDisabledAndSwallowsTheCooldown() {
-        when(emailSender.isEnabled()).thenReturn(false);
-        service.restartVerification(user);
-        verify(userTokenService).consumeOutstanding(7, UserTokenPurpose.EMAIL_VERIFICATION);
-        verifyNoInteractions(events);
-    }
-
-    @Test
-    void restartVerificationDoesNotFailWhenTheCooldownApplies() {
-        when(emailSender.isEnabled()).thenReturn(true);
-        when(userTokenService.issue(any(), any(), any())).thenThrow(new TooManyRequestsException("slow down", 5));
-
-        assertDoesNotThrow(() -> service.restartVerification(user));
-        verify(events, never()).publishEvent(any(Object.class));
-    }
 }
