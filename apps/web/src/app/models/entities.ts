@@ -112,7 +112,7 @@ export interface School extends BaseEntity {
 }
 
 export interface Program extends BaseEntity {
-  duration: number; // In years
+  duration?: number | null; // In years
   /** Write: media id. Read: resolved `photo`. */
   photoMediaId?: number;
   photo?: Media | null;

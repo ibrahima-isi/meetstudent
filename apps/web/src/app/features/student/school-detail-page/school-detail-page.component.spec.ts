@@ -520,6 +520,17 @@ describe('SchoolDetailPageComponent', () => {
       locale.set('en');
     });
 
+    for (const duration of [undefined, null, 0, -1]) {
+      it(`hides the duration text and clock for a programme with duration ${duration}`, async () => {
+        const programme: Program = { id: 1, name: 'Programme without duration', ...(duration === undefined ? {} : { duration }) };
+        await renderWith(mockSchool, [programme]);
+
+        expect(text()).toContain('Programme without duration');
+        expect(text()).not.toContain('year');
+        expect(harness.routeNativeElement!.querySelector('[data-testid="programme-duration"]')).toBeNull();
+      });
+    }
+
     it('shows no availability, waiting list or intake for a programme without capacity or start date', async () => {
       await renderWith(mockSchool, [{ id: 1, name: 'Prog', duration: 3 }]);
 
