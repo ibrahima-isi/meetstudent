@@ -158,7 +158,13 @@
       "errorText": "Nous n’avons pas pu confirmer votre adresse pour le moment. Veuillez réessayer.",
       "retry": "Réessayer",
       "signInForNew": "Se connecter pour recevoir un nouvel e-mail",
-      "goToSpace": "Accéder à mon espace"
+      "goToSpace": "Accéder à mon espace",
+      "changeVerifyingTitle": "Confirmation de votre nouvelle adresse",
+      "changeVerifyingText": "Un instant, nous confirmons votre nouvelle adresse...",
+      "changeSuccessTitle": "Adresse e-mail mise à jour",
+      "changeSuccessText": "Votre nouvelle adresse e-mail est confirmée et remplace l'ancienne. Utilisez-la désormais pour vous connecter.",
+      "changeExpiredText": "Ce lien a expiré, a déjà été utilisé ou l'adresse n'est plus disponible. Connectez-vous et demandez un nouveau changement depuis votre profil.",
+      "changeInvalidText": "Ce lien est incomplet ou invalide. Connectez-vous et demandez un nouveau changement depuis votre profil."
     },
     "register": {
       "title": "Créer un compte",
@@ -320,6 +326,34 @@
     "fieldErrors": "Veuillez corriger les champs signalés.",
     "newPassword": "Nouveau mot de passe",
     "newPasswordHint": "Laissez vide pour conserver votre mot de passe actuel. 8 caractères minimum.",
+    "emailSection": {
+      "title": "Adresse e-mail",
+      "verified": "Confirmée",
+      "unverified": "Pas encore confirmée",
+      "unverifiedHint": "Confirmez votre adresse pour sécuriser votre compte. Votre compte fonctionne en attendant.",
+      "resendVerification": "Renvoyer l'e-mail de confirmation",
+      "change": "Changer d'adresse e-mail",
+      "newEmail": "Nouvelle adresse e-mail",
+      "currentPassword": "Mot de passe actuel",
+      "currentPasswordHint": "Nous le demandons pour vérifier que c'est bien vous.",
+      "send": "Envoyer le lien de confirmation",
+      "sending": "Envoi…",
+      "cancel": "Annuler",
+      "pendingTitle": "En attente de confirmation",
+      "pendingText": "Nous avons envoyé un lien à {{ email }}. Votre adresse actuelle reste active tant que vous ne l'avez pas ouvert.",
+      "resendPending": "Renvoyer le lien",
+      "cancelPending": "Annuler le changement",
+      "unavailable": "L'envoi d'e-mails n'est pas disponible pour le moment : l'adresse ne peut pas être modifiée.",
+      "feedback": {
+        "requested": "Lien envoyé. Ouvrez-le depuis la boîte de réception de votre nouvelle adresse pour confirmer.",
+        "sent": "E-mail envoyé.",
+        "limited": "Trop de tentatives. Réessayez plus tard.",
+        "failed": "Une erreur est survenue. Veuillez réessayer.",
+        "unavailable": "L'envoi d'e-mails n'est pas disponible pour le moment.",
+        "cancelled": "Changement annulé.",
+        "alreadyVerified": "Votre adresse est déjà confirmée."
+      }
+    },
     "errors": {
       "required": "Ce champ est obligatoire.",
       "email": "Veuillez saisir une adresse e-mail valide.",

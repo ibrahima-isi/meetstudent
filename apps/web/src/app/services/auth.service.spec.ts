@@ -68,6 +68,15 @@ describe('AuthService password reset and capabilities', () => {
     req.flush(null, { status: 204, statusText: 'No Content' });
   });
 
+  it('confirms an email change with the token alone', () => {
+    service.confirmEmailChange('tok').subscribe();
+
+    const req = backend.expectOne(`${base}/email-change/confirm`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ token: 'tok' });
+    req.flush(null, { status: 204, statusText: 'No Content' });
+  });
+
   it('asks for a new confirmation email with no body of its own', () => {
     service.resendEmailVerification('fr').subscribe();
 

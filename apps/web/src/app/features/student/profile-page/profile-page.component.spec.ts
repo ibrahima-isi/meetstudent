@@ -29,9 +29,13 @@ describe('ProfilePageComponent translations', () => {
     fixture = TestBed.createComponent(ProfilePageComponent);
     fixture.detectChanges();
     // The embedded documents panel asks for the user's media on init.
-    TestBed.inject(HttpTestingController)
-      .match(`${environment.apiUrl}/media/mine`)
-      .forEach((req) => req.flush([]));
+    const backend = TestBed.inject(HttpTestingController);
+    backend.match(`${environment.apiUrl}/media/mine`).forEach((req) => req.flush([]));
+    // So does the embedded email section: whether mail can be sent, and any pending change.
+    backend.match(`${environment.apiUrl}/auth/capabilities`).forEach((req) => req.flush({ emailEnabled: false }));
+    backend
+      .match((req) => req.method === 'GET' && req.url.endsWith('/email-change'))
+      .forEach((req) => req.flush({}));
     fixture.detectChanges();
     await fixture.whenStable();
   }
@@ -227,10 +231,17 @@ describe('ProfilePageComponent translations', () => {
       expect(req.request.body).toEqual({
         firstname: 'Awa Marie',
         lastname: 'Diop',
-        email: 'awa@example.com',
         qualification: '',
       });
       req.flush({ id: 5, firstname: 'Awa Marie', lastname: 'Diop', email: 'awa@example.com', role: { name: 'ROLE_STUDENT' } });
+    });
+
+    it('leaves the email to its own section: no email field in the form, and the section is there', async () => {
+      await edit();
+
+      expect(fixture.nativeElement.querySelector('[data-testid="profile-email"]')).toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-testid="profile-email-section"]')).not.toBeNull();
+      expect(text()).toContain('awa@example.com');
     });
 
     it('stores the saved user, leaves edit mode and says so', async () => {
@@ -285,11 +296,11 @@ describe('ProfilePageComponent translations', () => {
       await edit();
       save();
 
-      http.expectOne(url).flush({ email: 'Cet email est déjà utilisé' }, { status: 400, statusText: 'Bad Request' });
+      http.expectOne(url).flush({ firstname: 'Prénom invalide' }, { status: 400, statusText: 'Bad Request' });
       await settle();
 
-      const message = fixture.nativeElement.querySelector('[data-testid="profile-error-email"]') as HTMLElement;
-      expect(message.textContent).toContain('Cet email est déjà utilisé');
+      const message = fixture.nativeElement.querySelector('[data-testid="profile-error-firstname"]') as HTMLElement;
+      expect(message.textContent).toContain('Prénom invalide');
       expect(text()).toContain('Please correct the highlighted fields.');
       expect(setUser).not.toHaveBeenCalled();
       expect(fixture.componentInstance.isEditing()).toBeTrue();
@@ -298,13 +309,13 @@ describe('ProfilePageComponent translations', () => {
     it('drops the API message when the field is edited', async () => {
       await edit();
       save();
-      http.expectOne(url).flush({ email: 'Cet email est déjà utilisé' }, { status: 400, statusText: 'Bad Request' });
+      http.expectOne(url).flush({ firstname: 'Prénom invalide' }, { status: 400, statusText: 'Bad Request' });
       await settle();
 
-      type('[data-testid="profile-email"]', 'other@example.com');
+      type('[data-testid="profile-firstname"]', 'Awa Marie');
       await settle();
 
-      expect(fixture.nativeElement.querySelector('[data-testid="profile-error-email"]')).toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-testid="profile-error-firstname"]')).toBeNull();
     });
 
     it('shows a translated failure for any other error, keeping the edits', async () => {
