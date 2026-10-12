@@ -1,253 +1,251 @@
-<div class="min-h-screen bg-muted/50" *transloco="let t">
-  <div class="bg-card border-b border-border pt-24">
-    <div class="max-w-4xl mx-auto px-4 py-6">
-      <div class="flex items-center justify-between gap-2 mb-4">
-        <button
-          (click)="goTo('home')"
-          class="flex min-w-0 items-center gap-2 text-foreground hover:text-muted-foreground cursor-pointer"
-        >
-          <lucide-icon [img]="ArrowLeft" class="w-5 h-5 shrink-0"></lucide-icon>
-          <span class="truncate">{{ t('profile.back') }}</span>
-        </button>
+<div class="min-h-screen" *transloco="let t">
+  <header class="relative isolate overflow-hidden border-b border-border pb-10 pt-28">
+    <app-mesh-background />
+    <div class="mx-auto max-w-5xl px-4 sm:px-6">
+      <button type="button" (click)="goTo('home')" class="btn btn-ghost -ml-3">
+        <lucide-icon [img]="ArrowLeft" class="h-4 w-4 shrink-0" aria-hidden="true"></lucide-icon>
+        <span class="truncate">{{ t('profile.back') }}</span>
+      </button>
+
+      <div class="mt-6 flex flex-wrap items-center gap-5">
+        <div
+          data-testid="profile-avatar"
+          aria-hidden="true"
+          class="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-brand text-2xl font-semibold text-brand-foreground shadow-[var(--shadow-glow)] ring-4 ring-background"
+        >{{ initials() }}</div>
+        <div class="min-w-0">
+          <h1 class="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">{{ t('profile.title') }}</h1>
+          <p data-testid="profile-name" class="mt-1 break-words text-lg text-muted-foreground">{{ fullName() }}</p>
+          <p class="mt-3">
+            <span data-testid="profile-role" class="inline-flex items-center gap-1.5 rounded-full bg-brand-soft px-3 py-1 text-sm font-medium text-brand-soft-foreground">
+              @if (isStudent()) {
+                <lucide-icon [img]="GraduationCap" class="h-4 w-4" aria-hidden="true"></lucide-icon>{{ t('profile.roleStudent') }}
+              } @else if (isExpert()) {
+                <lucide-icon [img]="Briefcase" class="h-4 w-4" aria-hidden="true"></lucide-icon>{{ t('profile.roleExpert') }}
+              } @else {
+                <lucide-icon [img]="UserIcon" class="h-4 w-4" aria-hidden="true"></lucide-icon>{{ profile().role?.name }}
+              }
+            </span>
+          </p>
+        </div>
       </div>
-      <h1 class="text-foreground text-2xl font-bold">{{ t('profile.title') }}</h1>
     </div>
-  </div>
+  </header>
 
-  <div class="max-w-4xl mx-auto px-4 py-8">
-    <div class="bg-card rounded-xl shadow-sm border border-border p-4 sm:p-6 mb-6">
-      <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <h2 class="text-foreground text-xl font-bold">{{ t('profile.personalInfo') }}</h2>
-        @if (!isEditing()) {
-          <button
-            (click)="isEditing.set(true); saveStatus.set(null)"
-            class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors cursor-pointer"
-          >
-            {{ t('profile.edit') }}
-          </button>
-        } @else {
-          <div class="flex gap-2">
-            <button
-              data-testid="profile-cancel"
-              (click)="handleCancel()"
-              [disabled]="isSaving()"
-              class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-foreground rounded-lg hover:bg-accent transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {{ t('profile.cancel') }}
+  <div class="mx-auto grid max-w-5xl gap-6 px-4 py-8 sm:px-6 lg:grid-cols-3">
+    <div [class]="(isStudent() ? 'lg:col-span-2' : 'lg:col-span-3') + ' min-w-0 space-y-6'">
+      <section data-testid="profile-info-card" class="rounded-2xl border border-border bg-card p-5 sm:p-6">
+        <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <h2 class="text-xl font-semibold tracking-tight text-foreground">{{ t('profile.personalInfo') }}</h2>
+          @if (!isEditing()) {
+            <button type="button" (click)="isEditing.set(true); saveStatus.set(null)" class="btn btn-primary">
+              {{ t('profile.edit') }}
             </button>
-            <button
-              data-testid="profile-save"
-              (click)="handleSave()"
-              [disabled]="isSaving()"
-              class="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <lucide-icon [img]="Save" class="w-4 h-4"></lucide-icon>
-              <span>{{ t(isSaving() ? 'profile.saving' : 'profile.save') }}</span>
-            </button>
-          </div>
-        }
-      </div>
-
-      @switch (saveStatus()) {
-        @case ('saved') {
-          <p role="status" data-testid="profile-save-status" class="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 text-green-800 dark:border-green-900 dark:bg-green-950/40 dark:text-green-200">
-            {{ t('profile.saved') }}
-          </p>
-        }
-        @case ('fieldErrors') {
-          <p role="alert" data-testid="profile-save-status" class="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
-            {{ t('profile.fieldErrors') }}
-          </p>
-        }
-        @case ('failed') {
-          <p role="alert" data-testid="profile-save-status" class="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
-            {{ t('profile.saveFailed') }}
-          </p>
-        }
-      }
-
-      <!-- The API's message for a field, else the form's own validation message. -->
-      <ng-template #fieldErrors let-field>
-        @if (serverError(field); as message) {
-          <p class="mt-1 text-red-600 dark:text-red-400" role="alert" [attr.data-testid]="'profile-error-' + field">{{ message }}</p>
-        } @else if (clientError(field); as key) {
-          <p class="mt-1 text-red-600 dark:text-red-400" role="alert" [attr.data-testid]="'profile-error-' + field">{{ t(key) }}</p>
-        }
-      </ng-template>
-
-      <div class="space-y-4">
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div class="min-w-0">
-            <label class="block text-foreground mb-2 font-medium">{{ t('profile.firstname') }}</label>
-            @if (isEditing()) {
-              <div class="relative">
-                <lucide-icon [img]="UserIcon" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground"></lucide-icon>
-                <input
-                  type="text"
-                  [formControl]="form.controls.firstname"
-                  data-testid="profile-firstname"
-                  class="bg-card text-foreground placeholder:text-muted-foreground w-full pl-11 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  [placeholder]="t('profile.firstnamePlaceholder')"
-                />
-              </div>
-              <ng-container *ngTemplateOutlet="fieldErrors; context: { $implicit: 'firstname' }" />
-            } @else {
-              <div class="flex items-center gap-3 text-foreground">
-                <lucide-icon [img]="UserIcon" class="w-5 h-5 shrink-0 text-muted-foreground"></lucide-icon>
-                <span class="min-w-0 break-words">{{ profile().firstname || t('profile.notProvided') }}</span>
-              </div>
-            }
-          </div>
-          <div class="min-w-0">
-            <label class="block text-foreground mb-2 font-medium">{{ t('profile.lastname') }}</label>
-            @if (isEditing()) {
-              <div class="relative">
-                <lucide-icon [img]="UserIcon" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground"></lucide-icon>
-                <input
-                  type="text"
-                  [formControl]="form.controls.lastname"
-                  data-testid="profile-lastname"
-                  class="bg-card text-foreground placeholder:text-muted-foreground w-full pl-11 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  [placeholder]="t('profile.lastnamePlaceholder')"
-                />
-              </div>
-              <ng-container *ngTemplateOutlet="fieldErrors; context: { $implicit: 'lastname' }" />
-            } @else {
-              <div class="flex items-center gap-3 text-foreground">
-                <lucide-icon [img]="UserIcon" class="w-5 h-5 shrink-0 text-muted-foreground"></lucide-icon>
-                <span class="min-w-0 break-words">{{ profile().lastname || t('profile.notProvided') }}</span>
-              </div>
-            }
-          </div>
+          } @else {
+            <div class="flex gap-2">
+              <button type="button" data-testid="profile-cancel" (click)="handleCancel()" [disabled]="isSaving()" class="btn btn-secondary">
+                {{ t('profile.cancel') }}
+              </button>
+              <button type="button" data-testid="profile-save" (click)="handleSave()" [disabled]="isSaving()" class="btn btn-primary">
+                <lucide-icon [img]="Save" class="h-4 w-4" aria-hidden="true"></lucide-icon>
+                <span>{{ t(isSaving() ? 'profile.saving' : 'profile.save') }}</span>
+              </button>
+            </div>
+          }
         </div>
 
+        @switch (saveStatus()) {
+          @case ('saved') {
+            <p role="status" data-testid="profile-save-status" class="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 text-green-800 dark:border-green-900 dark:bg-green-950/40 dark:text-green-200">
+              {{ t('profile.saved') }}
+            </p>
+          }
+          @case ('fieldErrors') {
+            <p role="alert" data-testid="profile-save-status" class="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
+              {{ t('profile.fieldErrors') }}
+            </p>
+          }
+          @case ('failed') {
+            <p role="alert" data-testid="profile-save-status" class="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
+              {{ t('profile.saveFailed') }}
+            </p>
+          }
+        }
+
+        <!-- The API's message for a field, else the form's own validation message. -->
+        <ng-template #fieldErrors let-field>
+          @if (serverError(field); as message) {
+            <p class="mt-1 text-destructive" role="alert" [attr.data-testid]="'profile-error-' + field">{{ message }}</p>
+          } @else if (clientError(field); as key) {
+            <p class="mt-1 text-destructive" role="alert" [attr.data-testid]="'profile-error-' + field">{{ t(key) }}</p>
+          }
+        </ng-template>
+
+        <div class="space-y-5">
+          <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <div class="min-w-0">
+              <label class="mb-2 block text-sm font-medium text-foreground">{{ t('profile.firstname') }}</label>
+              @if (isEditing()) {
+                <div class="relative">
+                  <lucide-icon [img]="UserIcon" class="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true"></lucide-icon>
+                  <input
+                    type="text"
+                    [formControl]="form.controls.firstname"
+                    data-testid="profile-firstname"
+                    class="field-input pl-10"
+                    [placeholder]="t('profile.firstnamePlaceholder')"
+                  />
+                </div>
+                <ng-container *ngTemplateOutlet="fieldErrors; context: { $implicit: 'firstname' }" />
+              } @else {
+                <div class="flex items-center gap-3 text-foreground">
+                  <lucide-icon [img]="UserIcon" class="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true"></lucide-icon>
+                  <span class="min-w-0 break-words">{{ profile().firstname || t('profile.notProvided') }}</span>
+                </div>
+              }
+            </div>
+            <div class="min-w-0">
+              <label class="mb-2 block text-sm font-medium text-foreground">{{ t('profile.lastname') }}</label>
+              @if (isEditing()) {
+                <div class="relative">
+                  <lucide-icon [img]="UserIcon" class="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true"></lucide-icon>
+                  <input
+                    type="text"
+                    [formControl]="form.controls.lastname"
+                    data-testid="profile-lastname"
+                    class="field-input pl-10"
+                    [placeholder]="t('profile.lastnamePlaceholder')"
+                  />
+                </div>
+                <ng-container *ngTemplateOutlet="fieldErrors; context: { $implicit: 'lastname' }" />
+              } @else {
+                <div class="flex items-center gap-3 text-foreground">
+                  <lucide-icon [img]="UserIcon" class="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true"></lucide-icon>
+                  <span class="min-w-0 break-words">{{ profile().lastname || t('profile.notProvided') }}</span>
+                </div>
+              }
+            </div>
+          </div>
+
+          @if (isEditing()) {
+            <div class="min-w-0">
+              <label for="profile-password" class="mb-2 block text-sm font-medium text-foreground">{{ t('profile.newPassword') }}</label>
+              <input
+                id="profile-password"
+                type="password"
+                autocomplete="new-password"
+                [formControl]="form.controls.password"
+                data-testid="profile-password"
+                class="field-input"
+                placeholder="••••••••"
+              />
+              <p class="mt-1 text-sm text-muted-foreground">{{ t('profile.newPasswordHint') }}</p>
+              <ng-container *ngTemplateOutlet="fieldErrors; context: { $implicit: 'password' }" />
+            </div>
+          }
+
+          @if (isStudent()) {
+            <div>
+              <label class="mb-2 block text-sm font-medium text-foreground">{{ t('profile.bacType') }}</label>
+              @if (isEditing()) {
+                <div class="relative">
+                  <lucide-icon [img]="GraduationCap" class="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true"></lucide-icon>
+                  <select
+                    [formControl]="form.controls.qualification"
+                    data-testid="profile-qualification"
+                    class="field-input appearance-none pl-10"
+                  >
+                    <option value="">{{ t('profile.bacPlaceholder') }}</option>
+                    <option value="bac-general">{{ t('common.bacTypes.general') }}</option>
+                    <option value="bac-techno-sti2d">{{ t('common.bacTypes.technoSti2d') }}</option>
+                    <option value="bac-techno-stmg">{{ t('common.bacTypes.technoStmg') }}</option>
+                    <option value="bac-pro">{{ t('common.bacTypes.pro') }}</option>
+                  </select>
+                </div>
+                <ng-container *ngTemplateOutlet="fieldErrors; context: { $implicit: 'qualification' }" />
+              } @else {
+                <div class="flex items-center gap-3 text-foreground">
+                  <lucide-icon [img]="GraduationCap" class="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true"></lucide-icon>
+                  <span>
+                    @switch (profile().qualification) {
+                      @case ('bac-general') { {{ t('common.bacTypes.general') }} }
+                      @case ('bac-techno-sti2d') { {{ t('common.bacTypes.technoSti2d') }} }
+                      @case ('bac-techno-stmg') { {{ t('common.bacTypes.technoStmg') }} }
+                      @case ('bac-pro') { {{ t('common.bacTypes.pro') }} }
+                      @default { {{ profile().qualification || t('profile.notProvided') }} }
+                    }
+                  </span>
+                </div>
+              }
+            </div>
+          }
+
+          @if (isExpert()) {
+            <div>
+              <label class="mb-2 block text-sm font-medium text-foreground">{{ t('profile.specialty') }}</label>
+              @if (isEditing()) {
+                <div class="relative">
+                  <lucide-icon [img]="Briefcase" class="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true"></lucide-icon>
+                  <input
+                    type="text"
+                    [formControl]="form.controls.qualification"
+                    data-testid="profile-qualification"
+                    class="field-input pl-10"
+                    [placeholder]="t('profile.specialtyPlaceholder')"
+                  />
+                </div>
+                <ng-container *ngTemplateOutlet="fieldErrors; context: { $implicit: 'qualification' }" />
+              } @else {
+                <div class="flex items-center gap-3 text-foreground">
+                  <lucide-icon [img]="Briefcase" class="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true"></lucide-icon>
+                  <span>{{ profile().qualification || t('profile.notProvided') }}</span>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </section>
+
+      <section data-testid="profile-email-card" class="rounded-2xl border border-border bg-card p-5 sm:p-6">
         <app-profile-email-section />
+      </section>
 
-        @if (isEditing()) {
-          <div class="min-w-0">
-            <label for="profile-password" class="block text-foreground mb-2 font-medium">{{ t('profile.newPassword') }}</label>
-            <input
-              id="profile-password"
-              type="password"
-              autocomplete="new-password"
-              [formControl]="form.controls.password"
-              data-testid="profile-password"
-              class="bg-card text-foreground placeholder:text-muted-foreground w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              placeholder="••••••••"
-            />
-            <p class="text-muted-foreground mt-1">{{ t('profile.newPasswordHint') }}</p>
-            <ng-container *ngTemplateOutlet="fieldErrors; context: { $implicit: 'password' }" />
-          </div>
-        }
-
-        <div>
-          <label class="block text-foreground mb-2 font-medium">{{ t('profile.profileType') }}</label>
-          <div class="flex items-center gap-3 text-foreground uppercase">
-            @if (isStudent()) {
-              <lucide-icon [img]="GraduationCap" class="w-5 h-5 text-muted-foreground"></lucide-icon>
-              <span>{{ t('profile.roleStudent') }}</span>
-            } @else if (isExpert()) {
-              <lucide-icon [img]="Briefcase" class="w-5 h-5 text-muted-foreground"></lucide-icon>
-              <span>{{ t('profile.roleExpert') }}</span>
-            } @else {
-              <lucide-icon [img]="UserIcon" class="w-5 h-5 text-muted-foreground"></lucide-icon>
-              <span>{{ profile().role?.name }}</span>
-            }
-          </div>
-        </div>
-
-        @if (isStudent()) {
-          <div>
-            <label class="block text-foreground mb-2 font-medium">{{ t('profile.bacType') }}</label>
-            @if (isEditing()) {
-              <div class="relative">
-                <lucide-icon [img]="GraduationCap" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground"></lucide-icon>
-                <select
-                  [formControl]="form.controls.qualification"
-                  data-testid="profile-qualification"
-                  class="bg-card text-foreground placeholder:text-muted-foreground w-full pl-11 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent appearance-none"
-                >
-                  <option value="">{{ t('profile.bacPlaceholder') }}</option>
-                  <option value="bac-general">{{ t('common.bacTypes.general') }}</option>
-                  <option value="bac-techno-sti2d">{{ t('common.bacTypes.technoSti2d') }}</option>
-                  <option value="bac-techno-stmg">{{ t('common.bacTypes.technoStmg') }}</option>
-                  <option value="bac-pro">{{ t('common.bacTypes.pro') }}</option>
-                </select>
-              </div>
-              <ng-container *ngTemplateOutlet="fieldErrors; context: { $implicit: 'qualification' }" />
-            } @else {
-              <div class="flex items-center gap-3 text-foreground">
-                <lucide-icon [img]="GraduationCap" class="w-5 h-5 text-muted-foreground"></lucide-icon>
-                <span>
-                  @switch (profile().qualification) {
-                    @case ('bac-general') { {{ t('common.bacTypes.general') }} }
-                    @case ('bac-techno-sti2d') { {{ t('common.bacTypes.technoSti2d') }} }
-                    @case ('bac-techno-stmg') { {{ t('common.bacTypes.technoStmg') }} }
-                    @case ('bac-pro') { {{ t('common.bacTypes.pro') }} }
-                    @default { {{ profile().qualification || t('profile.notProvided') }} }
-                  }
-                </span>
-              </div>
-            }
-          </div>
-        }
-
-        @if (isExpert()) {
-          <div>
-            <label class="block text-foreground mb-2 font-medium">{{ t('profile.specialty') }}</label>
-            @if (isEditing()) {
-              <div class="relative">
-                <lucide-icon [img]="Briefcase" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground"></lucide-icon>
-                <input
-                  type="text"
-                  [formControl]="form.controls.qualification"
-                  data-testid="profile-qualification"
-                  class="bg-card text-foreground placeholder:text-muted-foreground w-full pl-11 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  [placeholder]="t('profile.specialtyPlaceholder')"
-                />
-              </div>
-              <ng-container *ngTemplateOutlet="fieldErrors; context: { $implicit: 'qualification' }" />
-            } @else {
-              <div class="flex items-center gap-3 text-foreground">
-                <lucide-icon [img]="Briefcase" class="w-5 h-5 text-muted-foreground"></lucide-icon>
-                <span>{{ profile().qualification || t('profile.notProvided') }}</span>
-              </div>
-            }
-          </div>
-        }
-      </div>
+      @if (isStudent()) {
+        <app-user-documents />
+      }
     </div>
 
     @if (isStudent()) {
-      <app-user-documents />
+      <aside class="min-w-0 lg:col-span-1">
+        <section class="rounded-2xl border border-border bg-card p-5 lg:sticky lg:top-28">
+          <h2 class="text-xl font-semibold tracking-tight text-foreground">{{ t('profile.wishlistTitle') }}</h2>
+          <p class="mt-1 text-sm text-muted-foreground">
+            {{ t(plural('wishlist.count', wishlist.schools().length), { count: wishlist.schools().length }) }}
+          </p>
 
-      <div class="bg-card rounded-xl shadow-sm border border-border p-6">
-        <h2 class="text-foreground mb-4 text-xl font-bold">{{ t('profile.wishlistTitle') }}</h2>
-        @if (wishlist.schools().length > 0) {
-          <div class="space-y-3">
-            @for (school of wishlist.schools(); track school.id) {
-              <div class="flex items-center justify-between p-4 border border-border rounded-lg">
-                <div class="flex items-center gap-3">
-                  <lucide-icon [img]="Heart" class="w-5 h-5 text-red-600 dark:text-red-400 fill-current"></lucide-icon>
-                  <span class="text-foreground font-medium">{{ school.name }}</span>
-                </div>
-                <button
-                  data-testid="wishlist-remove"
-                  (click)="wishlist.toggle(school)"
-                  class="px-3 py-1 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
-                >
-                  {{ t('profile.remove') }}
-                </button>
-              </div>
-            }
-          </div>
-        } @else {
-          <div class="text-center py-8 text-muted-foreground">
-            <lucide-icon [img]="Heart" class="w-12 h-12 mx-auto mb-3 text-muted-foreground/50"></lucide-icon>
-            <p>{{ t('profile.wishlistEmpty') }}</p>
-          </div>
-        }
-      </div>
+          @if (wishlist.schools().length > 0) {
+            <ul role="list" class="mt-4 space-y-3">
+              @for (school of wishlist.schools(); track school.id) {
+                <li>
+                  <app-wishlist-item
+                    [school]="school"
+                    [removing]="wishlist.isPending(school.id)"
+                    (removed)="wishlist.toggle($event)"
+                  />
+                </li>
+              }
+            </ul>
+          } @else {
+            <div class="mt-4 rounded-xl border border-dashed border-border-strong p-6 text-center">
+              <lucide-icon [img]="Heart" class="mx-auto mb-3 h-10 w-10 text-muted-foreground/50" aria-hidden="true"></lucide-icon>
+              <p class="text-muted-foreground">{{ t('profile.wishlistEmpty') }}</p>
+              <a [routerLink]="['/', locale.active(), 'schools']" class="btn btn-primary mt-4">
+                {{ t('profile.exploreSchools') }}
+              </a>
+            </div>
+          }
+        </section>
+      </aside>
     }
   </div>
 </div>

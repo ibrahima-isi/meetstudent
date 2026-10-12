@@ -285,9 +285,14 @@
     },
     "empty": "Your wishlist is empty",
     "emptyHint": "Add schools to find them again easily",
-    "compare": "Compare programmes",
     "addAction": "Add to wishlist",
     "removeAction": "Remove from wishlist",
+    "viewMore": "View more",
+    "manage": "Manage my wishlist",
+    "programmes": {
+      "one": "{{ count }} programme",
+      "other": "{{ count }} programmes"
+    },
     "updateError": "Your wishlist could not be updated. Please try again.",
     "dismiss": "Dismiss",
     "loadError": "Your wishlist could not be loaded."
@@ -361,7 +366,8 @@
     },
     "wishlistTitle": "My wishlist",
     "remove": "Remove",
-    "wishlistEmpty": "No schools in your wishlist"
+    "wishlistEmpty": "No schools in your wishlist",
+    "exploreSchools": "Explore schools"
   },
   "documents": {
     "title": "My documents",

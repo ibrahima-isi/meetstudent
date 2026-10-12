@@ -156,7 +156,7 @@ describe('dark mode: no light-only palette classes', () => {
           },
         },
         { provide: ProgramService, useValue: { getPrograms: () => of({ content: [] }) } },
-        { provide: MediaService, useValue: { mine: () => of(documents) } },
+        { provide: MediaService, useValue: { mine: () => of(documents), resolveUrl: () => null } },
         {
           provide: TokenService,
           useValue: { isAuthenticated: signal(true), user: signal(student), clear: () => undefined },
