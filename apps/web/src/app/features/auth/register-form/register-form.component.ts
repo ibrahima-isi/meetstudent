@@ -2,7 +2,8 @@ import { Component, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
+import { catchError, of, switchMap } from 'rxjs';
 import { LucideAngularModule, Mail, Lock, User as UserIcon, AlertCircle, UserPlus, GraduationCap, MapPin, Users, BookOpen } from 'lucide-angular';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { AuthService, RegisterPayload } from '../../../services/auth.service';
@@ -38,6 +39,7 @@ export class RegisterFormComponent {
   private fb = inject(FormBuilder);
   private authService = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly locale = inject(LocaleService);
 
   readonly Mail = Mail;
@@ -169,6 +171,16 @@ export class RegisterFormComponent {
     this.filteredSpecialties.set([]);
   }
 
+  /** Back to the page `authGuard` interrupted, else home. Same-site paths only. */
+  private afterSignIn(): void {
+    const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
+    if (returnUrl?.startsWith('/') && !returnUrl.startsWith('//')) {
+      void this.router.navigateByUrl(returnUrl);
+    } else {
+      this.goTo('home');
+    }
+  }
+
   /** Navigations stay in the language the visitor is reading. */
   protected goTo(...segments: (string | number)[]): void {
     void this.router.navigate(['/', this.locale.active(), ...segments]);
@@ -225,14 +237,23 @@ export class RegisterFormComponent {
       lang: this.locale.active()
     };
 
-    this.authService.register(userData).subscribe({
-      next: () => {
+    this.authService.register(userData).pipe(
+      // The account exists and its owner just typed the password: sign them in
+      // rather than make them type it again on the login page.
+      switchMap(() => this.authService.login(email, password).pipe(
+        catchError(() => of(null)),
+      )),
+    ).subscribe({
+      next: (user) => {
         this.isLoading.set(false);
-        // No email verification yet (the backend has none): the account is
-        // usable, so go straight to login with a flag for the success notice.
-        void this.router.navigate(['/', this.locale.active(), 'login'], {
-          queryParams: { registered: '1' },
-        });
+        if (user) {
+          this.afterSignIn();
+        } else {
+          // Registered but not signed in (the sign-in call failed): the login page says so.
+          void this.router.navigate(['/', this.locale.active(), 'login'], {
+            queryParams: { registered: '1' },
+          });
+        }
       },
       // Field messages from a 400 are shown under their fields; anything else
       // gets the front's own text, never the API's raw message.

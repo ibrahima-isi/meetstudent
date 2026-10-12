@@ -2,13 +2,15 @@ import { TestBed, ComponentFixture } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, provideRouter } from '@angular/router';
+import { EMPTY, of, throwError } from 'rxjs';
 import { provideTransloco, TranslocoService } from '@jsverse/transloco';
 import { firstValueFrom } from 'rxjs';
 import { translocoOptions } from '@i18n/transloco.config';
 import { RegisterFormComponent } from './register-form.component';
 import { Router } from '@angular/router';
 import { LocaleService } from '@services/locale.service';
+import { AuthService } from '@services/auth.service';
 import { environment } from '../../../../environments/environment';
 
 /**
@@ -20,6 +22,7 @@ describe('RegisterFormComponent registration payload', () => {
   let fixture: ComponentFixture<RegisterFormComponent>;
   let component: RegisterFormComponent;
   let httpMock: HttpTestingController;
+  let login: jasmine.Spy;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -37,6 +40,8 @@ describe('RegisterFormComponent registration payload', () => {
     fixture = TestBed.createComponent(RegisterFormComponent);
     component = fixture.componentInstance;
     httpMock = TestBed.inject(HttpTestingController);
+    // A successful signup signs the user in; the payload specs below do not care how.
+    login = spyOn(TestBed.inject(AuthService), 'login').and.returnValue(EMPTY);
   });
 
   afterEach(() => httpMock.verify());
@@ -76,20 +81,58 @@ describe('RegisterFormComponent registration payload', () => {
     req.flush({});
   });
 
-  // Launch scope: the backend has no email verification, so a successful
-  // signup goes straight to login, carrying a flag for the success notice.
-  it('goes straight to login after a successful registration', () => {
-    const navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
-    fillValidForm();
-    component.handleSubmit();
+  describe('after a successful registration', () => {
+    const user = { id: 3, email: 'awa@example.com' };
 
-    httpMock.expectOne(`${environment.apiUrl}/users`).flush({});
+    function register() {
+      fillValidForm();
+      component.handleSubmit();
+      httpMock.expectOne(`${environment.apiUrl}/users`).flush({});
+    }
 
-    expect(navigate).toHaveBeenCalledTimes(1);
-    const [commands, extras] = navigate.calls.mostRecent().args;
-    expect((commands as string[]).at(-1)).toBe('login');
-    expect(commands).not.toContain('verify');
-    expect(extras).toEqual({ queryParams: { registered: '1' } });
+    it('signs the user in with the credentials just chosen, then lands on home', () => {
+      const navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+      spyOn(TestBed.inject(LocaleService), 'active').and.returnValue('en');
+      login.and.returnValue(of(user));
+      register();
+
+      expect(login).toHaveBeenCalledOnceWith('awa@example.com', 'sup3rsecret');
+      expect(navigate).toHaveBeenCalledOnceWith(['/', 'en', 'home']);
+    });
+
+    it('goes back to the page the guard interrupted when the visitor came from one', () => {
+      const router = TestBed.inject(Router);
+      const navigate = spyOn(router, 'navigate').and.resolveTo(true);
+      const navigateByUrl = spyOn(router, 'navigateByUrl').and.resolveTo(true);
+      TestBed.inject(ActivatedRoute).snapshot.queryParams = { returnUrl: '/fr/schools/4' };
+      login.and.returnValue(of(user));
+      register();
+
+      expect(navigateByUrl).toHaveBeenCalledOnceWith('/fr/schools/4');
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('ignores a returnUrl that leaves the site', () => {
+      const router = TestBed.inject(Router);
+      const navigate = spyOn(router, 'navigate').and.resolveTo(true);
+      const navigateByUrl = spyOn(router, 'navigateByUrl').and.resolveTo(true);
+      TestBed.inject(ActivatedRoute).snapshot.queryParams = { returnUrl: '//evil.example' };
+      login.and.returnValue(of(user));
+      register();
+
+      expect(navigateByUrl).not.toHaveBeenCalled();
+      expect((navigate.calls.mostRecent().args[0] as string[]).at(-1)).toBe('home');
+    });
+
+    it('falls back to the login page with the success notice when the automatic sign-in fails', () => {
+      const navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+      login.and.returnValue(throwError(() => new Error('nope')));
+      register();
+
+      const [commands, extras] = navigate.calls.mostRecent().args;
+      expect((commands as string[]).at(-1)).toBe('login');
+      expect(extras).toEqual({ queryParams: { registered: '1' } });
+    });
   });
 
   it('sends the current locale as lang, so the confirmation email is in the language being read', () => {
