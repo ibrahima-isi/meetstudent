@@ -18,26 +18,54 @@ public final class EmailTemplates {
     public static EmailMessage build(AccountEmailRequested event, String frontendBaseUrl, Duration ttl) {
         var lang = normalizeLang(event.lang());
         var english = "en".equals(lang);
-        var verification = event.type() == EmailType.EMAIL_VERIFICATION;
-        var path = verification ? "verify-email" : "reset-password";
-        var link = stripTrailingSlash(frontendBaseUrl) + "/" + lang + "/" + path + "#token=" + event.token();
+        var type = event.type();
+        var path = type == EmailType.PASSWORD_RESET ? "reset-password" : "verify-email";
+        // The change link opens the same page as the verification one; the marker tells it which endpoint to call.
+        var marker = type == EmailType.EMAIL_CHANGE ? "&type=change" : "";
+        var link = stripTrailingSlash(frontendBaseUrl) + "/" + lang + "/" + path + "#token=" + event.token() + marker;
         var name = event.firstName() == null ? "" : event.firstName().strip();
         var validity = formatTtl(ttl, english);
-
-        var subject = verification
-                ? (english ? "Confirm your MeetStudent email address" : "Confirmez votre adresse e-mail MeetStudent")
-                : (english ? "Reset your MeetStudent password" : "Réinitialisez votre mot de passe MeetStudent");
-
-        var text = english
-                ? (verification ? EN_VERIFY_TEXT : EN_RESET_TEXT).formatted(greeting(name, true, false), validity, link)
-                : (verification ? FR_VERIFY_TEXT : FR_RESET_TEXT).formatted(greeting(name, false, false), validity, link);
-        var html = english
-                ? (verification ? EN_VERIFY_HTML : EN_RESET_HTML).formatted(greeting(name, true, true), validity,
-                        HtmlUtils.htmlEscape(link), HtmlUtils.htmlEscape(link))
-                : (verification ? FR_VERIFY_HTML : FR_RESET_HTML).formatted(greeting(name, false, true), validity,
-                        HtmlUtils.htmlEscape(link), HtmlUtils.htmlEscape(link));
-
+        var subject = switch (type) {
+            case EMAIL_VERIFICATION -> english ? "Confirm your MeetStudent email address" : "Confirmez votre adresse e-mail MeetStudent";
+            case EMAIL_CHANGE -> english ? "Confirm your new MeetStudent email address" : "Confirmez votre nouvelle adresse e-mail MeetStudent";
+            case PASSWORD_RESET -> english ? "Reset your MeetStudent password" : "Réinitialisez votre mot de passe MeetStudent";
+        };
+        var text = (english ? englishText(type) : frenchText(type)).formatted(greeting(name, english, false), validity, link);
+        var html = (english ? englishHtml(type) : frenchHtml(type)).formatted(greeting(name, english, true), validity,
+                HtmlUtils.htmlEscape(link), HtmlUtils.htmlEscape(link));
         return new EmailMessage(event.type(), event.userId(), event.to(), subject, text, html);
+    }
+
+    private static String frenchText(EmailType type) {
+        return switch (type) {
+            case EMAIL_VERIFICATION -> FR_VERIFY_TEXT;
+            case EMAIL_CHANGE -> FR_CHANGE_TEXT;
+            case PASSWORD_RESET -> FR_RESET_TEXT;
+        };
+    }
+
+    private static String englishText(EmailType type) {
+        return switch (type) {
+            case EMAIL_VERIFICATION -> EN_VERIFY_TEXT;
+            case EMAIL_CHANGE -> EN_CHANGE_TEXT;
+            case PASSWORD_RESET -> EN_RESET_TEXT;
+        };
+    }
+
+    private static String frenchHtml(EmailType type) {
+        return switch (type) {
+            case EMAIL_VERIFICATION -> FR_VERIFY_HTML;
+            case EMAIL_CHANGE -> FR_CHANGE_HTML;
+            case PASSWORD_RESET -> FR_RESET_HTML;
+        };
+    }
+
+    private static String englishHtml(EmailType type) {
+        return switch (type) {
+            case EMAIL_VERIFICATION -> EN_VERIFY_HTML;
+            case EMAIL_CHANGE -> EN_CHANGE_HTML;
+            case PASSWORD_RESET -> EN_RESET_HTML;
+        };
     }
 
     private static String normalizeLang(String lang) {
@@ -159,6 +187,46 @@ public final class EmailTemplates {
             <p><a href="%s">Choose a new password</a></p>
             <p style="font-size:12px;color:#6b7280">If the link does not work, copy it into your browser:<br>%s</p>
             <p>If you did not ask for this, ignore this message: your current password stays unchanged.</p>
+            <p>The MeetStudent team</p>
+            </body></html>
+            """;
+
+    private static final String FR_CHANGE_TEXT = """
+            %s
+            Vous avez demandé à utiliser cette adresse e-mail pour votre compte MeetStudent. Confirmez-la en ouvrant ce lien (valable %s) :
+            %s
+            Tant que vous ne l'avez pas confirmée, votre ancienne adresse reste active. Si vous n'êtes pas à l'origine de cette demande, ignorez ce message.
+            L'équipe MeetStudent
+            """;
+
+    private static final String EN_CHANGE_TEXT = """
+            %s
+            You asked to use this email address for your MeetStudent account. Confirm it by opening this link (valid for %s):
+            %s
+            Until you confirm it, your previous address stays active. If you did not ask for this, ignore this message.
+            The MeetStudent team
+            """;
+
+    private static final String FR_CHANGE_HTML = """
+            <!doctype html>
+            <html lang="fr"><body style="font-family:Arial,Helvetica,sans-serif;color:#1f2937;line-height:1.5">
+            <p>%s</p>
+            <p>Vous avez demandé à utiliser cette adresse e-mail pour votre compte MeetStudent (lien valable %s) :</p>
+            <p><a href="%s">Confirmer ma nouvelle adresse e-mail</a></p>
+            <p style="font-size:12px;color:#6b7280">Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :<br>%s</p>
+            <p>Tant que vous ne l'avez pas confirmée, votre ancienne adresse reste active. Si vous n'êtes pas à l'origine de cette demande, ignorez ce message.</p>
+            <p>L'équipe MeetStudent</p>
+            </body></html>
+            """;
+
+    private static final String EN_CHANGE_HTML = """
+            <!doctype html>
+            <html lang="en"><body style="font-family:Arial,Helvetica,sans-serif;color:#1f2937;line-height:1.5">
+            <p>%s</p>
+            <p>You asked to use this email address for your MeetStudent account (link valid for %s):</p>
+            <p><a href="%s">Confirm my new email address</a></p>
+            <p style="font-size:12px;color:#6b7280">If the link does not work, copy it into your browser:<br>%s</p>
+            <p>Until you confirm it, your previous address stays active. If you did not ask for this, ignore this message.</p>
             <p>The MeetStudent team</p>
             </body></html>
             """;

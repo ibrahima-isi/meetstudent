@@ -310,48 +310,7 @@ class EmailVerificationIntegrationTests {
         assertThat(mailbox.all()).isEmpty();
     }
 
-    // ---- email change ----
-
-    @Test
-    void changingTheEmailResetsVerificationKillsTheOldLinkAndMailsTheNewAddress() throws Exception {
-        var oldEmail = uniqueEmail();
-        var newEmail = uniqueEmail();
-        var user = register(oldEmail, null);
-        var oldToken = CapturingEmailSender.extractToken(mailbox.last());
-        var accessToken = login(oldEmail);
-        mailbox.clear();
-
-        mockMvc.perform(put("/api/v1/users/" + user.get("id").asInt())
-                        .header("Authorization", "Bearer " + accessToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"" + newEmail + "\"}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.emailVerified").value(false))
-                .andExpect(jsonPath("$.email").value(newEmail));
-
-        mockMvc.perform(confirm(oldToken)).andExpect(status().isBadRequest()).andExpect(jsonPath("$.token").value(INVALID));
-        assertThat(mailbox.all()).hasSize(1);
-        assertThat(mailbox.last().to()).isEqualTo(newEmail);
-        var newToken = CapturingEmailSender.extractToken(mailbox.last());
-        assertThat(newToken).isNotEqualTo(oldToken);
-        mockMvc.perform(confirm(newToken)).andExpect(status().isNoContent());
-        assertThat(userRepository.findByEmailIgnoreCase(newEmail).orElseThrow().isEmailVerified()).isTrue();
-    }
-
-    @Test
-    void changingTheEmailOfAVerifiedUserMakesHimUnverifiedAgain() throws Exception {
-        var oldEmail = uniqueEmail();
-        var user = register(oldEmail, null);
-        mockMvc.perform(confirm(CapturingEmailSender.extractToken(mailbox.last()))).andExpect(status().isNoContent());
-        var accessToken = login(oldEmail);
-
-        mockMvc.perform(put("/api/v1/users/" + user.get("id").asInt())
-                        .header("Authorization", "Bearer " + accessToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"" + uniqueEmail() + "\"}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.emailVerified").value(false));
-    }
+    // ---- email change: see EmailChangeIntegrationTests (the profile update no longer changes the address) ----
 
     @Test
     void updatingOtherProfileFieldsKeepsVerification() throws Exception {
@@ -412,38 +371,16 @@ class EmailVerificationIntegrationTests {
             var own = uniqueEmail();
             var u = register(own, null);
             var accessToken = login(own);
-            // move onto the victim's address (alternating case), then away so the next account can do the same
+            // ask to move onto the victim's address (alternating case): the cap answers 429 from the 4th mail on
             var onto = i % 2 == 0 ? target : target.toUpperCase();
-            mockMvc.perform(put("/api/v1/users/" + u.get("id").asInt()).header("Authorization", "Bearer " + accessToken)
-                    .contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"" + onto + "\"}")).andExpect(status().isOk());
-            mockMvc.perform(put("/api/v1/users/" + u.get("id").asInt()).header("Authorization", "Bearer " + accessToken)
-                    .contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"" + uniqueEmail() + "\"}")).andExpect(status().isOk());
+            mockMvc.perform(post("/api/v1/users/" + u.get("id").asInt() + "/email-change").header("Authorization", "Bearer " + accessToken)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"newEmail\":\"" + onto + "\",\"currentPassword\":\"" + PASSWORD + "\"}"))
+                    .andExpect(status().is(i < 3 ? 202 : 429));
         }
 
         var toVictim = mailbox.all().stream().filter(m -> m.to().equalsIgnoreCase(target)).count();
         assertThat(toVictim).isEqualTo(3);
-    }
-
-    // ---- a refusal inside a profile update must not roll it back ----
-
-    @Test
-    void anEmailChangeStillSucceedsWhenTheUsersDailyTokenCapIsReached() throws Exception {
-        var own = uniqueEmail();
-        var u = register(own, null);
-        var accessToken = login(own);
-        var last = own;
-        // 1 token at registration + 4 changes = the per-user cap of 5; changes 5 and 6 are refused by the cap.
-        for (int i = 1; i <= 6; i++) {
-            last = uniqueEmail();
-            mockMvc.perform(put("/api/v1/users/" + u.get("id").asInt()).header("Authorization", "Bearer " + accessToken)
-                            .contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"" + last + "\"}"))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.email").value(last));
-        }
-
-        assertThat(userRepository.findById(u.get("id").asInt()).orElseThrow().getEmail()).isEqualTo(last);
-        assertThat(mailbox.all()).hasSize(5);
-        assertThat(mailbox.last().to()).isNotEqualTo(last);
     }
 
     // ---- real JWT through the real filter ----
@@ -506,7 +443,7 @@ class EmailVerificationIntegrationTests {
     }
 
     @Test
-    void changingOnlyTheCaseOfOwnEmailIsAllowedAndKeepsVerification() throws Exception {
+    void sendingTheOwnEmailInAnotherCaseIsAcceptedAndChangesNothing() throws Exception {
         var email = "Own." + UUID.randomUUID().toString().substring(0, 6) + "@example.com";
         var u = register(email, null);
         mockMvc.perform(confirm(CapturingEmailSender.extractToken(mailbox.last()))).andExpect(status().isNoContent());
@@ -515,7 +452,7 @@ class EmailVerificationIntegrationTests {
         mockMvc.perform(put("/api/v1/users/" + u.get("id").asInt()).header("Authorization", "Bearer " + accessToken)
                         .contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"" + email.toUpperCase() + "\"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.email").value(email.toUpperCase()))
+                .andExpect(jsonPath("$.email").value(email))
                 .andExpect(jsonPath("$.emailVerified").value(true));
     }
 
