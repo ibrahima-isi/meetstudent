@@ -131,3 +131,21 @@ The front is deliberately absent from the dev override: `ng serve` on the host h
 ## Agent instruction files
 
 `apps/api/AGENTS.md` is a symlink to `apps/api/CLAUDE.md`. In `apps/web`, `.claude/CLAUDE.md` is the single frontend agent guide.
+
+## Agent skills
+
+### Issue tracker
+
+Issues and specs live in GitHub Issues for `ibrahima-isi/meetstudent`. Before reading or publishing tickets, read `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Use the five default triage labels. Before triaging issues, read `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one shared root glossary and root ADR directory. Before exploring domain concepts or decisions, read `docs/agents/domain.md`.
+
+### Communication
+
+Respond in French, simply and very briefly. Use a very short analogy when helpful. Ask questions through interactive inline input tools.
