@@ -55,7 +55,7 @@ describe('ProfilePageComponent translations', () => {
         provideRouter([]),
         provideTransloco(translocoOptions),
         { provide: TokenService, useValue: { user, setUser } },
-        { provide: WishlistService, useValue: { schools: saved, load: () => {}, toggle } },
+        { provide: WishlistService, useValue: { schools: saved, load: () => {}, toggle, isPending: () => false } },
       ],
     });
   });
@@ -125,6 +125,51 @@ describe('ProfilePageComponent translations', () => {
     (fixture.nativeElement.querySelector('[data-testid="wishlist-remove"]') as HTMLButtonElement).click();
 
     expect(toggle).toHaveBeenCalledWith(school);
+  });
+
+  it('introduces the user in the header: initials, full name and role', async () => {
+    user.set({ firstname: 'Awa', lastname: 'Diop', email: 'awa@example.com', role: { name: 'ROLE_STUDENT' } });
+    await render('en');
+
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelector('[data-testid="profile-avatar"]')?.textContent?.trim()).toBe('AD');
+    expect(root.querySelector('[data-testid="profile-name"]')?.textContent?.trim()).toBe('Awa Diop');
+    expect(root.querySelector('[data-testid="profile-role"]')?.textContent?.trim()).toBe('Student');
+  });
+
+  it('copes with a user who has only a first name', async () => {
+    await render('en');
+
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelector('[data-testid="profile-avatar"]')?.textContent?.trim()).toBe('A');
+    expect(root.querySelector('[data-testid="profile-name"]')?.textContent?.trim()).toBe('Awa');
+  });
+
+  it('shows each wishlisted school in detail, with a "View more" link to its page', async () => {
+    saved.set([{ id: 3, name: 'Real School', address: { location: '', city: 'Dakar', country: '' }, programs: [{ id: 1 }] }]);
+    await render('en');
+
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelector('app-wishlist-item')).not.toBeNull();
+    const link = Array.from(root.querySelectorAll('a')).find((a) => /view more/i.test(a.textContent ?? ''));
+    expect(link?.getAttribute('href')).toBe('/en/schools/3');
+    expect(text()).toContain('1 programme');
+  });
+
+  it('invites a student with an empty wishlist to explore the schools', async () => {
+    await render('en');
+
+    const link = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('a')).find((a) => /explore schools/i.test(a.textContent ?? ''));
+    expect(link?.getAttribute('href')).toBe('/en/schools');
+  });
+
+  it('keeps the email in its own card, apart from the personal information', async () => {
+    await render('en');
+
+    const email = (fixture.nativeElement as HTMLElement).querySelector('[data-testid="profile-email-card"]');
+    expect(email).not.toBeNull();
+    expect(email!.querySelector('app-profile-email-section')).not.toBeNull();
+    expect((fixture.nativeElement as HTMLElement).querySelector('[data-testid="profile-info-card"] app-profile-email-section')).toBeNull();
   });
 
   function bacOptions(): { value: string; label: string }[] {

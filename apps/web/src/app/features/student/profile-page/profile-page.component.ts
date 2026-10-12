@@ -2,8 +2,9 @@ import { Component, signal, OnInit, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { LucideAngularModule, ArrowLeft, User as UserIcon, Phone, MapPin, GraduationCap, Book, Save, Heart, Briefcase } from 'lucide-angular';
+import { pluralKey } from '@i18n/plural';
 import { LocaleService } from '@services/locale.service';
 import { TokenService } from '@services/token.service';
 import { ProfileUpdate, UserService } from '@services/user.service';
@@ -12,6 +13,8 @@ import { User } from '@models/entities';
 import { ROLE_EXPERT, ROLE_STUDENT } from '@models/roles';
 import { UserDocumentsComponent } from '../user-documents/user-documents.component';
 import { ProfileEmailSectionComponent } from './profile-email-section/profile-email-section.component';
+import { MeshBackgroundComponent } from '@shared/components/mesh-background/mesh-background.component';
+import { WishlistItemComponent } from '@shared/components/wishlist-item/wishlist-item.component';
 import { TranslocoDirective } from '@jsverse/transloco';
 
 /** The fields of the API's 400 body (`{ field: message }`) this form can show. */
@@ -23,14 +26,24 @@ type SaveStatus = 'saved' | 'fieldErrors' | 'failed' | null;
 
 @Component({
   selector: 'app-profile-page',
-  imports: [CommonModule, ReactiveFormsModule, LucideAngularModule, UserDocumentsComponent, ProfileEmailSectionComponent, TranslocoDirective],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    RouterLink,
+    LucideAngularModule,
+    UserDocumentsComponent,
+    ProfileEmailSectionComponent,
+    MeshBackgroundComponent,
+    WishlistItemComponent,
+    TranslocoDirective,
+  ],
   templateUrl: './profile-page.component.html'
 })
 export class ProfilePageComponent implements OnInit {
   private tokenService = inject(TokenService);
   private readonly userService = inject(UserService);
   private readonly router = inject(Router);
-  private readonly locale = inject(LocaleService);
+  protected readonly locale = inject(LocaleService);
   protected readonly wishlist = inject(WishlistService);
 
   readonly ArrowLeft = ArrowLeft;
@@ -52,6 +65,14 @@ export class ProfilePageComponent implements OnInit {
 
   protected readonly isStudent = computed(() => this.profile().role?.name === ROLE_STUDENT);
   protected readonly isExpert = computed(() => this.profile().role?.name === ROLE_EXPERT);
+
+  protected readonly fullName = computed(() => `${this.profile().firstname ?? ''} ${this.profile().lastname ?? ''}`.trim());
+  /** Up to two letters for the avatar: first name and last name, whichever exist. */
+  protected readonly initials = computed(() =>
+    [this.profile().firstname, this.profile().lastname]
+      .map((part) => part?.trim()[0]?.toUpperCase() ?? '')
+      .join(''),
+  );
 
   /**
    * The editable fields. The email is not one of them: it changes through its own
@@ -92,6 +113,11 @@ export class ProfilePageComponent implements OnInit {
     }
 
     this.wishlist.load();
+  }
+
+  /** The key for a count, by the plural rule of the language being read. */
+  protected plural(base: string, count: number): string {
+    return pluralKey(base, count, this.locale.active());
   }
 
   /** The message the API attached to a field, if any. */

@@ -2,9 +2,10 @@ import { Component, computed, DestroyRef, ElementRef, input, output, signal, OnI
 import { CommonModule, DOCUMENT } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs';
-import { NavigationEnd, Router } from '@angular/router';
+import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { LucideAngularModule, ShoppingCart, X, GraduationCap } from 'lucide-angular';
 import { ErrorStateComponent } from '@shared/components/error-state/error-state.component';
+import { WishlistItemComponent } from '@shared/components/wishlist-item/wishlist-item.component';
 import { WishlistService } from '@services/wishlist.service';
 import { TokenService } from '@services/token.service';
 import { LocaleService } from '@services/locale.service';
@@ -17,7 +18,7 @@ import { pluralKey } from '@i18n/plural';
     '(document:pointerdown)': 'onPointerDown($event)',
     '(document:keydown.escape)': 'onEscape()',
   },
-  imports: [CommonModule, LucideAngularModule, TranslocoDirective, ErrorStateComponent],
+  imports: [CommonModule, LucideAngularModule, TranslocoDirective, ErrorStateComponent, RouterLink, WishlistItemComponent],
   template: `
     <div [class]="compact() ? '' : 'sm:relative'" *transloco="let t">
       <button
@@ -44,7 +45,7 @@ import { pluralKey } from '@i18n/plural';
           <div class="fixed inset-0 z-40" (click)="setOpen(false)"></div>
         }
 
-        <div id="wishlist-panel" [class]="(compact() ? 'right-0 w-[min(24rem,100%)]' : 'inset-x-4 sm:inset-x-auto sm:left-0 sm:w-96') + ' absolute top-full mt-2 bg-card rounded-xl shadow-xl border border-border z-50 max-h-[80vh] overflow-hidden flex flex-col'">
+        <div id="wishlist-panel" [class]="(compact() ? 'right-0 w-[min(24rem,100%)]' : 'inset-x-4 sm:inset-x-auto sm:left-0 sm:w-96') + ' absolute top-full mt-2 bg-card rounded-2xl shadow-2xl border border-border z-50 max-h-[80vh] overflow-hidden flex flex-col'">
           <div class="p-4 border-b border-border">
             <div class="flex items-center justify-between">
               <h3 class="text-foreground font-bold">{{ t('wishlist.title') }}</h3>
@@ -73,36 +74,25 @@ import { pluralKey } from '@i18n/plural';
                 <p class="text-muted-foreground mt-1 text-sm">{{ t('wishlist.emptyHint') }}</p>
               </div>
             } @else {
-              <div class="p-4 space-y-3">
+              <ul role="list" class="space-y-3 p-4">
                 @for (school of wishlist.schools(); track school.id) {
-                  <div class="flex items-start gap-3 p-3 bg-muted/50 rounded-lg hover:bg-accent transition-colors">
-                    <lucide-icon [img]="GraduationCap" class="w-5 h-5 text-indigo-600 dark:text-indigo-400 flex-shrink-0 mt-1"></lucide-icon>
-                    <div class="flex-1 min-w-0">
-                      <h4 class="text-foreground line-clamp-2 mb-1 text-sm font-medium">{{ school.name }}</h4>
-                      @if (school.address; as address) {
-                        <p class="text-muted-foreground text-xs font-semibold">{{ address.city }}</p>
-                      }
-                    </div>
-                    <button
-                      data-testid="wishlist-remove"
-                      [attr.aria-label]="t('wishlist.removeAction')"
-                      [disabled]="wishlist.isPending(school.id)"
-                      (click)="wishlist.toggle(school)"
-                      class="p-1 hover:bg-card rounded-lg transition-colors flex-shrink-0 cursor-pointer"
-                    >
-                      <lucide-icon [img]="X" class="w-4 h-4 text-muted-foreground hover:text-red-600 dark:hover:text-red-400"></lucide-icon>
-                    </button>
-                  </div>
+                  <li>
+                    <app-wishlist-item
+                      [school]="school"
+                      [removing]="wishlist.isPending(school.id)"
+                      (removed)="wishlist.toggle($event)"
+                    />
+                  </li>
                 }
-              </div>
+              </ul>
             }
           </div>
 
           @if (wishlist.schools().length > 0) {
-            <div class="p-4 border-t border-border bg-muted/50">
-              <button class="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium text-sm cursor-pointer">
-                {{ t('wishlist.compare') }}
-              </button>
+            <div class="border-t border-border bg-muted/50 p-4">
+              <a [routerLink]="['/', locale.active(), 'profile']" class="btn btn-primary w-full">
+                {{ t('wishlist.manage') }}
+              </a>
             </div>
           }
         </div>
@@ -114,7 +104,7 @@ export class WishlistCartComponent implements OnInit {
   protected readonly wishlist = inject(WishlistService);
   private tokenService = inject(TokenService);
   private readonly router = inject(Router);
-  private readonly locale = inject(LocaleService);
+  protected readonly locale = inject(LocaleService);
 
   /**
    * Read from the session rather than passed in: the cart sits in a header

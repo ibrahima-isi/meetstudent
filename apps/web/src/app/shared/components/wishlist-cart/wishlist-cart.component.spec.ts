@@ -257,6 +257,18 @@ describe('WishlistCartComponent data states', () => {
     expect(text()).toContain('No address');
   });
 
+  it('gives each school a "View more" link to its page, and the panel a link to the whole list', async () => {
+    await open();
+    saved.set([{ id: 5, name: 'Real School', address: { city: 'Dakar' }, programs: [{ id: 1 }, { id: 2 }] }]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const links = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('a'));
+    expect(links.find((a) => /view more/i.test(a.textContent ?? ''))?.getAttribute('href')).toBe('/en/schools/5');
+    expect(links.find((a) => /manage my wishlist/i.test(a.textContent ?? ''))?.getAttribute('href')).toBe('/en/profile');
+    expect(text()).toContain('2 programmes');
+  });
+
   it('removes a school through the shared service', async () => {
     await open();
     const school = { id: 5, name: 'Real School', address: { city: 'Dakar' } };

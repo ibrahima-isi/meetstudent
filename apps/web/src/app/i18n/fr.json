@@ -285,9 +285,14 @@
     },
     "empty": "Aucun établissement dans vos souhaits",
     "emptyHint": "Ajoutez des établissements pour les retrouver facilement",
-    "compare": "Comparer les formations",
     "addAction": "Ajouter aux souhaits",
     "removeAction": "Retirer des souhaits",
+    "viewMore": "Voir plus",
+    "manage": "Gérer ma liste de souhaits",
+    "programmes": {
+      "one": "{{ count }} programme",
+      "other": "{{ count }} programmes"
+    },
     "updateError": "Votre liste de souhaits n'a pas pu être mise à jour. Veuillez réessayer.",
     "dismiss": "Fermer",
     "loadError": "Votre liste de souhaits n'a pas pu être chargée."
@@ -361,7 +366,8 @@
     },
     "wishlistTitle": "Ma liste de souhaits",
     "remove": "Retirer",
-    "wishlistEmpty": "Aucun établissement dans votre liste de souhaits"
+    "wishlistEmpty": "Aucun établissement dans votre liste de souhaits",
+    "exploreSchools": "Découvrir les établissements"
   },
   "documents": {
     "title": "Mes documents",
