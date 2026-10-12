@@ -1,6 +1,7 @@
 package com.bowe.meetstudent.repositories;
 
 import com.bowe.meetstudent.entities.School;
+import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -14,6 +15,8 @@ import org.springframework.data.repository.query.Param;
 
 @Repository
 public interface SchoolRepository extends JpaRepository<School, Integer> {
+
+    Optional<School> findByNameIgnoreCase(String name);
 
     Page<School> findSchoolByNameContainingIgnoreCase(String name, Pageable pageable);
 

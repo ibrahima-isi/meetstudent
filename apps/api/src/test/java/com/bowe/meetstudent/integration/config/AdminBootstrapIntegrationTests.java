@@ -50,7 +50,7 @@ class AdminBootstrapIntegrationTests {
     }
 
     private AdminBootstrapRunner runner(String email, String password) {
-        return new AdminBootstrapRunner(userRepository, roleRepository, passwordEncoder, email, password);
+        return new AdminBootstrapRunner(userRepository, roleRepository, passwordEncoder, email, password, true);
     }
 
     private UserEntity seededDefaultAdmin() {
