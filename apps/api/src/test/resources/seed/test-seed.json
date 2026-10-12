@@ -1,0 +1,34 @@
+{
+  "tags": [{ "name": "Université publique" }, { "name": "Informatique" }],
+  "accreditations": [
+    { "code": "CAMES", "name": "CAMES", "description": "Conseil africain et malgache pour l'enseignement supérieur" }
+  ],
+  "schools": [
+    {
+      "name": "École Test de Dakar",
+      "code": "ETD",
+      "city": "Dakar",
+      "location": "Avenue Test",
+      "country": "Sénégal",
+      "tags": ["Université publique", "Informatique"],
+      "source": "https://example.org/etd",
+      "programs": [
+        {
+          "name": "Licence en Informatique",
+          "duration": 3,
+          "courses": [{ "name": "Algorithmique" }, { "name": "Bases de données" }],
+          "accreditations": [{ "code": "CAMES", "starts": 2020, "ends": 2025 }]
+        },
+        { "name": "Master en Réseaux", "duration": 2 }
+      ]
+    },
+    {
+      "name": "Lycée Test de Thiès",
+      "city": "Thiès",
+      "country": "Sénégal",
+      "tags": ["Université publique"],
+      "source": "https://example.org/ltt",
+      "programs": []
+    }
+  ]
+}

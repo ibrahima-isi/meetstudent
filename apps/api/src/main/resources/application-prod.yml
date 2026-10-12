@@ -18,10 +18,6 @@ security:
 app:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS}
-  # Consumed by AdminBootstrapRunner, which refuses to start without them (password >= 12 chars).
-  admin:
-    email: ${ADMIN_EMAIL:}
-    password: ${ADMIN_PASSWORD:}
   # No localhost default in production. Only checked when MAIL_ENABLED=true (https required then).
   frontend-base-url: ${FRONTEND_BASE_URL:}
   mail:

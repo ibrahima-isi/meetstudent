@@ -90,6 +90,11 @@ Residual risks of the mail limits (accepted): an attacker can pre-consume the ad
 
 The `prod` profile (env vars, admin bootstrap via `AdminBootstrapRunner`, proxy headers, disabled Swagger) is documented in `docs/production.md`. Access token lifetime is `security.jwt.access-ttl-minutes` (`JWT_ACCESS_TTL_MINUTES`, default 60); invalid/expired refresh tokens raise `InvalidRefreshTokenException` (HTTP 401).
 
+### First admin and development seed
+
+- `AdminBootstrapRunner` runs on every profile except `test`. `prod` requires `ADMIN_EMAIL` + `ADMIN_PASSWORD` (12+ chars) and aborts startup without them; `dev`/`docker` treat them as optional: with neither set the seeded `admin@meetstudent.com` / `password` row is left alone, with both set the account is created/updated and the seeded default hash is neutralised exactly as in production; setting only one is an error. `app.admin.*` lives in `application.yml`.
+- `config/seed/DevSeedRunner` (profiles `dev` and `docker` only, never `prod`/`test`) loads `src/main/resources/seed/senegal.json` (`SeedData`): tags, accreditations, schools, programs, courses and program/accreditation links, **no users and no ratings**. It is additive and idempotent (natural keys: tag name, accreditation code, school name, program name within the school, course name within the program) and never edits existing rows. The shipped file is a sourced core set (every school carries a `source` URL): public universities at faculty/UFR level, UADB at degree level, the ISEP network, major private institutions, notable lycées. The model has no school type, so the type lives in tags. It deliberately omits what could not be sourced (most private institutes, vocational centres, courses, accreditation links: they need start/end years). `SeedDataFileTest` guards the file against the schema limits (name <= 50, code <= 5, no duplicates).
+
 ### Testing
 
 Tests live in `src/test/java/com/bowe/meetstudent/` split into `unit/` (Mockito) and `integration/` (MockMvc + H2).

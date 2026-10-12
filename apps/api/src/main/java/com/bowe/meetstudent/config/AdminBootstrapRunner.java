@@ -4,10 +4,13 @@ import com.bowe.meetstudent.entities.UserEntity;
 import com.bowe.meetstudent.repositories.RoleRepository;
 import com.bowe.meetstudent.repositories.UserRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.UUID;
 
 /**
- * Production-only admin bootstrap. {@code V2__data.sql} seeds {@code admin@meetstudent.com} with the
+ * Admin bootstrap, active on every profile but {@code test}. {@code V2__data.sql} seeds {@code admin@meetstudent.com} with the
  * bcrypt hash of {@code password}; that migration is already applied everywhere so it cannot be edited.
  * On every prod boot this runner:
  * <ol>
@@ -25,12 +28,18 @@ import java.util.UUID;
  *       one) and sets its email, ADMIN role and bcrypt password from the environment;</li>
  *   <li>replaces the seeded default hash on any remaining account with a random unusable password.</li>
  * </ol>
- * Idempotent: an unchanged password is not re-hashed; changing {@code ADMIN_PASSWORD} rotates it.
+ * <p>Under {@code prod} the credentials are mandatory. Under {@code dev}/{@code docker} they are
+ * optional: when neither {@code ADMIN_EMAIL} nor {@code ADMIN_PASSWORD} is set the runner does nothing,
+ * so the seeded {@code admin@meetstudent.com} / {@code password} account keeps working for local
+ * development; when they are set the same rules apply as in production (so the default hash is
+ * neutralised too). Setting only one of them is always an error.
+ *
+ * <p>Idempotent: an unchanged password is not re-hashed; changing {@code ADMIN_PASSWORD} rotates it.
  * Changing {@code ADMIN_EMAIL} later creates a new admin; the previous one is left for manual cleanup.
  */
 @Slf4j
 @Component
-@Profile("prod")
+@Profile("!test")
 public class AdminBootstrapRunner implements ApplicationRunner {
 
     public static final String DEFAULT_ADMIN_EMAIL = "admin@meetstudent.com";
@@ -46,22 +55,41 @@ public class AdminBootstrapRunner implements ApplicationRunner {
     private final PasswordEncoder passwordEncoder;
     private final String adminEmail;
     private final String adminPassword;
+    private final boolean required;
 
+    @Autowired
     public AdminBootstrapRunner(UserRepository userRepository,
                                 RoleRepository roleRepository,
                                 PasswordEncoder passwordEncoder,
                                 @Value("${app.admin.email:}") String adminEmail,
-                                @Value("${app.admin.password:}") String adminPassword) {
+                                @Value("${app.admin.password:}") String adminPassword,
+                                Environment environment) {
+        this(userRepository, roleRepository, passwordEncoder, adminEmail, adminPassword,
+                environment.acceptsProfiles(Profiles.of("prod")));
+    }
+
+    /** @param required true in production: the credentials must be set, or startup aborts. */
+    public AdminBootstrapRunner(UserRepository userRepository,
+                                RoleRepository roleRepository,
+                                PasswordEncoder passwordEncoder,
+                                String adminEmail,
+                                String adminPassword,
+                                boolean required) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.adminEmail = adminEmail;
         this.adminPassword = adminPassword;
+        this.required = required;
     }
 
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
+        if (!required && isBlank(adminEmail) && isBlank(adminPassword)) {
+            log.info("ADMIN_EMAIL/ADMIN_PASSWORD not set: leaving the seeded development admin account as it is.");
+            return;
+        }
         validateConfiguration();
         var email = adminEmail.trim();
 
@@ -105,17 +133,21 @@ public class AdminBootstrapRunner implements ApplicationRunner {
     }
 
     private void validateConfiguration() {
-        if (adminEmail == null || adminEmail.isBlank()) {
+        if (isBlank(adminEmail)) {
             throw new IllegalStateException(
-                    "ADMIN_EMAIL must be set when running with the 'prod' profile.");
+                    "ADMIN_EMAIL must be set" + (required ? " when running with the 'prod' profile." : " together with ADMIN_PASSWORD."));
         }
-        if (adminPassword == null || adminPassword.isBlank()) {
+        if (isBlank(adminPassword)) {
             throw new IllegalStateException(
-                    "ADMIN_PASSWORD must be set when running with the 'prod' profile.");
+                    "ADMIN_PASSWORD must be set" + (required ? " when running with the 'prod' profile." : " together with ADMIN_EMAIL."));
         }
         if (adminPassword.length() < MIN_PASSWORD_LENGTH) {
             throw new IllegalStateException(
                     "ADMIN_PASSWORD must be at least " + MIN_PASSWORD_LENGTH + " characters long.");
         }
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 }

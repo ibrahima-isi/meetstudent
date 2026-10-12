@@ -16,16 +16,47 @@ class AdminBootstrapRunnerTest {
     private final UserRepository userRepository = mock(UserRepository.class);
     private final RoleRepository roleRepository = mock(RoleRepository.class);
 
+    /** Production: the credentials are mandatory. */
     private AdminBootstrapRunner runnerWith(String email, String password) {
-        return new AdminBootstrapRunner(userRepository, roleRepository, new BCryptPasswordEncoder(), email, password);
+        return new AdminBootstrapRunner(userRepository, roleRepository, new BCryptPasswordEncoder(), email, password, true);
+    }
+
+    /** dev / docker: the credentials are optional. */
+    private AdminBootstrapRunner optionalRunnerWith(String email, String password) {
+        return new AdminBootstrapRunner(userRepository, roleRepository, new BCryptPasswordEncoder(), email, password, false);
     }
 
     @Test
-    void isOnlyActiveUnderProdProfile() {
+    void isActiveOnEveryProfileExceptTest() {
         var profile = AdminBootstrapRunner.class.getAnnotation(Profile.class);
 
         assertNotNull(profile);
-        assertArrayEquals(new String[]{"prod"}, profile.value());
+        assertArrayEquals(new String[]{"!test"}, profile.value());
+    }
+
+    @Test
+    void whenCredentialsAreOptional_andNoneAreSet_leavesTheSeededDevAdminAlone() {
+        assertDoesNotThrow(() -> optionalRunnerWith("", "").run(null));
+        assertDoesNotThrow(() -> optionalRunnerWith(null, null).run(null));
+
+        verifyNoInteractions(userRepository, roleRepository);
+    }
+
+    @Test
+    void whenCredentialsAreOptional_aHalfConfiguredAdminIsStillAnError() {
+        var ex = assertThrows(IllegalStateException.class, () -> optionalRunnerWith("root@example.com", "").run(null));
+
+        assertTrue(ex.getMessage().contains("ADMIN_PASSWORD"), ex.getMessage());
+        verifyNoInteractions(userRepository);
+    }
+
+    @Test
+    void whenCredentialsAreOptional_aShortPasswordIsStillRefused() {
+        var ex = assertThrows(IllegalStateException.class,
+                () -> optionalRunnerWith("root@example.com", "elevenchars").run(null));
+
+        assertTrue(ex.getMessage().contains("12"), ex.getMessage());
+        verifyNoInteractions(userRepository);
     }
 
     @Test

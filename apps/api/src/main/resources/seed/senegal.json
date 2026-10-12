@@ -1,0 +1,984 @@
+{
+  "tags": [
+    {
+      "name": "Formation professionnelle"
+    },
+    {
+      "name": "Institut supérieur"
+    },
+    {
+      "name": "Lycée"
+    },
+    {
+      "name": "Lycée technique"
+    },
+    {
+      "name": "Université"
+    },
+    {
+      "name": "École supérieure"
+    },
+    {
+      "name": "Établissement privé"
+    },
+    {
+      "name": "Établissement public"
+    }
+  ],
+  "accreditations": [
+    {
+      "code": "CAMES",
+      "name": "CAMES",
+      "description": "Conseil africain et malgache pour l'enseignement supérieur"
+    },
+    {
+      "code": "ANAQ",
+      "name": "ANAQ-Sup",
+      "description": "Autorité nationale d'assurance qualité de l'enseignement supérieur du Sénégal"
+    }
+  ],
+  "schools": [
+    {
+      "name": "Université Cheikh Anta Diop de Dakar",
+      "code": "UCAD",
+      "city": "Dakar",
+      "country": "Sénégal",
+      "location": "Dakar-Fann, BP 5005",
+      "tags": [
+        "Université",
+        "Établissement public"
+      ],
+      "source": "https://guindima.sn/educa/etablissement/universite-cheikh-anta-diop/",
+      "programs": [
+        {
+          "name": "Faculté des Sciences juridiques et politiques"
+        },
+        {
+          "name": "Faculté des Sciences et Techniques"
+        },
+        {
+          "name": "Faculté des Lettres et Sciences Humaines"
+        },
+        {
+          "name": "FASTEF - Sciences et Technologies de l'Éducation"
+        },
+        {
+          "name": "Faculté des Sciences économiques et de Gestion"
+        },
+        {
+          "name": "Médecine, Pharmacie et Odonto-Stomatologie (FMPO)"
+        },
+        {
+          "name": "École Supérieure Polytechnique (ESP)"
+        },
+        {
+          "name": "École des Mines et de la Géologie (ENSMG)"
+        },
+        {
+          "name": "INSEPS - Éducation populaire et Sport"
+        }
+      ]
+    },
+    {
+      "name": "Université Gaston Berger de Saint-Louis",
+      "code": "UGB",
+      "city": "Saint-Louis",
+      "country": "Sénégal",
+      "tags": [
+        "Université",
+        "Établissement public"
+      ],
+      "source": "https://fr.wikipedia.org/wiki/Université_Gaston-Berger",
+      "programs": [
+        {
+          "name": "UFR Lettres et Sciences humaines"
+        },
+        {
+          "name": "UFR Sciences appliquées et de Technologie"
+        },
+        {
+          "name": "UFR Sciences juridiques et politiques"
+        },
+        {
+          "name": "UFR Sciences économiques et de Gestion"
+        },
+        {
+          "name": "UFR Sciences de la Santé"
+        },
+        {
+          "name": "UFR S2ATA - Agronomie et Aquaculture"
+        },
+        {
+          "name": "UFR Civilisations, Religions, Arts, Communication"
+        }
+      ]
+    },
+    {
+      "name": "Université Alioune Diop de Bambey",
+      "code": "UADB",
+      "city": "Bambey",
+      "country": "Sénégal",
+      "tags": [
+        "Université",
+        "Établissement public"
+      ],
+      "source": "https://guindima.sn/educa/etablissement/universite-alioune-diop-de-bambey/",
+      "programs": [
+        {
+          "name": "Licence Finance et Comptabilité",
+          "duration": 3
+        },
+        {
+          "name": "Licence Économie appliquée",
+          "duration": 3
+        },
+        {
+          "name": "Licence Droit des Affaires, Fiscal et Cyber-droit",
+          "duration": 3
+        },
+        {
+          "name": "Licence Juriste d'Affaire",
+          "duration": 3
+        },
+        {
+          "name": "Licence Management responsable des organisations",
+          "duration": 3
+        },
+        {
+          "name": "Master Économie du Développement",
+          "duration": 2
+        },
+        {
+          "name": "Master Monnaie Banque Finance",
+          "duration": 2
+        },
+        {
+          "name": "Master Fiscalité",
+          "duration": 2
+        },
+        {
+          "name": "Master Comptabilité Contrôle Audit",
+          "duration": 2
+        },
+        {
+          "name": "Licence Statistique et Informatique Décisionnelle",
+          "duration": 3
+        },
+        {
+          "name": "Master Statistique et Informatique Décisionnelle",
+          "duration": 2
+        },
+        {
+          "name": "Licence Systèmes et Réseaux",
+          "duration": 3
+        },
+        {
+          "name": "Licence Administration et Maintenance des Réseaux",
+          "duration": 3
+        },
+        {
+          "name": "Master Systèmes d'Information",
+          "duration": 2
+        },
+        {
+          "name": "Master Mathématiques et Applications",
+          "duration": 2
+        },
+        {
+          "name": "Master Énergies renouvelables",
+          "duration": 2
+        },
+        {
+          "name": "Master Création Multimédia",
+          "duration": 2
+        },
+        {
+          "name": "Master Chimie appliquée",
+          "duration": 2
+        },
+        {
+          "name": "Licence Santé communautaire",
+          "duration": 3
+        },
+        {
+          "name": "Master Santé communautaire",
+          "duration": 2
+        },
+        {
+          "name": "Master Promotion de la Santé",
+          "duration": 2
+        },
+        {
+          "name": "Licence Nutrition",
+          "duration": 3
+        },
+        {
+          "name": "Licence Environnement",
+          "duration": 3
+        },
+        {
+          "name": "Master Développement agricole et rural",
+          "duration": 2
+        },
+        {
+          "name": "Master Gestion des Aires protégées et de la Faune",
+          "duration": 2
+        },
+        {
+          "name": "Master Conseil agricole et rural",
+          "duration": 2
+        }
+      ]
+    },
+    {
+      "name": "Université Iba Der Thiam de Thiès",
+      "code": "UIDT",
+      "city": "Thiès",
+      "country": "Sénégal",
+      "tags": [
+        "Université",
+        "Établissement public"
+      ],
+      "source": "https://www.sencampus.com/ecoles/universite-iba-der-thiam-de-thies",
+      "programs": [
+        {
+          "name": "UFR Sciences économiques et sociales"
+        },
+        {
+          "name": "UFR Sciences et Technologies"
+        },
+        {
+          "name": "UFR Sciences de la Santé"
+        },
+        {
+          "name": "UFR Sciences de l'Ingénieur"
+        },
+        {
+          "name": "École nationale supérieure d'Agriculture (ENSA)"
+        },
+        {
+          "name": "Institut universitaire de Technologie (IUT)"
+        }
+      ]
+    },
+    {
+      "name": "Université Assane Seck de Ziguinchor",
+      "code": "UASZ",
+      "city": "Ziguinchor",
+      "country": "Sénégal",
+      "tags": [
+        "Université",
+        "Établissement public"
+      ],
+      "source": "https://fr.wikipedia.org/wiki/Université_Assane-Seck_de_Ziguinchor",
+      "programs": [
+        {
+          "name": "UFR Sciences économiques et sociales"
+        },
+        {
+          "name": "UFR Sciences et Technologies"
+        },
+        {
+          "name": "UFR Lettres, Arts et Sciences humaines"
+        },
+        {
+          "name": "UFR Sciences de la Santé"
+        }
+      ]
+    },
+    {
+      "name": "Université Amadou Mahtar Mbow",
+      "code": "UAM",
+      "city": "Diamniadio",
+      "country": "Sénégal",
+      "tags": [
+        "Université",
+        "Établissement public"
+      ],
+      "source": "https://guindima.sn/educa/etablissement/universite-amadou-mahtar-mbow/",
+      "programs": [
+        {
+          "name": "Polytech Diamniadio"
+        },
+        {
+          "name": "UFR TECNA - Communication numérique et audiovisuel"
+        },
+        {
+          "name": "UFR SEG - Sciences économiques et Gestion"
+        },
+        {
+          "name": "UFR STA - Sciences et Technologies avancées"
+        }
+      ]
+    },
+    {
+      "name": "Université du Sine Saloum El Hadj Ibrahima Niass",
+      "code": "USSEI",
+      "city": "Kaolack",
+      "country": "Sénégal",
+      "tags": [
+        "Université",
+        "Établissement public"
+      ],
+      "source": "https://www.guindima.sn/faculte/universite-du-sine-saloum-el-hadj-ibrahima-niass/sciences-agronomiques-elevage-peche-aquaculture-et-nutrition-saepan-23/",
+      "programs": [
+        {
+          "name": "UFR SAEPAN - Agronomie, Élevage, Pêche, Nutrition"
+        }
+      ]
+    },
+    {
+      "name": "Université numérique Cheikh Hamidou Kane",
+      "code": "UNCHK",
+      "city": "Diamniadio",
+      "country": "Sénégal",
+      "tags": [
+        "Université",
+        "Établissement public"
+      ],
+      "source": "https://guindima.sn/educa/etablissement/universite-numerique-cheikh-hamidou-kane/",
+      "programs": [
+        {
+          "name": "Licence Communication digitale",
+          "duration": 3
+        },
+        {
+          "name": "Licence Mathématiques appliquées et Informatique",
+          "duration": 3
+        },
+        {
+          "name": "Master Audit et Contrôle de Gestion",
+          "duration": 2
+        },
+        {
+          "name": "Master Finance-Comptabilité",
+          "duration": 2
+        },
+        {
+          "name": "Master Droit public - Administration publique",
+          "duration": 2
+        },
+        {
+          "name": "Master Management des Collectivités territoriales",
+          "duration": 2
+        }
+      ]
+    },
+    {
+      "name": "ISEP Amadou Trawaré de Diamniadio",
+      "city": "Diamniadio",
+      "country": "Sénégal",
+      "location": "Pôle urbain, Cité du savoir",
+      "tags": [
+        "Institut supérieur",
+        "Formation professionnelle",
+        "Établissement public"
+      ],
+      "source": "https://guindima.sn/educa/etablissement/institut-superieur-denseignement-professionnel-de-diamniadio/",
+      "programs": [
+        {
+          "name": "BTS Électromécanique automobile",
+          "duration": 2
+        },
+        {
+          "name": "BTS Froid et Climatisation auto. et industriel",
+          "duration": 2
+        },
+        {
+          "name": "BTS Électricité et Électronique automobile",
+          "duration": 2
+        },
+        {
+          "name": "BTS Carrosserie et Peinture automobile",
+          "duration": 2
+        },
+        {
+          "name": "BTS Développement Back-End",
+          "duration": 2
+        },
+        {
+          "name": "BTS Administration Système, Sécurité et Cloud",
+          "duration": 2
+        },
+        {
+          "name": "BTS Analyse de Performance digitale",
+          "duration": 2
+        },
+        {
+          "name": "BTS Réseaux, Sécurité et IoT",
+          "duration": 2
+        },
+        {
+          "name": "BTS Administration des Bases de Données",
+          "duration": 2
+        },
+        {
+          "name": "BTS Développement Front-End",
+          "duration": 2
+        }
+      ]
+    },
+    {
+      "name": "ISEP de Thiès",
+      "city": "Thiès",
+      "country": "Sénégal",
+      "location": "Route Nationale 2 x VCN",
+      "tags": [
+        "Institut supérieur",
+        "Formation professionnelle",
+        "Établissement public"
+      ],
+      "source": "https://guindima.sn/educa/etablissement/institut-superieur-denseignement-professionnel-de-thies/",
+      "programs": [
+        {
+          "name": "BTS Production animale",
+          "duration": 2
+        },
+        {
+          "name": "BTS Entrepreneuriat agricole",
+          "duration": 2
+        },
+        {
+          "name": "BTS Exploitation agricole",
+          "duration": 2
+        },
+        {
+          "name": "BTS Signalisation, Énergie et Télécommunications",
+          "duration": 2
+        },
+        {
+          "name": "BTS Management des Métiers de l'Alimentation",
+          "duration": 2
+        },
+        {
+          "name": "BTS Transport, Logistique et Mobilité urbaine",
+          "duration": 2
+        },
+        {
+          "name": "BTS Gestion administrative et financière",
+          "duration": 2
+        },
+        {
+          "name": "BTS Développement Web & Mobile",
+          "duration": 2
+        },
+        {
+          "name": "BTS Production cinématographique et audiovisuelle",
+          "duration": 2
+        },
+        {
+          "name": "BTS Transport ferroviaire",
+          "duration": 2
+        },
+        {
+          "name": "BTS Gestion immobilière",
+          "duration": 2
+        },
+        {
+          "name": "BTS Tourisme et loisirs",
+          "duration": 2
+        },
+        {
+          "name": "BTS Maintenance des Voies ferrées",
+          "duration": 2
+        },
+        {
+          "name": "BTS Maintenance Matériel roulant",
+          "duration": 2
+        },
+        {
+          "name": "BTS Conseil Info-Énergie",
+          "duration": 2
+        }
+      ]
+    },
+    {
+      "name": "ISEP de Bignona",
+      "city": "Bignona",
+      "country": "Sénégal",
+      "tags": [
+        "Institut supérieur",
+        "Formation professionnelle",
+        "Établissement public"
+      ],
+      "source": "https://guindima.sn/educa/etablissement/institut-superieur-denseignement-professionnel-de-bignona/",
+      "programs": []
+    },
+    {
+      "name": "ISEP de Matam",
+      "city": "Matam",
+      "country": "Sénégal",
+      "tags": [
+        "Institut supérieur",
+        "Formation professionnelle",
+        "Établissement public"
+      ],
+      "source": "https://guindima.sn/educa/etablissement/institut-superieur-denseignement-professionnel-de-matam/",
+      "programs": []
+    },
+    {
+      "name": "ISEP de Richard-Toll",
+      "city": "Richard-Toll",
+      "country": "Sénégal",
+      "location": "Route nationale N°2, Quartier Khouma",
+      "tags": [
+        "Institut supérieur",
+        "Formation professionnelle"
+      ],
+      "source": "https://guindima.sn/educa/etablissement/institut-superieur-denseignement-professionnel-de-richard-toll/",
+      "programs": []
+    },
+    {
+      "name": "École supérieure multinationale des Télécoms",
+      "code": "ESMT",
+      "city": "Dakar",
+      "country": "Sénégal",
+      "tags": [
+        "École supérieure",
+        "Établissement privé"
+      ],
+      "source": "https://guindima.sn/educa/etablissement/ecolee-superieur-multinationale-des-telecommunications/",
+      "programs": [
+        {
+          "name": "Licence pro Management des projets numériques",
+          "duration": 3
+        },
+        {
+          "name": "Licence pro Management et Économie du Numérique",
+          "duration": 3
+        },
+        {
+          "name": "Licence pro Économie numérique (eNUM)",
+          "duration": 3
+        },
+        {
+          "name": "Licence pro Sciences et Technologies du Numérique",
+          "duration": 3
+        },
+        {
+          "name": "Master Télécommunications et Multimédia",
+          "duration": 2
+        },
+        {
+          "name": "Master Technologies de l'Information pour la Santé",
+          "duration": 2
+        },
+        {
+          "name": "Master Data Sciences & Intelligences artificielles",
+          "duration": 2
+        },
+        {
+          "name": "Master Radiocommunications et Services numériques",
+          "duration": 2
+        },
+        {
+          "name": "Master Finance digitale",
+          "duration": 2
+        },
+        {
+          "name": "Master pro Développement d'Applications & Services",
+          "duration": 2
+        },
+        {
+          "name": "Master pro Réseaux & Plateformes de Service",
+          "duration": 2
+        }
+      ]
+    },
+    {
+      "name": "Institut supérieur de Management",
+      "code": "ISM",
+      "city": "Dakar",
+      "country": "Sénégal",
+      "tags": [
+        "Institut supérieur",
+        "Établissement privé"
+      ],
+      "source": "https://guindima.sn/educa/etablissement/institut-superieur-de-management/",
+      "programs": [
+        {
+          "name": "Master pro Administration publique",
+          "duration": 2
+        },
+        {
+          "name": "Master pro Technologies Transport et Logistique",
+          "duration": 2
+        },
+        {
+          "name": "Master pro Journalisme et métiers de l'information",
+          "duration": 2
+        },
+        {
+          "name": "Master Management international",
+          "duration": 2
+        },
+        {
+          "name": "Master Concepteur de Solutions digitales",
+          "duration": 2
+        },
+        {
+          "name": "Licence pro Droit privé fondamental",
+          "duration": 3
+        },
+        {
+          "name": "Licence pro Droit - Gestion",
+          "duration": 3
+        },
+        {
+          "name": "Licence pro Communication et Médias",
+          "duration": 3
+        },
+        {
+          "name": "Licence pro Activités juridiques (Contentieux)",
+          "duration": 3
+        },
+        {
+          "name": "Licence Maths appliquées-Informatique-Économétrie",
+          "duration": 3
+        }
+      ]
+    },
+    {
+      "name": "Université polytechnique de l'Ouest africain",
+      "code": "UPOA",
+      "city": "Dakar",
+      "country": "Sénégal",
+      "location": "Route de Ngor",
+      "tags": [
+        "Université",
+        "Établissement privé"
+      ],
+      "source": "https://guindima.sn/educa/etablissement/universite-polytechnique-de-louest-africain-upoa/",
+      "programs": [
+        {
+          "name": "Master Imagerie médicale",
+          "duration": 2
+        },
+        {
+          "name": "Master Ingénierie biomédicale",
+          "duration": 2
+        },
+        {
+          "name": "Master Physique médicale",
+          "duration": 2
+        },
+        {
+          "name": "Master Radioprotection",
+          "duration": 2
+        },
+        {
+          "name": "Master Marketing et Force de Vente",
+          "duration": 2
+        },
+        {
+          "name": "Master Finance et Contrôle de Gestion",
+          "duration": 2
+        },
+        {
+          "name": "Master Management des Politiques publiques",
+          "duration": 2
+        },
+        {
+          "name": "Licence pro Maths appliquées à l'informatique",
+          "duration": 3
+        },
+        {
+          "name": "Licence pro Mathématiques statistiques",
+          "duration": 3
+        }
+      ]
+    },
+    {
+      "name": "Dakar Institute of Technology",
+      "code": "DIT",
+      "city": "Dakar",
+      "country": "Sénégal",
+      "location": "Cité Keur Gorgui",
+      "tags": [
+        "École supérieure"
+      ],
+      "source": "https://guindima.sn/educa/etablissement/dakar-institute-of-technology-dit/",
+      "programs": [
+        {
+          "name": "Licence Big Data",
+          "duration": 3
+        },
+        {
+          "name": "Master Intelligence artificielle",
+          "duration": 2
+        }
+      ]
+    },
+    {
+      "name": "Institut africain de Management",
+      "code": "IAM",
+      "city": "Dakar",
+      "country": "Sénégal",
+      "location": "Mermoz, villa 7606",
+      "tags": [
+        "Institut supérieur",
+        "Établissement privé"
+      ],
+      "source": "https://guindima.sn/educa/etablissement/institut-africain-de-management-iam/",
+      "programs": []
+    },
+    {
+      "name": "Groupe Supdeco Dakar",
+      "city": "Dakar",
+      "country": "Sénégal",
+      "location": "7, Avenue Faidherbe",
+      "tags": [
+        "École supérieure",
+        "Établissement privé"
+      ],
+      "source": "https://guindima.sn/educa/etablissement/supdeco-groupe-ecole-superieure-de-commerce/",
+      "programs": [
+        {
+          "name": "Licence Génie logiciel",
+          "duration": 3
+        },
+        {
+          "name": "Licence Management et Technologies numériques",
+          "duration": 3
+        },
+        {
+          "name": "Licence Réseaux, Systèmes et Sécurité",
+          "duration": 3
+        },
+        {
+          "name": "Licence Droit social et Ressources humaines",
+          "duration": 3
+        },
+        {
+          "name": "Licence pro Management des Entreprises et Projets",
+          "duration": 3
+        },
+        {
+          "name": "Licence pro Marketing Vente",
+          "duration": 3
+        },
+        {
+          "name": "Master Relations internationales et Diplomatie",
+          "duration": 2
+        },
+        {
+          "name": "Master Sciences économiques : Économie et Finance",
+          "duration": 2
+        }
+      ]
+    },
+    {
+      "name": "Université catholique de l'Afrique de l'Ouest",
+      "code": "UCAO",
+      "city": "Dakar",
+      "country": "Sénégal",
+      "tags": [
+        "Université"
+      ],
+      "source": "https://guindima.sn/educa/etablissement/universite-catholique-de-lafrique-de-louest-complexe-saint-michel-ucao/",
+      "programs": []
+    },
+    {
+      "name": "Université Cheikh Ahmadoul Khadim de Touba",
+      "code": "UCAK",
+      "city": "Touba",
+      "country": "Sénégal",
+      "location": "Corniche Ouest, Quartier Madiyana",
+      "tags": [
+        "Université",
+        "Établissement privé"
+      ],
+      "source": "https://guindima.sn/educa/etablissement/universite-cheikh-ahmadoul-khadim-ucak/",
+      "programs": []
+    },
+    {
+      "name": "Université Kocc Barma de Saint-Louis",
+      "code": "UKB",
+      "city": "Saint-Louis",
+      "country": "Sénégal",
+      "tags": [
+        "Université"
+      ],
+      "source": "https://guindima.sn/educa/etablissement/luniversite-kocc-barma-de-saint-louis/",
+      "programs": []
+    },
+    {
+      "name": "Lycée Cheikh Omar Foutiyou Tall (ex Faidherbe)",
+      "city": "Saint-Louis",
+      "country": "Sénégal",
+      "tags": [
+        "Lycée",
+        "Établissement public"
+      ],
+      "source": "https://www.ndarinfo.com/Histoire-du-lycee-Cheikh-Omar-Foutiyou-Tall-ex-Faidherbe-de-Saint-Louis_a5513.html",
+      "programs": []
+    },
+    {
+      "name": "Lycée Blaise Diagne",
+      "city": "Dakar",
+      "country": "Sénégal",
+      "tags": [
+        "Lycée",
+        "Établissement public"
+      ],
+      "source": "https://seneplus.com/node/183709",
+      "programs": []
+    },
+    {
+      "name": "Lycée Lamine Guèye (ex Van Vollenhoven)",
+      "city": "Dakar",
+      "country": "Sénégal",
+      "tags": [
+        "Lycée",
+        "Établissement public"
+      ],
+      "source": "https://lesoleil.sn/actualites/education/la-rehabilitation-au-coeur-du-centenaire/",
+      "programs": []
+    },
+    {
+      "name": "Lycée John F. Kennedy",
+      "city": "Dakar",
+      "country": "Sénégal",
+      "tags": [
+        "Lycée",
+        "Établissement public"
+      ],
+      "source": "https://www.seneplus.com/node/183965",
+      "programs": []
+    },
+    {
+      "name": "Lycée Ameth Fall",
+      "city": "Saint-Louis",
+      "country": "Sénégal",
+      "tags": [
+        "Lycée",
+        "Établissement public"
+      ],
+      "source": "https://www.seneplus.com/node/153754",
+      "programs": []
+    },
+    {
+      "name": "Lycée Charles de Gaulle",
+      "city": "Saint-Louis",
+      "country": "Sénégal",
+      "tags": [
+        "Lycée",
+        "Établissement public"
+      ],
+      "source": "https://www.ndarinfo.com/Rehabilitation-du-lycee-Charles-de-Gaulle-un-cri-du-coeur-relance-video_a35910.html",
+      "programs": []
+    },
+    {
+      "name": "Lycée Mame Cheikh Mbaye",
+      "city": "Tambacounda",
+      "country": "Sénégal",
+      "tags": [
+        "Lycée",
+        "Établissement public"
+      ],
+      "source": "https://lesoleil.sn/actualites/education/lycee-mame-cheikh-mbaye-de-tambacounda-un-patrimoine-educatif-a-preserver-4-6/",
+      "programs": []
+    },
+    {
+      "name": "Lycée Demba Diop",
+      "city": "Mbour",
+      "country": "Sénégal",
+      "tags": [
+        "Lycée",
+        "Établissement public"
+      ],
+      "source": "https://seneplus.com/node/155732",
+      "programs": []
+    },
+    {
+      "name": "Lycée technique industriel Maurice Delafosse",
+      "city": "Dakar",
+      "country": "Sénégal",
+      "tags": [
+        "Lycée technique",
+        "Établissement public",
+        "Formation professionnelle"
+      ],
+      "source": "https://www.sencampus.com/dossiers/le-bfem-et-apres/la-voie-technique-apres-le-bfem",
+      "programs": [
+        {
+          "name": "Série STIDD"
+        }
+      ]
+    },
+    {
+      "name": "Lycée technique André Peytavin",
+      "city": "Saint-Louis",
+      "country": "Sénégal",
+      "location": "Quartier Sor",
+      "tags": [
+        "Lycée technique",
+        "Établissement public",
+        "Formation professionnelle"
+      ],
+      "source": "https://www.sencampus.com/dossiers/le-bfem-et-apres/la-voie-technique-apres-le-bfem",
+      "programs": []
+    },
+    {
+      "name": "Lycée technique François-Xavier Ndione",
+      "city": "Thiès",
+      "country": "Sénégal",
+      "tags": [
+        "Lycée technique",
+        "Établissement public",
+        "Formation professionnelle"
+      ],
+      "source": "https://www.sencampus.com/dossiers/le-bfem-et-apres/la-voie-technique-apres-le-bfem",
+      "programs": []
+    },
+    {
+      "name": "Lycée technique Seydina Limamou Laye",
+      "city": "Guédiawaye",
+      "country": "Sénégal",
+      "tags": [
+        "Lycée technique",
+        "Établissement public",
+        "Formation professionnelle"
+      ],
+      "source": "https://www.sencampus.com/dossiers/le-bfem-et-apres/la-voie-technique-apres-le-bfem",
+      "programs": []
+    },
+    {
+      "name": "Lycée technique Ahmadou Bamba",
+      "city": "Diourbel",
+      "country": "Sénégal",
+      "tags": [
+        "Lycée technique",
+        "Établissement public",
+        "Formation professionnelle"
+      ],
+      "source": "https://fr.allafrica.com/stories/202506170218.html",
+      "programs": []
+    },
+    {
+      "name": "Lycée tech. industriel et minier Mamba Guirassy",
+      "city": "Kédougou",
+      "country": "Sénégal",
+      "tags": [
+        "Lycée technique",
+        "Établissement public",
+        "Formation professionnelle"
+      ],
+      "source": "https://fr.allafrica.com/stories/202506240129.html",
+      "programs": [
+        {
+          "name": "Série STI2D"
+        },
+        {
+          "name": "Série STEG"
+        },
+        {
+          "name": "Série T1"
+        },
+        {
+          "name": "Série T2"
+        }
+      ]
+    }
+  ]
+}
