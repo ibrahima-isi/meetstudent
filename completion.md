@@ -12,7 +12,8 @@ Spec : [#99](https://github.com/ibrahima-isi/meetstudent/issues/99). Mettre à j
 - [x] Web : 927 tests et build SSR ; backoffice : 271 tests et build réussis.
 - [x] API : 226 tests unitaires + 273 intégrations ; PostgreSQL : 15 tests HTTP/courses.
 - [x] Revue Standards / Spec terminée ; course email corrigée et retestée.
-- [ ] PR vers dev, CI verte, squash et nettoyage vérifiés.
+- [x] [PR #131](https://github.com/ibrahima-isi/meetstudent/pull/131) ouverte vers dev.
+- [ ] CI verte, squash et nettoyage vérifiés.
 
 ## Livraison des 30 tickets
 
