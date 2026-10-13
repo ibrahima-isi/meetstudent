@@ -136,7 +136,11 @@ The front is deliberately absent from the dev override: `ng serve` on the host h
 
 ### Issue tracker
 
-Issues and specs live in GitHub Issues for `ibrahima-isi/meetstudent`. Before reading or publishing tickets, read `docs/agents/issue-tracker.md`.
+New issues and specs use local Markdown under `.scratch/<feature>/`. Before reading or creating tickets, read `docs/agents/issue-tracker.md`; it also defines how to resolve existing GitHub tickets.
+
+### Ticket progress
+
+Ticket creation is complete only after its entry is saved in `docs/completion.md`, immediately after each ticket and before creating the next one. Read the mandatory lifecycle rules in `docs/agents/issue-tracker.md` when creating, claiming or completing tickets.
 
 ### Triage labels
 

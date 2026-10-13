@@ -1,33 +1,50 @@
-# Issue tracker: GitHub
+# Issue tracker: Local Markdown
 
-Issues and specs live in GitHub Issues for `ibrahima-isi/meetstudent`. Use the `gh` CLI with `--repo ibrahima-isi/meetstudent` for issue and PR commands; the Git remote uses the SSH alias `github-isi`.
+New issues and specs for MeetStudent live as versioned Markdown files under `.scratch/`. GitHub remains the PR review and delivery surface defined in the root working agreement.
 
 ## Conventions
 
-- Create: `gh issue create --repo ibrahima-isi/meetstudent --title "..." --body-file <file>`. Save multiline bodies in a temporary file, preserving actual newlines.
-- Read: `gh issue view <number> --repo ibrahima-isi/meetstudent --json number,title,body,labels,comments`.
-- List: `gh issue list --repo ibrahima-isi/meetstudent --state open --json number,title,body,labels,comments`, adding label or state filters as needed.
-- Comment: `gh issue comment <number> --repo ibrahima-isi/meetstudent --body-file <file>`.
-- Apply/remove labels: `gh issue edit <number> --repo ibrahima-isi/meetstudent --add-label "..."` / `--remove-label "..."`.
-- Close: `gh issue close <number> --repo ibrahima-isi/meetstudent`.
-- Sub-issues: use the installed CLI's supported sub-issue commands. If unavailable, list children in the parent's task list and put `Part of #<parent>` at the top of each child.
+- One feature directory: `.scratch/<feature-slug>/`.
+- Spec: `.scratch/<feature-slug>/spec.md`.
+- One file per ticket: `.scratch/<feature-slug>/issues/<NN>-<slug>.md`, numbered in dependency order.
+- Canonical ticket identity: `<feature-slug>/<NN>`; numbers alone may repeat between features.
+- Record `Status:` near the top using the configured triage vocabulary. During execution, record `claimed` or `resolved` where appropriate.
+- Record `Blocked by:` near the top, using local ticket identities and relative Markdown links. External legacy blockers may use their GitHub URL.
+- Append discussion under `## Comments`; preserve existing content and decisions.
+- Keep local specs, tickets and the completion document in Git so future worktrees/sessions receive them.
 
-## Pull requests as a triage surface
+## Mandatory completion tracking
 
-**PRs as a request surface: no.**
+Every ticket creation MUST immediately create or update the repository-root `docs/completion.md`. This applies to any ticket-creating skill or manual workflow in this project, including `to-tickets`, `triage` and wayfinding.
 
-GitHub issues and PRs share a number space. Resolve an ambiguous number with `gh pr view`, then fall back to `gh issue view`.
+For each ticket, in this order:
+
+1. Write the ticket file.
+2. Create `docs/completion.md` if absent, or preserve and update it if present.
+3. Add exactly one unchecked Markdown checklist entry with the canonical ticket identity, title, link and initial state. Save it before creating another ticket or reporting creation complete.
+
+A ticket without its saved completion entry is incompletely created. If either write fails, report the failure and reconcile that ticket before proceeding; never defer tracking until implementation begins or until the end of a batch.
+
+When claiming/resuming a ticket, read both its file and the completion document; keep its checkbox unchecked and record progress, blockers and the next action. Mark it checked only when the implementation and required verification are complete, and record actual test evidence and PR/delivery links. Set the ticket to resolved consistently; distinguish implementation completion from PR merge status. Reopening a ticket restores its unchecked state and records the reason.
+
+Preserve all prior completed entries and evidence. Rerunning ticket creation updates the existing entry rather than duplicating it.
+
+## Existing GitHub work
+
+Spec #99 and its existing tickets #100–#129 remain GitHub records. No migration or duplication is implied. Resolve explicit references to those records with the GitHub CLI and preserve their original issue/PR workflow. New tickets use the local convention above unless the user explicitly instructs otherwise.
 
 ## Skill operations
 
-- Publish to the issue tracker: create a GitHub issue.
-- Fetch the relevant ticket: read its issue body, labels and comments.
+- Publish a spec: write the local spec file.
+- Publish a ticket: write its individual local file AND immediately save its completion entry as required above.
+- Fetch a ticket: read its referenced local file; for a canonical identity, locate the corresponding feature and numbered file. Use GitHub for the explicit legacy references above.
+- Change triage labels: update the ticket's Status field using `docs/agents/triage-labels.md`.
 
 ## Wayfinding operations
 
-- Map: one issue labelled `wayfinder:map`, holding Notes / Decisions-so-far / Fog.
-- Child: a sub-issue of the map, labelled `wayfinder:<type>` (`research`, `prototype`, `grilling`, `task`). Use the task-list fallback above when necessary.
-- Blocking: use native GitHub issue dependencies. Add a blocker with `gh api --method POST repos/ibrahima-isi/meetstudent/issues/<child>/dependencies/blocked_by -F issue_id=<blocker-db-id>`. Obtain the database ID with `gh api repos/ibrahima-isi/meetstudent/issues/<number> --jq .id`. If unavailable, use a `Blocked by: #<number>` line in the child body.
-- Frontier: among the map's open children, select the first in map order with no open blockers and no assignee.
-- Claim: assign the selected child to the driving developer (`gh issue edit <number> --repo ibrahima-isi/meetstudent --add-assignee @me`).
-- Resolve: comment with the result, close the child, then add a concise result and link to the map's Decisions-so-far.
+- Map: `.scratch/<effort>/map.md`, holding Notes / Decisions-so-far / Fog.
+- Child: one numbered file in the effort's issues directory, with its Type and Status. Creating the child immediately updates the shared completion document.
+- Blocking: local Blocked by links; a blocker is satisfied only when its implementation is resolved with the required verification.
+- Frontier: select an open, unclaimed ticket whose blockers are satisfied; prefer the agreed priority, then ticket number. Check external session-release conditions explicitly.
+- Claim: save Status: claimed before implementation, then update its completion progress.
+- Resolve: append the result/evidence, set Status: resolved, update the completion checkbox, and add a concise result/link to the map's Decisions-so-far.
