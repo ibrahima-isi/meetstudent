@@ -15,6 +15,9 @@ import java.time.Instant;
 @Table(name = "refresh_tokens")
 public class RefreshToken extends AbstractEntity {
 
+    @Column(name = "password_version", nullable = false)
+    private int passwordVersion;
+
     @Column(nullable = false, unique = true)
     private String token;
 

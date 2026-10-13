@@ -26,6 +26,7 @@ class ErrorDispatchIntegrationTests {
 
     @LocalServerPort private int port;
     @Autowired private JwtIssuer jwtIssuer;
+    @Autowired private com.bowe.meetstudent.repositories.UserRepository users;
 
     private HttpResponse<String> send(String method, String path, String token) throws Exception {
         var builder = HttpRequest.newBuilder(URI.create("http://localhost:" + port + path))
@@ -39,7 +40,8 @@ class ErrorDispatchIntegrationTests {
 
     @Test
     void studentOnAdminUrlRuleGets403() throws Exception {
-        String token = jwtIssuer.issueToken(1, "s@example.com", List.of("ROLE_STUDENT"));
+        var user = users.save(com.bowe.meetstudent.entities.UserEntity.builder().email("s@example.com").build());
+        String token = jwtIssuer.issueToken(user.getId(), user.getEmail(), List.of("ROLE_STUDENT"), 0);
         var response = send("POST", "/api/v1/schools", token);
         assertEquals(403, response.statusCode(), response.body());
         assertTrue(response.body().contains("Forbidden"), response.body());

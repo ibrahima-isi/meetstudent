@@ -29,7 +29,7 @@ class JwtIssuerTest {
     void issueToken_defaultsToSixtyMinutes() {
         var issuer = issuerWith(new JwtProperties());
 
-        long seconds = secondsUntilExpiry(issuer.issueToken(1, "a@b.c", List.of("ROLE_STUDENT")));
+        long seconds = secondsUntilExpiry(issuer.issueToken(1, "a@b.c", List.of("ROLE_STUDENT"), 0));
 
         assertTrue(Math.abs(seconds - 60 * 60) <= TOLERANCE_SECONDS, "expected ~60 min but was " + seconds + "s");
     }
@@ -40,7 +40,7 @@ class JwtIssuerTest {
         properties.setAccessTtlMinutes(5);
         var issuer = issuerWith(properties);
 
-        long seconds = secondsUntilExpiry(issuer.issueToken(1, "a@b.c", List.of("ROLE_STUDENT")));
+        long seconds = secondsUntilExpiry(issuer.issueToken(1, "a@b.c", List.of("ROLE_STUDENT"), 0));
 
         assertTrue(Math.abs(seconds - 5 * 60) <= TOLERANCE_SECONDS, "expected ~5 min but was " + seconds + "s");
     }

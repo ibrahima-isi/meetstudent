@@ -35,6 +35,7 @@ public class UserService {
     private final RoleRepository roleRepository;
     private final MediaService mediaService;
     private final UserTokenService userTokenService;
+    private final RefreshTokenService refreshTokenService;
 
     public UserEntity saveUser(UserEntity userEntity, PasswordEncoder passwordEncoder ) {
         userEntity.setPassword(
@@ -100,16 +101,28 @@ public class UserService {
 
     @Transactional
     public UserEntity patch(Integer id, UserEntity updates, PasswordEncoder encoder) {
-        return patch(id, updates, encoder, false);
+        return patch(id, updates, encoder, false, null, false);
     }
 
     @Transactional
     public UserEntity patchAsAdmin(Integer id, UserEntity updates, PasswordEncoder encoder) {
-        return patch(id, updates, encoder, true);
+        return patch(id, updates, encoder, true, null, false);
     }
 
-    private UserEntity patch(Integer id, UserEntity updates, PasswordEncoder encoder, boolean allowRoleUpdate) {
-        return userRepository.findById(id).map(existing -> {
+    @Transactional
+    public UserEntity patch(Integer id, UserEntity updates, PasswordEncoder encoder,
+                            String currentPassword, boolean administratorEditingAnotherUser) {
+        return patch(id, updates, encoder, false, currentPassword, administratorEditingAnotherUser);
+    }
+
+    private UserEntity patch(Integer id, UserEntity updates, PasswordEncoder encoder, boolean allowRoleUpdate,
+                             String currentPassword, boolean administratorEditingAnotherUser) {
+        return userRepository.findByIdForUpdate(id).map(existing -> {
+            if (updates.getPassword() != null && !updates.getPassword().isEmpty()
+                    && !administratorEditingAnotherUser
+                    && (currentPassword == null || !encoder.matches(currentPassword, existing.getPassword()))) {
+                throw new FieldValidationException("currentPassword", "Mot de passe actuel incorrect ou manquant");
+            }
             // The address changes only through EmailChangeService (current password + a link to the new address).
             if (updates.getEmail() != null && !updates.getEmail().equalsIgnoreCase(existing.getEmail())) {
                 throw new FieldValidationException("email",
@@ -125,8 +138,11 @@ public class UserService {
 
             if (updates.getPassword() != null && !updates.getPassword().isEmpty()) {
                 existing.setPassword(encoder.encode(updates.getPassword()));
+                existing.setPasswordVersion(Math.incrementExact(existing.getPasswordVersion()));
+                refreshTokenService.deleteByUserId(id);
                 // A password chosen here makes any emailed reset link stale.
                 userTokenService.consumeOutstanding(existing.getId(), UserTokenPurpose.PASSWORD_RESET);
+                userTokenService.consumeOutstanding(existing.getId(), UserTokenPurpose.EMAIL_CHANGE);
             }
             return userRepository.save(existing);
         }).orElseThrow(() -> new com.bowe.meetstudent.exceptions.ResourceNotFoundException("User not found"));

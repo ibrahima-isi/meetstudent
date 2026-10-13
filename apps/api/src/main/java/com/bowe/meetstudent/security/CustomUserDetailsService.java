@@ -30,6 +30,7 @@ public class CustomUserDetailsService implements UserDetailsService {
                 .username(user.getEmail())
                 .authorities(List.of(new SimpleGrantedAuthority(roleName)))
                 .password(user.getPassword())
+                .passwordVersion(user.getPasswordVersion())
                 .build();
     }
 }

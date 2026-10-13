@@ -75,9 +75,9 @@
         <!-- The API's message for a field, else the form's own validation message. -->
         <ng-template #fieldErrors let-field>
           @if (serverError(field); as message) {
-            <p class="mt-1 text-destructive" role="alert" [attr.data-testid]="'profile-error-' + field">{{ message }}</p>
+            <p class="mt-1 text-destructive" role="alert" [attr.data-testid]="'profile-error-' + field" [id]="'profile-error-' + field">{{ message }}</p>
           } @else if (clientError(field); as key) {
-            <p class="mt-1 text-destructive" role="alert" [attr.data-testid]="'profile-error-' + field">{{ t(key) }}</p>
+            <p class="mt-1 text-destructive" role="alert" [attr.data-testid]="'profile-error-' + field" [id]="'profile-error-' + field">{{ t(key) }}</p>
           }
         </ng-template>
 
@@ -129,6 +129,12 @@
 
           @if (isEditing()) {
             <div class="min-w-0">
+              <label for="profile-current-password" class="mb-2 block text-sm font-medium text-foreground">{{ t('profile.currentPassword') }}</label>
+              <input id="profile-current-password" type="password" autocomplete="current-password"
+                [formControl]="form.controls.currentPassword" data-testid="profile-current-password"
+                [attr.aria-invalid]="!!(clientError('currentPassword') || serverError('currentPassword'))"
+                aria-describedby="profile-error-currentPassword" class="field-input mb-2" />
+              <ng-container *ngTemplateOutlet="fieldErrors; context: { $implicit: 'currentPassword' }" />
               <label for="profile-password" class="mb-2 block text-sm font-medium text-foreground">{{ t('profile.newPassword') }}</label>
               <input
                 id="profile-password"

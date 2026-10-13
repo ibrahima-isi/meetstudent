@@ -50,7 +50,7 @@ class JwtAuthenticationFilterTest {
     void invalidTokenIsLoggedWithoutErrorLevelOrStackTrace() throws Exception {
         JwtDecoder decoder = mock(JwtDecoder.class);
         when(decoder.decodedJWT(anyString())).thenThrow(new JWTDecodeException("bad token"));
-        var filter = new JwtAuthenticationFilter(decoder, mock(JwtToPrincipalConverter.class));
+        var filter = new JwtAuthenticationFilter(decoder, mock(JwtToPrincipalConverter.class), mock(com.bowe.meetstudent.repositories.UserRepository.class));
         var request = new MockHttpServletRequest();
         request.addHeader("Authorization", "Bearer garbage");
         FilterChain chain = mock(FilterChain.class);

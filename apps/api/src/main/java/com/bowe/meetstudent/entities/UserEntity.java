@@ -22,6 +22,9 @@ import java.util.List;
 @ToString(callSuper = true, onlyExplicitlyIncluded = true)
 public class UserEntity extends AbstractEntity {
 
+    @Column(name = "password_version", nullable = false)
+    private int passwordVersion;
+
     @Column(length = 100)
     @ToString.Include
     private String firstname;

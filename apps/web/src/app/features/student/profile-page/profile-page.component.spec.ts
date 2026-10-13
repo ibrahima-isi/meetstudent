@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { provideTransloco } from '@jsverse/transloco';
 import { firstValueFrom } from 'rxjs';
 import { translocoOptions } from '@i18n/transloco.config';
@@ -19,6 +19,7 @@ describe('ProfilePageComponent translations', () => {
   let saved: ReturnType<typeof signal<unknown[]>>;
   let toggle: jasmine.Spy;
   let setUser: jasmine.Spy;
+  let clear: jasmine.Spy;
 
   function text(): string {
     return (fixture.nativeElement as HTMLElement).textContent ?? '';
@@ -44,6 +45,7 @@ describe('ProfilePageComponent translations', () => {
     saved = signal<unknown[]>([]);
     toggle = jasmine.createSpy('toggle');
     setUser = jasmine.createSpy('setUser');
+    clear = jasmine.createSpy('clear').and.callFake(() => user.set(null));
     user = signal<Partial<User> | null>({ firstname: 'Awa', lastname: '', email: '', role: { name: 'ROLE_STUDENT' } });
 
     TestBed.configureTestingModule({
@@ -54,7 +56,7 @@ describe('ProfilePageComponent translations', () => {
         provideHttpClientTesting(),
         provideRouter([]),
         provideTransloco(translocoOptions),
-        { provide: TokenService, useValue: { user, setUser } },
+        { provide: TokenService, useValue: { user, setUser, clear } },
         { provide: WishlistService, useValue: { schools: saved, load: () => {}, toggle, isPending: () => false } },
       ],
     });
@@ -303,15 +305,43 @@ describe('ProfilePageComponent translations', () => {
       expect(text()).toContain('Profile updated.');
     });
 
-    it('sends a new password when one is typed', async () => {
+    it('sends both passwords then clears the session and returns to localized login', async () => {
       await edit();
+      const navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
       type('[data-testid="profile-password"]', 'n3wpassword');
-
+      type('[data-testid="profile-current-password"]', 'old-password');
       save();
-
       const req = http.expectOne(url);
       expect(req.request.body.password).toBe('n3wpassword');
-      req.flush({ id: 5, firstname: 'Awa', lastname: 'Diop', email: 'awa@example.com', role: { name: 'ROLE_STUDENT' } });
+      expect(req.request.body.currentPassword).toBe('old-password');
+      req.flush({ id: 5, firstname: 'Awa', lastname: 'Diop' });
+      await settle();
+      expect(user()).toBeNull();
+      expect(setUser).not.toHaveBeenCalled();
+      expect(navigate).toHaveBeenCalledWith(['/', 'en', 'login'], { queryParams: { passwordChanged: '1' } });
+    });
+
+    it('associates a rejected current password with its input and preserves the session', async () => {
+      await edit();
+      type('[data-testid="profile-password"]', 'n3wpassword');
+      type('[data-testid="profile-current-password"]', 'wrong-password');
+      save();
+      http.expectOne(url).flush({ currentPassword: 'Mot de passe incorrect' }, { status: 400, statusText: 'Bad Request' });
+      await settle();
+      const input = field('[data-testid="profile-current-password"]');
+      expect(input.getAttribute('aria-invalid')).toBe('true');
+      expect(fixture.nativeElement.querySelector('#' + input.getAttribute('aria-describedby'))?.textContent).toContain('Mot de passe incorrect');
+      expect(clear).not.toHaveBeenCalled();
+      expect(fixture.componentInstance.isEditing()).toBeTrue();
+    });
+
+    it('requires the current password before sending a new password', async () => {
+      await edit();
+      type('[data-testid="profile-password"]', 'n3wpassword');
+      save();
+      await settle();
+      http.expectNone(url);
+      expect(text()).toContain('This field is required.');
     });
 
     it('does not call the API for a password under 8 characters, and says why', async () => {

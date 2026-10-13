@@ -120,6 +120,29 @@ class EmailChangeIntegrationTests {
         }
     }
 
+    @Test
+    void passwordChangeCancelsPendingEmailAndResetLinks() throws Exception {
+        var email = uniqueEmail();
+        var user = user(email);
+        var auth = bearer(email);
+        mockMvc.perform(requestChange(user.getId(), auth, uniqueEmail(), PASSWORD, "fr"))
+                .andExpect(status().isAccepted());
+        var emailToken = CapturingEmailSender.extractToken(mailbox.last());
+        mockMvc.perform(post("/api/v1/auth/password-reset/request").contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(java.util.Map.of("email", email))))
+                .andExpect(status().isAccepted());
+        var resetToken = CapturingEmailSender.extractToken(mailbox.last());
+        mockMvc.perform(patch("/api/v1/users/" + user.getId()).header("Authorization", auth)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(java.util.Map.of("password", "Changed-pass-123", "currentPassword", PASSWORD))))
+                .andExpect(status().isOk());
+        mockMvc.perform(confirm(emailToken)).andExpect(status().isBadRequest());
+        mockMvc.perform(post("/api/v1/auth/password-reset/confirm").contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(java.util.Map.of("token", resetToken,
+                        "password", "Another-pass-123", "confirmedPassword", "Another-pass-123"))))
+                .andExpect(status().isBadRequest());
+    }
+
     // ---- requesting a change ----
 
     @Test

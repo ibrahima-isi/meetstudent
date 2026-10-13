@@ -150,7 +150,8 @@ public class UserController {
 
         checkOwnershipOrAdmin(principal, id);
 
-        UserEntity saved = this.userService.patch(id, toProfileUpdates(request), encoder);
+        UserEntity saved = this.userService.patch(id, toProfileUpdates(request), encoder, request.getCurrentPassword(),
+                isAdmin(principal) && !principal.getId().equals(id));
         return ResponseEntity.ok(userMapper.toDTO(saved));
     }
 
@@ -163,7 +164,8 @@ public class UserController {
 
         checkOwnershipOrAdmin(principal, id);
 
-        UserEntity saved = this.userService.patch(id, toProfileUpdates(request), encoder);
+        UserEntity saved = this.userService.patch(id, toProfileUpdates(request), encoder, request.getCurrentPassword(),
+                isAdmin(principal) && !principal.getId().equals(id));
         return ResponseEntity.ok(userMapper.toDTO(saved));
     }
 
