@@ -36,10 +36,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /** Real committed HTTP requests. JDBC barriers force old credentials to be read before the change commits. */
-@SpringBootTest(properties = "spring.jpa.show-sql=false")
+@SpringBootTest(properties = {"spring.jpa.show-sql=false", "app.tokens.cooldown-seconds=0"})
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@Import(PasswordSessionRaceIntegrationTests.DatabaseBarrier.class)
+@Import({PasswordSessionRaceIntegrationTests.DatabaseBarrier.class, com.bowe.meetstudent.support.CapturingMailConfig.class})
 class PasswordSessionRaceIntegrationTests {
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
@@ -101,15 +101,64 @@ class PasswordSessionRaceIntegrationTests {
         }
     }
 
+    @Autowired com.bowe.meetstudent.support.CapturingEmailSender mailbox;
+
+    @ParameterizedTest
+    @ValueSource(strings = {"email-request", "email-resend"})
+    void passwordChangeCannotBeFollowedByAnEmailLinkUsingOldCredentials(String operation) throws Exception {
+        var role = roles.findByName("ROLE_STUDENT").orElseGet(() -> roles.save(Role.builder().name("ROLE_STUDENT").build()));
+        var email = UUID.randomUUID() + "@example.com";
+        var newEmail = UUID.randomUUID() + "@example.com";
+        var user = users.save(UserEntity.builder().email(email).password(encoder.encode("Old-password-123")).role(role).build());
+        var before = login(email, "Old-password-123");
+        var auth = "Bearer " + before.get("accessToken").asText();
+        var endpoint = "/api/v1/users/" + user.getId() + "/email-change";
+        var payload = json.writeValueAsString(Map.of("newEmail", newEmail, "currentPassword", "Old-password-123"));
+        if (operation.equals("email-resend")) {
+            mvc.perform(post(endpoint).header("Authorization", auth).contentType(MediaType.APPLICATION_JSON).content(payload))
+                    .andExpect(status().isAccepted());
+        }
+        var barrier = new ReadBarrier(operation);
+        try (var pool = Executors.newSingleThreadExecutor()) {
+            var racing = pool.submit(() -> {
+                DatabaseBarrier.active.set(barrier);
+                try {
+                    return mvc.perform(post(endpoint + (operation.equals("email-resend") ? "/resend" : ""))
+                            .header("Authorization", auth).contentType(MediaType.APPLICATION_JSON).content(payload))
+                            .andReturn().getResponse();
+                } finally { DatabaseBarrier.active.remove(); }
+            });
+            try {
+                assertThat(barrier.read.await(15, TimeUnit.SECONDS)).as("old email request read reached").isTrue();
+                mvc.perform(patch("/api/v1/users/" + user.getId()).header("Authorization", auth)
+                        .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(Map.of(
+                                "currentPassword", "Old-password-123", "password", "New-password-123"))))
+                        .andExpect(status().isOk());
+            } finally { barrier.resume.countDown(); }
+            var outcome = racing.get(15, TimeUnit.SECONDS);
+            assertThat(outcome.getStatus()).as(outcome.getContentAsString()).isIn(400, 409);
+            for (var message : mailbox.all().stream().filter(m -> m.to().equals(newEmail)).toList()) {
+                var token = com.bowe.meetstudent.support.CapturingEmailSender.extractToken(message);
+                mvc.perform(post("/api/v1/auth/email-change/confirm").contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of("token", token))))
+                        .andExpect(status().isBadRequest());
+            }
+        }
+    }
+
     private static class ReadBarrier {
         final String operation;
         final CountDownLatch read = new CountDownLatch(1);
         final CountDownLatch resume = new CountDownLatch(1);
         ReadBarrier(String operation) { this.operation = operation; }
         void afterQuery(String sql) throws InterruptedException {
-            boolean matches = operation.equals("login")
-                    ? sql.contains("from users ") && sql.contains("upper(")
-                    : sql.contains("from refresh_tokens ");
+            boolean matches = switch (operation) {
+                case "login" -> sql.contains("from users ") && sql.contains("upper(");
+                case "refresh" -> sql.contains("from refresh_tokens ");
+                case "email-request" -> sql.contains("from users ") && sql.contains(".password,");
+                case "email-resend" -> sql.contains("from user_tokens ") && sql.contains("consumed_at is null");
+                default -> false;
+            };
             if (matches && read.getCount() > 0) {
                 read.countDown();
                 if (!resume.await(20, TimeUnit.SECONDS)) throw new IllegalStateException("Credential barrier timed out");

@@ -15,6 +15,9 @@ import java.util.Optional;
 @Repository
 public interface UserTokenRepository extends JpaRepository<UserToken, Integer> {
 
+    @Query("select t.user.id from UserToken t where t.tokenHash = :hash")
+    Optional<Integer> findUserIdByTokenHash(@Param("hash") String hash);
+
     Optional<UserToken> findByTokenHash(String tokenHash);
 
     /** Tokens issued to the user for the purpose since the given instant, oldest first. */

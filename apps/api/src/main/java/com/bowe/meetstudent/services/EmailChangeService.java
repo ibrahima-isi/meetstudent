@@ -40,6 +40,7 @@ public class EmailChangeService {
     private final EmailSender emailSender;
     private final MailProperties properties;
     private final ApplicationEventPublisher events;
+    private final jakarta.persistence.EntityManager entityManager;
 
     /**
      * Starts (or replaces) the pending change and mails the confirmation link to {@code newEmail}.
@@ -120,6 +121,13 @@ public class EmailChangeService {
     }
 
     private void send(UserEntity user, String address, String lang) {
+        var requestedVersion = user.getPasswordVersion();
+        userRepository.findByIdForUpdate(user.getId()).orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        // Request/resend read the password or pending address before taking the lock.
+        entityManager.refresh(user);
+        if (user.getPasswordVersion() != requestedVersion) {
+            throw new ConflictException("Credentials changed; start a new email change request");
+        }
         var raw = userTokenService.issue(user, UserTokenPurpose.EMAIL_CHANGE,
                 Duration.ofHours(properties.getTokens().getVerifyTtlHours()), address);
         events.publishEvent(new AccountEmailRequested(EmailType.EMAIL_CHANGE, user.getId(), address,

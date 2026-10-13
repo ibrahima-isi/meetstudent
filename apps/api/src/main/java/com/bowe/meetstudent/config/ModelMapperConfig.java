@@ -17,6 +17,9 @@ public class ModelMapperConfig {
         modelMapper.getConfiguration().setMatchingStrategy(MatchingStrategies.LOOSE);
         modelMapper.getConfiguration().setSkipNullEnabled(true);
 
+        // Credential version is server-owned; loose matching otherwise maps password into it.
+        modelMapper.typeMap(com.bowe.meetstudent.dto.UserDTO.class, com.bowe.meetstudent.entities.UserEntity.class)
+                .addMappings(mapping -> mapping.skip(com.bowe.meetstudent.entities.UserEntity::setPasswordVersion));
         return modelMapper;
     }
 }

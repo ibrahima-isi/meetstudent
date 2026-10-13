@@ -421,7 +421,7 @@ class PasswordResetIntegrationTests {
 
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/v1/users/" + account.getId())
                         .header("Authorization", "Bearer " + access).contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"password\":\"Profile-new-pass1\"}"))
+                        .content(objectMapper.writeValueAsString(java.util.Map.of("password", "Profile-new-pass1", "currentPassword", OLD_PASSWORD))))
                 .andExpect(status().isOk());
 
         mockMvc.perform(reset(token)).andExpect(status().isBadRequest()).andExpect(jsonPath("$.token").value(INVALID));

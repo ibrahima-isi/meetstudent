@@ -15,6 +15,7 @@ import java.time.Instant;
 @Table(name = "refresh_tokens")
 public class RefreshToken extends AbstractEntity {
 
+    @org.hibernate.annotations.ColumnDefault("0")
     @Column(name = "password_version", nullable = false)
     private int passwordVersion;
 
