@@ -223,7 +223,7 @@ class AuthIntegrationTests {
         // 1. Create User
         String email = "refresh@test.com";
         String rawPassword = "password123";
-        Role userRole = roleRepository.save(Role.builder().name("ROLE_REFRESH").description("Refresh").build());
+        Role userRole = roleRepository.findByName("ROLE_STUDENT").orElseThrow();
 
         com.bowe.meetstudent.entities.UserEntity user = com.bowe.meetstudent.entities.UserEntity.builder()
                 .email(email)

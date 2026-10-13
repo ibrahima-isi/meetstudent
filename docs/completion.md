@@ -37,7 +37,9 @@ Implementation: current password required on self-service PUT/PATCH, administrat
 
 Tests use the approved HTTP and rendered Angular form boundaries. The two race cases use actual committed requests and a JDBC read barrier, not timing-only concurrent starts. Removing the login version check causes the regression test to fail; restoring it passes.
 
-Evidence collected so far:
+Local verification complete. Detailed commands and regression evidence: [ticket-100.md](evidence/ticket-100.md).
+
+Evidence:
 
 | Check | Before | After |
 | --- | --- | --- |
@@ -50,4 +52,8 @@ Evidence collected so far:
 | Angular full suite | — | 927 tests passed; production SSR build passed |
 | PostgreSQL migration | V19 with legacy user/refresh rows | V20 applied; both rows retain version zero |
 
-Delivery remains pending full API verification, PostgreSQL HTTP checks, review and green PR CI. No main promotion or unrelated worktree cleanup is part of this ticket (#129 owns the final promotion). Existing source branches/worktrees and their uncommitted files are preserved.
+Final local checks: API 226 unit + 273 integration tests passed; web 927 and backoffice 271 tests passed; both production builds and TypeScript checking passed. PostgreSQL: V19 → V20 plus 15 HTTP/race tests passed with schema validation. Standards/Spec review completed; the email-link race finding was reproduced and corrected. Disposable PostgreSQL removed.
+
+- [ ] [#100 — Changer son mot de passe et révoquer les anciennes sessions](https://github.com/ibrahima-isi/meetstudent/issues/100): implementation and local verification complete; PR/CI delivery pending.
+
+Delivery remains pending green PR CI and squash merge. No main promotion or unrelated worktree cleanup is part of this ticket (#129 owns the final promotion). Existing source branches/worktrees and their uncommitted files are preserved.
