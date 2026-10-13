@@ -49,3 +49,5 @@ No documented-standard violation or confirmed regression remains in the reviewed
 One initial finding: concurrent email-link creation/resend could resurrect a cancelled request. Reproduced in two deterministic HTTP tests, fixed with user locking plus version revalidation. Action-token issuance/consumption now uses a consistent lock order. Final re-review: no actionable finding within #100.
 
 Review outcome: Standards 0 blocking findings (1 heuristic); Spec 0 remaining findings (1 corrected). Static review complements the execution evidence above. No real SMTP, deployment, main promotion or unrelated worktree cleanup was performed. CI and merge evidence is linked from completion tracking and the PR.
+
+CI: [run 38413822495](https://github.com/ibrahima-isi/meetstudent/actions/runs/38413822495), commit `ccb655a49c050be21029f9e02d73964f84bc4c42`: API passed (1m54s), web passed (1m3s), backoffice passed (41s). Final documentation closeout is checked again before squash.

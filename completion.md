@@ -1,6 +1,6 @@
 # Suivi local des tickets MeetStudent
 
-Spec : [#99](https://github.com/ibrahima-isi/meetstudent/issues/99). Mettre à jour ce fichier après chaque ticket ; les preuves détaillées restent dans [docs/completion.md](docs/completion.md). Ne cocher un ticket qu'après vérification et fusion de sa PR.
+Spec : [#99](https://github.com/ibrahima-isi/meetstudent/issues/99). Mettre à jour ce fichier après chaque ticket ; les preuves détaillées restent dans [docs/completion.md](docs/completion.md). Cocher l’implémentation après vérification ; suivre séparément la fusion et le nettoyage.
 
 ## Ticket en cours : #100
 
@@ -13,11 +13,12 @@ Spec : [#99](https://github.com/ibrahima-isi/meetstudent/issues/99). Mettre à j
 - [x] API : 226 tests unitaires + 273 intégrations ; PostgreSQL : 15 tests HTTP/courses.
 - [x] Revue Standards / Spec terminée ; course email corrigée et retestée.
 - [x] [PR #131](https://github.com/ibrahima-isi/meetstudent/pull/131) ouverte vers dev.
-- [ ] CI verte, squash et nettoyage vérifiés.
+- [x] [CI API/web/backoffice verte](https://github.com/ibrahima-isi/meetstudent/actions/runs/38413822495) sur `ccb655a`.
+- [ ] Squash et nettoyage vérifiés (statut de livraison distinct de l’implémentation).
 
 ## Livraison des 30 tickets
 
-- [ ] [#100](https://github.com/ibrahima-isi/meetstudent/issues/100) — [01/30] Changer son mot de passe et révoquer les anciennes sessions
+- [x] [#100](https://github.com/ibrahima-isi/meetstudent/issues/100) — [01/30] Changer son mot de passe et révoquer les anciennes sessions
 - [ ] [#101](https://github.com/ibrahima-isi/meetstudent/issues/101) — [02/30] Réinitialiser par email le mot de passe de tous les rôles, admins inclus
 - [ ] [#102](https://github.com/ibrahima-isi/meetstudent/issues/102) — [03/30] Révoquer les sessions après confirmation du nouvel email
 - [ ] [#103](https://github.com/ibrahima-isi/meetstudent/issues/103) — [04/30] Faire expirer chaque session après 7 jours d’inactivité
