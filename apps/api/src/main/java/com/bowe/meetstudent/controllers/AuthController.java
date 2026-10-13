@@ -1,6 +1,5 @@
 package com.bowe.meetstudent.controllers;
 
-import com.bowe.meetstudent.exceptions.InvalidRefreshTokenException;
 import com.bowe.meetstudent.models.LoginRequest;
 import com.bowe.meetstudent.models.LoginResponse;
 import com.bowe.meetstudent.models.TokenRefreshRequest;
@@ -50,8 +49,9 @@ public class AuthController {
                 .map(GrantedAuthority::getAuthority)
                 .toList();
 
-        var token = jwtIssuer.issueToken(principal.getId(), principal.getUsername(), roles);
-        var refreshToken = refreshTokenService.createRefreshToken(principal.getId());
+        int version = principal.getPasswordVersion() == null ? 0 : principal.getPasswordVersion();
+        var refreshToken = refreshTokenService.createRefreshToken(principal.getId(), version);
+        var token = jwtIssuer.issueToken(principal.getId(), principal.getUsername(), roles, version);
 
         return LoginResponse.builder()
                 .accessToken(token)
@@ -63,22 +63,16 @@ public class AuthController {
     @Operation(summary = "Refresh access token", description = "Uses a valid refresh token to issue a new access token and a new refresh token (rotation).")
     @org.springframework.transaction.annotation.Transactional
     public LoginResponse refreshToken(@RequestBody @Validated TokenRefreshRequest request) {
-        return refreshTokenService.findByToken(request.getRefreshToken())
-                .map(refreshTokenService::verifyExpiration)
-                .map(token -> {
-                    var user = token.getUser();
-                    String roleName = user.getRole().getName();
-                    if (!roleName.startsWith("ROLE_")) {
-                        roleName = "ROLE_" + roleName;
-                    }
-                    var roles = List.of(roleName);
-                    var newAccessToken = jwtIssuer.issueToken(user.getId(), user.getEmail(), roles);
-                    var newRefreshToken = refreshTokenService.createRefreshToken(user.getId());
-                    return LoginResponse.builder()
-                            .accessToken(newAccessToken)
-                            .refreshToken(newRefreshToken.getToken())
-                            .build();
-                })
-                .orElseThrow(() -> new InvalidRefreshTokenException("Refresh token is not in database!"));
+        var rotation = refreshTokenService.rotate(request.getRefreshToken());
+        var user = rotation.user();
+        String roleName = user.getRole().getName();
+        if (!roleName.startsWith("ROLE_")) {
+            roleName = "ROLE_" + roleName;
+        }
+        var newAccessToken = jwtIssuer.issueToken(user.getId(), user.getEmail(), List.of(roleName), user.getPasswordVersion());
+        return LoginResponse.builder()
+                .accessToken(newAccessToken)
+                .refreshToken(rotation.refreshToken().getToken())
+                .build();
     }
 }

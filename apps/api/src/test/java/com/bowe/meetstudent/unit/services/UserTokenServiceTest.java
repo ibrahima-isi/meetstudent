@@ -49,6 +49,9 @@ class UserTokenServiceTest {
     @Mock
     private AddressIssueLock addressLock;
 
+    @Mock
+    private com.bowe.meetstudent.repositories.UserRepository userRepository;
+
     private MailProperties properties;
     private UserTokenService service;
     private UserEntity user;
@@ -56,9 +59,10 @@ class UserTokenServiceTest {
     @BeforeEach
     void setUp() {
         properties = new MailProperties();
-        service = new UserTokenService(repository, properties, Clock.fixed(NOW, ZoneOffset.UTC), addressLock);
+        service = new UserTokenService(repository, properties, Clock.fixed(NOW, ZoneOffset.UTC), addressLock, userRepository);
         user = UserEntity.builder().email("jane@example.com").firstname("Jane").build();
         user.setId(7);
+        lenient().when(userRepository.findByIdForUpdate(anyInt())).thenReturn(Optional.of(user));
         lenient().when(repository.save(any(UserToken.class))).thenAnswer(inv -> inv.getArgument(0));
         lenient().when(repository.consumeIfOpen(any(), any())).thenReturn(1);
     }
@@ -84,6 +88,7 @@ class UserTokenServiceTest {
         var token = UserToken.builder().user(user).purpose(VERIFY).tokenHash(sha256Hex(raw)).email("jane@example.com")
                 .issuedAt(NOW.minusSeconds(3600)).expiresAt(NOW.plusSeconds(3600)).build();
         token.setId(1);
+        lenient().when(repository.findUserIdByTokenHash(sha256Hex(raw))).thenReturn(Optional.of(7));
         lenient().when(repository.findByTokenHash(sha256Hex(raw))).thenReturn(Optional.of(token));
         return token;
     }
@@ -284,7 +289,7 @@ class UserTokenServiceTest {
 
     @Test
     void consumeRejectsAnUnknownToken() {
-        when(repository.findByTokenHash(any())).thenReturn(Optional.empty());
+        when(repository.findUserIdByTokenHash(any())).thenReturn(Optional.empty());
 
         assertThrows(InvalidActionTokenException.class, () -> service.consume("nope", VERIFY));
     }

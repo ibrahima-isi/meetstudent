@@ -41,7 +41,7 @@ class AuthControllerTest {
 
     @Test
     void refreshToken_throwsInvalidRefreshToken_whenTokenUnknown() {
-        when(refreshTokenService.findByToken("nope")).thenReturn(java.util.Optional.empty());
+        when(refreshTokenService.rotate("nope")).thenThrow(new com.bowe.meetstudent.exceptions.InvalidRefreshTokenException("Unknown token"));
         var request = new com.bowe.meetstudent.models.TokenRefreshRequest();
         request.setRefreshToken("nope");
 
@@ -76,12 +76,12 @@ class AuthControllerTest {
         when(authentication.getPrincipal()).thenReturn(principal);
 
         // Mock JWT Issue
-        when(jwtIssuer.issueToken(principal.getId(), principal.getUsername(), List.of("ROLE_STUDENT")))
+        when(jwtIssuer.issueToken(principal.getId(), principal.getUsername(), List.of("ROLE_STUDENT"), 0))
                 .thenReturn(expectedToken);
         
         // Mock Refresh Token
         RefreshToken refreshToken = RefreshToken.builder().token(expectedRefreshToken).build();
-        when(refreshTokenService.createRefreshToken(principal.getId())).thenReturn(refreshToken);
+        when(refreshTokenService.createRefreshToken(principal.getId(), 0)).thenReturn(refreshToken);
 
         // Act
         LoginResponse response = authController.login(request);

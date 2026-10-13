@@ -40,6 +40,7 @@ public class UserTokenService {
     private final MailProperties properties;
     private final Clock clock;
     private final AddressIssueLock addressLock;
+    private final com.bowe.meetstudent.repositories.UserRepository userRepository;
 
     /**
      * Creates a token for the user's current email address, consuming any older open token of the same
@@ -61,6 +62,8 @@ public class UserTokenService {
      */
     @Transactional(noRollbackFor = TooManyRequestsException.class)
     public String issue(UserEntity user, UserTokenPurpose purpose, Duration ttl, String address) {
+        // Same order as credential changes: user, address, then action-token rows.
+        userRepository.findByIdForUpdate(user.getId()).orElseThrow(InvalidActionTokenException::new);
         addressLock.acquire(address);
         var now = Instant.now(clock);
         repository.deleteIssuedBefore(now.minus(RETENTION));
@@ -98,7 +101,11 @@ public class UserTokenService {
             throw new InvalidActionTokenException();
         }
         var now = Instant.now(clock);
-        var token = repository.findByTokenHash(hash(rawToken.strip()))
+        var tokenHash = hash(rawToken.strip());
+        var ownerId = repository.findUserIdByTokenHash(tokenHash).orElseThrow(InvalidActionTokenException::new);
+        userRepository.findByIdForUpdate(ownerId).orElseThrow(InvalidActionTokenException::new);
+        // Read only after the owner lock: a password change may have consumed it while we waited.
+        var token = repository.findByTokenHash(tokenHash)
                 .filter(t -> t.getPurpose() == purpose)
                 .orElseThrow(InvalidActionTokenException::new);
         if (token.getUser() == null) { // account deleted: the row only remains as cap evidence

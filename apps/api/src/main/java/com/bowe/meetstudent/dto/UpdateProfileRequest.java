@@ -36,5 +36,7 @@ public class UpdateProfileRequest {
     @MaxUtf8Bytes(72)
     private String password;
 
+    private String currentPassword;
+
     private String qualification;
 }

@@ -50,6 +50,8 @@ export class LoginFormComponent {
           this.success.set({ key: 'auth.login.registeredEmail' });
         }
       });
+    } else if (this.route.snapshot.queryParamMap.get('passwordChanged') === '1') {
+      this.success.set({ key: 'auth.login.passwordChanged' });
     } else if (this.route.snapshot.queryParamMap.get('reset') === '1') {
       this.success.set({ key: 'auth.login.reset' });
     }

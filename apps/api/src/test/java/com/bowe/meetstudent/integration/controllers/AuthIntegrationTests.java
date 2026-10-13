@@ -52,6 +52,136 @@ class AuthIntegrationTests {
     }
 
     @Test
+    void passwordChangeRequiresCurrentPasswordWithoutChangingProfileOrSession() throws Exception {
+        var user = userService.saveUser(com.bowe.meetstudent.entities.UserEntity.builder()
+                .email("change@test.com").password("password123").firstname("Original")
+                .role(roleRepository.findByName("ROLE_STUDENT").orElseThrow()).build(), passwordEncoder);
+        var login = mockMvc.perform(post("/api/v1/auth").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"change@test.com\",\"password\":\"password123\"}"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        var access = objectMapper.readTree(login).get("accessToken").asText();
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/v1/users/" + user.getId())
+                .header("Authorization", "Bearer " + access).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"firstname\":\"Changed\",\"password\":\"newPassword123\"}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.currentPassword").exists());
+        mockMvc.perform(get("/api/v1/users/id/" + user.getId()).header("Authorization", "Bearer " + access))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.firstname").value("Original"));
+    }
+
+    @Test
+    void passwordChangeRevokesEveryAccessAndRefreshCredentialAndAllowsNewLogin() throws Exception {
+        var user = userService.saveUser(com.bowe.meetstudent.entities.UserEntity.builder()
+                .email("revoke@test.com").password("password123").firstname("Original")
+                .role(roleRepository.findByName("ROLE_STUDENT").orElseThrow()).build(), passwordEncoder);
+        var login = mockMvc.perform(post("/api/v1/auth").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"revoke@test.com\",\"password\":\"password123\"}"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        var tokens = objectMapper.readTree(login);
+        var access = tokens.get("accessToken").asText();
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/v1/users/" + user.getId())
+                .header("Authorization", "Bearer " + access).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"password\":\"newPassword123\",\"currentPassword\":\"password123\"}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/users/id/" + user.getId()).header("Authorization", "Bearer " + access))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(post("/api/v1/auth/refresh").contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(java.util.Map.of("refreshToken", tokens.get("refreshToken").asText()))))
+                .andExpect(status().isUnauthorized());
+        var fresh = mockMvc.perform(post("/api/v1/auth").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"revoke@test.com\",\"password\":\"newPassword123\"}"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        mockMvc.perform(get("/api/v1/users/id/" + user.getId())
+                .header("Authorization", "Bearer " + objectMapper.readTree(fresh).get("accessToken").asText()))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void wrongCurrentPasswordDoesNotChangeCredentials() throws Exception {
+        var user = account("wrong-current@test.com", "ROLE_STUDENT");
+        var tokens = credentials(user.getEmail(), "password123");
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/v1/users/" + user.getId())
+                .header("Authorization", "Bearer " + tokens.get("accessToken").asText())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"password\":\"newPassword123\",\"currentPassword\":\"wrong\"}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.currentPassword").exists());
+        credentials(user.getEmail(), "password123");
+    }
+
+    @Test
+    void adminExemptionAppliesOnlyWhenEditingAnotherAccount() throws Exception {
+        var admin = account("admin-change@test.com", "ROLE_ADMIN");
+        var student = account("student-change@test.com", "ROLE_STUDENT");
+        var studentTokens = credentials(student.getEmail(), "password123");
+        var adminTokens = credentials(admin.getEmail(), "password123");
+        var auth = "Bearer " + adminTokens.get("accessToken").asText();
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/v1/users/" + admin.getId())
+                .header("Authorization", auth).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"password\":\"newPassword123\"}"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/v1/users/" + student.getId())
+                .header("Authorization", auth).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"password\":\"newPassword123\"}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/users/id/" + student.getId())
+                .header("Authorization", "Bearer " + studentTokens.get("accessToken").asText()))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/v1/users/id/" + admin.getId()).header("Authorization", auth))
+                .andExpect(status().isOk());
+        credentials(student.getEmail(), "newPassword123");
+    }
+
+    @Autowired private com.bowe.meetstudent.security.JwtProperties jwtProperties;
+
+    @Test
+    void legacyCredentialsWorkUntilFirstChangeAndNeverBecomeValidAgain() throws Exception {
+        var user = account("legacy@test.com", "ROLE_STUDENT");
+        // Old deployment format: no pv claim and a refresh row using the migration's zero default.
+        var legacy = com.auth0.jwt.JWT.create().withSubject(user.getId().toString())
+                .withClaim("email", user.getEmail()).withClaim("roles", java.util.List.of("ROLE_STUDENT"))
+                .withExpiresAt(java.time.Instant.now().plusSeconds(300))
+                .sign(com.auth0.jwt.algorithms.Algorithm.HMAC256(jwtProperties.getSecretKey()));
+        refreshTokenRepository.save(com.bowe.meetstudent.entities.RefreshToken.builder().user(user)
+                .token("legacy-refresh").expiryDate(java.time.Instant.now().plusSeconds(300)).build());
+        mockMvc.perform(get("/api/v1/users/id/" + user.getId()).header("Authorization", "Bearer " + legacy))
+                .andExpect(status().isOk());
+        var rotated = mockMvc.perform(post("/api/v1/auth/refresh").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"refreshToken\":\"legacy-refresh\"}"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        var first = objectMapper.readTree(rotated);
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/v1/users/" + user.getId())
+                .header("Authorization", "Bearer " + legacy).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"password\":\"secondPassword\",\"currentPassword\":\"password123\"}"))
+                .andExpect(status().isOk());
+        var second = credentials(user.getEmail(), "secondPassword");
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/v1/users/" + user.getId())
+                .header("Authorization", "Bearer " + second.get("accessToken").asText()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"password\":\"password123\",\"currentPassword\":\"secondPassword\"}"))
+                .andExpect(status().isOk());
+        for (var access : java.util.List.of(legacy, first.get("accessToken").asText(), second.get("accessToken").asText())) {
+            mockMvc.perform(get("/api/v1/users/id/" + user.getId()).header("Authorization", "Bearer " + access))
+                    .andExpect(status().isUnauthorized());
+        }
+        for (var refresh : java.util.List.of("legacy-refresh", first.get("refreshToken").asText(), second.get("refreshToken").asText())) {
+            mockMvc.perform(post("/api/v1/auth/refresh").contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(java.util.Map.of("refreshToken", refresh))))
+                    .andExpect(status().isUnauthorized());
+        }
+        credentials(user.getEmail(), "password123");
+    }
+
+    private com.bowe.meetstudent.entities.UserEntity account(String email, String role) {
+        var assigned = roleRepository.findByName(role).orElseGet(() -> roleRepository.save(Role.builder().name(role).build()));
+        return userService.saveUser(com.bowe.meetstudent.entities.UserEntity.builder().email(email)
+                .password("password123").firstname("Original").role(assigned).build(), passwordEncoder);
+    }
+
+    private com.fasterxml.jackson.databind.JsonNode credentials(String email, String password) throws Exception {
+        return objectMapper.readTree(mockMvc.perform(post("/api/v1/auth").contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(java.util.Map.of("username", email, "password", password))))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+    }
+
+    @Test
     void shouldLoginSuccessfully() throws Exception {
         // 1. Create a User in DB
         String email = "integration@test.com";
@@ -93,7 +223,7 @@ class AuthIntegrationTests {
         // 1. Create User
         String email = "refresh@test.com";
         String rawPassword = "password123";
-        Role userRole = roleRepository.save(Role.builder().name("ROLE_REFRESH").description("Refresh").build());
+        Role userRole = roleRepository.findByName("ROLE_STUDENT").orElseThrow();
 
         com.bowe.meetstudent.entities.UserEntity user = com.bowe.meetstudent.entities.UserEntity.builder()
                 .email(email)

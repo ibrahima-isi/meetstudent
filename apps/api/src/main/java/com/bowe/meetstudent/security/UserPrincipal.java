@@ -21,6 +21,9 @@ public class UserPrincipal implements UserDetails {
 
     private final Collection<? extends GrantedAuthority> authorities;
 
+    /** The user's {@code passwordVersion} at authentication time (null = 0). */
+    private final Integer passwordVersion;
+
     @Override
     public boolean isAccountNonExpired() {
         return true;

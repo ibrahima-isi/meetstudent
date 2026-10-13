@@ -17,6 +17,7 @@ export interface ProfileUpdate {
   lastname?: string;
   birthday?: string;
   password?: string;
+  currentPassword?: string;
   qualification?: string;
 }
 

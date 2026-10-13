@@ -18,7 +18,7 @@ import { WishlistItemComponent } from '@shared/components/wishlist-item/wishlist
 import { TranslocoDirective } from '@jsverse/transloco';
 
 /** The fields of the API's 400 body (`{ field: message }`) this form can show. */
-const FORM_FIELDS = ['firstname', 'lastname', 'qualification', 'password'] as const;
+const FORM_FIELDS = ['firstname', 'lastname', 'qualification', 'password', 'currentPassword'] as const;
 type FormField = (typeof FORM_FIELDS)[number];
 
 /** A translation key, so a language switch re-renders the message. */
@@ -86,6 +86,7 @@ export class ProfilePageComponent implements OnInit {
     lastname: ['', Validators.required],
     qualification: [''],
     password: ['', Validators.minLength(8)],
+    currentPassword: [''],
   });
 
   isEditing = signal(false);
@@ -95,6 +96,11 @@ export class ProfilePageComponent implements OnInit {
   protected readonly serverErrors = signal<Partial<Record<FormField, string>>>({});
 
   constructor() {
+    this.form.controls.password.valueChanges.subscribe((password) => {
+      const current = this.form.controls.currentPassword;
+      current.setValidators(password ? Validators.required : null);
+      current.updateValueAndValidity();
+    });
     // Editing a field drops the message the API attached to it.
     for (const field of FORM_FIELDS) {
       this.form.controls[field].valueChanges.subscribe(() => {
@@ -148,13 +154,20 @@ export class ProfilePageComponent implements OnInit {
       return;
     }
 
-    const { password, ...fields } = this.form.getRawValue();
-    const changes: ProfileUpdate = password ? { ...fields, password } : fields;
+    const { password, currentPassword, ...fields } = this.form.getRawValue();
+    const changes: ProfileUpdate = password ? { ...fields, password, currentPassword } : fields;
 
     this.serverErrors.set({});
     this.isSaving.set(true);
     this.userService.updateProfile(id, changes).subscribe({
       next: (saved) => {
+        if (password) {
+          this.tokenService.clear();
+          this.resetForm();
+          this.isSaving.set(false);
+          void this.router.navigate(['/', this.locale.active(), 'login'], { queryParams: { passwordChanged: '1' } });
+          return;
+        }
         const updated: User = { ...(this.profile() as User), ...saved };
         this.tokenService.setUser(updated);
         this.profile.set(updated);
@@ -206,6 +219,7 @@ export class ProfilePageComponent implements OnInit {
       lastname: lastname ?? '',
       qualification: qualification ?? '',
       password: '',
+      currentPassword: '',
     });
   }
 

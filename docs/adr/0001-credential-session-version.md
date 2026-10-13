@@ -1,0 +1,9 @@
+# Révocation par version persistée des identifiants
+
+Pour le ticket #100 (spec #99), une version monotone du compte lie les JWT (`pv`) et les refresh tokens au mot de passe utilisé. Un changement de mot de passe incrémente cette version et supprime les refresh tokens dans la même transaction : la précision des horodatages ne permettrait pas de distinguer deux changements rapprochés. Chaque autorisation JWT lit la version courante en base, au prix d'une requête supplémentaire ; les JWT historiques sans `pv` correspondent uniquement à la version zéro, conservée par V20.
+
+Le verrou de ligne du compte sérialise changement de mot de passe et émission/rotation des sessions. Le login revalide sous verrou la version utilisée pour vérifier le mot de passe et rafraîchit l'entité Hibernate chargée avant le verrou ; le refresh relit son jeton après acquisition du verrou. Une autorisation déjà accordée n'est pas rétroactivement annulée. Une requête ultérieure utilisant une ancienne session est refusée.
+
+Le ticket #100 couvre les changements depuis le profil, y compris ceux effectués par un administrateur sur un autre compte. Les raccordements de révocation du reset, de confirmation d'email et de l'expiration par appareil restent respectivement dans #101, #102 et #103. Le modèle actuel conserve un seul refresh token par compte ; ce ticket ne prétend pas implémenter les sessions indépendantes par appareil.
+
+Les liens d'action suivent le même ordre de verrous : utilisateur, adresse si émission, puis jetons. La demande et le renvoi d'un lien email revalident la version après verrouillage pour ne pas recréer une demande annulée par un changement de mot de passe concurrent. Cet ordre évite les inversions entre confirmation et changement de mot de passe.

@@ -329,7 +329,7 @@ class UserControllerIntegrationTests {
         mockMvc.perform(
                 MockMvcRequestBuilders.patch("/api/v1/users/" + user.getId())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"password\":\"exactly8\"}")
+                        .content(objectMapper.writeValueAsString(java.util.Map.of("password", "exactly8", "currentPassword", userDTO.getPassword())))
                         .with(TestDataUtil.mockUser(user.getId(), "ROLE_STUDENT"))
         ).andExpect(
                 MockMvcResultMatchers.status().isOk()

@@ -328,3 +328,21 @@ shapes before coding against them.
 - The same section shows whether the current address is confirmed and offers the
   confirmation email again (`POST /auth/email-verification/resend`), so dismissing
   the banner never loses the way to confirm.
+
+## 10. Profile password change (#100, 2026-10-13)
+
+- `PUT/PATCH /users/{id}` requires `currentPassword` when a nonempty `password`
+  is supplied for one's own account. Missing/wrong values return 400
+  `{currentPassword}` without applying any profile changes. An administrator
+  editing another account is exempt; an administrator editing themself is not.
+- A successful password change still returns 200 with the saved profile, but
+  invalidates all previous access/refresh credentials, including the caller.
+  The profile clears local authentication and navigates to
+  `/:lang/login?passwordChanged=1`, where a translated notice explains re-login.
+  Ordinary profile edits do not sign out and omit both password fields.
+- Open reset and email-change links are invalidated. A request/resend racing a
+  password change can return 409 rather than recreate a cancelled email link.
+- Old JWTs without the new credential version remain compatible at version zero
+  until the first password change or their original expiry. Reset-triggered
+  revocation, email-confirmation revocation and per-device inactivity belong to
+  #101, #102 and #103 respectively.

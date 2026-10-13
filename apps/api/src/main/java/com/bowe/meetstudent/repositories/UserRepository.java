@@ -17,6 +17,13 @@ import java.util.Optional;
 @Repository
 public interface UserRepository extends JpaRepository<UserEntity, Integer> {
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select u from UserEntity u where u.id = :id")
+    Optional<UserEntity> findByIdForUpdate(@Param("id") Integer id);
+
+    @Query("select u.passwordVersion from UserEntity u where u.id = :id")
+    Optional<Integer> findPasswordVersionById(@Param("id") Integer id);
+
     Optional<UserEntity> findByEmailIgnoreCase(String email);
     List<UserEntity> findByRole(Role role);
     List<UserEntity> findAllByPassword(String password);

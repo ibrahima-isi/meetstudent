@@ -22,6 +22,10 @@ import java.util.List;
 @ToString(callSuper = true, onlyExplicitlyIncluded = true)
 public class UserEntity extends AbstractEntity {
 
+    @org.hibernate.annotations.ColumnDefault("0")
+    @Column(name = "password_version", nullable = false)
+    private int passwordVersion;
+
     @Column(length = 100)
     @ToString.Include
     private String firstname;

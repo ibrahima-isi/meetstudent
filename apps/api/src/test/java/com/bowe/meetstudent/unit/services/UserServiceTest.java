@@ -47,6 +47,9 @@ class UserServiceTest {
     private PasswordEncoder passwordEncoder;
 
     @Mock
+    private com.bowe.meetstudent.services.RefreshTokenService refreshTokenService;
+
+    @Mock
     private UserTokenService userTokenService;
 
     @InjectMocks
@@ -110,18 +113,18 @@ class UserServiceTest {
 
     @Test
     void patch_shouldBurnOutstandingResetLinks_whenThePasswordChanges() {
-        Mockito.when(userRepository.findById(1)).thenReturn(Optional.of(user));
+        Mockito.when(userRepository.findByIdForUpdate(1)).thenReturn(Optional.of(user));
         Mockito.when(userRepository.save(any(UserEntity.class))).thenReturn(user);
         Mockito.when(passwordEncoder.encode("brand-new-pass")).thenReturn("hash");
 
-        userService.patch(1, UserEntity.builder().password("brand-new-pass").build(), passwordEncoder);
+        userService.patch(1, UserEntity.builder().password("brand-new-pass").build(), passwordEncoder, "current", true);
 
         Mockito.verify(userTokenService).consumeOutstanding(1, UserTokenPurpose.PASSWORD_RESET);
     }
 
     @Test
     void patch_shouldLeaveResetLinksAlone_whenThePasswordIsNotChanged() {
-        Mockito.when(userRepository.findById(1)).thenReturn(Optional.of(user));
+        Mockito.when(userRepository.findByIdForUpdate(1)).thenReturn(Optional.of(user));
         Mockito.when(userRepository.save(any(UserEntity.class))).thenReturn(user);
 
         userService.patch(1, UserEntity.builder().firstname("Johnny").build(), passwordEncoder);
@@ -136,7 +139,7 @@ class UserServiceTest {
                 .qualification("Data Science")
                 .build();
 
-        Mockito.when(userRepository.findById(1)).thenReturn(Optional.of(user));
+        Mockito.when(userRepository.findByIdForUpdate(1)).thenReturn(Optional.of(user));
         Mockito.when(userRepository.save(any(UserEntity.class))).thenReturn(user);
 
         userService.patch(1, updates, passwordEncoder);
@@ -151,7 +154,7 @@ class UserServiceTest {
     void patch_shouldRefuseADifferentEmailAndPointToTheEmailChangeFlow() {
         user.setEmail("old@example.com");
         user.setEmailVerified(true);
-        Mockito.when(userRepository.findById(1)).thenReturn(Optional.of(user));
+        Mockito.when(userRepository.findByIdForUpdate(1)).thenReturn(Optional.of(user));
 
         var ex = assertThrows(com.bowe.meetstudent.exceptions.FieldValidationException.class,
                 () -> userService.patch(1, UserEntity.builder().email("new@example.com").build(), passwordEncoder));
@@ -173,7 +176,7 @@ class UserServiceTest {
     void patch_shouldKeepVerification_whenOnlyTheCaseOfTheEmailChanges() {
         user.setEmail("old@example.com");
         user.setEmailVerified(true);
-        Mockito.when(userRepository.findById(1)).thenReturn(Optional.of(user));
+        Mockito.when(userRepository.findByIdForUpdate(1)).thenReturn(Optional.of(user));
         Mockito.when(userRepository.save(any(UserEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
         UserEntity saved = userService.patch(1, UserEntity.builder().email("OLD@example.com").build(), passwordEncoder);
@@ -185,7 +188,7 @@ class UserServiceTest {
     void patch_shouldNotTouchVerification_whenTheEmailIsNotSent() {
         user.setEmail("old@example.com");
         user.setEmailVerified(true);
-        Mockito.when(userRepository.findById(1)).thenReturn(Optional.of(user));
+        Mockito.when(userRepository.findByIdForUpdate(1)).thenReturn(Optional.of(user));
         Mockito.when(userRepository.save(any(UserEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
         userService.patch(1, UserEntity.builder().firstname("Johnny").build(), passwordEncoder);
@@ -200,7 +203,7 @@ class UserServiceTest {
         user.setRole(currentRole);
         UserEntity updates = UserEntity.builder().role(requestedRole).build();
 
-        Mockito.when(userRepository.findById(1)).thenReturn(Optional.of(user));
+        Mockito.when(userRepository.findByIdForUpdate(1)).thenReturn(Optional.of(user));
         Mockito.when(userRepository.save(any(UserEntity.class))).thenReturn(user);
 
         UserEntity saved = userService.patch(1, updates, passwordEncoder);
@@ -215,7 +218,7 @@ class UserServiceTest {
         user.setRole(currentRole);
         UserEntity updates = UserEntity.builder().role(requestedRole).build();
 
-        Mockito.when(userRepository.findById(1)).thenReturn(Optional.of(user));
+        Mockito.when(userRepository.findByIdForUpdate(1)).thenReturn(Optional.of(user));
         Mockito.when(userRepository.save(any(UserEntity.class))).thenReturn(user);
 
         UserEntity saved = userService.patchAsAdmin(1, updates, passwordEncoder);

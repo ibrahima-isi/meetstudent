@@ -175,6 +175,16 @@ describe('LoginFormComponent translations', () => {
     });
   });
 
+  it('explains the sign-out after a password change in both languages', async () => {
+    TestBed.inject(ActivatedRoute).snapshot = {
+      queryParamMap: convertToParamMap({ passwordChanged: '1' }),
+    } as ActivatedRouteSnapshot;
+    await render('fr');
+    expect(text()).toContain('Mot de passe modifié');
+    await render('en');
+    expect(text()).toContain('Password changed');
+  });
+
   describe('after a password reset', () => {
     function arriveFromReset(reset: boolean) {
       TestBed.inject(ActivatedRoute).snapshot = {
