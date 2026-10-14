@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -23,6 +24,7 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class RefreshTokenService {
+    private static final Duration INACTIVITY_TIMEOUT = Duration.ofDays(7);
 
     /** The outcome of a rotation: the (locked, current) user and the replacement refresh token. */
     public record Rotation(UserEntity user, RefreshToken refreshToken) {}
@@ -54,7 +56,7 @@ public class RefreshTokenService {
         var now = clock.instant();
         return refreshTokenRepository.save(RefreshToken.builder().user(user)
                 .sessionId(UUID.randomUUID()).lastActivity(now)
-                .expiryDate(now.plus(Duration.ofDays(7)))
+                .expiryDate(now.plus(INACTIVITY_TIMEOUT))
                 .token(UUID.randomUUID().toString()).passwordVersion(user.getPasswordVersion()).build());
     }
 
@@ -82,7 +84,7 @@ public class RefreshTokenService {
     }
 
     public RefreshToken verifyExpiration(RefreshToken token) {
-        if (!token.getLastActivity().plus(Duration.ofDays(7)).isAfter(clock.instant())) {
+        if (!isActiveAt(token, clock.instant())) {
             refreshTokenRepository.delete(token);
             throw new InvalidRefreshTokenException("Refresh token was expired. Please make a new signin request");
         }
@@ -116,12 +118,16 @@ public class RefreshTokenService {
             entityManager.refresh(token);
             var now = clock.instant();
             if (token.getPasswordVersion() == passwordVersion
-                    && token.getLastActivity().plus(Duration.ofDays(7)).isAfter(now)
+                    && isActiveAt(token, now)
                     && now.isAfter(token.getLastActivity())) {
                 token.setLastActivity(now);
-                token.setExpiryDate(now.plus(Duration.ofDays(7)));
+                token.setExpiryDate(now.plus(INACTIVITY_TIMEOUT));
             }
         });
+    }
+
+    private boolean isActiveAt(RefreshToken session, Instant now) {
+        return session.getLastActivity().plus(INACTIVITY_TIMEOUT).isAfter(now);
     }
 
     /** Ends every session of the user. Callers hold the user's row lock. */

@@ -78,6 +78,12 @@ Preuves : [ticket-102.md](evidence/ticket-102.md). API : 226 unitaires + 294 int
 
 Livraison : [PR #133](https://github.com/ibrahima-isi/meetstudent/pull/133) vers dev ; [CI API/web/backoffice verte](https://github.com/ibrahima-isi/meetstudent/actions/runs/38528795149) sur `48256a3`. Le closeout documentaire doit aussi passer les trois CI avant squash. Le statut définitif de fusion reste celui de la PR. Le bilan définitif de fusion/nettoyage sera conservé dans la copie locale exportée. Arrêt après #102 ; #103 non commencé.
 
-### #103 — sessions par appareil (en cours)
+### #103 — sessions par appareil (2026-10-14)
 
-- [ ] Ticket réclamé ; base isolée `40802dd`, branche `feat/session-inactivity-103`. TDD HTTP et Angular, migration PostgreSQL, revues puis PR/CI/squash.
+- [x] [#103](https://github.com/ibrahima-isi/meetstudent/issues/103) : implémentation et vérifications locales requises terminées. Base isolée `40802dd`, branche `feat/session-inactivity-103` ; PR/CI/fusion suivies séparément.
+
+Sessions UUID indépendantes, rotation stable, inactivité serveur de sept jours au seuil exact, refresh/passivité exclus, activité après interaction explicite ou écriture réussie, révocation globale et grâce historique V21. Choix d’activité confirmé par le propriétaire le 2026-10-14. Web/backoffice : purge et invitation à se reconnecter, sans boucle ni accès SSR au stockage.
+
+Preuves : [ticket-103.md](evidence/ticket-103.md). API finale : 226 unitaires + 302 intégrations ; PostgreSQL V20→V21 et 61 HTTP/courses verts sur code final, plus anciens credentials via HTTP réel sur schéma migré ; web 940 et backoffice 286 tests, types et builds verts. Revues Sol finales : Standards 0 / Spec 0 (hypothèse OSIV retirée après test et vérification de l’ordre réel des contextes).
+
+Blocage temporaire du validateur levé ; reprise autorisée, PostgreSQL final vert et API/PostgreSQL jetables arrêtés/supprimés. Restent PR vers dev, CI des trois apps au head final, squash, export local et nettoyage du seul worktree/branche #103. #104 non commencé.

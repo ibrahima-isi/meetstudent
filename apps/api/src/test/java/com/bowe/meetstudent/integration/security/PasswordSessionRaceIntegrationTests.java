@@ -121,12 +121,13 @@ class PasswordSessionRaceIntegrationTests {
         controlledTime.set(start.plusSeconds(604799));
         session = refresh(session, 200);
         final var before = session;
-        var barrier = new ReadBarrier("refresh");
+        var barrier = new ReadBarrier("refresh-after-auth");
         try (var pool = Executors.newSingleThreadExecutor()) {
             var racing = pool.submit(() -> {
                 DatabaseBarrier.active.set(barrier);
                 try {
                     return mvc.perform(post("/api/v1/auth/refresh").contentType(MediaType.APPLICATION_JSON)
+                            .header("Authorization", "Bearer " + before.get("accessToken").asText())
                             .content(json.writeValueAsString(Map.of("refreshToken", before.get("refreshToken").asText()))))
                             .andReturn().getResponse();
                 } finally { DatabaseBarrier.active.remove(); }
@@ -313,6 +314,7 @@ class PasswordSessionRaceIntegrationTests {
         void afterQuery(String sql) throws InterruptedException {
             boolean matches = switch (operation) {
                 case "login" -> sql.contains("from users ") && sql.contains("upper(");
+                case "refresh-after-auth" -> sql.contains("from refresh_tokens ") && sql.contains(".user_id from ");
                 case "refresh" -> sql.contains("from refresh_tokens ");
                 case "reset-confirm" -> sql.contains("from user_tokens ") && sql.contains(".token_hash=?");
                 case "business-read", "email-request" -> sql.contains("from users ") && sql.contains(".password,");

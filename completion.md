@@ -83,6 +83,12 @@ Preuves : [docs/evidence/ticket-102.md](docs/evidence/ticket-102.md). Arrêt apr
 - [ ] [#128](https://github.com/ibrahima-isi/meetstudent/issues/128) — [29/30] Renommer la navigation en Découvrir / Discover
 - [ ] [#129](https://github.com/ibrahima-isi/meetstudent/issues/129) — [30/30] Vérifier l’ensemble, promouvoir main et terminer le nettoyage
 
-### #103 — sessions par appareil (en cours)
+### #103 — sessions par appareil (2026-10-14)
 
-- [ ] Ticket réclamé ; base isolée `40802dd`, branche `feat/session-inactivity-103`. TDD HTTP et Angular, migration PostgreSQL, revues puis PR/CI/squash.
+- [x] [#103](https://github.com/ibrahima-isi/meetstudent/issues/103) : implémentation et vérifications locales requises terminées. Base isolée `40802dd`, branche `feat/session-inactivity-103` ; PR/CI/fusion suivies séparément.
+
+Sessions UUID indépendantes, rotation stable, inactivité serveur de sept jours au seuil exact, refresh/passivité exclus, activité après interaction explicite ou écriture réussie, révocation globale et grâce historique V21. Choix d’activité confirmé par le propriétaire le 2026-10-14. Web/backoffice : purge et invitation à se reconnecter, sans boucle ni accès SSR au stockage.
+
+Preuves : [ticket-103.md](docs/evidence/ticket-103.md). API finale : 226 unitaires + 302 intégrations ; PostgreSQL V20→V21 et 61 HTTP/courses verts sur code final, plus anciens credentials via HTTP réel sur schéma migré ; web 940 et backoffice 286 tests, types et builds verts. Revues Sol finales : Standards 0 / Spec 0 (hypothèse OSIV retirée après test et vérification de l’ordre réel des contextes).
+
+Blocage temporaire du validateur levé ; reprise autorisée, PostgreSQL final vert et API/PostgreSQL jetables arrêtés/supprimés. Restent PR vers dev, CI des trois apps au head final, squash, export local et nettoyage du seul worktree/branche #103. #104 non commencé.
