@@ -53,3 +53,5 @@ Un P2 initial : identité obsolète dans l’autre onglet après confirmation. R
 ## Ressources et livraison
 
 `docker compose -p ms102 -f /tmp/ms102-compose.yml down -v` a supprimé seulement le conteneur et réseau PostgreSQL #102. Aucun SMTP réel, déploiement, promotion main, modification d’autres worktrees ou démarrage de #103. PR vers dev, CI finale, squash et nettoyage sont suivis dans les documents de completion et dans la copie locale exportée après livraison.
+
+Livraison : [PR #133](https://github.com/ibrahima-isi/meetstudent/pull/133). [CI API/web/backoffice verte](https://github.com/ibrahima-isi/meetstudent/actions/runs/38528795149) sur `48256a32c58889ed1fbeb8ecf515de20f98b33a7` : API 2m39s, web 1m8s, backoffice 43s. Le commit documentaire final est soumis à une nouvelle CI avant squash ; PR et copie locale exportée conservent le bilan définitif.

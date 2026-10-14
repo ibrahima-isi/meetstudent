@@ -44,7 +44,8 @@ Preuves : [docs/evidence/ticket-101.md](docs/evidence/ticket-101.md). Arrêt apr
 - [x] Web 930 tests, build SSR et types ; backoffice 275 tests et build.
 - [x] Revues Sol Standards/Spec ; P2 inter-onglets corrigé, aucun écart restant.
 - [x] Ressources PostgreSQL du seul ticket #102 supprimées.
-- [ ] PR vers dev et CI finale API/web/backoffice verte.
+- [x] [PR #133](https://github.com/ibrahima-isi/meetstudent/pull/133) vers dev ; [CI API/web/backoffice verte](https://github.com/ibrahima-isi/meetstudent/actions/runs/38528795149) sur `48256a3`.
+- [ ] CI du closeout documentaire avant squash.
 - [ ] Squash et nettoyage du seul worktree/branche #102.
 
 Preuves : [docs/evidence/ticket-102.md](docs/evidence/ticket-102.md). Arrêt après #102, sans commencer #103. La copie locale exportée recevra le bilan définitif de livraison.
