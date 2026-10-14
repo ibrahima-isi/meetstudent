@@ -18,12 +18,25 @@ Spec : [#99](https://github.com/ibrahima-isi/meetstudent/issues/99). Mettre à j
 
 ## Ticket en cours : #101
 
-État : claimed. Spec #99 et ticket relus ; dépendance #100 fermée. Worktree isolé `f21e`, branche `fix/password-reset-all-roles`, base `5b37b2a`. Implémentation et vérification en cours ; aucune validation acquise à ce stade.
+- [x] Spec #99 et dépendance #100 relues ; #100 fermé, base `5b37b2a`.
+- [x] Worktree isolé `f21e`, branche `fix/password-reset-all-roles`.
+- [x] Régressions HTTP et backoffice observées rouges puis vertes.
+- [x] Reset de tous les rôles, révocation access/refresh et liens sensibles vérifiés.
+- [x] Bootstrap sûr et redémarrage complet après reset admin vérifiés.
+- [x] API : 226 unitaires + 286 intégrations ; PostgreSQL : 20 migrations, 38 tests HTTP/courses.
+- [x] Web : 927 tests et build SSR ; backoffice : 275 tests et build.
+- [x] Parcours fr/en et lien backoffice vérifiés au navigateur, desktop/mobile.
+- [x] Revues Standards/Spec terminées ; documentation de révocation corrigée.
+- [x] PostgreSQL et serveurs navigateur jetables arrêtés/supprimés.
+- [ ] PR vers dev, CI API/web/backoffice verte et squash vérifiés.
+- [ ] Nettoyage du seul worktree et de la branche #101 vérifié.
+
+Preuves : [docs/evidence/ticket-101.md](docs/evidence/ticket-101.md). Arrêt après #101 ; aucun ticket suivant commencé.
 
 ## Livraison des 30 tickets
 
 - [x] [#100](https://github.com/ibrahima-isi/meetstudent/issues/100) — [01/30] Changer son mot de passe et révoquer les anciennes sessions
-- [ ] [#101](https://github.com/ibrahima-isi/meetstudent/issues/101) — [02/30] Réinitialiser par email le mot de passe de tous les rôles, admins inclus
+- [x] [#101](https://github.com/ibrahima-isi/meetstudent/issues/101) — [02/30] Réinitialiser par email le mot de passe de tous les rôles, admins inclus
 - [ ] [#102](https://github.com/ibrahima-isi/meetstudent/issues/102) — [03/30] Révoquer les sessions après confirmation du nouvel email
 - [ ] [#103](https://github.com/ibrahima-isi/meetstudent/issues/103) — [04/30] Faire expirer chaque session après 7 jours d’inactivité
 - [ ] [#104](https://github.com/ibrahima-isi/meetstudent/issues/104) — [05/30] Supprimer un compte avec confirmation et nettoyage fiable

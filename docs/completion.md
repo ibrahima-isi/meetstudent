@@ -58,6 +58,12 @@ Final local checks: API 226 unit + 273 integration tests passed; web 927 and bac
 
 Delivery: [PR #131](https://github.com/ibrahima-isi/meetstudent/pull/131). Local verification and review are complete. [API/web/backoffice CI passed](https://github.com/ibrahima-isi/meetstudent/actions/runs/38413822495) on `ccb655a`. Squash merge status is authoritative on the PR; the documentation-only closeout commit is gated by a fresh green CI before merge. No main promotion or unrelated worktree cleanup is part of this ticket (#129 owns the final promotion). Existing source branches/worktrees and their uncommitted files are preserved.
 
-### #101 — récupération de tous les rôles (2026-10-13)
+### #101 — récupération de tous les rôles (2026-10-14)
 
-- [ ] [#101](https://github.com/ibrahima-isi/meetstudent/issues/101) : claimed ; dépendance #100 fermée. Base `5b37b2a`, branche `fix/password-reset-all-roles`. Prochaine étape : régressions HTTP de révocation, bootstrap persistant et accès depuis le backoffice.
+- [x] [#101](https://github.com/ibrahima-isi/meetstudent/issues/101) : implémentation et vérification terminées ; livraison PR/CI/squash en cours.
+
+Reset étudiant/expert/admin : version des identifiants incrémentée atomiquement, anciennes sessions access/refresh et liens reset/email-change invalidés. Bootstrap admin : initialisation sûre, mot de passe existant conservé au redémarrage, neutralisation du seed avec révocation ; aucune promotion d’un compte étudiant/expert. Backoffice : accès au parcours web français par origine configurable ; parcours fr/en conservés.
+
+Preuves : [ticket-101.md](evidence/ticket-101.md). API : 226 unitaires + 286 intégrations ; PostgreSQL : 20 migrations et 38 tests HTTP/courses ; web : 927 tests et build SSR ; backoffice : 275 tests et build. Redémarrage complet après reset admin et navigateur desktop/mobile vérifiés. Revues Standards/Spec terminées ; contradiction documentaire corrigée. Ressources jetables arrêtées/supprimées.
+
+Prochaine étape : PR vers dev, CI API/web/backoffice verte, squash et nettoyage du seul ticket #101. Les tickets #102–#129 restent décochés ; cette session s’arrête après #101.
