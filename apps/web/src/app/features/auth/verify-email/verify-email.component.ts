@@ -122,8 +122,10 @@ export class VerifyEmailComponent {
       next: () => {
         this.token = null;
         this.finish('success');
-        if (this.tokens.isAuthenticated()) {
-          // Best effort: the cached copy feeds the banner and, after a change, the address shown everywhere.
+        if (this.kind === 'change') {
+          this.tokens.clear();
+        } else if (this.tokens.isAuthenticated()) {
+          // Best effort: update the verification banner for a session that remains valid.
           this.auth.refreshCurrentUser().subscribe({ error: () => undefined });
         }
       },

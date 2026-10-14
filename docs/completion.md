@@ -67,3 +67,7 @@ Reset étudiant/expert/admin : version des identifiants incrémentée atomiqueme
 Preuves : [ticket-101.md](evidence/ticket-101.md). API : 226 unitaires + 286 intégrations ; PostgreSQL : 20 migrations et 38 tests HTTP/courses ; web : 927 tests et build SSR ; backoffice : 275 tests et build. Redémarrage complet après reset admin et navigateur desktop/mobile vérifiés. Revues Standards/Spec terminées ; contradiction documentaire corrigée. Ressources jetables arrêtées/supprimées.
 
 Livraison : [PR #132](https://github.com/ibrahima-isi/meetstudent/pull/132). [CI API/web/backoffice verte](https://github.com/ibrahima-isi/meetstudent/actions/runs/38525554851) sur `b408ac0` : API 2m58s, web 1m3s, backoffice 34s. Le commit de closeout documentaire est soumis à une nouvelle CI avant squash. Le statut définitif de fusion est celui de la PR ; le bilan de squash/nettoyage est conservé dans la copie locale exportée après livraison. Les tickets #102–#129 restent décochés ; cette session s’arrête après #101.
+
+### #102 — confirmation du nouvel email (en cours)
+
+Base isolée `b56e384`. Interfaces TDD approuvées : HTTP versionné (sessions, liens, courses JDBC déterministes) et parcours Angular de confirmation. Périmètre : confirmation atomique avec révocation access/refresh, effacement de l’identité locale après succès, invitation fr/en à se reconnecter. Aucun ticket suivant commencé.

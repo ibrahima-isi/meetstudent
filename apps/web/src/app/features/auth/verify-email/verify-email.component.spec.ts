@@ -251,17 +251,42 @@ describe('VerifyEmailComponent', () => {
       expect(title()).toBe('Adresse e-mail mise à jour');
     });
 
-    it('reloads the cached user when someone is signed in, so the new address shows everywhere', async () => {
-      localStorage.setItem('token', 'access');
-      localStorage.setItem('user', JSON.stringify({ id: 7, email: 'old@example.com' }));
-      TestBed.inject(TokenService).setTokens('access', 'refresh');
-      TestBed.inject(TokenService).setUser({ id: 7, email: 'old@example.com' } as never);
-      await render('en', fragment);
-      httpMock.expectOne(changeUrl).flush(null, ok());
-      httpMock.expectOne(`${environment.apiUrl}/users/id/7`).flush({ id: 7, email: 'new@example.com' });
-      await settle();
+    for (const lang of ['fr', 'en'] as const) {
+      it(`ends the local session and invites re-login after an email change in ${lang}`, async () => {
+        const tokens = TestBed.inject(TokenService);
+        tokens.setTokens('access', 'refresh');
+        tokens.setUser({ id: 7, email: 'old@example.com' } as never);
+        await render(lang, fragment);
+        httpMock.expectOne(changeUrl).flush(null, ok());
+        httpMock.expectNone((r) => r.url.includes('/users/'));
+        await settle();
 
-      expect(TestBed.inject(TokenService).user()?.email).toBe('new@example.com');
+        expect(tokens.isAuthenticated()).toBeFalse();
+        expect(tokens.refreshToken()).toBeNull();
+        expect(tokens.user()).toBeNull();
+        expect(localStorage.getItem('auth_token')).toBeNull();
+        expect(localStorage.getItem('refresh_token')).toBeNull();
+        expect(localStorage.getItem('auth_user')).toBeNull();
+        expect(el().querySelector(`a[href="/${lang}/login"]`)).not.toBeNull();
+        expect(el().querySelector(`a[href="/${lang}/home"]`)).toBeNull();
+      });
+    }
+
+    it('keeps the session on network failure and clears it only after a successful retry', async () => {
+      const tokens = TestBed.inject(TokenService);
+      tokens.setTokens('access', 'refresh');
+      tokens.setUser({ id: 7, email: 'old@example.com' } as never);
+      await render('en', fragment);
+      httpMock.expectOne(changeUrl).error(new ProgressEvent('error'));
+      await settle();
+      expect(tokens.isAuthenticated()).toBeTrue();
+      expect(tokens.user()?.email).toBe('old@example.com');
+      el().querySelector<HTMLButtonElement>('button')!.click();
+      await settle();
+      httpMock.expectOne(changeUrl).flush(null, ok());
+      await settle();
+      expect(tokens.user()).toBeNull();
+      expect(el().querySelector('a[href="/en/login"]')).not.toBeNull();
     });
 
     it('explains a dead link with the change wording, not the verification one', async () => {

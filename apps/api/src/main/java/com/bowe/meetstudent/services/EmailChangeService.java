@@ -36,6 +36,7 @@ public class EmailChangeService {
 
     private final UserRepository userRepository;
     private final UserTokenService userTokenService;
+    private final RefreshTokenService refreshTokenService;
     private final PasswordEncoder passwordEncoder;
     private final EmailSender emailSender;
     private final MailProperties properties;
@@ -111,9 +112,10 @@ public class EmailChangeService {
             throw new InvalidActionTokenException();
         }
         // Targeted update (not save), like email verification, so a concurrent profile edit is not overwritten.
-        if (userRepository.changeEmail(userId, token.getEmail()) == 0) {
+        if (userRepository.changeEmailAndRevokeSessions(userId, token.getEmail()) == 0) {
             throw new InvalidActionTokenException();
         }
+        refreshTokenService.deleteByUserId(userId);
         // Any other pending link (and any verification link for the old address) is now meaningless.
         userTokenService.consumeOutstanding(userId, UserTokenPurpose.EMAIL_CHANGE);
         userTokenService.consumeOutstanding(userId, UserTokenPurpose.EMAIL_VERIFICATION);

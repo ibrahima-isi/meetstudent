@@ -37,10 +37,10 @@ public interface UserRepository extends JpaRepository<UserEntity, Integer> {
     @Query("update UserEntity u set u.emailVerified = true where u.id = :id and lower(u.email) = lower(:email)")
     int markEmailVerified(@Param("id") Integer id, @Param("email") String email);
 
-    /** Targeted write of a confirmed new address (verified by definition: the link reached it), same reason as above. */
+    /** Atomically confirms the new address and revokes credentials, without overwriting profile fields. */
     @Modifying
-    @Query("update UserEntity u set u.email = :email, u.emailVerified = true where u.id = :id")
-    int changeEmail(@Param("id") Integer id, @Param("email") String email);
+    @Query("update UserEntity u set u.email = :email, u.emailVerified = true, u.passwordVersion = u.passwordVersion + 1 where u.id = :id")
+    int changeEmailAndRevokeSessions(@Param("id") Integer id, @Param("email") String email);
 
     /**
      * Every user whose address matches ignoring case, oldest first. A list, not an Optional: legacy data may

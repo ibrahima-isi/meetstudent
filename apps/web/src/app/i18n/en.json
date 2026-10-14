@@ -163,7 +163,7 @@
       "changeVerifyingTitle": "Confirming your new address",
       "changeVerifyingText": "One moment, we are confirming your new address...",
       "changeSuccessTitle": "Email address updated",
-      "changeSuccessText": "Your new email address is confirmed and replaces the old one. Use it from now on to sign in.",
+      "changeSuccessText": "Your new email address is confirmed and replaces the old one. All your sessions have ended. Sign in again with your new address.",
       "changeExpiredText": "This link has expired, was already used, or the address is no longer available. Sign in and ask for a new change from your profile.",
       "changeInvalidText": "This link is incomplete or invalid. Sign in and ask for a new change from your profile."
     },

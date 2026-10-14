@@ -57,6 +57,8 @@ class EmailChangeIntegrationTests {
     @Autowired private UserService userService;
     @Autowired private PasswordEncoder passwordEncoder;
 
+    @Autowired private com.bowe.meetstudent.security.JwtProperties jwtProperties;
+
     private Role studentRole;
 
     @BeforeEach
@@ -141,6 +143,71 @@ class EmailChangeIntegrationTests {
                 .content(objectMapper.writeValueAsString(java.util.Map.of("token", resetToken,
                         "password", "Another-pass-123", "confirmedPassword", "Another-pass-123"))))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void confirmationRevokesEveryOldSessionButTheRequestDoesNot() throws Exception {
+        var oldEmail = uniqueEmail();
+        var newEmail = uniqueEmail();
+        var user = user(oldEmail);
+        var sessionBody = mockMvc.perform(post("/api/v1/auth").contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(java.util.Map.of("username", oldEmail, "password", PASSWORD))))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        var session = objectMapper.readTree(sessionBody);
+        var firstAccess = "Bearer " + session.get("accessToken").asText();
+        var secondBody = mockMvc.perform(post("/api/v1/auth").contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(java.util.Map.of("username", oldEmail, "password", PASSWORD))))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        var second = objectMapper.readTree(secondBody);
+        var otherAccess = "Bearer " + second.get("accessToken").asText();
+        mockMvc.perform(requestChange(user.getId(), otherAccess, newEmail, PASSWORD, "fr"))
+                .andExpect(status().isAccepted());
+        var token = CapturingEmailSender.extractToken(mailbox.last());
+        mockMvc.perform(get("/api/v1/users/id/" + user.getId()).header("Authorization", firstAccess))
+                .andExpect(status().isOk());
+        mockMvc.perform(confirm(token)).andExpect(status().isNoContent());
+        for (var access : java.util.List.of(firstAccess, otherAccess)) {
+            mockMvc.perform(get("/api/v1/users/id/" + user.getId()).header("Authorization", access))
+                    .andExpect(status().isUnauthorized());
+        }
+        for (var credentials : java.util.List.of(session, second)) {
+            mockMvc.perform(post("/api/v1/auth/refresh").contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(java.util.Map.of("refreshToken", credentials.get("refreshToken").asText()))))
+                    .andExpect(status().isUnauthorized());
+        }
+        loginFails(oldEmail);
+        mockMvc.perform(get("/api/v1/users/id/" + user.getId()).header("Authorization", bearer(newEmail)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.email").value(newEmail));
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"ROLE_STUDENT", "ROLE_EXPERT", "ROLE_ADMIN"})
+    void legacySessionsRemainCompatibleUntilEmailConfirmationForEveryRole(String roleName) throws Exception {
+        var role = roleRepository.findByName(roleName)
+                .orElseGet(() -> roleRepository.save(Role.builder().name(roleName).build()));
+        var oldEmail = uniqueEmail();
+        var newEmail = uniqueEmail();
+        var user = userService.saveUser(UserEntity.builder().email(oldEmail).password(PASSWORD).role(role).build(), passwordEncoder);
+        var legacy = com.auth0.jwt.JWT.create().withSubject(user.getId().toString())
+                .withClaim("email", oldEmail).withClaim("roles", java.util.List.of(roleName))
+                .withExpiresAt(java.time.Instant.now().plusSeconds(300))
+                .sign(com.auth0.jwt.algorithms.Algorithm.HMAC256(jwtProperties.getSecretKey()));
+        var legacyRefresh = UUID.randomUUID().toString();
+        refreshTokenRepository.save(com.bowe.meetstudent.entities.RefreshToken.builder().user(user)
+                .token(legacyRefresh).expiryDate(java.time.Instant.now().plusSeconds(300)).build());
+        var auth = "Bearer " + legacy;
+        mockMvc.perform(requestChange(user.getId(), auth, newEmail, PASSWORD, "fr")).andExpect(status().isAccepted());
+        var token = CapturingEmailSender.extractToken(mailbox.last());
+        mockMvc.perform(get("/api/v1/users/id/" + user.getId()).header("Authorization", auth)).andExpect(status().isOk());
+        var rotated = mockMvc.perform(post("/api/v1/auth/refresh").contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(java.util.Map.of("refreshToken", legacyRefresh))))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        mockMvc.perform(confirm(token)).andExpect(status().isNoContent());
+        mockMvc.perform(get("/api/v1/users/id/" + user.getId()).header("Authorization", auth)).andExpect(status().isUnauthorized());
+        mockMvc.perform(post("/api/v1/auth/refresh").contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(java.util.Map.of("refreshToken", objectMapper.readTree(rotated).get("refreshToken").asText()))))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/v1/users/id/" + user.getId()).header("Authorization", bearer(newEmail))).andExpect(status().isOk());
     }
 
     // ---- requesting a change ----
