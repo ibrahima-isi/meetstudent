@@ -12,6 +12,10 @@ import org.springframework.data.domain.Sort;
 
 @Repository
 public interface SchoolRateRepository extends JpaRepository<SchoolRate, Integer> {
+    @org.springframework.data.jpa.repository.Modifying(flushAutomatically = true)
+    @Query("delete from SchoolRate r where r.userEntity.id = :userId")
+    int deleteAllByUserId(@Param("userId") Integer userId);
+
     List<SchoolRate> findBySchoolId(Integer schoolId, Sort sort);
 
     @Query("SELECT AVG(r.note) FROM SchoolRate r WHERE r.school.id = :schoolId")

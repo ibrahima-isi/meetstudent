@@ -1,6 +1,7 @@
 package com.bowe.meetstudent.controllers;
 
 import com.bowe.meetstudent.dto.AdminUpdateUserRoleRequest;
+import com.bowe.meetstudent.dto.DeleteAccountRequest;
 import com.bowe.meetstudent.dto.RegisterRequest;
 import com.bowe.meetstudent.dto.UpdateProfileRequest;
 import com.bowe.meetstudent.dto.UserDTO;
@@ -189,19 +190,18 @@ public class UserController {
     }
 
     @DeleteMapping(path = "{id}")
-    @Operation(summary = "Delete a user by ID", description = "Removes a user account from the platform.")
-    public ResponseEntity<UserDTO> deleteById(
+    @Operation(summary = "Delete a user by ID", description = "Requires the current password for self-deletion, including administrators. Administrators deleting another account are exempt.")
+    @ApiResponse(responseCode = "204", description = "Account deleted")
+    @ApiResponse(responseCode = "400", description = "Current password incorrect or missing")
+    @ApiResponse(responseCode = "404", description = "User not found")
+    public ResponseEntity<Void> deleteById(
             @AuthenticationPrincipal UserPrincipal principal,
-            @Parameter(description = "ID of the user to delete") @PathVariable int id) {
-        
+            @Parameter(description = "ID of the user to delete") @PathVariable int id,
+            @RequestBody(required = false) DeleteAccountRequest request) {
         checkOwnershipOrAdmin(principal, id);
-        
-        UserEntity deletedUser =  this.userService.deleteUser(id);
-        if (deletedUser == null) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-        UserDTO deletedUserDto = this.userMapper.toDTO(deletedUser);
-        return new ResponseEntity<>(deletedUserDto, HttpStatus.OK);
+        userService.deleteUser(id, encoder, request == null ? null : request.currentPassword(),
+                isAdmin(principal) && !principal.getId().equals(id));
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{userId}/wishlist/{schoolId}")

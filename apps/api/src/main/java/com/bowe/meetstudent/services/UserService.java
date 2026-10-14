@@ -4,6 +4,9 @@ import com.bowe.meetstudent.entities.UserEntity;
 import com.bowe.meetstudent.entities.School;
 import com.bowe.meetstudent.exceptions.FieldValidationException;
 import com.bowe.meetstudent.exceptions.ResourceNotFoundException;
+import com.bowe.meetstudent.repositories.SchoolRateRepository;
+import com.bowe.meetstudent.repositories.ProgramRateRepository;
+import com.bowe.meetstudent.repositories.CourseRateRepository;
 import com.bowe.meetstudent.repositories.RoleRepository;
 import com.bowe.meetstudent.repositories.UserRepository;
 import com.bowe.meetstudent.repositories.SchoolRepository;
@@ -36,6 +39,9 @@ public class UserService {
     private final MediaService mediaService;
     private final UserTokenService userTokenService;
     private final RefreshTokenService refreshTokenService;
+    private final SchoolRateRepository schoolRateRepository;
+    private final ProgramRateRepository programRateRepository;
+    private final CourseRateRepository courseRateRepository;
 
     public UserEntity saveUser(UserEntity userEntity, PasswordEncoder passwordEncoder ) {
         userEntity.setPassword(
@@ -74,17 +80,28 @@ public class UserService {
     }
 
     @Transactional
-    public UserEntity deleteUser(int id) {
-        Optional<UserEntity> toDeleteOpt = this.userRepository.findById(id);
-        if (toDeleteOpt.isPresent()) {
-            UserEntity toDelete = toDeleteOpt.get();
-            // Delete all media (diplomas, certificates, videos, photo) owned by this user
-            mediaService.deleteAllOwnedBy(id);
-
-            this.userRepository.deleteById(id);
-            return toDelete;
+    public void deleteUser(int id, PasswordEncoder encoder, String currentPassword,
+                           boolean administratorDeletingAnotherUser) {
+        var user = userRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        if (!administratorDeletingAnotherUser
+                && (currentPassword == null || !encoder.matches(currentPassword, user.getPassword()))) {
+            throw new FieldValidationException("currentPassword", "Mot de passe actuel incorrect ou manquant");
         }
-        return null;
+        deleteAccountData(user);
+    }
+
+    private void deleteAccountData(UserEntity user) {
+        var id = user.getId();
+        // The caller holds the user lock, also used by login/rotation and action-token consumption.
+        refreshTokenService.deleteByUserId(id);
+        schoolRateRepository.deleteAllByUserId(id);
+        programRateRepository.deleteAllByUserId(id);
+        courseRateRepository.deleteAllByUserId(id);
+        mediaService.deleteAllOwnedBy(id);
+        // JPA removes the owned wishlist links. Action-token FKs become NULL: their rows keep
+        // counting toward the address budget until the existing seven-day retention purge.
+        userRepository.delete(user);
     }
 
     public boolean notExists(int id){
