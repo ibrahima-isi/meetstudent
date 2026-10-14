@@ -26,7 +26,7 @@ describe('session activity at the HTTP boundary', () => {
         provideZonelessChangeDetection(),
         { provide: PLATFORM_ID, useValue: platform },
         { provide: DOCUMENT, useValue: document },
-        
+
         provideEnvironmentInitializer(() => inject(SessionActivityService)),
         provideHttpClient(withInterceptors([sessionActivityInterceptor])),
         provideHttpClientTesting(),
