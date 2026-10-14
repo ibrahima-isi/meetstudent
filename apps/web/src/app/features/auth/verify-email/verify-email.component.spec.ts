@@ -289,6 +289,27 @@ describe('VerifyEmailComponent', () => {
       expect(el().querySelector('a[href="/en/login"]')).not.toBeNull();
     });
 
+    it('drops the old identity when confirmation in another tab removes the shared session', async () => {
+      const tokens = TestBed.inject(TokenService);
+      tokens.setTokens('access', 'refresh');
+      tokens.setUser({ id: 7, email: 'old@example.com' } as never);
+      await render('en', 'type=change');
+      expect(el().querySelector('a[href="/en/home"]')).not.toBeNull();
+      // Browser boundary: another tab removes the shared keys and emits storage here.
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('auth_user');
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: 'auth_token', oldValue: 'access', newValue: null, storageArea: localStorage,
+      }));
+      await settle();
+      expect(tokens.user()).toBeNull();
+      expect(tokens.token()).toBeNull();
+      expect(tokens.refreshToken()).toBeNull();
+      expect(el().querySelector('a[href="/en/home"]')).toBeNull();
+      expect(el().querySelector('a[href="/en/login"]')).not.toBeNull();
+    });
+
     it('explains a dead link with the change wording, not the verification one', async () => {
       await render('en', fragment);
       httpMock.expectOne(changeUrl).flush({ token: 'Lien invalide ou expiré' }, { status: 400, statusText: 'Bad Request' });
