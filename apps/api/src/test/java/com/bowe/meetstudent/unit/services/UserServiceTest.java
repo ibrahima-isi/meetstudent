@@ -52,6 +52,10 @@ class UserServiceTest {
     @Mock
     private UserTokenService userTokenService;
 
+    @Mock private com.bowe.meetstudent.repositories.SchoolRateRepository schoolRateRepository;
+    @Mock private com.bowe.meetstudent.repositories.ProgramRateRepository programRateRepository;
+    @Mock private com.bowe.meetstudent.repositories.CourseRateRepository courseRateRepository;
+
     @InjectMocks
     private UserService userService;
 
@@ -102,13 +106,12 @@ class UserServiceTest {
 
     @Test
     void testDeleteUser() {
-        Mockito.when(userRepository.findById(1)).thenReturn(Optional.of(user));
-        Mockito.doNothing().when(userRepository).deleteById(1);
+        Mockito.when(userRepository.findByIdForUpdate(1)).thenReturn(Optional.of(user));
 
-        userService.deleteUser(1);
+        userService.deleteUser(1, passwordEncoder, null, true);
 
         Mockito.verify(mediaService).deleteAllOwnedBy(1);
-        Mockito.verify(userRepository).deleteById(1);
+        Mockito.verify(userRepository).delete(user);
     }
 
     @Test

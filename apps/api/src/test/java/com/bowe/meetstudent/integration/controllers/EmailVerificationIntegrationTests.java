@@ -404,7 +404,10 @@ class EmailVerificationIntegrationTests {
         var email = uniqueEmail();
         for (int i = 0; i < 4; i++) {
             var u = register(email, null);
-            userService.deleteUser(u.get("id").asInt());
+            mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/v1/users/" + u.get("id").asInt())
+                    .header("Authorization", "Bearer " + login(u.get("email").asText()))
+                    .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(java.util.Map.of("currentPassword", PASSWORD))))
+                    .andExpect(status().isNoContent());
         }
 
         // 3 mails in 24 h for the address; the 4th registration got none, although every account was deleted.
@@ -416,7 +419,10 @@ class EmailVerificationIntegrationTests {
     void aTokenOfADeletedAccountCanNoLongerBeConsumed() throws Exception {
         var u = register(uniqueEmail(), null);
         var token = CapturingEmailSender.extractToken(mailbox.last());
-        userService.deleteUser(u.get("id").asInt());
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/v1/users/" + u.get("id").asInt())
+                    .header("Authorization", "Bearer " + login(u.get("email").asText()))
+                    .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(java.util.Map.of("currentPassword", PASSWORD))))
+                    .andExpect(status().isNoContent());
 
         assertThat(userTokenRepository.findAll()).hasSize(1).allSatisfy(t -> assertThat(t.getUser()).isNull());
         mockMvc.perform(confirm(token)).andExpect(status().isBadRequest()).andExpect(jsonPath("$.token").value(INVALID));

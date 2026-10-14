@@ -12,6 +12,10 @@ import org.springframework.data.domain.Sort;
 
 @Repository
 public interface CourseRateRepository extends JpaRepository<CourseRate, Integer> {
+    @org.springframework.data.jpa.repository.Modifying(flushAutomatically = true)
+    @Query("delete from CourseRate r where r.userEntity.id = :userId")
+    int deleteAllByUserId(@Param("userId") Integer userId);
+
     List<CourseRate> findByCourseId(Integer courseId, Sort sort);
 
     @Query("SELECT AVG(r.note) FROM CourseRate r WHERE r.course.id = :courseId")

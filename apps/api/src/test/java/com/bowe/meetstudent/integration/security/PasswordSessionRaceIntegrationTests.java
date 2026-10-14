@@ -65,7 +65,7 @@ class PasswordSessionRaceIntegrationTests {
     }
 
     @ParameterizedTest
-    @CsvSource({"login, change", "refresh, change", "login, reset", "refresh, reset", "login, email", "refresh, email"})
+    @CsvSource({"login, change", "refresh, change", "login, reset", "refresh, reset", "login, email", "refresh, email", "login, delete", "refresh, delete"})
     void credentialsReadBeforeSensitiveChangeCannotMintASurvivingSession(String operation, String mutation) throws Exception {
         var role = roles.findByName("ROLE_STUDENT").orElseGet(() -> roles.save(Role.builder().name("ROLE_STUDENT").build()));
         var email = UUID.randomUUID() + "@example.com";
@@ -101,11 +101,17 @@ class PasswordSessionRaceIntegrationTests {
             mvc.perform(post("/api/v1/auth/refresh").contentType(MediaType.APPLICATION_JSON)
                     .content(json.writeValueAsString(Map.of("refreshToken", before.get("refreshToken").asText()))))
                     .andExpect(status().isUnauthorized());
-            var after = login(mutation.equals("email") ? "new-" + email : email,
-                    mutation.equals("email") ? "Old-password-123" : "New-password-123");
-            mvc.perform(get("/api/v1/users/id/" + user.getId())
-                    .header("Authorization", "Bearer " + after.get("accessToken").asText()))
-                    .andExpect(status().isOk());
+            if (mutation.equals("delete")) {
+                mvc.perform(post("/api/v1/auth").contentType(MediaType.APPLICATION_JSON)
+                                .content(json.writeValueAsString(Map.of("username", email, "password", "Old-password-123"))))
+                        .andExpect(status().isUnauthorized());
+            } else {
+                var after = login(mutation.equals("email") ? "new-" + email : email,
+                        mutation.equals("email") ? "Old-password-123" : "New-password-123");
+                mvc.perform(get("/api/v1/users/id/" + user.getId())
+                        .header("Authorization", "Bearer " + after.get("accessToken").asText()))
+                        .andExpect(status().isOk());
+            }
         }
     }
 
@@ -278,7 +284,13 @@ class PasswordSessionRaceIntegrationTests {
     }
 
     private void changeCredentials(UserEntity user, JsonNode session, String mutation) throws Exception {
-        if (mutation.equals("email")) {
+        if (mutation.equals("delete")) {
+            mvc.perform(delete("/api/v1/users/" + user.getId())
+                            .header("Authorization", "Bearer " + session.get("accessToken").asText())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json.writeValueAsString(Map.of("currentPassword", "Old-password-123"))))
+                    .andExpect(status().isNoContent());
+        } else if (mutation.equals("email")) {
             mvc.perform(post("/api/v1/users/" + user.getId() + "/email-change")
                             .header("Authorization", "Bearer " + session.get("accessToken").asText())
                             .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(Map.of(

@@ -352,3 +352,18 @@ shapes before coding against them.
   until the first password change/reset or their original expiry. Reset-triggered
   revocation is delivered in #101; email-confirmation revocation and per-device
   inactivity remain in #102 and #103 respectively.
+
+## 11. Account deletion (#104, 2026-10-14)
+
+- `DELETE /users/{id}` accepts an optional JSON body `{currentPassword}`. For
+  self-deletion, including an administrator deleting their own account, the
+  current password is required. An administrator deleting another account does
+  not need it.
+- Success returns an empty 204 response. A missing or incorrect current password
+  returns 400 `{currentPassword}`; authentication and authorization failures use
+  the usual 401/403 responses, and an absent account returns 404. A client that
+  invokes this endpoint should show the password field error and handle 204
+  without expecting a user object.
+- Deletion revokes the account's sessions and action tokens and removes dependent
+  ratings. Neither the web app nor the backoffice currently offers a user-account
+  deletion journey or calls this endpoint.
