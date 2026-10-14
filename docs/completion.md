@@ -57,3 +57,7 @@ Final local checks: API 226 unit + 273 integration tests passed; web 927 and bac
 - [x] [#100 — Changer son mot de passe et révoquer les anciennes sessions](https://github.com/ibrahima-isi/meetstudent/issues/100): implementation and required verification complete; [PR #131](https://github.com/ibrahima-isi/meetstudent/pull/131) targets dev; CI/merge status tracked there.
 
 Delivery: [PR #131](https://github.com/ibrahima-isi/meetstudent/pull/131). Local verification and review are complete. [API/web/backoffice CI passed](https://github.com/ibrahima-isi/meetstudent/actions/runs/38413822495) on `ccb655a`. Squash merge status is authoritative on the PR; the documentation-only closeout commit is gated by a fresh green CI before merge. No main promotion or unrelated worktree cleanup is part of this ticket (#129 owns the final promotion). Existing source branches/worktrees and their uncommitted files are preserved.
+
+### #101 — récupération de tous les rôles (2026-10-13)
+
+- [ ] [#101](https://github.com/ibrahima-isi/meetstudent/issues/101) : claimed ; dépendance #100 fermée. Base `5b37b2a`, branche `fix/password-reset-all-roles`. Prochaine étape : régressions HTTP de révocation, bootstrap persistant et accès depuis le backoffice.

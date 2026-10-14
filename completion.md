@@ -2,7 +2,7 @@
 
 Spec : [#99](https://github.com/ibrahima-isi/meetstudent/issues/99). Mettre à jour ce fichier après chaque ticket ; les preuves détaillées restent dans [docs/completion.md](docs/completion.md). Cocher l’implémentation après vérification ; suivre séparément la fusion et le nettoyage.
 
-## Ticket en cours : #100
+## Ticket précédent : #100
 
 - [x] Spec et dépendances lues : aucun blocage GitHub.
 - [x] Worktree isolé depuis `origin/dev` (`b236bc1`), branche `fix/password-session-revocation`.
@@ -14,7 +14,11 @@ Spec : [#99](https://github.com/ibrahima-isi/meetstudent/issues/99). Mettre à j
 - [x] Revue Standards / Spec terminée ; course email corrigée et retestée.
 - [x] [PR #131](https://github.com/ibrahima-isi/meetstudent/pull/131) ouverte vers dev.
 - [x] [CI API/web/backoffice verte](https://github.com/ibrahima-isi/meetstudent/actions/runs/38413822495) sur `ccb655a`.
-- [ ] Squash et nettoyage vérifiés (statut de livraison distinct de l’implémentation).
+- [x] Squash `5b37b2a` via PR #131 et nettoyage réalisés (passation vérifiée : #100 fermé).
+
+## Ticket en cours : #101
+
+État : claimed. Spec #99 et ticket relus ; dépendance #100 fermée. Worktree isolé `f21e`, branche `fix/password-reset-all-roles`, base `5b37b2a`. Implémentation et vérification en cours ; aucune validation acquise à ce stade.
 
 ## Livraison des 30 tickets
 

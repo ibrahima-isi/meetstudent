@@ -251,6 +251,7 @@ services:
     environment:
       # Rendered into /config.json at container start.
       BO_API_URL: ${BO_API_URL:-https://${DOMAIN}/api/v1}
+      BO_WEB_URL: https://${DOMAIN}
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:8080/config.json || exit 1"]
       interval: 15s

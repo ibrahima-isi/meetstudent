@@ -11,7 +11,7 @@ the prod profile has no fallbacks for the required ones, so a missing value stop
 | `SPRING_DATASOURCE_PASSWORD` | yes | none | Database password. |
 | `CORS_ALLOWED_ORIGINS` | yes | none | Comma-separated front origins, e.g. `https://app.example.com`. |
 | `ADMIN_EMAIL` | yes | none | Email of the platform admin account. |
-| `ADMIN_PASSWORD` | yes | none | Admin password, at least 12 characters. |
+| `ADMIN_PASSWORD` | yes | none | Initial admin password, at least 12 characters; does not rotate an existing password. |
 | `JWT_ACCESS_TTL_MINUTES` | no | `60` | Access token lifetime in minutes (must be >= 1). The web client refreshes on 401. |
 | `FILE_UPLOAD_DIR` | no | `uploads` | Public media (served at `/uploads/public/**`). Mount a persistent volume. |
 | `FILE_PRIVATE_DIR` | no | `storage/private` | Private documents (never served statically). Mount a persistent volume. |
@@ -57,15 +57,17 @@ attacker spending the budget cannot kill the owner's live link, and a successful
 Passwords must be 8 to 72 UTF-8 bytes (BCrypt limit) on registration, profile update and reset. `POST /api/v1/auth/password-reset/confirm` (`{"token","password","confirmedPassword"}`) answers `204`,
 or `400` with `{"password"}`, `{"confirmedPassword"}` or `{"token":"Lien invalide ou expiré"}`; the password and
 confirmation are checked before the token is consumed. On success the token and every other open reset token of the
-account are burned, all refresh tokens of the account are deleted and the address is marked verified.
-**Access tokens already issued remain valid until they expire** (`JWT_ACCESS_TTL_MINUTES`, default 60 in the API,
-set to 15 by `compose.prod.yml`): there is no access-token revocation list. Residual risks (accepted): anyone can exhaust an
-address's daily reset budget, after which the owner relies on links already sent (1 h) or an admin manual reset; an
-unknown address answers a few milliseconds faster than a known one (mitigated by the Traefik per-IP rate limit); a
-reset does not evict an attacker already holding an access token, and `PATCH /users/{id}` changes password or email
-without the current password (pre-existing). Follow-ups: `password_changed_at`/token-version check in
-`JwtAuthenticationFilter`, or require the current password for those changes. With `MAIL_ENABLED=false` the request
-endpoint still answers `202` but nothing is sent and no token is created.
+account are burned, pending email-change links are cancelled, all refresh tokens are deleted and the
+address is marked verified. The persisted password version is incremented atomically: previously issued
+access tokens are rejected on their next request, including the session that performed the reset.
+The same revocation applies to profile password changes, which require the current password for
+self-service. Email changes use their separate confirmation workflow.
+
+Residual risks (accepted): anyone can exhaust an address's daily reset budget, after which the owner
+relies on links already sent (1 h) or an administrator-assisted password change; an unknown address
+answers a few milliseconds faster than a known one (mitigated by the Traefik per-IP rate limit).
+With `MAIL_ENABLED=false` the request endpoint still answers `202` but nothing is sent and no token
+is created. Recovery is available to students, experts and administrators alike.
 
 ## Profile must be set explicitly
 
@@ -79,13 +81,24 @@ prints emails, one-time links included, to the log. Production must always set `
 cannot be edited. Under the `prod` profile `AdminBootstrapRunner` runs on every boot and:
 
 1. refuses to start unless `ADMIN_EMAIL` is set and `ADMIN_PASSWORD` is at least 12 characters;
-2. takes the admin account for `ADMIN_EMAIL` (otherwise the seeded default admin, otherwise creates
-   one), and sets its email, `ROLE_ADMIN` and bcrypt password from the environment;
-3. replaces the seeded default hash on any remaining account with a random unusable password, so
-   nobody can log in with `password`.
+2. preserves an existing `ROLE_ADMIN` account at `ADMIN_EMAIL`, including its current password;
+   refuses startup if that address belongs to a non-admin account;
+3. if no account has that address, reuses only the untouched seeded admin (default address,
+   `ROLE_ADMIN` and exact published seed hash), or creates a new admin, using the configured password;
+4. replaces the published seed hash on every remaining account with a random unusable password.
+   Every seed credential replacement also invalidates existing access/refresh sessions and pending
+   reset, verification and email-change links in the same transaction.
 
-It is idempotent. Changing `ADMIN_PASSWORD` and restarting rotates the password. Changing
-`ADMIN_EMAIL` creates a new admin; remove or demote the old one by hand.
+`ADMIN_PASSWORD` is now **initialization only**. Changing it and restarting no longer rotates an
+existing admin password: passwords changed through the account profile or email reset survive
+restarts. Use the authenticated password-change workflow or the emailed password-reset workflow
+for rotation; both revoke existing sessions. Keep the bootstrap variables configured for startup
+validation. Changing `ADMIN_EMAIL` to an unused address creates a new admin; it does not rename an
+existing admin whose seed password was already replaced. Remove or demote the previous admin
+explicitly when appropriate. An address belonging to a student or expert is never promoted.
+
+In `dev`/`docker`, neither variable remains valid for local seeded development; setting both enables
+the same safe initialization and seed neutralization, while setting only one aborts startup.
 
 ## Behind a TLS proxy
 

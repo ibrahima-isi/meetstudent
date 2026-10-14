@@ -155,7 +155,7 @@ class PasswordResetServiceTest {
         service.confirm("raw", "brand-new-pass", "brand-new-pass");
 
         var stored = ArgumentCaptor.forClass(String.class);
-        verify(userRepository).updatePassword(eq(7), stored.capture());
+        verify(userRepository).updatePasswordAndRevokeSessions(eq(7), stored.capture());
         assertTrue(encoder.matches("brand-new-pass", stored.getValue()));
         assertFalse(encoder.matches("old-password", stored.getValue()));
         assertNotEquals("brand-new-pass", stored.getValue());
@@ -181,7 +181,7 @@ class PasswordResetServiceTest {
 
         InOrder order = inOrder(userTokenService, userRepository);
         order.verify(userTokenService).consume("raw", UserTokenPurpose.PASSWORD_RESET);
-        order.verify(userRepository).updatePassword(eq(7), anyString());
+        order.verify(userRepository).updatePasswordAndRevokeSessions(eq(7), anyString());
     }
 
     @Test
@@ -191,7 +191,7 @@ class PasswordResetServiceTest {
         assertEquals("password", ex.getField());
         assertEquals("Le mot de passe doit contenir au moins 8 caractères", ex.getMessage());
         verifyNoInteractions(userTokenService, refreshTokenService);
-        verify(userRepository, never()).updatePassword(any(), any());
+        verify(userRepository, never()).updatePasswordAndRevokeSessions(any(), any());
     }
 
     @Test
@@ -212,7 +212,7 @@ class PasswordResetServiceTest {
         assertEquals("confirmedPassword", ex.getField());
         assertEquals("Les mots de passe ne correspondent pas", ex.getMessage());
         verifyNoInteractions(userTokenService, refreshTokenService);
-        verify(userRepository, never()).updatePassword(any(), any());
+        verify(userRepository, never()).updatePasswordAndRevokeSessions(any(), any());
     }
 
     @Test
@@ -221,7 +221,7 @@ class PasswordResetServiceTest {
 
         assertThrows(InvalidActionTokenException.class, () -> service.confirm("bad", "brand-new-pass", "brand-new-pass"));
 
-        verify(userRepository, never()).updatePassword(any(), any());
+        verify(userRepository, never()).updatePasswordAndRevokeSessions(any(), any());
         verifyNoInteractions(refreshTokenService);
     }
 }

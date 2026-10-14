@@ -3,6 +3,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService, NotAdminError } from '@services/auth.service';
+import { WEB_URL } from '@services/api-config';
 import { Alert } from '@shared/components/alert/alert';
 
 const NOT_ADMIN_MESSAGE = 'Accès réservé aux administrateurs.';
@@ -46,6 +47,11 @@ const NOT_ADMIN_MESSAGE = 'Accès réservé aux administrateurs.';
           />
         </div>
 
+        <a
+          [href]="recoveryUrl"
+          class="inline-flex min-h-11 items-center rounded text-sm font-medium text-indigo-700 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+        >Mot de passe oublié ?</a>
+
         <button
           type="submit"
           [disabled]="loading()"
@@ -58,6 +64,7 @@ const NOT_ADMIN_MESSAGE = 'Accès réservé aux administrateurs.';
   `,
 })
 export class LoginPage {
+  readonly recoveryUrl = `${inject(WEB_URL)}/fr/forgot-password`;
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly query = inject(ActivatedRoute).snapshot.queryParamMap;

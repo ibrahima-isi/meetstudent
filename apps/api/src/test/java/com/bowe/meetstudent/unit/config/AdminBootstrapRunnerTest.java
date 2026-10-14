@@ -18,12 +18,12 @@ class AdminBootstrapRunnerTest {
 
     /** Production: the credentials are mandatory. */
     private AdminBootstrapRunner runnerWith(String email, String password) {
-        return new AdminBootstrapRunner(userRepository, roleRepository, new BCryptPasswordEncoder(), email, password, true);
+        return new AdminBootstrapRunner(userRepository, roleRepository, new BCryptPasswordEncoder(), null, null, null, email, password, true);
     }
 
     /** dev / docker: the credentials are optional. */
     private AdminBootstrapRunner optionalRunnerWith(String email, String password) {
-        return new AdminBootstrapRunner(userRepository, roleRepository, new BCryptPasswordEncoder(), email, password, false);
+        return new AdminBootstrapRunner(userRepository, roleRepository, new BCryptPasswordEncoder(), null, null, null, email, password, false);
     }
 
     @Test

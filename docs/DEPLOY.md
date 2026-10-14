@@ -152,10 +152,15 @@ The API creates the administrator at startup from `ADMIN_EMAIL` and
 `ADMIN_PASSWORD` (set in `.env`), with `ROLE_ADMIN`. Log in to
 `https://BO_DOMAIN` with those credentials. If the account already exists the
 startup does not overwrite it, so changing `ADMIN_PASSWORD` in `.env` later does
-not change the password (change it through the application). Check
+not change the password. Change it through the authenticated profile or the emailed
+password-reset workflow; both revoke all existing access/refresh sessions and pending
+email-change links. Reset passwords survive application restarts. An existing student
+or expert address is refused, never promoted. Only the untouched seeded admin may be
+repurposed, and every published seed credential is neutralized with its sessions and
+sensitive links. Check
 `docker compose -f compose.prod.yml logs api | grep -i admin` after the first
-boot. Note: this behaviour is implemented by a separate change; confirm it is
-on the branch you deploy.
+boot. Keep both bootstrap variables configured: production still validates them
+on every startup.
 
 ## 5. Smoke test checklist
 

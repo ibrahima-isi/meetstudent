@@ -19,12 +19,16 @@ If `ng serve` of `apps/web` is also running, pass another port: `npm start -- --
 `src/environments/environment.ts` holds the default (`http://localhost:8080/api/v1`). To change it per deployment **without rebuilding**, serve a `config.json` next to `index.html`:
 
 ```json
-{ "apiUrl": "https://api.example.com/api/v1" }
+{ "apiUrl": "https://api.example.com/api/v1", "webUrl": "https://example.com" }
 ```
 
 Static media (`Media.publicUrl`, e.g. school logos) is relative to the **server root**, not to `/api/v1`. The `SERVER_URL` token is derived from the API URL by dropping `/api/v1` (a relative `/api/v1` means same origin); set `"serverUrl"` in `config.json` to override it. Inject `SERVER_URL` (or use `MediaService.publicUrl()`) to build image URLs.
 
 It is fetched at bootstrap; if it is missing or invalid the build-time default applies. In `ng serve`, put it in `public/config.json` (do not commit it).
+
+## Password recovery
+
+The login page links to the public web app's French recovery journey (`/fr/forgot-password`), shared by all roles. `webUrl` in `config.json` selects that app's root URL; it must be an absolute HTTP(S) URL without credentials, query or fragment. The development default is `http://localhost:4200`. Docker renders `BO_WEB_URL` into the runtime config; production Compose sets it to `https://${DOMAIN}`, independently of the backoffice's `BO_DOMAIN`. Custom deployments must set it to their public web URL. The shared recovery pages also support English under `/en`.
 
 ## Deploying
 

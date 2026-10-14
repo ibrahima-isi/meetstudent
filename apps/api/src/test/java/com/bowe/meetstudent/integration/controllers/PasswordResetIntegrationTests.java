@@ -19,6 +19,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -43,6 +45,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -310,6 +313,57 @@ class PasswordResetIntegrationTests {
                 .andExpect(status().isUnauthorized());
         login(email, OLD_PASSWORD, 401);
         login(email, NEW_PASSWORD, 200);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"ROLE_STUDENT", "ROLE_EXPERT", "ROLE_ADMIN"})
+    void resetRevokesEveryAccessAndRefreshCredentialForEveryRole(String roleName) throws Exception {
+        var role = roleRepository.findByName(roleName)
+                .orElseGet(() -> roleRepository.save(Role.builder().name(roleName).build()));
+        var account = user(uniqueEmail());
+        account.setRole(role);
+        userRepository.save(account);
+        var first = login(account.getEmail(), OLD_PASSWORD, 200);
+        var second = login(account.getEmail(), OLD_PASSWORD, 200);
+        var unknown = askFor(uniqueEmail());
+        assertThat(askFor(account.getEmail())).isEqualTo(unknown);
+        assertThat(mailbox.last().to()).isEqualTo(account.getEmail());
+
+        mockMvc.perform(reset(tokenOfLastMail())).andExpect(status().isNoContent());
+
+        for (var session : List.of(first, second)) {
+            mockMvc.perform(get("/api/v1/users/id/" + account.getId())
+                            .header("Authorization", "Bearer " + session.get("accessToken").asText()))
+                    .andExpect(status().isUnauthorized());
+            mockMvc.perform(post("/api/v1/auth/refresh").contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(Map.of("refreshToken", session.get("refreshToken").asText()))))
+                    .andExpect(status().isUnauthorized());
+        }
+        login(account.getEmail(), OLD_PASSWORD, 401);
+        var fresh = login(account.getEmail(), NEW_PASSWORD, 200);
+        mockMvc.perform(get("/api/v1/users/id/" + account.getId())
+                        .header("Authorization", "Bearer " + fresh.get("accessToken").asText()))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void resetCancelsPendingEmailChangeWithoutChangingTheAddress() throws Exception {
+        var account = user(uniqueEmail());
+        var session = login(account.getEmail(), OLD_PASSWORD, 200);
+        mockMvc.perform(post("/api/v1/users/" + account.getId() + "/email-change")
+                        .header("Authorization", "Bearer " + session.get("accessToken").asText())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "newEmail", uniqueEmail(), "currentPassword", OLD_PASSWORD))))
+                .andExpect(status().isAccepted());
+        var emailLink = tokenOfLastMail();
+        mockMvc.perform(forgot(account.getEmail())).andExpect(status().isAccepted());
+        mockMvc.perform(reset(tokenOfLastMail())).andExpect(status().isNoContent());
+
+        mockMvc.perform(post("/api/v1/auth/email-change/confirm").contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("token", emailLink))))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.token").value(INVALID));
+        login(account.getEmail(), NEW_PASSWORD, 200);
     }
 
     @Test
