@@ -55,7 +55,7 @@ Preuves : [docs/evidence/ticket-102.md](docs/evidence/ticket-102.md). Arrêt apr
 - [x] [#100](https://github.com/ibrahima-isi/meetstudent/issues/100) — [01/30] Changer son mot de passe et révoquer les anciennes sessions
 - [x] [#101](https://github.com/ibrahima-isi/meetstudent/issues/101) — [02/30] Réinitialiser par email le mot de passe de tous les rôles, admins inclus
 - [x] [#102](https://github.com/ibrahima-isi/meetstudent/issues/102) — [03/30] Révoquer les sessions après confirmation du nouvel email
-- [ ] [#103](https://github.com/ibrahima-isi/meetstudent/issues/103) — [04/30] Faire expirer chaque session après 7 jours d’inactivité
+- [x] [#103](https://github.com/ibrahima-isi/meetstudent/issues/103) — [04/30] Faire expirer chaque session après 7 jours d’inactivité
 - [ ] [#104](https://github.com/ibrahima-isi/meetstudent/issues/104) — [05/30] Supprimer un compte avec confirmation et nettoyage fiable
 - [ ] [#105](https://github.com/ibrahima-isi/meetstudent/issues/105) — [06/30] Retourner des erreurs API utiles sur les mutations et conflits
 - [ ] [#106](https://github.com/ibrahima-isi/meetstudent/issues/106) — [07/30] Désassocier une accréditation sans détruire la donnée partagée
@@ -91,4 +91,4 @@ Sessions UUID indépendantes, rotation stable, inactivité serveur de sept jours
 
 Preuves : [ticket-103.md](docs/evidence/ticket-103.md). API finale : 226 unitaires + 302 intégrations ; PostgreSQL V20→V21 et 61 HTTP/courses verts sur code final, plus anciens credentials via HTTP réel sur schéma migré ; web 940 et backoffice 286 tests, types et builds verts. Revues Sol finales : Standards 0 / Spec 0 (hypothèse OSIV retirée après test et vérification de l’ordre réel des contextes).
 
-Blocage temporaire du validateur levé ; reprise autorisée, PostgreSQL final vert et API/PostgreSQL jetables arrêtés/supprimés. Restent PR vers dev, CI des trois apps au head final, squash, export local et nettoyage du seul worktree/branche #103. #104 non commencé.
+Livraison : [PR #134](https://github.com/ibrahima-isi/meetstudent/pull/134) vers dev ; [CI API/web/backoffice verte](https://github.com/ibrahima-isi/meetstudent/actions/runs/38570741641) sur `b74a6f63af2e2dc00db1eba1d33cbeef171dcdd5` (API 2m27s, web 1m11s, backoffice 34s). Le closeout documentaire passe aussi les trois CI avant squash ; le statut définitif de fusion est celui de la PR, et le bilan final de fusion/nettoyage est conservé dans la copie locale exportée. API/PostgreSQL jetables arrêtés/supprimés. Arrêt après #103 ; #104 non commencé.
