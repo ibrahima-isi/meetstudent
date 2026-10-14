@@ -194,6 +194,7 @@ class EmailChangeIntegrationTests {
                 .sign(com.auth0.jwt.algorithms.Algorithm.HMAC256(jwtProperties.getSecretKey()));
         var legacyRefresh = UUID.randomUUID().toString();
         refreshTokenRepository.save(com.bowe.meetstudent.entities.RefreshToken.builder().user(user)
+                .sessionId(java.util.UUID.randomUUID()).lastActivity(java.time.Instant.now()).legacy(true)
                 .token(legacyRefresh).expiryDate(java.time.Instant.now().plusSeconds(300)).build());
         var auth = "Bearer " + legacy;
         mockMvc.perform(requestChange(user.getId(), auth, newEmail, PASSWORD, "fr")).andExpect(status().isAccepted());

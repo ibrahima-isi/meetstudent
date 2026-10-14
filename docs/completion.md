@@ -77,3 +77,13 @@ Confirmation atomique : nouvelle adresse vérifiée, version des identifiants in
 Preuves : [ticket-102.md](evidence/ticket-102.md). API : 226 unitaires + 294 intégrations ; PostgreSQL : 20 migrations et 39 HTTP/courses ; web : 930 tests, build SSR et types ; backoffice : 275 tests et build. Revues Sol Standards/Spec : défaut inter-onglets reproduit et corrigé, aucun écart restant. Ressources PostgreSQL supprimées.
 
 Livraison : [PR #133](https://github.com/ibrahima-isi/meetstudent/pull/133) vers dev ; [CI API/web/backoffice verte](https://github.com/ibrahima-isi/meetstudent/actions/runs/38528795149) sur `48256a3`. Le closeout documentaire doit aussi passer les trois CI avant squash. Le statut définitif de fusion reste celui de la PR. Le bilan définitif de fusion/nettoyage sera conservé dans la copie locale exportée. Arrêt après #102 ; #103 non commencé.
+
+### #103 — sessions par appareil (2026-10-14)
+
+- [x] [#103](https://github.com/ibrahima-isi/meetstudent/issues/103) : implémentation et vérifications locales requises terminées. Base isolée `40802dd`, branche `feat/session-inactivity-103` ; PR/CI/fusion suivies séparément.
+
+Sessions UUID indépendantes, rotation stable, inactivité serveur de sept jours au seuil exact, refresh/passivité exclus, activité après interaction explicite ou écriture réussie, révocation globale et grâce historique V21. Choix d’activité confirmé par le propriétaire le 2026-10-14. Web/backoffice : purge et invitation à se reconnecter, sans boucle ni accès SSR au stockage.
+
+Preuves : [ticket-103.md](evidence/ticket-103.md). API finale : 226 unitaires + 302 intégrations ; PostgreSQL V20→V21 et 61 HTTP/courses verts sur code final, plus anciens credentials via HTTP réel sur schéma migré ; web 940 et backoffice 286 tests, types et builds verts. Revues Sol finales : Standards 0 / Spec 0 (hypothèse OSIV retirée après test et vérification de l’ordre réel des contextes).
+
+Livraison : [PR #134](https://github.com/ibrahima-isi/meetstudent/pull/134) vers dev ; [CI API/web/backoffice verte](https://github.com/ibrahima-isi/meetstudent/actions/runs/38570741641) sur `b74a6f63af2e2dc00db1eba1d33cbeef171dcdd5` (API 2m27s, web 1m11s, backoffice 34s). Le closeout documentaire passe aussi les trois CI avant squash ; le statut définitif de fusion est celui de la PR, et le bilan final de fusion/nettoyage est conservé dans la copie locale exportée. API/PostgreSQL jetables arrêtés/supprimés. Arrêt après #103 ; #104 non commencé.

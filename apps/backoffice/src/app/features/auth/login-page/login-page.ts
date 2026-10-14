@@ -74,7 +74,11 @@ export class LoginPage {
     password: ['', Validators.required],
   });
   readonly loading = signal(false);
-  readonly error = signal(this.query.get('reason') === 'forbidden' ? NOT_ADMIN_MESSAGE : '');
+  readonly error = signal(
+    this.query.get('reason') === 'expired'
+      ? 'Votre session a expiré. Reconnectez-vous pour continuer.'
+      : this.query.get('reason') === 'forbidden' ? NOT_ADMIN_MESSAGE : '',
+  );
 
   submit() {
     if (this.form.invalid || this.loading()) {

@@ -43,7 +43,7 @@ function endSession(auth: AuthService, injector: Injector): void {
   const onAuthScreen = /\/(login|register)(\?|$)/.test(router.url);
   void router.navigate(
     ['/', locale, 'login'],
-    onAuthScreen ? undefined : { queryParams: { returnUrl: router.url } },
+    { queryParams: { reason: 'expired', ...(onAuthScreen ? {} : { returnUrl: router.url }) } },
   );
 }
 
@@ -54,6 +54,8 @@ function endSession(auth: AuthService, injector: Injector): void {
  * `jwtInterceptor` in the chain.
  */
 export const refreshInterceptor: HttpInterceptorFn = (req, next) => {
+  // A server render has no browser session or storage to refresh or clear.
+  if (!isPlatformBrowser(inject(PLATFORM_ID))) return next(req);
   const auth = inject(AuthService);
   const tokens = inject(TokenService);
   const injector = inject(Injector);
@@ -66,7 +68,8 @@ export const refreshInterceptor: HttpInterceptorFn = (req, next) => {
 
       const stored = tokens.refreshToken();
       if (!stored) {
-        auth.logout();
+        if (tokens.token()) endSession(auth, injector);
+        else auth.logout();
         return throwError(() => error);
       }
 
@@ -82,7 +85,14 @@ export const refreshInterceptor: HttpInterceptorFn = (req, next) => {
 
       return refresh$.pipe(
         switchMap((accessToken) =>
-          next(req.clone({ setHeaders: { Authorization: `Bearer ${accessToken}` } })),
+          next(req.clone({ setHeaders: { Authorization: `Bearer ${accessToken}` } })).pipe(
+            catchError((retryError: unknown) => {
+              if (retryError instanceof HttpErrorResponse && retryError.status === 401) {
+                endSession(auth, injector);
+              }
+              return throwError(() => retryError);
+            }),
+          ),
         ),
       );
     }),

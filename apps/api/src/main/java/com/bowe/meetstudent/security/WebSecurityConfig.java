@@ -121,7 +121,7 @@ public class WebSecurityConfig {
         // "idempotency-key" is required for the media upload endpoint: browsers preflight
         // any request carrying it, and a header missing here makes the upload impossible
         // from the SPA. Keep this an explicit allowlist — never widen it to "*".
-        configuration.setAllowedHeaders(Arrays.asList("authorization", "content-type", "x-auth-token", "idempotency-key"));
+        configuration.setAllowedHeaders(Arrays.asList("authorization", "content-type", "x-auth-token", "idempotency-key", "x-session-activity"));
         configuration.setExposedHeaders(List.of("x-auth-token"));
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

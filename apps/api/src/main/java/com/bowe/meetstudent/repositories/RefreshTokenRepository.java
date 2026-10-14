@@ -8,10 +8,17 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
+import java.util.List;
+import java.util.UUID;
 
 @Repository
 public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Integer> {
     Optional<RefreshToken> findByToken(String token);
+
+    Optional<RefreshToken> findBySessionIdAndUserId(UUID sessionId, Integer userId);
+
+    @Query("select r from RefreshToken r where r.user.id = :userId and r.legacy = true order by r.id desc")
+    List<RefreshToken> findLegacySessions(@Param("userId") Integer userId);
 
     /** Owner of a token without loading the user, so the user row can be locked before it is read. */
     @Query("select r.user.id from RefreshToken r where r.token = :token")

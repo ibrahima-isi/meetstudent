@@ -42,7 +42,9 @@ export class LoginFormComponent {
       password: ['', [Validators.required]]
     });
 
-    if (this.route.snapshot.queryParamMap.get('registered') === '1') {
+    if (this.route.snapshot.queryParamMap.get('reason') === 'expired') {
+      this.error.set('auth.login.sessionExpired');
+    } else if (this.route.snapshot.queryParamMap.get('registered') === '1') {
       this.success.set({ key: 'auth.login.registered' });
       // Only claim an email was sent if the server can send one.
       this.authService.getCapabilities().subscribe((c) => {
