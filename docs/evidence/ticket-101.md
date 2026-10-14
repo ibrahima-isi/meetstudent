@@ -55,3 +55,5 @@ Spec: one stale deployment-guide paragraph contradicted access-token revocation.
 ## Resources and delivery
 
 `docker compose -p ms101 -f /tmp/ms101-compose.yml down -v` removed the disposable PostgreSQL container/network after tests. Both temporary browser servers were stopped and the test tab closed. No real SMTP, production deployment, main promotion or unrelated worktree cleanup occurred. PR/CI/squash/branch-cleanup evidence is recorded in completion tracking after delivery.
+
+Delivery: [PR #132](https://github.com/ibrahima-isi/meetstudent/pull/132) into dev. [CI API/web/backoffice verte](https://github.com/ibrahima-isi/meetstudent/actions/runs/38525554851) on `b408ac0e292bb26799da1e56dcf278fa4fb490d0`: API 2m58s, web 1m3s, backoffice 34s. The documentation closeout must pass fresh CI before squash; the PR remains authoritative for final merge status.

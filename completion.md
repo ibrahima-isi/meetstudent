@@ -16,7 +16,7 @@ Spec : [#99](https://github.com/ibrahima-isi/meetstudent/issues/99). Mettre à j
 - [x] [CI API/web/backoffice verte](https://github.com/ibrahima-isi/meetstudent/actions/runs/38413822495) sur `ccb655a`.
 - [x] Squash `5b37b2a` via PR #131 et nettoyage réalisés (passation vérifiée : #100 fermé).
 
-## Ticket en cours : #101
+## Dernier ticket traité : #101
 
 - [x] Spec #99 et dépendance #100 relues ; #100 fermé, base `5b37b2a`.
 - [x] Worktree isolé `f21e`, branche `fix/password-reset-all-roles`.
@@ -28,8 +28,9 @@ Spec : [#99](https://github.com/ibrahima-isi/meetstudent/issues/99). Mettre à j
 - [x] Parcours fr/en et lien backoffice vérifiés au navigateur, desktop/mobile.
 - [x] Revues Standards/Spec terminées ; documentation de révocation corrigée.
 - [x] PostgreSQL et serveurs navigateur jetables arrêtés/supprimés.
-- [ ] PR vers dev, CI API/web/backoffice verte et squash vérifiés.
-- [ ] Nettoyage du seul worktree et de la branche #101 vérifié.
+- [x] [PR #132](https://github.com/ibrahima-isi/meetstudent/pull/132) vers dev ; [CI API/web/backoffice verte](https://github.com/ibrahima-isi/meetstudent/actions/runs/38525554851) sur `b408ac0`.
+
+Fusion : consulter le statut définitif de la PR #132. Le closeout documentaire doit aussi passer les trois CI avant squash ; la copie locale exportée conserve le bilan de fusion et du nettoyage après livraison.
 
 Preuves : [docs/evidence/ticket-101.md](docs/evidence/ticket-101.md). Arrêt après #101 ; aucun ticket suivant commencé.
 
