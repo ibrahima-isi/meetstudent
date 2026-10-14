@@ -50,3 +50,7 @@ Revue indépendante Sol : **0 écart confirmé** (exigence manquante, scope cree
 ## Livraison
 
 Suite API complète finale `./mvnw clean verify` : **226 unitaires + 308 intégrations**, zéro échec/erreur/skip, BUILD SUCCESS (1m47s), `/tmp/ms104-api-final.log`. Code produit `a7d48f3` après simplification de la signature du service ; aucune modification produit ultérieure. Cases cochées pour l'implémentation et les vérifications locales requises ; PR/CI/fusion restent suivies séparément. Le bilan final et le nettoyage du seul worktree/branche seront enregistrés après livraison dans la copie locale exportée.
+
+Livraison : [PR #135](https://github.com/ibrahima-isi/meetstudent/pull/135) vers dev ; [CI API/web/backoffice verte](https://github.com/ibrahima-isi/meetstudent/actions/runs/38584026934) sur `8b8a202f26891279d69f99de06c1c328f708f0ee` (API 3m33s, web 1m05s, backoffice 33s). Le présent closeout documentaire doit à son tour passer les trois CI sur son head final avant squash ; statut définitif sur la PR, bilan de fusion/nettoyage conservé dans la copie locale exportée.
+
+Le validateur automatique a expiré sur deux commandes groupées ; les relances ciblées ont réussi. Le helper Git HTTPS enregistré utilisait un autre compte et a reçu 403 ; le push ponctuel avec le helper gh déjà authentifié a réussi sans changement de configuration enregistrée ni de signature.
