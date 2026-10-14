@@ -133,6 +133,11 @@ describe('LoginPage', () => {
     expect(router.navigateByUrl).toHaveBeenCalledWith('/');
   });
 
+  it('invites an expired session to reconnect', async () => {
+    await setup({ reason: 'expired' });
+    expect(alertText()).toContain('Votre session a expiré. Reconnectez-vous');
+  });
+
   it('explains a forbidden redirect from the guard', async () => {
     await setup({ reason: 'forbidden' });
     expect(alertText()).toContain('réservé aux administrateurs');

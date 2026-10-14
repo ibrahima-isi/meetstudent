@@ -5,6 +5,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Getter
 @Setter
@@ -25,7 +26,17 @@ public class RefreshToken extends AbstractEntity {
     @Column(nullable = false)
     private Instant expiryDate;
 
-    @OneToOne
+    /** Stable across refresh-secret rotation; also carried by access JWTs as sid. */
+    @Column(nullable = false, unique = true)
+    private UUID sessionId;
+
+    @Column(nullable = false)
+    private Instant lastActivity;
+
+    @Column(nullable = false)
+    private boolean legacy;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", referencedColumnName = "id")
     private UserEntity user;
 }

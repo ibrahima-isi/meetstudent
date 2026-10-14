@@ -84,6 +84,16 @@ describe('LoginFormComponent translations', () => {
     expect(text()).not.toContain('Ou continuez avec votre e-mail');
   });
 
+  it('invites an expired session to reconnect in both languages', async () => {
+    TestBed.inject(ActivatedRoute).snapshot = {
+      queryParamMap: convertToParamMap({ reason: 'expired' }),
+    } as ActivatedRouteSnapshot;
+    await render('fr');
+    expect(text()).toContain('Votre session a expiré. Reconnectez-vous');
+    await render('en');
+    expect(text()).toContain('Your session has expired. Sign in again');
+  });
+
   describe('after registration', () => {
     function arriveFromRegistration(registered: boolean) {
       TestBed.inject(ActivatedRoute).snapshot = {

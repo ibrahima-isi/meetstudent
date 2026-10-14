@@ -101,6 +101,7 @@
       "passwordRequired": "Password is required"
     },
     "login": {
+      "sessionExpired": "Your session has expired. Sign in again to continue.",
       "title": "Welcome Back",
       "subtitle": "Sign in to your account",
       "rememberMe": "Remember me",

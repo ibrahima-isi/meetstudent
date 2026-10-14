@@ -1,5 +1,6 @@
+import { Router, provideRouter } from '@angular/router';
 import { TestBed } from '@angular/core/testing';
-import { provideZonelessChangeDetection } from '@angular/core';
+import { PLATFORM_ID, provideZonelessChangeDetection } from '@angular/core';
 import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { AuthService } from '@services/auth.service';
@@ -23,6 +24,7 @@ describe('refreshInterceptor', () => {
     TestBed.configureTestingModule({
       providers: [
         provideZonelessChangeDetection(),
+        provideRouter([]),
         provideHttpClient(withInterceptors([jwtInterceptor, refreshInterceptor])),
         provideHttpClientTesting(),
         { provide: API_URL, useValue: api },
@@ -32,6 +34,7 @@ describe('refreshInterceptor', () => {
     backend = TestBed.inject(HttpTestingController);
     tokens = TestBed.inject(TokenService);
     auth = TestBed.inject(AuthService);
+    spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
     tokens.setTokens('old-access', 'old-refresh');
   });
 
@@ -85,6 +88,9 @@ describe('refreshInterceptor', () => {
     backend.expectOne('/api/data').flush(null, unauthorized);
 
     backend.expectNone(refreshUrl);
+    expect(tokens.token()).toBeNull();
+    expect(tokens.refreshToken()).toBeNull();
+    expect(TestBed.inject(Router).navigate).toHaveBeenCalled();
     expect(error).toBeTruthy();
   });
 
@@ -126,10 +132,47 @@ describe('refreshInterceptor', () => {
     expect(errors.length).toBe(2);
   });
 
+  it('returns an expired admin session to login with the interrupted page', () => {
+    spyOnProperty(TestBed.inject(Router), 'url').and.returnValue('/schools?page=2');
+    http.get('/api/data').subscribe({ error: () => undefined });
+    backend.expectOne('/api/data').flush(null, unauthorized);
+    backend.expectOne(refreshUrl).flush(null, unauthorized);
+    expect(tokens.token()).toBeNull();
+    expect(tokens.refreshToken()).toBeNull();
+    expect(TestBed.inject(Router).navigate).toHaveBeenCalledOnceWith(['/login'], {
+      queryParams: { reason: 'expired', returnUrl: '/schools?page=2' },
+    });
+  });
+
   it('passes non-401 errors through', () => {
     let status = 0;
     http.get('/api/data').subscribe({ error: (e) => (status = e.status) });
     backend.expectOne('/api/data').flush(null, { status: 500, statusText: 'Server Error' });
     expect(status).toBe(500);
+  });
+});
+
+
+describe('refreshInterceptor during server rendering', () => {
+  it('passes a 401 through without browser logout, refresh or redirect', () => {
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: PLATFORM_ID, useValue: 'server' },
+        provideHttpClient(withInterceptors([refreshInterceptor])),
+        provideHttpClientTesting(),
+        { provide: API_URL, useValue: api },
+      ],
+    });
+    const auth = TestBed.inject(AuthService);
+    const logout = spyOn(auth, 'logout').and.callThrough();
+    const backend = TestBed.inject(HttpTestingController);
+    let status = 0;
+    TestBed.inject(HttpClient).get('/api/data').subscribe({ error: (error) => status = error.status });
+    backend.expectOne('/api/data').flush(null, { status: 401, statusText: 'Unauthorized' });
+    expect(status).toBe(401);
+    expect(logout).not.toHaveBeenCalled();
+    backend.verify();
   });
 });

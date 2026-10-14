@@ -76,7 +76,7 @@ class AuthControllerTest {
         when(authentication.getPrincipal()).thenReturn(principal);
 
         // Mock JWT Issue
-        when(jwtIssuer.issueToken(principal.getId(), principal.getUsername(), List.of("ROLE_STUDENT"), 0))
+        when(jwtIssuer.issueToken(principal.getId(), principal.getUsername(), List.of("ROLE_STUDENT"), 0, null))
                 .thenReturn(expectedToken);
         
         // Mock Refresh Token

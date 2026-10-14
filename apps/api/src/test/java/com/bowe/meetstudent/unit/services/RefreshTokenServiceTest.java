@@ -27,12 +27,18 @@ class RefreshTokenServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private java.time.Clock clock;
+
+    @org.junit.jupiter.api.BeforeEach
+    void time() { org.mockito.Mockito.when(clock.instant()).thenAnswer(invocation -> Instant.now()); }
+
     @InjectMocks
     private RefreshTokenService service;
 
     @Test
     void verifyExpiration_throwsInvalidRefreshTokenAndDeletesToken_whenExpired() {
-        RefreshToken token = RefreshToken.builder().token("t").expiryDate(Instant.now().minusSeconds(1)).build();
+        RefreshToken token = RefreshToken.builder().token("t").lastActivity(Instant.now().minus(java.time.Duration.ofDays(8))).build();
 
         assertThrows(InvalidRefreshTokenException.class, () -> service.verifyExpiration(token));
         verify(refreshTokenRepository).delete(token);
@@ -40,7 +46,7 @@ class RefreshTokenServiceTest {
 
     @Test
     void verifyExpiration_returnsToken_whenStillValid() {
-        RefreshToken token = RefreshToken.builder().token("t").expiryDate(Instant.now().plusSeconds(60)).build();
+        RefreshToken token = RefreshToken.builder().token("t").lastActivity(Instant.now()).build();
 
         assertSame(token, service.verifyExpiration(token));
         verify(refreshTokenRepository, never()).delete(token);

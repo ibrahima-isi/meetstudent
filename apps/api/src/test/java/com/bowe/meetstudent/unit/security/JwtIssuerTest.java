@@ -18,7 +18,7 @@ class JwtIssuerTest {
 
     private JwtIssuer issuerWith(JwtProperties properties) {
         properties.setSecretKey("unit-test-secret-key-0123456789");
-        return new JwtIssuer(properties);
+        return new JwtIssuer(properties, java.time.Clock.systemUTC());
     }
 
     private long secondsUntilExpiry(String token) {

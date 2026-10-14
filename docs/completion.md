@@ -77,3 +77,7 @@ Confirmation atomique : nouvelle adresse vérifiée, version des identifiants in
 Preuves : [ticket-102.md](evidence/ticket-102.md). API : 226 unitaires + 294 intégrations ; PostgreSQL : 20 migrations et 39 HTTP/courses ; web : 930 tests, build SSR et types ; backoffice : 275 tests et build. Revues Sol Standards/Spec : défaut inter-onglets reproduit et corrigé, aucun écart restant. Ressources PostgreSQL supprimées.
 
 Livraison : [PR #133](https://github.com/ibrahima-isi/meetstudent/pull/133) vers dev ; [CI API/web/backoffice verte](https://github.com/ibrahima-isi/meetstudent/actions/runs/38528795149) sur `48256a3`. Le closeout documentaire doit aussi passer les trois CI avant squash. Le statut définitif de fusion reste celui de la PR. Le bilan définitif de fusion/nettoyage sera conservé dans la copie locale exportée. Arrêt après #102 ; #103 non commencé.
+
+### #103 — sessions par appareil (en cours)
+
+- [ ] Ticket réclamé ; base isolée `40802dd`, branche `feat/session-inactivity-103`. TDD HTTP et Angular, migration PostgreSQL, revues puis PR/CI/squash.

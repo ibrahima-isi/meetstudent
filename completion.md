@@ -82,3 +82,7 @@ Preuves : [docs/evidence/ticket-102.md](docs/evidence/ticket-102.md). Arrêt apr
 - [ ] [#127](https://github.com/ibrahima-isi/meetstudent/issues/127) — [28/30] Ajouter le classement des programmes
 - [ ] [#128](https://github.com/ibrahima-isi/meetstudent/issues/128) — [29/30] Renommer la navigation en Découvrir / Discover
 - [ ] [#129](https://github.com/ibrahima-isi/meetstudent/issues/129) — [30/30] Vérifier l’ensemble, promouvoir main et terminer le nettoyage
+
+### #103 — sessions par appareil (en cours)
+
+- [ ] Ticket réclamé ; base isolée `40802dd`, branche `feat/session-inactivity-103`. TDD HTTP et Angular, migration PostgreSQL, revues puis PR/CI/squash.

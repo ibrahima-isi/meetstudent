@@ -141,6 +141,7 @@ class AuthIntegrationTests {
                 .withExpiresAt(java.time.Instant.now().plusSeconds(300))
                 .sign(com.auth0.jwt.algorithms.Algorithm.HMAC256(jwtProperties.getSecretKey()));
         refreshTokenRepository.save(com.bowe.meetstudent.entities.RefreshToken.builder().user(user)
+                .sessionId(java.util.UUID.randomUUID()).lastActivity(java.time.Instant.now()).legacy(true)
                 .token("legacy-refresh").expiryDate(java.time.Instant.now().plusSeconds(300)).build());
         mockMvc.perform(get("/api/v1/users/id/" + user.getId()).header("Authorization", "Bearer " + legacy))
                 .andExpect(status().isOk());
@@ -308,7 +309,8 @@ class AuthIntegrationTests {
                 .email("expired@test.com").password("password123").firstname("E").lastname("X")
                 .role(role).build(), passwordEncoder);
         refreshTokenRepository.save(com.bowe.meetstudent.entities.RefreshToken.builder()
-                .user(user).token("expired-token")
+                .user(user).token("expired-token").sessionId(java.util.UUID.randomUUID())
+                .lastActivity(java.time.Instant.now().minus(java.time.Duration.ofDays(8)))
                 .expiryDate(java.time.Instant.now().minusSeconds(60)).build());
 
         mockMvc.perform(post("/api/v1/auth/refresh")

@@ -101,6 +101,7 @@
       "passwordRequired": "Le mot de passe est obligatoire"
     },
     "login": {
+      "sessionExpired": "Votre session a expiré. Reconnectez-vous pour continuer.",
       "title": "Bon retour parmi nous",
       "subtitle": "Connectez-vous à votre compte",
       "rememberMe": "Se souvenir de moi",

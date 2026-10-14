@@ -46,6 +46,17 @@ class PasswordSessionRaceIntegrationTests {
     @Autowired UserRepository users;
     @Autowired RoleRepository roles;
     @Autowired PasswordEncoder encoder;
+    @org.springframework.test.context.bean.override.mockito.MockitoBean java.time.Clock clock;
+    private final java.util.concurrent.atomic.AtomicReference<java.time.Instant> controlledTime = new java.util.concurrent.atomic.AtomicReference<>();
+
+    @org.junit.jupiter.api.BeforeEach void clockAtSystemTime() {
+        controlledTime.set(null);
+        org.mockito.Mockito.when(clock.instant()).thenAnswer(call -> {
+            var now = controlledTime.get();
+            return now == null ? java.time.Instant.now() : now;
+        });
+    }
+
 
     private JsonNode login(String email, String password) throws Exception {
         return json.readTree(mvc.perform(post("/api/v1/auth").contentType(MediaType.APPLICATION_JSON)
@@ -96,6 +107,96 @@ class PasswordSessionRaceIntegrationTests {
                     .header("Authorization", "Bearer " + after.get("accessToken").asText()))
                     .andExpect(status().isOk());
         }
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void refreshWaitingAcrossExpiryRechecksActivityUnderTheAccountLock(boolean activityBeforeExpiry) throws Exception {
+        var start = java.time.Instant.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
+        controlledTime.set(start);
+        var email = UUID.randomUUID() + "@example.com";
+        var role = roles.findByName("ROLE_STUDENT").orElseGet(() -> roles.save(Role.builder().name("ROLE_STUDENT").build()));
+        var user = users.save(UserEntity.builder().email(email).password(encoder.encode("Old-password-123")).role(role).build());
+        var session = login(email, "Old-password-123");
+        controlledTime.set(start.plusSeconds(604799));
+        session = refresh(session, 200);
+        final var before = session;
+        var barrier = new ReadBarrier("refresh");
+        try (var pool = Executors.newSingleThreadExecutor()) {
+            var racing = pool.submit(() -> {
+                DatabaseBarrier.active.set(barrier);
+                try {
+                    return mvc.perform(post("/api/v1/auth/refresh").contentType(MediaType.APPLICATION_JSON)
+                            .content(json.writeValueAsString(Map.of("refreshToken", before.get("refreshToken").asText()))))
+                            .andReturn().getResponse();
+                } finally { DatabaseBarrier.active.remove(); }
+            });
+            try {
+                assertThat(barrier.read.await(15, TimeUnit.SECONDS)).as("refresh owner read before lock").isTrue();
+                if (activityBeforeExpiry) {
+                    mvc.perform(get("/api/v1/users/id/" + user.getId())
+                            .header("Authorization", "Bearer " + before.get("accessToken").asText())
+                            .header("X-Session-Activity", "true")).andExpect(status().isOk());
+                }
+                controlledTime.set(start.plusSeconds(604800));
+            } finally { barrier.resume.countDown(); }
+            var result = racing.get(15, TimeUnit.SECONDS);
+            assertThat(result.getStatus()).isEqualTo(activityBeforeExpiry ? 200 : 401);
+            if (activityBeforeExpiry) {
+                var after = json.readTree(result.getContentAsString());
+                mvc.perform(get("/api/v1/users/id/" + user.getId())
+                        .header("Authorization", "Bearer " + after.get("accessToken").asText())).andExpect(status().isOk());
+                refresh(before, 401); // rotation cannot leave the old secret usable
+                controlledTime.set(start.plusSeconds(1209598));
+                after = refresh(after, 200);
+                controlledTime.set(start.plusSeconds(1209599));
+                refresh(after, 401);
+            } else {
+                mvc.perform(get("/api/v1/users/id/" + user.getId())
+                        .header("Authorization", "Bearer " + before.get("accessToken").asText())
+                        .header("X-Session-Activity", "true")).andExpect(status().isUnauthorized());
+                refresh(before, 401);
+            }
+        }
+    }
+
+    @org.junit.jupiter.api.Test
+    void successfulRequestFinishingAfterTheDeadlineCannotReviveItsSession() throws Exception {
+        var start = java.time.Instant.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
+        controlledTime.set(start);
+        var email = UUID.randomUUID() + "@example.com";
+        var role = roles.findByName("ROLE_STUDENT").orElseGet(() -> roles.save(Role.builder().name("ROLE_STUDENT").build()));
+        var user = users.save(UserEntity.builder().email(email).password(encoder.encode("Old-password-123")).role(role).build());
+        var session = login(email, "Old-password-123");
+        controlledTime.set(start.plusSeconds(604799));
+        final var before = refresh(session, 200);
+        var barrier = new ReadBarrier("business-read");
+        try (var pool = Executors.newSingleThreadExecutor()) {
+            var racing = pool.submit(() -> {
+                DatabaseBarrier.active.set(barrier);
+                try {
+                    return mvc.perform(get("/api/v1/users/id/" + user.getId())
+                            .header("Authorization", "Bearer " + before.get("accessToken").asText())
+                            .header("X-Session-Activity", "true")).andReturn().getResponse();
+                } finally { DatabaseBarrier.active.remove(); }
+            });
+            try {
+                assertThat(barrier.read.await(15, TimeUnit.SECONDS)).as("authorized business read reached").isTrue();
+                controlledTime.set(start.plusSeconds(604800));
+            } finally { barrier.resume.countDown(); }
+            assertThat(racing.get(15, TimeUnit.SECONDS).getStatus()).isEqualTo(200);
+            refresh(before, 401);
+            mvc.perform(get("/api/v1/users/id/" + user.getId())
+                    .header("Authorization", "Bearer " + before.get("accessToken").asText())
+                    .header("X-Session-Activity", "true")).andExpect(status().isUnauthorized());
+        }
+    }
+
+    private JsonNode refresh(JsonNode session, int expectedStatus) throws Exception {
+        var result = mvc.perform(post("/api/v1/auth/refresh").contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(Map.of("refreshToken", session.get("refreshToken").asText()))))
+                .andExpect(status().is(expectedStatus)).andReturn().getResponse();
+        return json.readTree(result.getContentAsString());
     }
 
     @Autowired com.bowe.meetstudent.support.CapturingEmailSender mailbox;
@@ -214,7 +315,7 @@ class PasswordSessionRaceIntegrationTests {
                 case "login" -> sql.contains("from users ") && sql.contains("upper(");
                 case "refresh" -> sql.contains("from refresh_tokens ");
                 case "reset-confirm" -> sql.contains("from user_tokens ") && sql.contains(".token_hash=?");
-                case "email-request" -> sql.contains("from users ") && sql.contains(".password,");
+                case "business-read", "email-request" -> sql.contains("from users ") && sql.contains(".password,");
                 case "email-resend" -> sql.contains("from user_tokens ") && sql.contains("consumed_at is null");
                 default -> false;
             };

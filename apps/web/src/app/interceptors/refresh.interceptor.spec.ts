@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { provideZonelessChangeDetection, signal } from '@angular/core';
+import { PLATFORM_ID, provideZonelessChangeDetection, signal } from '@angular/core';
 import { Router, provideRouter } from '@angular/router';
 import { LocaleService } from '@services/locale.service';
 import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
@@ -87,6 +87,9 @@ describe('refreshInterceptor', () => {
     backend.expectOne('/api/data').flush(null, { status: 401, statusText: 'Unauthorized' });
 
     backend.expectNone(refreshUrl);
+    expect(tokens.token()).toBeNull();
+    expect(tokens.refreshToken()).toBeNull();
+    expect(TestBed.inject(Router).navigate).toHaveBeenCalled();
     expect(error).toBeTruthy();
   });
 
@@ -178,7 +181,7 @@ describe('refreshInterceptor', () => {
 
       expect(tokens.token()).toBeNull();
       expect(navigate).toHaveBeenCalledOnceWith(['/', 'fr', 'login'], {
-        queryParams: { returnUrl: '/fr/schools/7' },
+        queryParams: { reason: 'expired', returnUrl: '/fr/schools/7' },
       });
     });
 
@@ -196,7 +199,7 @@ describe('refreshInterceptor', () => {
 
       failRefresh();
 
-      expect(navigate).toHaveBeenCalledOnceWith(['/', 'fr', 'login'], undefined);
+      expect(navigate).toHaveBeenCalledOnceWith(['/', 'fr', 'login'], { queryParams: { reason: 'expired' } });
     });
 
     it('navigates once for a burst of concurrent 401s', () => {
@@ -227,5 +230,29 @@ describe('refreshInterceptor', () => {
 
       expect(navigate).not.toHaveBeenCalled();
     });
+  });
+});
+
+
+describe('refreshInterceptor during server rendering', () => {
+  it('passes a 401 through without browser logout, refresh or redirect', () => {
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: PLATFORM_ID, useValue: 'server' },
+        provideHttpClient(withInterceptors([refreshInterceptor])),
+        provideHttpClientTesting(),
+      ],
+    });
+    const auth = TestBed.inject(AuthService);
+    const logout = spyOn(auth, 'logout').and.callThrough();
+    const backend = TestBed.inject(HttpTestingController);
+    let status = 0;
+    TestBed.inject(HttpClient).get('/api/data').subscribe({ error: (error) => status = error.status });
+    backend.expectOne('/api/data').flush(null, { status: 401, statusText: 'Unauthorized' });
+    expect(status).toBe(401);
+    expect(logout).not.toHaveBeenCalled();
+    backend.verify();
   });
 });

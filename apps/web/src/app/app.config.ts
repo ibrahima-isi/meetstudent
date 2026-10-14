@@ -1,3 +1,5 @@
+import { SessionActivityService } from '@services/session-activity.service';
+import { sessionActivityInterceptor } from './interceptors/session-activity.interceptor';
 import {
   ApplicationConfig,
   inject,
@@ -22,6 +24,7 @@ import { PageTitleStrategy } from '@shared/page-title';
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
+    provideEnvironmentInitializer(() => inject(SessionActivityService)),
     provideZonelessChangeDetection(),
     provideRouter(
       routes,
@@ -30,7 +33,7 @@ export const appConfig: ApplicationConfig = {
     ),
     // No withFetch(): the fetch backend emits no upload progress events, so the
     // document upload bar would stay at 0%. XHR does, in the browser and on the server.
-    provideHttpClient(withInterceptors([jwtInterceptor, refreshInterceptor, absoluteUrlInterceptor])),
+    provideHttpClient(withInterceptors([jwtInterceptor, sessionActivityInterceptor, refreshInterceptor, absoluteUrlInterceptor])),
     provideClientHydration(withEventReplay()),
     provideTransloco(translocoOptions),
     { provide: TitleStrategy, useExisting: PageTitleStrategy },
