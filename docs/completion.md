@@ -57,3 +57,13 @@ Final local checks: API 226 unit + 273 integration tests passed; web 927 and bac
 - [x] [#100 — Changer son mot de passe et révoquer les anciennes sessions](https://github.com/ibrahima-isi/meetstudent/issues/100): implementation and required verification complete; [PR #131](https://github.com/ibrahima-isi/meetstudent/pull/131) targets dev; CI/merge status tracked there.
 
 Delivery: [PR #131](https://github.com/ibrahima-isi/meetstudent/pull/131). Local verification and review are complete. [API/web/backoffice CI passed](https://github.com/ibrahima-isi/meetstudent/actions/runs/38413822495) on `ccb655a`. Squash merge status is authoritative on the PR; the documentation-only closeout commit is gated by a fresh green CI before merge. No main promotion or unrelated worktree cleanup is part of this ticket (#129 owns the final promotion). Existing source branches/worktrees and their uncommitted files are preserved.
+
+### #101 — récupération de tous les rôles (2026-10-14)
+
+- [x] [#101](https://github.com/ibrahima-isi/meetstudent/issues/101) : implémentation et vérification terminées ; [PR #132](https://github.com/ibrahima-isi/meetstudent/pull/132) vers dev.
+
+Reset étudiant/expert/admin : version des identifiants incrémentée atomiquement, anciennes sessions access/refresh et liens reset/email-change invalidés. Bootstrap admin : initialisation sûre, mot de passe existant conservé au redémarrage, neutralisation du seed avec révocation ; aucune promotion d’un compte étudiant/expert. Backoffice : accès au parcours web français par origine configurable ; parcours fr/en conservés.
+
+Preuves : [ticket-101.md](evidence/ticket-101.md). API : 226 unitaires + 286 intégrations ; PostgreSQL : 20 migrations et 38 tests HTTP/courses ; web : 927 tests et build SSR ; backoffice : 275 tests et build. Redémarrage complet après reset admin et navigateur desktop/mobile vérifiés. Revues Standards/Spec terminées ; contradiction documentaire corrigée. Ressources jetables arrêtées/supprimées.
+
+Livraison : [PR #132](https://github.com/ibrahima-isi/meetstudent/pull/132). [CI API/web/backoffice verte](https://github.com/ibrahima-isi/meetstudent/actions/runs/38525554851) sur `b408ac0` : API 2m58s, web 1m3s, backoffice 34s. Le commit de closeout documentaire est soumis à une nouvelle CI avant squash. Le statut définitif de fusion est celui de la PR ; le bilan de squash/nettoyage est conservé dans la copie locale exportée après livraison. Les tickets #102–#129 restent décochés ; cette session s’arrête après #101.

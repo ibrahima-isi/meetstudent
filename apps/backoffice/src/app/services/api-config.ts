@@ -23,3 +23,9 @@ export const SERVER_URL = new InjectionToken<string>('SERVER_URL', {
   providedIn: 'root',
   factory: () => serverUrlFrom(inject(API_URL)),
 });
+
+/** Public web app hosting the shared account recovery journey. */
+export const WEB_URL = new InjectionToken<string>('WEB_URL', {
+  providedIn: 'root',
+  factory: () => 'http://localhost:4200',
+});

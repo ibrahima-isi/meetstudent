@@ -48,8 +48,8 @@ public interface UserRepository extends JpaRepository<UserEntity, Integer> {
      */
     List<UserEntity> findAllByEmailIgnoreCaseOrderByIdAsc(String email);
 
-    /** Targeted write of an already encoded password, for the same reason as {@link #markEmailVerified}. */
+    /** Atomically changes the password and invalidates every credential bound to the previous version. */
     @Modifying
-    @Query("update UserEntity u set u.password = :password where u.id = :id")
-    int updatePassword(@Param("id") Integer id, @Param("password") String password);
+    @Query("update UserEntity u set u.password = :password, u.passwordVersion = u.passwordVersion + 1 where u.id = :id")
+    int updatePasswordAndRevokeSessions(@Param("id") Integer id, @Param("password") String password);
 }

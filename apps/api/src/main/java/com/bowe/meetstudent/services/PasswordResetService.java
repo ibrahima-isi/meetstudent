@@ -71,7 +71,7 @@ public class PasswordResetService {
      * Sets a new password. Checks that need no token come first so a typo does not burn the link; then, in one
      * transaction: consume the token, write the password, burn the other reset links, end every refresh-token
      * session and mark the address verified (the link proved ownership of the mailbox).
-     * Access tokens already issued stay valid until they expire.
+     * Access tokens already issued are invalidated by the credential-version increment.
      */
     @Transactional
     public void confirm(String rawToken, String password, String confirmedPassword) {
@@ -87,8 +87,9 @@ public class PasswordResetService {
         var token = userTokenService.consume(rawToken, UserTokenPurpose.PASSWORD_RESET);
         var userId = token.getUser().getId();
         // Targeted writes (not save): flushing a whole loaded row could overwrite a concurrent profile update.
-        userRepository.updatePassword(userId, passwordEncoder.encode(password));
+        userRepository.updatePasswordAndRevokeSessions(userId, passwordEncoder.encode(password));
         userTokenService.consumeOutstanding(userId, UserTokenPurpose.PASSWORD_RESET);
+        userTokenService.consumeOutstanding(userId, UserTokenPurpose.EMAIL_CHANGE);
         refreshTokenService.deleteByUserId(userId);
         userRepository.markEmailVerified(userId, token.getEmail());
     }

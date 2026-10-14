@@ -4,6 +4,18 @@ const reply = (body: unknown, ok = true) =>
   (() => Promise.resolve({ ok, json: () => Promise.resolve(body) })) as unknown as typeof fetch;
 
 describe('loadRuntimeConfig', () => {
+  it('loads the public web URL without a trailing slash', async () => {
+    expect(await loadRuntimeConfig(reply({ webUrl: 'https://meetstudent.example/' }))).toEqual({
+      webUrl: 'https://meetstudent.example',
+    });
+  });
+
+  it('ignores unsafe public web URLs', async () => {
+    for (const webUrl of ['javascript:alert(1)', '//evil.example', 'https://user:pw@example.com', 'https://example.com/?next=evil']) {
+      expect(await loadRuntimeConfig(reply({ webUrl }))).toEqual({});
+    }
+  });
+
   it('returns the apiUrl from config.json, without trailing slash', async () => {
     expect(await loadRuntimeConfig(reply({ apiUrl: 'https://api.x.io/api/v1/' }))).toEqual({
       apiUrl: 'https://api.x.io/api/v1',

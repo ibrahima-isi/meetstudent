@@ -7,7 +7,7 @@ import com.bowe.meetstudent.repositories.UserRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -54,8 +54,8 @@ class PasswordSessionRaceIntegrationTests {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"login", "refresh"})
-    void credentialsReadBeforePasswordChangeCannotMintASurvivingSession(String operation) throws Exception {
+    @CsvSource({"login, change", "refresh, change", "login, reset", "refresh, reset"})
+    void credentialsReadBeforePasswordChangeCannotMintASurvivingSession(String operation, String mutation) throws Exception {
         var role = roles.findByName("ROLE_STUDENT").orElseGet(() -> roles.save(Role.builder().name("ROLE_STUDENT").build()));
         var email = UUID.randomUUID() + "@example.com";
         var user = users.save(UserEntity.builder().email(email).password(encoder.encode("Old-password-123"))
@@ -78,11 +78,7 @@ class PasswordSessionRaceIntegrationTests {
             });
             try {
                 assertThat(barrier.read.await(15, TimeUnit.SECONDS)).as("old credential read reached").isTrue();
-                mvc.perform(patch("/api/v1/users/" + user.getId())
-                        .header("Authorization", "Bearer " + before.get("accessToken").asText())
-                        .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(Map.of(
-                                "currentPassword", "Old-password-123", "password", "New-password-123"))))
-                        .andExpect(status().isOk());
+                changeCredentials(user, before, mutation);
             } finally {
                 barrier.resume.countDown();
             }
@@ -104,8 +100,8 @@ class PasswordSessionRaceIntegrationTests {
     @Autowired com.bowe.meetstudent.support.CapturingEmailSender mailbox;
 
     @ParameterizedTest
-    @ValueSource(strings = {"email-request", "email-resend"})
-    void passwordChangeCannotBeFollowedByAnEmailLinkUsingOldCredentials(String operation) throws Exception {
+    @CsvSource({"email-request, change", "email-resend, change", "email-request, reset", "email-resend, reset"})
+    void passwordChangeCannotBeFollowedByAnEmailLinkUsingOldCredentials(String operation, String mutation) throws Exception {
         var role = roles.findByName("ROLE_STUDENT").orElseGet(() -> roles.save(Role.builder().name("ROLE_STUDENT").build()));
         var email = UUID.randomUUID() + "@example.com";
         var newEmail = UUID.randomUUID() + "@example.com";
@@ -130,10 +126,7 @@ class PasswordSessionRaceIntegrationTests {
             });
             try {
                 assertThat(barrier.read.await(15, TimeUnit.SECONDS)).as("old email request read reached").isTrue();
-                mvc.perform(patch("/api/v1/users/" + user.getId()).header("Authorization", auth)
-                        .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(Map.of(
-                                "currentPassword", "Old-password-123", "password", "New-password-123"))))
-                        .andExpect(status().isOk());
+                changeCredentials(user, before, mutation);
             } finally { barrier.resume.countDown(); }
             var outcome = racing.get(15, TimeUnit.SECONDS);
             assertThat(outcome.getStatus()).as(outcome.getContentAsString()).isIn(400, 409);
@@ -146,6 +139,60 @@ class PasswordSessionRaceIntegrationTests {
         }
     }
 
+    @org.junit.jupiter.api.Test
+    void concurrentConfirmationCannotReuseTheSameResetLink() throws Exception {
+        var role = roles.findByName("ROLE_STUDENT").orElseGet(() -> roles.save(Role.builder().name("ROLE_STUDENT").build()));
+        var email = UUID.randomUUID() + "@example.com";
+        users.save(UserEntity.builder().email(email).password(encoder.encode("Old-password-123")).role(role).build());
+        mvc.perform(post("/api/v1/auth/password-reset/request").contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of("email", email))))
+                .andExpect(status().isAccepted());
+        var token = com.bowe.meetstudent.support.CapturingEmailSender.extractToken(mailbox.last());
+        var barrier = new ReadBarrier("reset-confirm");
+        try (var pool = Executors.newSingleThreadExecutor()) {
+            var racing = pool.submit(() -> {
+                DatabaseBarrier.active.set(barrier);
+                try {
+                    return mvc.perform(post("/api/v1/auth/password-reset/confirm").contentType(MediaType.APPLICATION_JSON)
+                                    .content(json.writeValueAsString(Map.of("token", token,
+                                            "password", "Losing-password-123", "confirmedPassword", "Losing-password-123"))))
+                            .andReturn().getResponse();
+                } finally { DatabaseBarrier.active.remove(); }
+            });
+            try {
+                assertThat(barrier.read.await(15, TimeUnit.SECONDS)).as("reset token owner read reached").isTrue();
+                mvc.perform(post("/api/v1/auth/password-reset/confirm").contentType(MediaType.APPLICATION_JSON)
+                                .content(json.writeValueAsString(Map.of("token", token,
+                                        "password", "Winning-password-123", "confirmedPassword", "Winning-password-123"))))
+                        .andExpect(status().isNoContent());
+            } finally { barrier.resume.countDown(); }
+            assertThat(racing.get(15, TimeUnit.SECONDS).getStatus()).isEqualTo(400);
+            login(email, "Winning-password-123");
+            mvc.perform(post("/api/v1/auth").contentType(MediaType.APPLICATION_JSON)
+                            .content(json.writeValueAsString(Map.of("username", email, "password", "Losing-password-123"))))
+                    .andExpect(status().isUnauthorized());
+        }
+    }
+
+    private void changeCredentials(UserEntity user, JsonNode session, String mutation) throws Exception {
+        if (mutation.equals("reset")) {
+            mvc.perform(post("/api/v1/auth/password-reset/request").contentType(MediaType.APPLICATION_JSON)
+                            .content(json.writeValueAsString(Map.of("email", user.getEmail()))))
+                    .andExpect(status().isAccepted());
+            var token = com.bowe.meetstudent.support.CapturingEmailSender.extractToken(mailbox.last());
+            mvc.perform(post("/api/v1/auth/password-reset/confirm").contentType(MediaType.APPLICATION_JSON)
+                            .content(json.writeValueAsString(Map.of("token", token,
+                                    "password", "New-password-123", "confirmedPassword", "New-password-123"))))
+                    .andExpect(status().isNoContent());
+        } else {
+            mvc.perform(patch("/api/v1/users/" + user.getId())
+                            .header("Authorization", "Bearer " + session.get("accessToken").asText())
+                            .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(Map.of(
+                                    "currentPassword", "Old-password-123", "password", "New-password-123"))))
+                    .andExpect(status().isOk());
+        }
+    }
+
     private static class ReadBarrier {
         final String operation;
         final CountDownLatch read = new CountDownLatch(1);
@@ -155,6 +202,7 @@ class PasswordSessionRaceIntegrationTests {
             boolean matches = switch (operation) {
                 case "login" -> sql.contains("from users ") && sql.contains("upper(");
                 case "refresh" -> sql.contains("from refresh_tokens ");
+                case "reset-confirm" -> sql.contains("from user_tokens ") && sql.contains(".token_hash=?");
                 case "email-request" -> sql.contains("from users ") && sql.contains(".password,");
                 case "email-resend" -> sql.contains("from user_tokens ") && sql.contains("consumed_at is null");
                 default -> false;

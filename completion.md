@@ -2,7 +2,7 @@
 
 Spec : [#99](https://github.com/ibrahima-isi/meetstudent/issues/99). Mettre à jour ce fichier après chaque ticket ; les preuves détaillées restent dans [docs/completion.md](docs/completion.md). Cocher l’implémentation après vérification ; suivre séparément la fusion et le nettoyage.
 
-## Ticket en cours : #100
+## Ticket précédent : #100
 
 - [x] Spec et dépendances lues : aucun blocage GitHub.
 - [x] Worktree isolé depuis `origin/dev` (`b236bc1`), branche `fix/password-session-revocation`.
@@ -14,12 +14,30 @@ Spec : [#99](https://github.com/ibrahima-isi/meetstudent/issues/99). Mettre à j
 - [x] Revue Standards / Spec terminée ; course email corrigée et retestée.
 - [x] [PR #131](https://github.com/ibrahima-isi/meetstudent/pull/131) ouverte vers dev.
 - [x] [CI API/web/backoffice verte](https://github.com/ibrahima-isi/meetstudent/actions/runs/38413822495) sur `ccb655a`.
-- [ ] Squash et nettoyage vérifiés (statut de livraison distinct de l’implémentation).
+- [x] Squash `5b37b2a` via PR #131 et nettoyage réalisés (passation vérifiée : #100 fermé).
+
+## Dernier ticket traité : #101
+
+- [x] Spec #99 et dépendance #100 relues ; #100 fermé, base `5b37b2a`.
+- [x] Worktree isolé `f21e`, branche `fix/password-reset-all-roles`.
+- [x] Régressions HTTP et backoffice observées rouges puis vertes.
+- [x] Reset de tous les rôles, révocation access/refresh et liens sensibles vérifiés.
+- [x] Bootstrap sûr et redémarrage complet après reset admin vérifiés.
+- [x] API : 226 unitaires + 286 intégrations ; PostgreSQL : 20 migrations, 38 tests HTTP/courses.
+- [x] Web : 927 tests et build SSR ; backoffice : 275 tests et build.
+- [x] Parcours fr/en et lien backoffice vérifiés au navigateur, desktop/mobile.
+- [x] Revues Standards/Spec terminées ; documentation de révocation corrigée.
+- [x] PostgreSQL et serveurs navigateur jetables arrêtés/supprimés.
+- [x] [PR #132](https://github.com/ibrahima-isi/meetstudent/pull/132) vers dev ; [CI API/web/backoffice verte](https://github.com/ibrahima-isi/meetstudent/actions/runs/38525554851) sur `b408ac0`.
+
+Fusion : consulter le statut définitif de la PR #132. Le closeout documentaire doit aussi passer les trois CI avant squash ; la copie locale exportée conserve le bilan de fusion et du nettoyage après livraison.
+
+Preuves : [docs/evidence/ticket-101.md](docs/evidence/ticket-101.md). Arrêt après #101 ; aucun ticket suivant commencé.
 
 ## Livraison des 30 tickets
 
 - [x] [#100](https://github.com/ibrahima-isi/meetstudent/issues/100) — [01/30] Changer son mot de passe et révoquer les anciennes sessions
-- [ ] [#101](https://github.com/ibrahima-isi/meetstudent/issues/101) — [02/30] Réinitialiser par email le mot de passe de tous les rôles, admins inclus
+- [x] [#101](https://github.com/ibrahima-isi/meetstudent/issues/101) — [02/30] Réinitialiser par email le mot de passe de tous les rôles, admins inclus
 - [ ] [#102](https://github.com/ibrahima-isi/meetstudent/issues/102) — [03/30] Révoquer les sessions après confirmation du nouvel email
 - [ ] [#103](https://github.com/ibrahima-isi/meetstudent/issues/103) — [04/30] Faire expirer chaque session après 7 jours d’inactivité
 - [ ] [#104](https://github.com/ibrahima-isi/meetstudent/issues/104) — [05/30] Supprimer un compte avec confirmation et nettoyage fiable

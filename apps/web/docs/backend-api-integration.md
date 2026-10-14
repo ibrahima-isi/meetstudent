@@ -279,6 +279,9 @@ shapes before coding against them.
 - `POST /auth/password-reset/confirm` `{token, password, confirmedPassword}` → 204;
   400 `{token}` (expired/consumed/unknown, one message for all), `{password}`,
   `{confirmedPassword}`. The API's text is never displayed, the front has its own.
+  For all roles, including admins, success revokes prior access/refresh sessions
+  and outstanding reset/email-change links; only the new password signs in.
+  Admin recovery survives application restarts (#101).
 - `GET /auth/capabilities` → `{emailEnabled}`, cached in `AuthService.getCapabilities()`;
   any failure reads as `false`.
 - Reset mails link to `/<lang>/reset-password#token=…`. The token is in the
@@ -343,6 +346,6 @@ shapes before coding against them.
 - Open reset and email-change links are invalidated. A request/resend racing a
   password change can return 409 rather than recreate a cancelled email link.
 - Old JWTs without the new credential version remain compatible at version zero
-  until the first password change or their original expiry. Reset-triggered
-  revocation, email-confirmation revocation and per-device inactivity belong to
-  #101, #102 and #103 respectively.
+  until the first password change/reset or their original expiry. Reset-triggered
+  revocation is delivered in #101; email-confirmation revocation and per-device
+  inactivity remain in #102 and #103 respectively.

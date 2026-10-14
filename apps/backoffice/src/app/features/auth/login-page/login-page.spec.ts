@@ -5,7 +5,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ActivatedRoute, Router, provideRouter } from '@angular/router';
 import { LoginPage } from './login-page';
 import { TokenService } from '@services/token.service';
-import { API_URL } from '@services/api-config';
+import { API_URL, WEB_URL } from '@services/api-config';
 
 const api = 'http://api.test/api/v1';
 
@@ -15,7 +15,7 @@ describe('LoginPage', () => {
   let router: Router;
   let el: HTMLElement;
 
-  const setup = async (query: Record<string, string> = {}) => {
+  const setup = async (query: Record<string, string> = {}, webUrl?: string) => {
     localStorage.clear();
     TestBed.configureTestingModule({
       imports: [LoginPage],
@@ -25,6 +25,7 @@ describe('LoginPage', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: API_URL, useValue: api },
+        ...(webUrl ? [{ provide: WEB_URL, useValue: webUrl }] : []),
         { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: new Map(Object.entries(query)) } } },
       ],
     });
@@ -53,6 +54,20 @@ describe('LoginPage', () => {
   afterEach(() => {
     backend.verify();
     localStorage.clear();
+  });
+
+  it('offers password recovery on the public French web app', async () => {
+    await setup();
+    const link = el.querySelector<HTMLAnchorElement>('a');
+    expect(link?.textContent).toContain('Mot de passe oublié');
+    expect(link?.href).toBe('http://localhost:4200/fr/forgot-password');
+  });
+
+  it('uses the configured public website instead of the backoffice origin', async () => {
+    await setup({}, 'https://meetstudent.example');
+    expect(el.querySelector<HTMLAnchorElement>('a')?.href).toBe(
+      'https://meetstudent.example/fr/forgot-password',
+    );
   });
 
   it('does not submit an empty form', async () => {

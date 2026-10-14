@@ -3,6 +3,10 @@ package com.bowe.meetstudent.config;
 import com.bowe.meetstudent.entities.UserEntity;
 import com.bowe.meetstudent.repositories.RoleRepository;
 import com.bowe.meetstudent.repositories.UserRepository;
+import com.bowe.meetstudent.entities.enums.UserTokenPurpose;
+import com.bowe.meetstudent.services.RefreshTokenService;
+import com.bowe.meetstudent.services.UserTokenService;
+import jakarta.persistence.EntityManager;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,7 +29,7 @@ import java.util.UUID;
  *   <li>requires {@code ADMIN_EMAIL} and an {@code ADMIN_PASSWORD} of at least 12 characters
  *       (it throws, which aborts startup, otherwise);</li>
  *   <li>takes the admin account for {@code ADMIN_EMAIL} (else the seeded default admin, else creates
- *       one) and sets its email, ADMIN role and bcrypt password from the environment;</li>
+ *       one) and initializes its email, ADMIN role and bcrypt password from the environment;</li>
  *   <li>replaces the seeded default hash on any remaining account with a random unusable password.</li>
  * </ol>
  * <p>Under {@code prod} the credentials are mandatory. Under {@code dev}/{@code docker} they are
@@ -34,7 +38,8 @@ import java.util.UUID;
  * development; when they are set the same rules apply as in production (so the default hash is
  * neutralised too). Setting only one of them is always an error.
  *
- * <p>Idempotent: an unchanged password is not re-hashed; changing {@code ADMIN_PASSWORD} rotates it.
+ * <p>Existing non-seed admin credentials are preserved; {@code ADMIN_PASSWORD} only initializes them.
+ * Seed credential changes revoke sessions and sensitive links in the same transaction.
  * Changing {@code ADMIN_EMAIL} later creates a new admin; the previous one is left for manual cleanup.
  */
 @Slf4j
@@ -53,6 +58,9 @@ public class AdminBootstrapRunner implements ApplicationRunner {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final RefreshTokenService refreshTokenService;
+    private final UserTokenService userTokenService;
+    private final EntityManager entityManager;
     private final String adminEmail;
     private final String adminPassword;
     private final boolean required;
@@ -61,10 +69,13 @@ public class AdminBootstrapRunner implements ApplicationRunner {
     public AdminBootstrapRunner(UserRepository userRepository,
                                 RoleRepository roleRepository,
                                 PasswordEncoder passwordEncoder,
+                                RefreshTokenService refreshTokenService,
+                                UserTokenService userTokenService,
+                                EntityManager entityManager,
                                 @Value("${app.admin.email:}") String adminEmail,
                                 @Value("${app.admin.password:}") String adminPassword,
                                 Environment environment) {
-        this(userRepository, roleRepository, passwordEncoder, adminEmail, adminPassword,
+        this(userRepository, roleRepository, passwordEncoder, refreshTokenService, userTokenService, entityManager, adminEmail, adminPassword,
                 environment.acceptsProfiles(Profiles.of("prod")));
     }
 
@@ -72,12 +83,18 @@ public class AdminBootstrapRunner implements ApplicationRunner {
     public AdminBootstrapRunner(UserRepository userRepository,
                                 RoleRepository roleRepository,
                                 PasswordEncoder passwordEncoder,
+                                RefreshTokenService refreshTokenService,
+                                UserTokenService userTokenService,
+                                EntityManager entityManager,
                                 String adminEmail,
                                 String adminPassword,
                                 boolean required) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
+        this.refreshTokenService = refreshTokenService;
+        this.userTokenService = userTokenService;
+        this.entityManager = entityManager;
         this.adminEmail = adminEmail;
         this.adminPassword = adminPassword;
         this.required = required;
@@ -97,9 +114,15 @@ public class AdminBootstrapRunner implements ApplicationRunner {
                 .orElseThrow(() -> new IllegalStateException(
                         "Cannot bootstrap the admin account: role " + ADMIN_ROLE + " does not exist (did Flyway run?)."));
 
-        var admin = userRepository.findByEmailIgnoreCase(email)
-                .or(() -> userRepository.findByEmailIgnoreCase(DEFAULT_ADMIN_EMAIL))
+        var admin = userRepository.findByEmailIgnoreCase(email).map(this::lockCurrent)
+                .or(() -> userRepository.findByEmailIgnoreCase(DEFAULT_ADMIN_EMAIL).map(this::lockCurrent)
+                        .filter(user -> DEFAULT_ADMIN_PASSWORD_HASH.equals(user.getPassword())
+                                && user.getRole() != null && ADMIN_ROLE.equals(user.getRole().getName())))
                 .orElseGet(() -> UserEntity.builder().firstname("System").lastname("Admin").build());
+
+        if (admin.getId() != null && (admin.getRole() == null || !ADMIN_ROLE.equals(admin.getRole().getName()))) {
+            throw new IllegalStateException("ADMIN_EMAIL belongs to a non-admin account; bootstrap will not promote it.");
+        }
 
         boolean changed = false;
         if (!email.equals(admin.getEmail())) {
@@ -110,8 +133,9 @@ public class AdminBootstrapRunner implements ApplicationRunner {
             admin.setRole(adminRole);
             changed = true;
         }
-        if (admin.getPassword() == null || !passwordEncoder.matches(adminPassword, admin.getPassword())) {
+        if (admin.getPassword() == null || DEFAULT_ADMIN_PASSWORD_HASH.equals(admin.getPassword())) {
             admin.setPassword(passwordEncoder.encode(adminPassword));
+            if (admin.getId() != null) revokeCredentials(admin);
             changed = true;
         }
         if (!admin.isEmailVerified()) {
@@ -125,10 +149,28 @@ public class AdminBootstrapRunner implements ApplicationRunner {
         }
 
         // Anything still carrying the published default hash must not be usable.
-        for (var other : userRepository.findAllByPassword(DEFAULT_ADMIN_PASSWORD_HASH)) {
+        for (var candidate : userRepository.findAllByPassword(DEFAULT_ADMIN_PASSWORD_HASH)) {
+            var other = lockCurrent(candidate);
+            if (!DEFAULT_ADMIN_PASSWORD_HASH.equals(other.getPassword())) continue;
             other.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
+            revokeCredentials(other);
             userRepository.save(other);
             log.warn("Neutralised default seeded password on account {}", other.getEmail());
+        }
+    }
+
+    private UserEntity lockCurrent(UserEntity user) {
+        var current = userRepository.findByIdForUpdate(user.getId()).orElseThrow();
+        // A credential change may have committed while this startup waited for the row lock.
+        entityManager.refresh(current);
+        return current;
+    }
+
+    private void revokeCredentials(UserEntity user) {
+        user.setPasswordVersion(Math.incrementExact(user.getPasswordVersion()));
+        refreshTokenService.deleteByUserId(user.getId());
+        for (var purpose : UserTokenPurpose.values()) {
+            userTokenService.consumeOutstanding(user.getId(), purpose);
         }
     }
 
