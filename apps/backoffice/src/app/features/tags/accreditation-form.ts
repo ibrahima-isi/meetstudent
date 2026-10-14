@@ -130,9 +130,8 @@ export class AccreditationForm implements OnInit {
           for (const f of this.fields) if (fields[f.name]) mapped[f.name] = fields[f.name];
           this.serverErrors.set(mapped);
           if (!Object.keys(mapped).length) this.error.set(Object.values(fields)[0]);
-        } else if (err instanceof HttpErrorResponse && err.status === 500) {
-          // The API has no dedicated duplicate answer: a unique-code violation surfaces as a 500.
-          this.error.set("Enregistrement impossible : ce code existe peut-être déjà.");
+        } else if (err instanceof HttpErrorResponse && err.status === 409) {
+          this.error.set('Enregistrement impossible : ce code existe déjà.');
         } else {
           this.error.set(messageFrom(err, "L'enregistrement a échoué."));
         }

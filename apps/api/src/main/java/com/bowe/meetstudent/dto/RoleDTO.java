@@ -1,6 +1,7 @@
 package com.bowe.meetstudent.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -14,6 +15,7 @@ public class RoleDTO {
     private Integer id;
 
     @NotBlank(message = "The role name is required !")
+    @Size(max = 255, message = "Role name must not exceed 255 characters")
     private String name;
 
     private String description;

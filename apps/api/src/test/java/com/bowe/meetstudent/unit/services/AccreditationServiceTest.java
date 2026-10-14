@@ -57,8 +57,8 @@ class AccreditationServiceTest {
 
     @Test
     void testDelete() {
-        Mockito.doNothing().when(accreditationRepository).deleteById(1);
+        Mockito.when(accreditationRepository.findById(1)).thenReturn(Optional.of(accreditation));
         accreditationService.delete(1);
-        Mockito.verify(accreditationRepository, Mockito.times(1)).deleteById(1);
+        Mockito.verify(accreditationRepository).delete(accreditation);
     }
 }

@@ -10,6 +10,8 @@ import org.springframework.data.jpa.repository.Query;
 
 @Repository
 public interface CourseRepository extends JpaRepository<Course, Integer> {
+    boolean existsByCodeIgnoreCase(String code);
+    boolean existsByCodeIgnoreCaseAndIdNot(String code, Integer id);
     Page<Course> findByNameContainingIgnoreCase(String name, Pageable pageable);
 
     @Query("SELECT c FROM Course c LEFT JOIN c.courseRates r GROUP BY c.id ORDER BY AVG(r.note) DESC NULLS LAST")

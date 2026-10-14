@@ -1,6 +1,7 @@
 package com.bowe.meetstudent.controllers;
 
 import com.bowe.meetstudent.dto.CourseDTO;
+import com.bowe.meetstudent.exceptions.FieldValidationException;
 import com.bowe.meetstudent.entities.Course;
 import com.bowe.meetstudent.entities.Program;
 import com.bowe.meetstudent.mappers.implementations.CourseMapper;
@@ -48,7 +49,7 @@ public class CourseController {
         if (courseDTO.getProgramId() != null) {
             Optional<Program> programOpt = programService.findById(courseDTO.getProgramId());
             if (programOpt.isEmpty()) {
-                return ResponseEntity.badRequest().build();
+                throw new FieldValidationException("programId", "Program not found");
             }
             course.setProgram(programOpt.get());
         } else {
@@ -123,7 +124,7 @@ public class CourseController {
         Course updates = courseMapper.toEntity(newCourseDTO);
         if (newCourseDTO.getProgramId() != null) {
             Optional<Program> programOpt = programService.findById(newCourseDTO.getProgramId());
-            if (programOpt.isEmpty()) return ResponseEntity.badRequest().build();
+            if (programOpt.isEmpty()) throw new FieldValidationException("programId", "Program not found");
             updates.setProgram(programOpt.get());
         }
 
@@ -143,7 +144,8 @@ public class CourseController {
         Course updates = courseMapper.toEntity(courseDTO);
         if (courseDTO.getProgramId() != null) {
             Optional<Program> programOpt = programService.findById(courseDTO.getProgramId());
-            if (programOpt.isPresent()) updates.setProgram(programOpt.get());
+            if (programOpt.isEmpty()) throw new FieldValidationException("programId", "Program not found");
+            updates.setProgram(programOpt.get());
         }
 
         Course saved = courseService.patch(id, updates);

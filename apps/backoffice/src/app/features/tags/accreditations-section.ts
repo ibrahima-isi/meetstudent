@@ -239,7 +239,7 @@ export class AccreditationsSection {
       error: (err: unknown) => {
         this.deleting.set(false);
         this.pendingDeleteId.set(null);
-        const refused = err instanceof HttpErrorResponse && (err.status === 409 || err.status === 500);
+        const refused = err instanceof HttpErrorResponse && err.status === 409;
         this.error.set(
           refused
             ? 'Suppression impossible : cette accréditation est probablement encore associée à des programmes. Retirez-la de ces programmes puis réessayez.'

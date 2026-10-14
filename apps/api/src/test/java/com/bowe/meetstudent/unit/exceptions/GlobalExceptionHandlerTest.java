@@ -68,8 +68,9 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void genuineBugsStayInternalServerErrors() {
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR,
-                handler.handleGlobalException(new IllegalArgumentException("a real bug"), request()).getStatusCode());
+        var response = handler.handleGlobalException(new IllegalArgumentException("a real bug"), request());
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        assertEquals("Unexpected server error", response.getBody().getMessage());
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR,
                 handler.handleGlobalException(new IllegalStateException("a real bug"), request()).getStatusCode());
     }

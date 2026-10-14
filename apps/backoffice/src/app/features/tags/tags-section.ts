@@ -184,9 +184,8 @@ export class TagsSection {
         const fields = fieldErrorsFrom(err);
         if (fields) {
           this.nameError.set(fields['name'] ?? Object.values(fields)[0]);
-        } else if (err instanceof HttpErrorResponse && err.status === 500) {
-          // The API has no dedicated duplicate answer: a unique-name violation surfaces as a 500.
-          this.error.set("Création impossible : ce tag existe peut-être déjà.");
+        } else if (err instanceof HttpErrorResponse && err.status === 409) {
+          this.error.set('Création impossible : ce tag existe déjà.');
         } else {
           this.error.set(messageFrom(err, "L'ajout a échoué."));
         }
@@ -207,7 +206,7 @@ export class TagsSection {
       error: (err: unknown) => {
         this.deleting.set(false);
         this.pendingDeleteId.set(null);
-        const refused = err instanceof HttpErrorResponse && (err.status === 409 || err.status === 500);
+        const refused = err instanceof HttpErrorResponse && err.status === 409;
         this.error.set(
           refused
             ? 'Suppression impossible : ce tag est probablement encore utilisé par des écoles. Retirez-le de ces écoles puis réessayez.'

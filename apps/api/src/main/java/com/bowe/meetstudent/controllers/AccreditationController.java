@@ -16,6 +16,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.validation.annotation.Validated;
+import com.bowe.meetstudent.dto.validation.OnCreate;
+import jakarta.validation.groups.Default;
 
 import java.util.Optional;
 
@@ -33,7 +36,7 @@ public class AccreditationController {
     @Operation(summary = "Create a new accreditation", description = "Adds a new accreditation type to the system.")
     @ApiResponse(responseCode = "201", description = "Accreditation created successfully")
     @ApiResponse(responseCode = "400", description = "Invalid input data")
-    public ResponseEntity<AccreditationDTO> create(@RequestBody AccreditationDTO accreditationDTO) {
+    public ResponseEntity<AccreditationDTO> create(@RequestBody @Validated({Default.class, OnCreate.class}) AccreditationDTO accreditationDTO) {
         Accreditation accreditation = accreditationMapper.toEntity(accreditationDTO);
         Accreditation saved = accreditationService.save(accreditation);
         return new ResponseEntity<>(accreditationMapper.toDTO(saved), HttpStatus.CREATED);
@@ -71,7 +74,7 @@ public class AccreditationController {
     @ApiResponse(responseCode = "200", description = "Accreditation updated successfully")
     @ApiResponse(responseCode = "404", description = "Accreditation not found")
     public ResponseEntity<AccreditationDTO> update(
-            @RequestBody AccreditationDTO newAccDTO,
+            @RequestBody @Validated AccreditationDTO newAccDTO,
             @Parameter(description = "ID of the accreditation to update") @PathVariable int id) {
         
         Optional<Accreditation> existingOpt = accreditationService.findById(id);
@@ -90,7 +93,7 @@ public class AccreditationController {
     @ApiResponse(responseCode = "200", description = "Accreditation patched successfully")
     @ApiResponse(responseCode = "404", description = "Accreditation not found")
     public ResponseEntity<AccreditationDTO> patch(
-            @RequestBody AccreditationDTO accDTO,
+            @RequestBody @Validated AccreditationDTO accDTO,
             @Parameter(description = "ID of the accreditation to patch") @PathVariable int id) {
         
         Optional<Accreditation> existingOpt = accreditationService.findById(id);

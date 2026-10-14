@@ -28,7 +28,7 @@ public class RoleController {
     @Operation(summary = "Create a new role", description = "Adds a new user role to the system.")
     @ApiResponse(responseCode = "201", description = "Role created successfully")
     @ApiResponse(responseCode = "400", description = "Invalid role data")
-    public ResponseEntity<RoleDTO> createRole(@RequestBody RoleDTO roleDTO) {
+    public ResponseEntity<RoleDTO> createRole(@RequestBody @jakarta.validation.Valid RoleDTO roleDTO) {
         Role roleEntity = roleMapper.toEntity(roleDTO);
         Role newRole = roleService.createRole(roleEntity);
         return new ResponseEntity<>(roleMapper.toDTO(newRole), HttpStatus.CREATED);
@@ -62,14 +62,10 @@ public class RoleController {
     @ApiResponse(responseCode = "404", description = "Role not found")
     public ResponseEntity<RoleDTO> updateRole(
             @Parameter(description = "ID of the role to update") @PathVariable Integer id, 
-            @RequestBody RoleDTO roleDetailsDTO) {
-        try {
-            Role roleDetailsEntity = roleMapper.toEntity(roleDetailsDTO);
-            Role updatedRole = roleService.updateRole(id, roleDetailsEntity);
-            return new ResponseEntity<>(roleMapper.toDTO(updatedRole), HttpStatus.OK);
-        } catch (RuntimeException e) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
+            @RequestBody @jakarta.validation.Valid RoleDTO roleDetailsDTO) {
+        Role roleDetailsEntity = roleMapper.toEntity(roleDetailsDTO);
+        Role updatedRole = roleService.updateRole(id, roleDetailsEntity);
+        return new ResponseEntity<>(roleMapper.toDTO(updatedRole), HttpStatus.OK);
     }
 
     @DeleteMapping("/{id}")

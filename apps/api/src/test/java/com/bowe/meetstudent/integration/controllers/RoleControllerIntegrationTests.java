@@ -2,8 +2,12 @@ package com.bowe.meetstudent.integration.controllers;
 
 import com.bowe.meetstudent.TestDataUtil;
 import com.bowe.meetstudent.dto.RoleDTO;
+import com.bowe.meetstudent.dto.UserDTO;
 import com.bowe.meetstudent.entities.Role;
+import com.bowe.meetstudent.entities.UserEntity;
+import com.bowe.meetstudent.mappers.Mapper;
 import com.bowe.meetstudent.repositories.RoleRepository;
+import com.bowe.meetstudent.services.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -34,6 +39,24 @@ class RoleControllerIntegrationTests {
     @Autowired
     private RoleRepository roleRepository;
 
+    @Autowired private UserService userService;
+    @Autowired private PasswordEncoder passwordEncoder;
+    @Autowired private Mapper<UserEntity, UserDTO> userMapper;
+
+    @Test
+    void deletingARoleStillAssignedToAUserReturnsConflict() throws Exception {
+        Role role = roleRepository.save(Role.builder().name("ROLE_105_ASSIGNED").build());
+        UserDTO dto = TestDataUtil.createUserDto();
+        dto.setEmail("role-105-" + java.util.UUID.randomUUID() + "@example.com");
+        dto.setRole(role);
+        userService.saveUser(userMapper.toEntity(dto), passwordEncoder);
+
+        mockMvc.perform(MockMvcRequestBuilders.delete("/api/v1/roles/" + role.getId())
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isConflict())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.message").isNotEmpty());
+    }
+
     @Test
     void testThatAdminCanCreateRole() throws Exception {
         RoleDTO roleDTO = RoleDTO.builder()
@@ -51,6 +74,26 @@ class RoleControllerIntegrationTests {
         ).andExpect(
                 MockMvcResultMatchers.jsonPath("$.name").value("ROLE_MANAGER")
         );
+    }
+
+    @Test
+    void roleWithoutNameReturnsFieldError() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/roles")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"description\":\"Missing name\"}")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isBadRequest())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.name").isNotEmpty());
+    }
+
+    @Test
+    void overlongRoleNameReturnsBadRequestWithoutSqlDetails() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/roles")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"" + "R".repeat(300) + "\"}")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isBadRequest())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.name").isNotEmpty());
     }
 
     @Test

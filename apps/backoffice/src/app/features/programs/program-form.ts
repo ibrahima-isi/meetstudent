@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { Observable, catchError, map, of, switchMap, tap, throwError } from 'rxjs';
 import { Program, ProgramInput } from '@models/program';
@@ -246,7 +247,10 @@ export class ProgramForm implements OnInit {
     }
     const fields = fieldErrorsFrom(err);
     this.error.set(
-      fields ? applyFieldErrors(this.form, fields) : messageFrom(err, "L'enregistrement a échoué (le code doit être unique)."),
+      fields ? applyFieldErrors(this.form, fields)
+        : err instanceof HttpErrorResponse && err.status === 409
+          ? 'Enregistrement impossible : ce code existe déjà.'
+          : messageFrom(err, "L'enregistrement a échoué."),
     );
   }
 }

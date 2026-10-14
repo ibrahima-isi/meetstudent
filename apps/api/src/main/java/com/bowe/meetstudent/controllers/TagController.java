@@ -15,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.validation.annotation.Validated;
 
 import java.util.List;
 
@@ -32,7 +33,7 @@ public class TagController {
     @ApiResponse(responseCode = "201", description = "Tag created successfully")
     @ApiResponse(responseCode = "400", description = "Invalid tag data or name already exists")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<TagDTO> create(@RequestBody TagDTO tagDTO) {
+    public ResponseEntity<TagDTO> create(@RequestBody @Validated TagDTO tagDTO) {
         com.bowe.meetstudent.entities.Tag tag = tagMapper.toEntity(tagDTO);
         com.bowe.meetstudent.entities.Tag saved = tagService.save(tag);
         return new ResponseEntity<>(tagMapper.toDTO(saved), HttpStatus.CREATED);

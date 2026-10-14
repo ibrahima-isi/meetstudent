@@ -1,6 +1,7 @@
 package com.bowe.meetstudent.services;
 
 import com.bowe.meetstudent.entities.Accreditation;
+import com.bowe.meetstudent.exceptions.ConflictException;
 import com.bowe.meetstudent.repositories.AccreditationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -18,6 +19,11 @@ public class AccreditationService {
 
     @Transactional
     public Accreditation save(Accreditation accreditation) {
+        if (accreditation.getCode() != null && (accreditation.getId() == null
+                ? accreditationRepository.existsByCodeIgnoreCase(accreditation.getCode())
+                : accreditationRepository.existsByCodeIgnoreCaseAndIdNot(accreditation.getCode(), accreditation.getId()))) {
+            throw new ConflictException("An accreditation with this code already exists");
+        }
         return this.accreditationRepository.save(accreditation);
     }
 
@@ -40,6 +46,12 @@ public class AccreditationService {
 
     @Transactional
     public void delete(int id) {
-        this.accreditationRepository.deleteById(id);
+        this.accreditationRepository.findById(id).ifPresent(accreditation -> {
+            if (accreditation.getProgramAccreditations() != null
+                    && !accreditation.getProgramAccreditations().isEmpty()) {
+                throw new ConflictException("This accreditation is still linked to programs");
+            }
+            this.accreditationRepository.delete(accreditation);
+        });
     }
 }

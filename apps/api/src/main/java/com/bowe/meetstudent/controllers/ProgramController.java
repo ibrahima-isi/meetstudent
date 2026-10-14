@@ -1,6 +1,7 @@
 package com.bowe.meetstudent.controllers;
 
 import com.bowe.meetstudent.dto.ProgramDTO;
+import com.bowe.meetstudent.exceptions.FieldValidationException;
 import com.bowe.meetstudent.entities.Program;
 import com.bowe.meetstudent.entities.School;
 import com.bowe.meetstudent.mappers.implementations.ProgramMapper;
@@ -117,7 +118,7 @@ public class ProgramController {
         if (programDTO.getSchoolId() != null) {
             Optional<School> schoolOpt = schoolService.getSchoolById(programDTO.getSchoolId());
             if (schoolOpt.isEmpty()) {
-                return ResponseEntity.badRequest().build();
+                throw new FieldValidationException("schoolId", "School not found");
             }
             program.setSchool(schoolOpt.get());
         } else {
@@ -192,7 +193,7 @@ public class ProgramController {
         Program updates = programMapper.toEntity(newProgramDTO);
         if (newProgramDTO.getSchoolId() != null) {
             Optional<School> schoolOpt = schoolService.getSchoolById(newProgramDTO.getSchoolId());
-            if (schoolOpt.isEmpty()) return ResponseEntity.badRequest().build();
+            if (schoolOpt.isEmpty()) throw new FieldValidationException("schoolId", "School not found");
             updates.setSchool(schoolOpt.get());
         }
 
@@ -212,7 +213,8 @@ public class ProgramController {
         Program updates = programMapper.toEntity(programDTO);
         if (programDTO.getSchoolId() != null) {
             Optional<School> schoolOpt = schoolService.getSchoolById(programDTO.getSchoolId());
-            if (schoolOpt.isPresent()) updates.setSchool(schoolOpt.get());
+            if (schoolOpt.isEmpty()) throw new FieldValidationException("schoolId", "School not found");
+            updates.setSchool(schoolOpt.get());
         }
 
         Program saved = programService.patch(id, updates);

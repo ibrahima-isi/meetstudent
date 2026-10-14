@@ -16,6 +16,7 @@ import java.util.Optional;
  */
 @Repository
 public interface UserRepository extends JpaRepository<UserEntity, Integer> {
+    boolean existsByRole(com.bowe.meetstudent.entities.Role role);
 
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     @Query("select u from UserEntity u where u.id = :id")

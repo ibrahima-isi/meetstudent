@@ -130,11 +130,14 @@ describe('TagsSection', () => {
       expect(q('[data-error=name]')?.textContent).toContain('Nom invalide');
     });
 
-    it('explains a 500 (the API answers so on a duplicate name)', () => {
+    it('explains a 409 duplicate name and keeps the submitted value', () => {
       submitName('NEW');
-      backend.expectOne(`${api}/tags`).flush(null, { status: 500, statusText: 'err' });
+      backend.expectOne(`${api}/tags`).flush(
+        { status: 409, message: 'A tag with this name already exists' },
+        { status: 409, statusText: 'Conflict' },
+      );
       settle();
-      expect(q('[role=alert]')?.textContent).toContain('existe peut-être déjà');
+      expect(q('[role=alert]')?.textContent).toContain('ce tag existe déjà');
       expect(q<HTMLInputElement>('#tag-name')!.value).toBe('NEW');
     });
   });
@@ -166,14 +169,14 @@ describe('TagsSection', () => {
       expect(q('[data-notice]')?.textContent).toContain('Tag supprimé');
     });
 
-    for (const status of [409, 500]) {
-      it(`explains a ${status} on delete (tag still used by schools)`, () => {
+    for (const [status, message] of [[409, 'encore utilisé'], [500, 'suppression a échoué']] as const) {
+      it(`handles ${status} on delete while keeping the list`, () => {
         ask();
         settle();
         q<HTMLButtonElement>('[data-confirm-delete]')!.click();
         backend.expectOne(`${api}/tags/1`).flush(null, { status, statusText: 'err' });
         settle();
-        expect(q('[role=alert]')?.textContent).toContain('encore utilisé');
+        expect(q('[role=alert]')?.textContent?.toLowerCase()).toContain(message);
         expect(q('[data-confirm-delete]')).toBeNull();
         expect(all('tr[data-tag]').length).toBe(2);
       });
