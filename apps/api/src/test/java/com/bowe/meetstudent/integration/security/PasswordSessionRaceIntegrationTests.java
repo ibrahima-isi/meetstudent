@@ -54,8 +54,8 @@ class PasswordSessionRaceIntegrationTests {
     }
 
     @ParameterizedTest
-    @CsvSource({"login, change", "refresh, change", "login, reset", "refresh, reset"})
-    void credentialsReadBeforePasswordChangeCannotMintASurvivingSession(String operation, String mutation) throws Exception {
+    @CsvSource({"login, change", "refresh, change", "login, reset", "refresh, reset", "login, email", "refresh, email"})
+    void credentialsReadBeforeSensitiveChangeCannotMintASurvivingSession(String operation, String mutation) throws Exception {
         var role = roles.findByName("ROLE_STUDENT").orElseGet(() -> roles.save(Role.builder().name("ROLE_STUDENT").build()));
         var email = UUID.randomUUID() + "@example.com";
         var user = users.save(UserEntity.builder().email(email).password(encoder.encode("Old-password-123"))
@@ -90,7 +90,8 @@ class PasswordSessionRaceIntegrationTests {
             mvc.perform(post("/api/v1/auth/refresh").contentType(MediaType.APPLICATION_JSON)
                     .content(json.writeValueAsString(Map.of("refreshToken", before.get("refreshToken").asText()))))
                     .andExpect(status().isUnauthorized());
-            var after = login(email, "New-password-123");
+            var after = login(mutation.equals("email") ? "new-" + email : email,
+                    mutation.equals("email") ? "Old-password-123" : "New-password-123");
             mvc.perform(get("/api/v1/users/id/" + user.getId())
                     .header("Authorization", "Bearer " + after.get("accessToken").asText()))
                     .andExpect(status().isOk());
@@ -100,8 +101,8 @@ class PasswordSessionRaceIntegrationTests {
     @Autowired com.bowe.meetstudent.support.CapturingEmailSender mailbox;
 
     @ParameterizedTest
-    @CsvSource({"email-request, change", "email-resend, change", "email-request, reset", "email-resend, reset"})
-    void passwordChangeCannotBeFollowedByAnEmailLinkUsingOldCredentials(String operation, String mutation) throws Exception {
+    @CsvSource({"email-request, change", "email-resend, change", "email-request, reset", "email-resend, reset", "email-request, email", "email-resend, email"})
+    void sensitiveChangeCannotBeFollowedByAnEmailLinkUsingOldCredentials(String operation, String mutation) throws Exception {
         var role = roles.findByName("ROLE_STUDENT").orElseGet(() -> roles.save(Role.builder().name("ROLE_STUDENT").build()));
         var email = UUID.randomUUID() + "@example.com";
         var newEmail = UUID.randomUUID() + "@example.com";
@@ -175,7 +176,17 @@ class PasswordSessionRaceIntegrationTests {
     }
 
     private void changeCredentials(UserEntity user, JsonNode session, String mutation) throws Exception {
-        if (mutation.equals("reset")) {
+        if (mutation.equals("email")) {
+            mvc.perform(post("/api/v1/users/" + user.getId() + "/email-change")
+                            .header("Authorization", "Bearer " + session.get("accessToken").asText())
+                            .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(Map.of(
+                                    "newEmail", "new-" + user.getEmail(), "currentPassword", "Old-password-123"))))
+                    .andExpect(status().isAccepted());
+            var token = com.bowe.meetstudent.support.CapturingEmailSender.extractToken(mailbox.last());
+            mvc.perform(post("/api/v1/auth/email-change/confirm").contentType(MediaType.APPLICATION_JSON)
+                            .content(json.writeValueAsString(Map.of("token", token))))
+                    .andExpect(status().isNoContent());
+        } else if (mutation.equals("reset")) {
             mvc.perform(post("/api/v1/auth/password-reset/request").contentType(MediaType.APPLICATION_JSON)
                             .content(json.writeValueAsString(Map.of("email", user.getEmail()))))
                     .andExpect(status().isAccepted());

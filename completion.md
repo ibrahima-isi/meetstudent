@@ -34,11 +34,27 @@ Fusion : consulter le statut définitif de la PR #132. Le closeout documentaire 
 
 Preuves : [docs/evidence/ticket-101.md](docs/evidence/ticket-101.md). Arrêt après #101 ; aucun ticket suivant commencé.
 
+## Dernier ticket traité : #102
+
+- [x] Spec #99, ticket et dépendance #100 relus ; base dev `b56e384`.
+- [x] Worktree isolé, branche `fix/email-confirmation-session-revocation`.
+- [x] TDD HTTP/Angular ; anciennes sessions et identité fr/en révoquées après confirmation seulement.
+- [x] Compatibilité historique des trois rôles, courses JDBC et synchronisation inter-onglets vérifiées.
+- [x] API 226 unitaires + 294 intégrations ; PostgreSQL 20 migrations et 39 tests HTTP/courses.
+- [x] Web 930 tests, build SSR et types ; backoffice 275 tests et build.
+- [x] Revues Sol Standards/Spec ; P2 inter-onglets corrigé, aucun écart restant.
+- [x] Ressources PostgreSQL du seul ticket #102 supprimées.
+- [x] [PR #133](https://github.com/ibrahima-isi/meetstudent/pull/133) vers dev ; [CI API/web/backoffice verte](https://github.com/ibrahima-isi/meetstudent/actions/runs/38528795149) sur `48256a3`.
+- [ ] CI du closeout documentaire avant squash.
+- [ ] Squash et nettoyage du seul worktree/branche #102.
+
+Preuves : [docs/evidence/ticket-102.md](docs/evidence/ticket-102.md). Arrêt après #102, sans commencer #103. La copie locale exportée recevra le bilan définitif de livraison.
+
 ## Livraison des 30 tickets
 
 - [x] [#100](https://github.com/ibrahima-isi/meetstudent/issues/100) — [01/30] Changer son mot de passe et révoquer les anciennes sessions
 - [x] [#101](https://github.com/ibrahima-isi/meetstudent/issues/101) — [02/30] Réinitialiser par email le mot de passe de tous les rôles, admins inclus
-- [ ] [#102](https://github.com/ibrahima-isi/meetstudent/issues/102) — [03/30] Révoquer les sessions après confirmation du nouvel email
+- [x] [#102](https://github.com/ibrahima-isi/meetstudent/issues/102) — [03/30] Révoquer les sessions après confirmation du nouvel email
 - [ ] [#103](https://github.com/ibrahima-isi/meetstudent/issues/103) — [04/30] Faire expirer chaque session après 7 jours d’inactivité
 - [ ] [#104](https://github.com/ibrahima-isi/meetstudent/issues/104) — [05/30] Supprimer un compte avec confirmation et nettoyage fiable
 - [ ] [#105](https://github.com/ibrahima-isi/meetstudent/issues/105) — [06/30] Retourner des erreurs API utiles sur les mutations et conflits

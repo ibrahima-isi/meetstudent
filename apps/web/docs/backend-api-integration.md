@@ -326,8 +326,11 @@ shapes before coding against them.
 - The link mailed to the **new** address opens `/<lang>/verify-email#token=…&type=change`
   (the same page as verification; `type=change` selects the endpoint and the wording).
   `POST /auth/email-change/confirm` `{token}` → 204; 400 `{token}` for any bad link
-  (unknown, expired, used, or the address was taken meanwhile). On success, if
-  signed in, the cached user is reloaded so the new address shows everywhere.
+  (unknown, expired, used, or the address was taken meanwhile). Success increments
+  the credential version and revokes every access/refresh session. The confirmation
+  page clears local tokens and cached identity, then invites re-login with the new
+  address in the active locale. Ordinary email verification still refreshes the
+  cached user without ending the session.
 - The same section shows whether the current address is confirmed and offers the
   confirmation email again (`POST /auth/email-verification/resend`), so dismissing
   the banner never loses the way to confirm.

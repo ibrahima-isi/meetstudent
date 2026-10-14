@@ -163,7 +163,7 @@
       "changeVerifyingTitle": "Confirmation de votre nouvelle adresse",
       "changeVerifyingText": "Un instant, nous confirmons votre nouvelle adresse...",
       "changeSuccessTitle": "Adresse e-mail mise à jour",
-      "changeSuccessText": "Votre nouvelle adresse e-mail est confirmée et remplace l'ancienne. Utilisez-la désormais pour vous connecter.",
+      "changeSuccessText": "Votre nouvelle adresse e-mail est confirmée et remplace l'ancienne. Toutes vos sessions ont été fermées. Reconnectez-vous avec votre nouvelle adresse.",
       "changeExpiredText": "Ce lien a expiré, a déjà été utilisé ou l'adresse n'est plus disponible. Connectez-vous et demandez un nouveau changement depuis votre profil.",
       "changeInvalidText": "Ce lien est incomplet ou invalide. Connectez-vous et demandez un nouveau changement depuis votre profil."
     },

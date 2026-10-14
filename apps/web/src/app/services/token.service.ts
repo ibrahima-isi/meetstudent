@@ -1,4 +1,4 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { DestroyRef, Injectable, inject, signal, computed } from '@angular/core';
 import { User } from '@models/entities';
 
 @Injectable({
@@ -14,6 +14,21 @@ export class TokenService {
   user = signal<User | null>(this.getStoredUser());
 
   isAuthenticated = computed(() => !!this.token());
+
+  constructor() {
+    const destroyRef = inject(DestroyRef);
+    if (typeof window === 'undefined') return;
+    const onStorage = (event: StorageEvent) => {
+      if (event.storageArea === localStorage
+          && (event.key === this.TOKEN_KEY || event.key === null)
+          && event.newValue === null
+          && this.getStoredToken() === null) {
+        this.clear();
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    destroyRef.onDestroy(() => window.removeEventListener('storage', onStorage));
+  }
 
   setTokens(accessToken: string, refreshToken: string) {
     localStorage.setItem(this.TOKEN_KEY, accessToken);

@@ -67,3 +67,13 @@ Reset étudiant/expert/admin : version des identifiants incrémentée atomiqueme
 Preuves : [ticket-101.md](evidence/ticket-101.md). API : 226 unitaires + 286 intégrations ; PostgreSQL : 20 migrations et 38 tests HTTP/courses ; web : 927 tests et build SSR ; backoffice : 275 tests et build. Redémarrage complet après reset admin et navigateur desktop/mobile vérifiés. Revues Standards/Spec terminées ; contradiction documentaire corrigée. Ressources jetables arrêtées/supprimées.
 
 Livraison : [PR #132](https://github.com/ibrahima-isi/meetstudent/pull/132). [CI API/web/backoffice verte](https://github.com/ibrahima-isi/meetstudent/actions/runs/38525554851) sur `b408ac0` : API 2m58s, web 1m3s, backoffice 34s. Le commit de closeout documentaire est soumis à une nouvelle CI avant squash. Le statut définitif de fusion est celui de la PR ; le bilan de squash/nettoyage est conservé dans la copie locale exportée après livraison. Les tickets #102–#129 restent décochés ; cette session s’arrête après #101.
+
+### #102 — confirmation du nouvel email (2026-10-14)
+
+- [x] [#102](https://github.com/ibrahima-isi/meetstudent/issues/102) : implémentation et vérification terminées, base isolée `b56e384`.
+
+Confirmation atomique : nouvelle adresse vérifiée, version des identifiants incrémentée, anciens access/refresh refusés. Demande avec mot de passe actuel, limites et liens à usage unique conservés. Web : cache/session effacés après succès, synchronisation inter-onglets, reconnexion fr/en ; vérification email ordinaire inchangée.
+
+Preuves : [ticket-102.md](evidence/ticket-102.md). API : 226 unitaires + 294 intégrations ; PostgreSQL : 20 migrations et 39 HTTP/courses ; web : 930 tests, build SSR et types ; backoffice : 275 tests et build. Revues Sol Standards/Spec : défaut inter-onglets reproduit et corrigé, aucun écart restant. Ressources PostgreSQL supprimées.
+
+Livraison : [PR #133](https://github.com/ibrahima-isi/meetstudent/pull/133) vers dev ; [CI API/web/backoffice verte](https://github.com/ibrahima-isi/meetstudent/actions/runs/38528795149) sur `48256a3`. Le closeout documentaire doit aussi passer les trois CI avant squash. Le statut définitif de fusion reste celui de la PR. Le bilan définitif de fusion/nettoyage sera conservé dans la copie locale exportée. Arrêt après #102 ; #103 non commencé.
