@@ -58,7 +58,7 @@ Preuves : [docs/evidence/ticket-102.md](docs/evidence/ticket-102.md). Arrêt apr
 - [x] [#103](https://github.com/ibrahima-isi/meetstudent/issues/103) — [04/30] Faire expirer chaque session après 7 jours d’inactivité
 - [x] [#104](https://github.com/ibrahima-isi/meetstudent/issues/104) — [05/30] Supprimer un compte avec confirmation et nettoyage fiable
 - [x] [#105](https://github.com/ibrahima-isi/meetstudent/issues/105) — [06/30] Retourner des erreurs API utiles sur les mutations et conflits
-- [ ] [#106](https://github.com/ibrahima-isi/meetstudent/issues/106) — [07/30] Désassocier une accréditation sans détruire la donnée partagée
+- [x] [#106](https://github.com/ibrahima-isi/meetstudent/issues/106) — [07/30] Désassocier une accréditation sans détruire la donnée partagée
 - [ ] [#107](https://github.com/ibrahima-isi/meetstudent/issues/107) — [08/30] Choisir étudiant ou enseignant à l’inscription
 - [ ] [#108](https://github.com/ibrahima-isi/meetstudent/issues/108) — [09/30] Valider la spécialité enseignant et afficher les erreurs au bon champ
 - [ ] [#109](https://github.com/ibrahima-isi/meetstudent/issues/109) — [10/30] Masquer les favoris étudiants pour les enseignants
@@ -109,6 +109,6 @@ Preuves locales : [docs/evidence/ticket-105.md](docs/evidence/ticket-105.md). AP
 
 ### #106 — désassociation d’accréditation (2026-10-15)
 
-- [ ] [#106](https://github.com/ibrahima-isi/meetstudent/issues/106) : en cours dans `fix/accreditation-unlink-106` depuis le squash #105 `93635e0`.
+- [x] [#106](https://github.com/ibrahima-isi/meetstudent/issues/106) : implémentation et validation terminées dans `fix/accreditation-unlink-106` depuis le squash #105 `93635e0`.
 
-[Preuves provisoires](docs/evidence/ticket-106.md) : retrait du seul lien programme/accréditation et nouveau lien direct cours/accréditation sur choix explicite du propriétaire ; donnée et autres liens conservés, erreurs 403/404/409. API 558 tests, backoffice 300 tests/types/build, web 940 tests/types/build SSR, PostgreSQL V1–V23 avec schéma validé et HTTP de partage cours/programme vert. Revues Sol Standards/Spec sans écart ferme après corrections ; CI et squash de la [PR #137](https://github.com/ibrahima-isi/meetstudent/pull/137) restent à faire. #107 non commencé.
+[Preuves](docs/evidence/ticket-106.md) : retrait du seul lien programme/accréditation et nouveau lien direct cours/accréditation sur choix explicite du propriétaire ; donnée et autres liens conservés, erreurs 403/404/409. API 558 tests, backoffice 300 tests/types/build, web 940 tests/types/build SSR, PostgreSQL V1–V23 avec schéma validé et HTTP de partage cours/programme vert. Revues Sol Standards/Spec sans écart. [CI API/web/backoffice verte](https://github.com/ibrahima-isi/meetstudent/actions/runs/38774480762) sur `e177808` ; le présent closeout documentaire doit passer les trois CI sur son head final avant squash de la [PR #137](https://github.com/ibrahima-isi/meetstudent/pull/137). #107 non commencé.
