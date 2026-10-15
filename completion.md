@@ -59,7 +59,7 @@ Preuves : [docs/evidence/ticket-102.md](docs/evidence/ticket-102.md). Arrêt apr
 - [x] [#104](https://github.com/ibrahima-isi/meetstudent/issues/104) — [05/30] Supprimer un compte avec confirmation et nettoyage fiable
 - [x] [#105](https://github.com/ibrahima-isi/meetstudent/issues/105) — [06/30] Retourner des erreurs API utiles sur les mutations et conflits
 - [x] [#106](https://github.com/ibrahima-isi/meetstudent/issues/106) — [07/30] Désassocier une accréditation sans détruire la donnée partagée
-- [ ] [#107](https://github.com/ibrahima-isi/meetstudent/issues/107) — [08/30] Choisir étudiant ou enseignant à l’inscription
+- [x] [#107](https://github.com/ibrahima-isi/meetstudent/issues/107) — [08/30] Choisir étudiant ou enseignant à l’inscription
 - [ ] [#108](https://github.com/ibrahima-isi/meetstudent/issues/108) — [09/30] Valider la spécialité enseignant et afficher les erreurs au bon champ
 - [ ] [#109](https://github.com/ibrahima-isi/meetstudent/issues/109) — [10/30] Masquer les favoris étudiants pour les enseignants
 - [ ] [#110](https://github.com/ibrahima-isi/meetstudent/issues/110) — [11/30] Conserver une seule note par utilisateur et établissement
@@ -115,6 +115,6 @@ Preuves locales : [docs/evidence/ticket-105.md](docs/evidence/ticket-105.md). AP
 
 ### #107 — choix étudiant ou enseignant (2026-10-15)
 
-- [ ] [#107](https://github.com/ibrahima-isi/meetstudent/issues/107) : issue assignée, branche isolée `feat/registration-role-107` depuis le squash #106 `4ed101e`.
+- [x] [#107](https://github.com/ibrahima-isi/meetstudent/issues/107) : implémentation et validation terminées dans `feat/registration-role-107` depuis le squash #106 `4ed101e`.
 
-[Preuves en cours](docs/evidence/ticket-107.md) : tests HTTP et formulaire rouges puis verts pour le choix enseignant, le défaut étudiant, le refus des rôles interdits, l’erreur de champ et l’auto-connexion enseignant en anglais. API 561 tests, web 943 tests/types/build SSR, backoffice 300 tests/types/build verts ; PostgreSQL V1–V23 et trois tests HTTP verts. Revues Sol Standards/Spec sans écart ; CI et squash de la [PR #138](https://github.com/ibrahima-isi/meetstudent/pull/138) à terminer. #108 attend la livraison de #107.
+[Preuves](docs/evidence/ticket-107.md) : tests HTTP et formulaire rouges puis verts pour le choix enseignant, le défaut étudiant, le refus des rôles interdits, l’erreur de champ et l’auto-connexion enseignant en anglais. API 561 tests, web 943 tests/types/build SSR, backoffice 300 tests/types/build verts ; PostgreSQL V1–V23 et trois tests HTTP verts. Revues Sol Standards/Spec sans écart. [CI API/web/backoffice verte](https://github.com/ibrahima-isi/meetstudent/actions/runs/38795669488) sur `6488b54` ; le présent closeout documentaire doit passer les trois CI sur son head final avant squash de la [PR #138](https://github.com/ibrahima-isi/meetstudent/pull/138). #108 suit après livraison de #107.

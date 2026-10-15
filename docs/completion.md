@@ -110,6 +110,6 @@ Contrats HTTP 400/404/409 des tags, accréditations, programmes/cours et rôles,
 
 ### #107 — choix étudiant ou enseignant à l’inscription (2026-10-15)
 
-- [ ] [#107](https://github.com/ibrahima-isi/meetstudent/issues/107) : issue assignée, branche isolée `feat/registration-role-107` depuis le squash #106 `4ed101e`.
+- [x] [#107](https://github.com/ibrahima-isi/meetstudent/issues/107) : implémentation et validation terminées dans `feat/registration-role-107` depuis le squash #106 `4ed101e`.
 
-[Preuves en cours](evidence/ticket-107.md) : tests HTTP et formulaire rouges puis verts pour `ROLE_EXPERT`, défaut étudiant, rejet des rôles interdits, erreur de champ et auto-connexion enseignant en anglais. API 561 tests, web 943 tests/types/build SSR, backoffice 300 tests/types/build verts ; PostgreSQL V1–V23 et trois tests HTTP verts. Revues Sol Standards/Spec sans écart ; CI et squash de la [PR #138](https://github.com/ibrahima-isi/meetstudent/pull/138) à terminer. #108 attend la livraison de #107.
+[Preuves](evidence/ticket-107.md) : tests HTTP et formulaire rouges puis verts pour `ROLE_EXPERT`, défaut étudiant, rejet des rôles interdits, erreur de champ et auto-connexion enseignant en anglais. API 561 tests, web 943 tests/types/build SSR, backoffice 300 tests/types/build verts ; PostgreSQL V1–V23 et trois tests HTTP verts. Revues Sol Standards/Spec sans écart. [CI API/web/backoffice verte](https://github.com/ibrahima-isi/meetstudent/actions/runs/38795669488) sur `6488b54` ; le présent closeout documentaire doit passer les trois CI sur son head final avant squash de la [PR #138](https://github.com/ibrahima-isi/meetstudent/pull/138). #108 suit après livraison de #107.
