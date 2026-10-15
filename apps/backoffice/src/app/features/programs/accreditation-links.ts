@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input, si
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Accreditation } from '@models/accreditation';
+import { Page } from '@models/entities';
 import { CourseAccreditation } from '@models/course';
 import { ProgramAccreditation } from '@models/program';
 import { Observable, map, of, switchMap } from 'rxjs';
@@ -148,7 +149,7 @@ export class AccreditationLinks implements OnInit {
         failed();
       },
     });
-    this.loadCatalog(0).subscribe({
+    this.loadAllPages((page) => this.accreditations.list(page, ACCREDITATIONS_SIZE)).subscribe({
       next: (items) => items.forEach((accreditation) => this.remember(accreditation)),
       error: failed,
     });
@@ -213,22 +214,14 @@ export class AccreditationLinks implements OnInit {
 
   private loadLinks(): Observable<AccreditationLink[]> {
     return this.kind() === 'course'
-      ? this.loadCourseLinks(0)
+      ? this.loadAllPages((page) => this.courses.accreditationsOf(this.resourceId(), page))
       : this.programs.accreditationsOf(this.resourceId());
   }
 
-  private loadCourseLinks(pageNumber: number): Observable<AccreditationLink[]> {
-    return this.courses.accreditationsOf(this.resourceId(), pageNumber).pipe(
+  private loadAllPages<T>(fetchPage: (pageNumber: number) => Observable<Page<T>>, pageNumber = 0): Observable<T[]> {
+    return fetchPage(pageNumber).pipe(
       switchMap((page) => pageNumber + 1 < page.totalPages
-        ? this.loadCourseLinks(pageNumber + 1).pipe(map((next) => [...page.content, ...next]))
-        : of(page.content)),
-    );
-  }
-
-  private loadCatalog(pageNumber: number): Observable<Accreditation[]> {
-    return this.accreditations.list(pageNumber, ACCREDITATIONS_SIZE).pipe(
-      switchMap((page) => pageNumber + 1 < page.totalPages
-        ? this.loadCatalog(pageNumber + 1).pipe(map((next) => [...page.content, ...next]))
+        ? this.loadAllPages(fetchPage, pageNumber + 1).pipe(map((next) => [...page.content, ...next]))
         : of(page.content)),
     );
   }
