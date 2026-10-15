@@ -105,4 +105,10 @@ Preuves : [docs/evidence/ticket-104.md](docs/evidence/ticket-104.md). API compl�
 
 - [x] [#105](https://github.com/ibrahima-isi/meetstudent/issues/105) : implémentation et validation locales terminées. Worktree isolé `meetstudent-ticket-105` depuis `ab5d08b`, branche `fix/api-mutation-errors-105`.
 
-Preuves locales : [docs/evidence/ticket-105.md](docs/evidence/ticket-105.md). API 226 unitaires + 325 intégrations ; PostgreSQL V1–V22 et deux cas HTTP verts ; backoffice 289 tests/types/build, web 940 tests/types/build SSR. Revues Sol Standards/Spec finales : 0 écart ; [CI API/web/backoffice verte](https://github.com/ibrahima-isi/meetstudent/actions/runs/38751277592) sur `abbd474`. PostgreSQL jetable nettoyé. [PR #136](https://github.com/ibrahima-isi/meetstudent/pull/136) : CI du closeout documentaire, squash et issue close encore requis. #106 non commencé.
+Preuves locales : [docs/evidence/ticket-105.md](docs/evidence/ticket-105.md). API 226 unitaires + 325 intégrations ; PostgreSQL V1–V22 et deux cas HTTP verts ; backoffice 289 tests/types/build, web 940 tests/types/build SSR. Revues Sol Standards/Spec finales : 0 écart. [PR #136](https://github.com/ibrahima-isi/meetstudent/pull/136) squashée dans dev à `93635e0` après [CI finale API/web/backoffice verte](https://github.com/ibrahima-isi/meetstudent/actions/runs/38752013959) sur `c5b86a4` ; issue #105 fermée, PostgreSQL jetable nettoyé et worktree archivé. #106 suit.
+
+### #106 — désassociation d’accréditation (2026-10-15)
+
+- [ ] [#106](https://github.com/ibrahima-isi/meetstudent/issues/106) : en cours dans `fix/accreditation-unlink-106` depuis le squash #105 `93635e0`.
+
+[Preuves provisoires](docs/evidence/ticket-106.md) : retrait du seul lien programme/accréditation, donnée et autres liens conservés, 404 et permission 403 ; API 226 unitaires + 327 intégrations avant l’ajout du test de permission, backoffice 290 tests/types/build, web 940 tests/types/build SSR, PostgreSQL V1–V22 et deux HTTP. La portée cours/accréditation attend le choix du propriétaire ; revues Sol, PR/CI et squash restent à faire. #107 non commencé.

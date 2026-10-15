@@ -145,6 +145,17 @@ describe('ProgramAccreditations', () => {
     fixture.detectChanges();
     expect(all('li[data-link-row]').length).toBe(0);
     expect(options()).toEqual(['Choisir…', 'AACSB', 'EQUIS']);
+    expect(q('[data-notice]')!.textContent).toContain('Lien retiré');
+  });
+
+  it('explains a missing association and keeps the visible link', () => {
+    setup();
+    q<HTMLButtonElement>('[data-unlink]')!.click();
+    backend.expectOne(`${api}/programs/5/accreditations/2`)
+      .flush({ message: 'Association non trouvée' }, { status: 404, statusText: 'Not Found' });
+    fixture.detectChanges();
+    expect(q('[role=alert]')!.textContent).toContain('introuvable');
+    expect(all('li[data-link-row]').length).toBe(1);
   });
 
   it('shows an alert when the lists cannot be loaded', () => {

@@ -20,6 +20,11 @@ const ACCREDITATIONS_SIZE = 200;
     <fieldset class="space-y-3">
       <legend class="text-sm font-medium text-slate-700">Accréditations</legend>
       <app-alert [message]="error()" />
+      @if (notice()) {
+        <div role="status" data-notice class="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+          {{ notice() }}
+        </div>
+      }
 
       @if (links().length) {
         <ul class="divide-y divide-slate-100 rounded-md border border-slate-200 bg-white text-sm">
@@ -114,6 +119,7 @@ export class ProgramAccreditations implements OnInit {
   readonly loading = signal(true);
   readonly busy = signal(false);
   readonly error = signal('');
+  readonly notice = signal('');
   readonly linkError = signal('');
 
   readonly available = computed(() => {
@@ -150,6 +156,7 @@ export class ProgramAccreditations implements OnInit {
 
     this.busy.set(true);
     this.error.set('');
+    this.notice.set('');
     this.service.link(this.programId(), Number(accreditationId), Number(startsAt), Number(endsAt)).subscribe({
       next: (created) => {
         this.busy.set(false);
@@ -169,14 +176,18 @@ export class ProgramAccreditations implements OnInit {
     if (this.busy()) return;
     this.busy.set(true);
     this.error.set('');
+    this.notice.set('');
     this.service.unlink(this.programId(), link.accreditationId).subscribe({
       next: () => {
         this.busy.set(false);
         this.links.update((list) => list.filter((l) => l.accreditationId !== link.accreditationId));
+        this.notice.set('Lien retiré. L’accréditation reste disponible.');
       },
-      error: () => {
+      error: (err: unknown) => {
         this.busy.set(false);
-        this.error.set("La suppression de l'association a échoué.");
+        this.error.set(err instanceof HttpErrorResponse && err.status === 404
+          ? 'Association introuvable. Actualisez la page puis réessayez.'
+          : "La suppression de l'association a échoué.");
       },
     });
   }

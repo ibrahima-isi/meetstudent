@@ -97,8 +97,11 @@ public class ProgramAccreditationService {
      * @param programId the id of the program to remove the accreditation from
      * @param accreditationId the id of the accreditation that will be removed from the program
      */
+    @Transactional
     public void removeAccreditationFromProgram(Integer programId, Integer accreditationId) {
         ProgramAccreditationId id = new ProgramAccreditationId(programId, accreditationId);
-        programAccreditationRepository.deleteById(id);
+        ProgramAccreditation association = programAccreditationRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Association non trouvée"));
+        programAccreditationRepository.delete(association);
     }
 }
