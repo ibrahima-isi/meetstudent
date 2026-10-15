@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Accreditation } from '@models/accreditation';
 import { ProgramAccreditation } from '@models/program';
@@ -155,9 +156,11 @@ export class ProgramAccreditations implements OnInit {
         this.links.update((list) => [...list, created]);
         this.form.reset();
       },
-      error: () => {
+      error: (err: unknown) => {
         this.busy.set(false);
-        this.error.set("L'association a échoué.");
+        this.error.set(err instanceof HttpErrorResponse && err.status === 409
+          ? 'Cette accréditation est déjà associée au programme.'
+          : "L'association a échoué.");
       },
     });
   }

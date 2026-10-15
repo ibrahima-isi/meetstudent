@@ -121,6 +121,21 @@ describe('ProgramAccreditations', () => {
     expect(all('li[data-link-row]').length).toBe(1);
   });
 
+  it('explains a duplicate link conflict and keeps the submitted years', () => {
+    setup();
+    choose('3');
+    type('#startsAt', '2021');
+    type('#endsAt', '2026');
+    q<HTMLButtonElement>('[data-link]')!.click();
+    backend.expectOne((r) => r.url === `${api}/programs/5/accreditations/3`)
+      .flush({ message: 'This accreditation is already linked to the program' }, { status: 409, statusText: 'Conflict' });
+    fixture.detectChanges();
+    expect(q('[role=alert]')!.textContent).toContain('déjà associée');
+    expect(q<HTMLInputElement>('#startsAt')!.value).toBe('2021');
+    expect(q<HTMLInputElement>('#endsAt')!.value).toBe('2026');
+    expect(all('li[data-link-row]').length).toBe(1);
+  });
+
   it('unlinks an accreditation', () => {
     setup();
     q<HTMLButtonElement>('[data-unlink]')!.click();

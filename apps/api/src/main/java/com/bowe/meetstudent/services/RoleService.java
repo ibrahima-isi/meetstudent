@@ -7,6 +7,7 @@ import com.bowe.meetstudent.repositories.RoleRepository;
 import com.bowe.meetstudent.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -45,6 +46,7 @@ public class RoleService {
         return roleRepository.save(role);
     }
 
+    @Transactional
     public void deleteRole(Integer id) {
         Role role = roleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Role not found"));

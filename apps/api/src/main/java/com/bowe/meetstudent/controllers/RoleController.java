@@ -72,6 +72,7 @@ public class RoleController {
     @Operation(summary = "Delete a role by ID", description = "Removes a role from the system using its unique ID.")
     @ApiResponse(responseCode = "204", description = "Role deleted successfully")
     @ApiResponse(responseCode = "404", description = "Role not found")
+    @ApiResponse(responseCode = "409", description = "Role is still assigned to users")
     public ResponseEntity<Void> deleteRole(
             @Parameter(description = "ID of the role to delete") @PathVariable Integer id) {
         roleService.deleteRole(id);

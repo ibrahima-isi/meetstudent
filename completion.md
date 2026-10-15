@@ -105,4 +105,4 @@ Preuves : [docs/evidence/ticket-104.md](docs/evidence/ticket-104.md). API compl�
 
 - [ ] [#105](https://github.com/ibrahima-isi/meetstudent/issues/105) : réclamé, implémentation locale en revue. Worktree isolé `meetstudent-ticket-105` depuis `ab5d08b`, branche `fix/api-mutation-errors-105`.
 
-Preuves locales : [docs/evidence/ticket-105.md](docs/evidence/ticket-105.md). API 226 unitaires + 325 intégrations vertes sur code final ; PostgreSQL V1–V22 et deux cas HTTP verts ; backoffice 288 tests/types/build, web 940 tests/types/build SSR. Revues Standards/Spec et PR/CI/squash restent nécessaires. #106 non commencé.
+Preuves locales : [docs/evidence/ticket-105.md](docs/evidence/ticket-105.md). API 226 unitaires + 325 intégrations après corrections de revue ; PostgreSQL V1–V22 et deux cas HTTP verts ; backoffice 289 tests/types/build, web 940 tests/types/build SSR. Revues Standards/Spec effectuées et constats corrigés ; relecture du head final, [PR #136](https://github.com/ibrahima-isi/meetstudent/pull/136)/CI/squash restent nécessaires. #106 non commencé.

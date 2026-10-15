@@ -51,6 +51,7 @@ public class ProgramController {
     @Operation(summary = "Link an accreditation to a program", description = "Associates a specific accreditation with a program, specifying start and end years.")
     @ApiResponse(responseCode = "201", description = "Accreditation linked successfully")
     @ApiResponse(responseCode = "404", description = "Program or Accreditation not found")
+    @ApiResponse(responseCode = "409", description = "Accreditation is already linked to this program")
     public ResponseEntity<ProgramAccreditationDTO> linkAccreditation(
             @Parameter(description = "ID of the program") @PathVariable Integer programId,
             @Parameter(description = "ID of the accreditation") @PathVariable Integer accreditationId,
@@ -112,6 +113,7 @@ public class ProgramController {
     @Operation(summary = "Create a new program", description = "Adds a new educational program to the system, optionally linking it to a school.")
     @ApiResponse(responseCode = "201", description = "Program created successfully")
     @ApiResponse(responseCode = "400", description = "Invalid School ID or input data")
+    @ApiResponse(responseCode = "409", description = "Program code already exists")
     public ResponseEntity<ProgramDTO> create(@RequestBody @Validated({Default.class, OnCreate.class}) ProgramDTO programDTO) {
         Program program = programMapper.toEntity(programDTO);
         
@@ -186,6 +188,7 @@ public class ProgramController {
     @ApiResponse(responseCode = "200", description = "Program updated successfully")
     @ApiResponse(responseCode = "404", description = "Program not found")
     @ApiResponse(responseCode = "400", description = "Invalid School ID")
+    @ApiResponse(responseCode = "409", description = "Program code already exists")
     public ResponseEntity<ProgramDTO> update(
             @RequestBody @Validated ProgramDTO newProgramDTO,
             @Parameter(description = "ID of the program to update") @PathVariable int id) {
@@ -206,6 +209,7 @@ public class ProgramController {
     @ApiResponse(responseCode = "200", description = "Program patched successfully")
     @ApiResponse(responseCode = "404", description = "Program not found")
     @ApiResponse(responseCode = "400", description = "Invalid School ID")
+    @ApiResponse(responseCode = "409", description = "Program code already exists")
     public ResponseEntity<ProgramDTO> patch(
             @RequestBody @Validated ProgramDTO programDTO,
             @Parameter(description = "ID of the program to patch") @PathVariable int id) {

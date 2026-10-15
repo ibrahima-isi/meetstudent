@@ -43,6 +43,7 @@ public class CourseController {
     @Operation(summary = "Create a new course", description = "Adds a new course to the system, optionally linking it to a program.")
     @ApiResponse(responseCode = "201", description = "Course created successfully")
     @ApiResponse(responseCode = "400", description = "Invalid Program ID or input data")
+    @ApiResponse(responseCode = "409", description = "Course code already exists")
     public ResponseEntity<CourseDTO> create(@RequestBody @Validated({Default.class, OnCreate.class}) CourseDTO courseDTO) {
         Course course = courseMapper.toEntity(courseDTO);
         
@@ -117,6 +118,7 @@ public class CourseController {
     @ApiResponse(responseCode = "200", description = "Course updated successfully")
     @ApiResponse(responseCode = "404", description = "Course not found")
     @ApiResponse(responseCode = "400", description = "Invalid Program ID")
+    @ApiResponse(responseCode = "409", description = "Course code already exists")
     public ResponseEntity<CourseDTO> update(
             @RequestBody @Validated CourseDTO newCourseDTO,
             @Parameter(description = "ID of the course to update") @PathVariable int id) {
@@ -137,6 +139,7 @@ public class CourseController {
     @ApiResponse(responseCode = "200", description = "Course patched successfully")
     @ApiResponse(responseCode = "404", description = "Course not found")
     @ApiResponse(responseCode = "400", description = "Invalid Program ID")
+    @ApiResponse(responseCode = "409", description = "Course code already exists")
     public ResponseEntity<CourseDTO> patch(
             @RequestBody @Validated CourseDTO courseDTO,
             @Parameter(description = "ID of the course to patch") @PathVariable int id) {
