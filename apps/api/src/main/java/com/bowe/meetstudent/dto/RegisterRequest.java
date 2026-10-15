@@ -42,6 +42,10 @@ public class RegisterRequest {
 
     private String qualification;
 
+    /** Public registration accepts only these two account types; absent means student. */
+    @Pattern(regexp = "ROLE_STUDENT|ROLE_EXPERT", message = "Choisissez un rôle étudiant ou enseignant")
+    private String role;
+
     /** Language of the verification email; defaults to French when absent. */
     @Pattern(regexp = "fr|en", message = "Langue non supportée")
     private String lang;

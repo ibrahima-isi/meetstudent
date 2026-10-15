@@ -18,6 +18,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 
@@ -40,7 +41,7 @@ class UserControllerRegistrationTest {
         var saved = UserEntity.builder().email("jane@example.com").build();
         when(userService.isPasswordConfirmed(any(), any())).thenReturn(true);
         when(userService.emailNotExists(any())).thenReturn(true);
-        when(userService.registerStudent(any(), any())).thenReturn(saved);
+        when(userService.registerPublic(any(), isNull(), any())).thenReturn(saved);
         when(userMapper.toDTO(saved)).thenReturn(new UserDTO());
         doThrow(new com.bowe.meetstudent.exceptions.TooManyRequestsException("limit", 5))
                 .when(emailVerificationService).sendVerification(any(), any());
@@ -55,7 +56,7 @@ class UserControllerRegistrationTest {
         var saved = UserEntity.builder().email("jane@example.com").build();
         when(userService.isPasswordConfirmed(any(), any())).thenReturn(true);
         when(userService.emailNotExists(any())).thenReturn(true);
-        when(userService.registerStudent(any(), any())).thenReturn(saved);
+        when(userService.registerPublic(any(), isNull(), any())).thenReturn(saved);
         when(userMapper.toDTO(saved)).thenReturn(new UserDTO());
         doThrow(new IllegalStateException("db down")).when(emailVerificationService).sendVerification(any(), any());
 

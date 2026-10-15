@@ -3,6 +3,7 @@ package com.bowe.meetstudent.unit.services;
 import com.bowe.meetstudent.entities.UserEntity;
 import com.bowe.meetstudent.entities.School;
 import com.bowe.meetstudent.entities.Role;
+import com.bowe.meetstudent.exceptions.FieldValidationException;
 import com.bowe.meetstudent.exceptions.ResourceNotFoundException;
 import com.bowe.meetstudent.repositories.RoleRepository;
 import com.bowe.meetstudent.repositories.UserRepository;
@@ -71,7 +72,7 @@ class UserServiceTest {
     }
 
     @Test
-    void registerStudent_shouldAssignStudentRole_whenRequestedRoleIsAdmin() {
+    void registerPublic_shouldAssignStudentRole_whenRoleIsAbsent() {
         Role requestedRole = Role.builder().id(1).name("ROLE_ADMIN").build();
         Role studentRole = Role.builder().id(4).name("ROLE_STUDENT").build();
         UserEntity registration = UserEntity.builder()
@@ -86,7 +87,7 @@ class UserServiceTest {
         Mockito.when(passwordEncoder.encode("raw-password")).thenReturn("encoded-password");
         Mockito.when(userRepository.save(any(UserEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        UserEntity saved = userService.registerStudent(registration, passwordEncoder);
+        UserEntity saved = userService.registerPublic(registration, null, passwordEncoder);
 
         assertEquals(studentRole, saved.getRole());
         assertEquals("encoded-password", saved.getPassword());
@@ -94,13 +95,24 @@ class UserServiceTest {
     }
 
     @Test
-    void registerStudent_shouldFail_whenDefaultStudentRoleIsMissing() {
+    void registerPublic_shouldFail_whenDefaultStudentRoleIsMissing() {
         UserEntity registration = UserEntity.builder().password("raw-password").build();
         Mockito.when(roleRepository.findByName("ROLE_STUDENT")).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class,
-                () -> userService.registerStudent(registration, passwordEncoder));
+                () -> userService.registerPublic(registration, null, passwordEncoder));
 
+        Mockito.verify(userRepository, Mockito.never()).save(any(UserEntity.class));
+    }
+
+    @Test
+    void registerPublic_shouldRejectAnAdminRoleWithoutSaving() {
+        UserEntity registration = UserEntity.builder().password("raw-password").build();
+
+        assertThrows(FieldValidationException.class,
+                () -> userService.registerPublic(registration, "ROLE_ADMIN", passwordEncoder));
+
+        Mockito.verify(roleRepository, Mockito.never()).findByName(any());
         Mockito.verify(userRepository, Mockito.never()).save(any(UserEntity.class));
     }
 

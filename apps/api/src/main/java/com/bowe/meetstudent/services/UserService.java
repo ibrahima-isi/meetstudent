@@ -52,10 +52,14 @@ public class UserService {
         return this.userRepository.save(userEntity);
     }
 
-    public UserEntity registerStudent(UserEntity userEntity, PasswordEncoder passwordEncoder) {
-        Role studentRole = roleRepository.findByName(DEFAULT_REGISTRATION_ROLE)
-                .orElseThrow(() -> new ResourceNotFoundException("Default student role not found"));
-        userEntity.setRole(studentRole);
+    public UserEntity registerPublic(UserEntity userEntity, String requestedRole, PasswordEncoder passwordEncoder) {
+        String roleName = requestedRole == null ? DEFAULT_REGISTRATION_ROLE : requestedRole;
+        if (!DEFAULT_REGISTRATION_ROLE.equals(roleName) && !"ROLE_EXPERT".equals(roleName)) {
+            throw new FieldValidationException("role", "Choisissez un rôle étudiant ou enseignant");
+        }
+        Role role = roleRepository.findByName(roleName)
+                .orElseThrow(() -> new ResourceNotFoundException("Registration role not found"));
+        userEntity.setRole(role);
         return saveUser(userEntity, passwordEncoder);
     }
 
