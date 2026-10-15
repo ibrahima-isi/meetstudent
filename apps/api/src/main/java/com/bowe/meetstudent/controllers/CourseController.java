@@ -1,10 +1,13 @@
 package com.bowe.meetstudent.controllers;
 
 import com.bowe.meetstudent.dto.CourseDTO;
+import com.bowe.meetstudent.dto.CourseAccreditationDTO;
 import com.bowe.meetstudent.exceptions.FieldValidationException;
 import com.bowe.meetstudent.entities.Course;
 import com.bowe.meetstudent.entities.Program;
 import com.bowe.meetstudent.mappers.implementations.CourseMapper;
+import com.bowe.meetstudent.mappers.implementations.CourseAccreditationMapper;
+import com.bowe.meetstudent.services.CourseAccreditationService;
 import com.bowe.meetstudent.services.CourseRateService;
 import com.bowe.meetstudent.services.CourseService;
 import com.bowe.meetstudent.services.ProgramService;
@@ -38,6 +41,55 @@ public class CourseController {
     private final CourseMapper courseMapper;
     private final ModelMapper modelMapper;
     private final CourseRateService courseRateService;
+    private final CourseAccreditationService courseAccreditationService;
+    private final CourseAccreditationMapper courseAccreditationMapper;
+
+    @PostMapping(path = "/{courseId}/accreditations/{accreditationId}")
+    @Operation(summary = "Link an accreditation to a course", description = "Creates a course-specific accreditation association with validity years.")
+    @ApiResponse(responseCode = "201", description = "Accreditation linked successfully")
+    @ApiResponse(responseCode = "404", description = "Course or accreditation not found")
+    @ApiResponse(responseCode = "409", description = "Accreditation is already linked to this course")
+    public ResponseEntity<CourseAccreditationDTO> linkAccreditation(
+            @PathVariable Integer courseId,
+            @PathVariable Integer accreditationId,
+            @RequestParam Integer startsAt,
+            @RequestParam Integer endsAt) {
+        var linked = courseAccreditationService.add(courseId, accreditationId, startsAt, endsAt);
+        return new ResponseEntity<>(courseAccreditationMapper.toDTO(linked), HttpStatus.CREATED);
+    }
+
+    @GetMapping(path = "/{courseId}/accreditations/{accreditationId}")
+    @Operation(summary = "Get a course accreditation", description = "Retrieves one course-specific accreditation association.")
+    @ApiResponse(responseCode = "200", description = "Association found")
+    @ApiResponse(responseCode = "404", description = "Association not found")
+    public ResponseEntity<CourseAccreditationDTO> getAccreditation(
+            @PathVariable Integer courseId,
+            @PathVariable Integer accreditationId) {
+        return courseAccreditationService.findById(courseId, accreditationId)
+                .map(link -> ResponseEntity.ok(courseAccreditationMapper.toDTO(link)))
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping(path = "/{courseId}/accreditations")
+    @Operation(summary = "Get course accreditations", description = "Lists the accreditations linked directly to a course.")
+    @ApiResponse(responseCode = "200", description = "Associations listed")
+    @ApiResponse(responseCode = "404", description = "Course not found")
+    public ResponseEntity<Page<CourseAccreditationDTO>> getAccreditations(
+            @PathVariable Integer courseId, @ParameterObject Pageable pageable) {
+        return ResponseEntity.ok(courseAccreditationService.findByCourseId(courseId, pageable)
+                .map(courseAccreditationMapper::toDTO));
+    }
+
+    @DeleteMapping(path = "/{courseId}/accreditations/{accreditationId}")
+    @Operation(summary = "Unlink an accreditation from a course", description = "Deletes only the selected course-accreditation association.")
+    @ApiResponse(responseCode = "204", description = "Accreditation unlinked successfully")
+    @ApiResponse(responseCode = "404", description = "Association not found")
+    public ResponseEntity<Void> unlinkAccreditation(
+            @PathVariable Integer courseId,
+            @PathVariable Integer accreditationId) {
+        courseAccreditationService.remove(courseId, accreditationId);
+        return ResponseEntity.noContent().build();
+    }
 
     @PostMapping
     @Operation(summary = "Create a new course", description = "Adds a new course to the system, optionally linking it to a program.")

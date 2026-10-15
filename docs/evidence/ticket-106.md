@@ -16,6 +16,12 @@ Base isolée : `origin/dev` à `93635e0c3af57e66de614786f93e1641b1ec9898`, branc
 - Web : 940 tests, contrôle TypeScript et build SSR verts, sans modification web.
 - PostgreSQL 18 jetable : Flyway V1–V22 et `ddl-auto=validate` ; tests HTTP ciblés de conservation du lien partagé et du 404 verts sur deux bases propres. Après retrait, requête SQL : 1 accréditation et 1 association restantes. Conteneur arrêté et supprimé.
 
-## Portée encore à décider
+## Cours / accréditation
 
-Le code actuel ne possède pas de relation directe cours/accréditation : un cours appartient à un programme, et seule la relation programme/accréditation existe. Le ticket mentionne également une désassociation cours/accréditation. Choix demandé au propriétaire : ajouter une relation directe et son retrait, ou couvrir le cours par les accréditations de son programme. Aucune PR ni revue finale avant cette décision.
+- Choix explicite du propriétaire : ajouter la relation directe cours/accréditation et sa désassociation. Migration Flyway V23, clé composée et contrôles HTTP de lecture, association et retrait.
+- TDD HTTP : POST absent d’abord en 404, puis vert. Deux cours et un programme partagent une accréditation ; retirer le premier lien conserve l’autre lien de cours, le lien de programme et l’accréditation. Lien absent 404, rôle étudiant interdit 403, doublon 409, ressource absente 404 et suppression de l’accréditation encore liée 409.
+- Backoffice : tests du composant rouges puis verts pour l’affichage, l’association avec années, le retrait avec confirmation et la réponse 404. La fiche d’un cours enregistré expose ces actions ; l’éditeur est commun aux cours et programmes. Une accréditation liée hors de la première page du catalogue redevient sélectionnable après retrait. 297 tests passent, TypeScript et build de production verts.
+- API complète après ajout : 558 tests (226 unitaires, 332 intégrations), aucun échec.
+- PostgreSQL 18 jetable neuf : Flyway V1–V23, `ddl-auto=validate` et test HTTP du partage cours/programme verts. Après retrait, requêtes SQL : version 23, une accréditation, une association de cours et une association de programme. Conteneur arrêté et supprimé.
+
+La première revue indépendante a demandé de paginer la liste HTTP des liens de cours et de traiter les accréditations hors de la première page ; ces deux points sont corrigés. La duplication UI signalée a été extraite dans un éditeur commun. La revue finale, la PR et les trois CI sur le head final restent à accomplir.

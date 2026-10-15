@@ -104,6 +104,6 @@ Contrats HTTP 400/404/409 des tags, accréditations, programmes/cours et rôles,
 
 ### #106 — désassociation d’accréditation (2026-10-15)
 
-- [ ] [#106](https://github.com/ibrahima-isi/meetstudent/issues/106) : branche isolée `fix/accreditation-unlink-106` depuis `93635e0`, programme/accréditation corrigé et validé localement ; portée cours/accréditation en attente du choix du propriétaire.
+- [ ] [#106](https://github.com/ibrahima-isi/meetstudent/issues/106) : branche isolée `fix/accreditation-unlink-106` depuis `93635e0` ; lien programme corrigé et lien direct cours/accréditation ajouté sur choix explicite du propriétaire.
 
-[Preuves provisoires](evidence/ticket-106.md) : HTTP rouge → vert sur conservation d’une accréditation partagée et 404, contrôle de permission 403, rendu backoffice rouge → vert, PostgreSQL V1–V22 et deux HTTP verts. Revue indépendante, PR/CI et clôture non commencées ; #107 reste en attente de la livraison de #106.
+[Preuves provisoires](evidence/ticket-106.md) : HTTP et UI rouges → verts ; API complète 558 tests, backoffice 297 tests/types/build, web 940 tests/types/build SSR verts ; PostgreSQL V1–V23 et HTTP de partage cours/programme verts avec schéma validé. Premières remarques Standards/Spec corrigées ; revue finale, PR/CI et clôture à faire. #107 reste en attente de la livraison de #106.

@@ -7,6 +7,7 @@ import { CourseService } from '@services/course.service';
 import { MediaService } from '@services/media.service';
 import { Alert } from '@shared/components/alert/alert';
 import { ImageField } from '@shared/components/image-field/image-field';
+import { CourseAccreditations } from './course-accreditations';
 import { applyFieldErrors, notBlank } from '@shared/utils/form-errors';
 import { fieldErrorsFrom, messageFrom } from '@shared/utils/http-errors';
 
@@ -17,7 +18,7 @@ class UploadFailed {
 
 @Component({
   selector: 'app-course-form',
-  imports: [ReactiveFormsModule, Alert, ImageField],
+  imports: [ReactiveFormsModule, Alert, ImageField, CourseAccreditations],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <form [formGroup]="form" (ngSubmit)="submit()" novalidate class="max-w-2xl space-y-6">
@@ -60,6 +61,10 @@ class UploadFailed {
         [existing]="!!course()?.photoMediaId"
         (fileChange)="onFile($event)"
       />
+
+      @if (course(); as existing) {
+        <app-course-accreditations [courseId]="existing.id" />
+      }
 
       <div class="flex gap-3">
         <button

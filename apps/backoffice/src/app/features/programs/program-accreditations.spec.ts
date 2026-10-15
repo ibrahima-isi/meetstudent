@@ -65,6 +65,15 @@ describe('ProgramAccreditations', () => {
     expect(options()).toEqual(['Choisir…', 'EQUIS']);
   });
 
+  it('offers a linked accreditation outside the first catalog page after unlink', () => {
+    setup([{ programId: 5, accreditationId: 250, accreditation: { id: 250, name: 'AMBA' }, startsAt: 2020, endsAt: 2025 }]);
+    q<HTMLButtonElement>('[data-unlink]')!.click();
+    backend.expectOne(`${api}/programs/5/accreditations/250`)
+      .flush(null, { status: 204, statusText: 'No Content' });
+    fixture.detectChanges();
+    expect(options()).toContain('AMBA');
+  });
+
   it('says so when nothing is linked', () => {
     setup([]);
     expect(el().textContent).toContain('Aucune accréditation');

@@ -1,4 +1,13 @@
 import { Media } from './entities';
+import { Accreditation } from './accreditation';
+
+export interface CourseAccreditation {
+  courseId: number;
+  accreditationId: number;
+  accreditation?: Accreditation | null;
+  startsAt: number;
+  endsAt: number;
+}
 
 /** Mirrors the API `CourseDTO`. Embedded in a program, only `id`, `name`, `code` and `photoMediaId` are reliable. */
 export interface Course {

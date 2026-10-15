@@ -51,6 +51,10 @@ public class AccreditationService {
                     && !accreditation.getProgramAccreditations().isEmpty()) {
                 throw new ConflictException("This accreditation is still linked to programs");
             }
+            if (accreditation.getCourseAccreditations() != null
+                    && !accreditation.getCourseAccreditations().isEmpty()) {
+                throw new ConflictException("This accreditation is still linked to courses");
+            }
             this.accreditationRepository.delete(accreditation);
         });
     }

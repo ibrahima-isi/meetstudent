@@ -2,9 +2,13 @@ package com.bowe.meetstudent.integration.controllers;
 
 import com.bowe.meetstudent.TestDataUtil;
 import com.bowe.meetstudent.dto.CourseDTO;
+import com.bowe.meetstudent.entities.Accreditation;
 import com.bowe.meetstudent.entities.Program;
+import com.bowe.meetstudent.mappers.implementations.AccreditationMapper;
 import com.bowe.meetstudent.mappers.implementations.CourseMapper;
+import com.bowe.meetstudent.services.AccreditationService;
 import com.bowe.meetstudent.services.CourseService;
+import com.bowe.meetstudent.services.ProgramAccreditationService;
 import com.bowe.meetstudent.services.ProgramService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -43,6 +47,15 @@ class CourseControllerIntegrationTests {
     private CourseMapper courseMapper;
 
     @Autowired
+    private AccreditationService accreditationService;
+
+    @Autowired
+    private AccreditationMapper accreditationMapper;
+
+    @Autowired
+    private ProgramAccreditationService programAccreditationService;
+
+    @Autowired
     private com.bowe.meetstudent.repositories.MediaRepository mediaRepository;
 
     private com.bowe.meetstudent.entities.Media persistedCoursePhoto() {
@@ -53,6 +66,102 @@ class CourseControllerIntegrationTests {
                 .visibility(com.bowe.meetstudent.entities.enums.MediaVisibility.PUBLIC)
                 .build();
         return mediaRepository.save(media);
+    }
+
+    @Test
+    void unlinkCourseAccreditationPreservesSharedAccreditationAndOtherLinks() throws Exception {
+        var first = courseService.save(courseMapper.toEntity(TestDataUtil.createCourseDto()));
+        CourseDTO secondDto = TestDataUtil.createCourseDto();
+        secondDto.setCode("C106B");
+        var second = courseService.save(courseMapper.toEntity(secondDto));
+        Program program = new Program();
+        program.setName("Shared program");
+        program.setCode("P106C");
+        program = programService.save(program);
+        Accreditation accreditation = accreditationService.save(accreditationMapper.toEntity(TestDataUtil.createAccreditationDto()));
+        programAccreditationService.addAccreditationToProgram(program.getId(), accreditation.getId(), 2020, 2025);
+
+        String firstUrl = "/api/v1/courses/" + first.getId() + "/accreditations/" + accreditation.getId();
+        String secondUrl = "/api/v1/courses/" + second.getId() + "/accreditations/" + accreditation.getId();
+        mockMvc.perform(MockMvcRequestBuilders.post(firstUrl)
+                        .param("startsAt", "2021").param("endsAt", "2026")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isCreated())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.startsAt").value(2021));
+        mockMvc.perform(MockMvcRequestBuilders.post(secondUrl)
+                        .param("startsAt", "2022").param("endsAt", "2027")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isCreated());
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/courses/" + first.getId() + "/accreditations"))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].accreditationId").value(accreditation.getId()));
+
+        mockMvc.perform(MockMvcRequestBuilders.delete(firstUrl).with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isNoContent());
+        mockMvc.perform(MockMvcRequestBuilders.get(firstUrl))
+                .andExpect(MockMvcResultMatchers.status().isNotFound());
+        mockMvc.perform(MockMvcRequestBuilders.get(secondUrl))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.startsAt").value(2022));
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/programs/" + program.getId()
+                        + "/accreditations/" + accreditation.getId()))
+                .andExpect(MockMvcResultMatchers.status().isOk());
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/accreditations/" + accreditation.getId()))
+                .andExpect(MockMvcResultMatchers.status().isOk());
+    }
+
+    @Test
+    void courseAccreditationMissingLinkAndStudentMutationKeepData() throws Exception {
+        var course = courseService.save(courseMapper.toEntity(TestDataUtil.createCourseDto()));
+        Accreditation accreditation = accreditationService.save(accreditationMapper.toEntity(TestDataUtil.createAccreditationDto()));
+        String url = "/api/v1/courses/" + course.getId() + "/accreditations/" + accreditation.getId();
+        mockMvc.perform(MockMvcRequestBuilders.delete(url).with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isNotFound());
+        mockMvc.perform(MockMvcRequestBuilders.post(url)
+                        .param("startsAt", "2021").param("endsAt", "2026")
+                        .with(TestDataUtil.mockUser("ROLE_STUDENT")))
+                .andExpect(MockMvcResultMatchers.status().isForbidden());
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/accreditations/" + accreditation.getId()))
+                .andExpect(MockMvcResultMatchers.status().isOk());
+    }
+
+    @Test
+    void courseAccreditationRejectsDuplicateAndMissingResources() throws Exception {
+        var course = courseService.save(courseMapper.toEntity(TestDataUtil.createCourseDto()));
+        Accreditation accreditation = accreditationService.save(accreditationMapper.toEntity(TestDataUtil.createAccreditationDto()));
+        String url = "/api/v1/courses/" + course.getId() + "/accreditations/" + accreditation.getId();
+        mockMvc.perform(MockMvcRequestBuilders.post(url)
+                        .param("startsAt", "2020").param("endsAt", "2025")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isCreated());
+        mockMvc.perform(MockMvcRequestBuilders.post(url)
+                        .param("startsAt", "2020").param("endsAt", "2025")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isConflict());
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/courses/987654/accreditations/" + accreditation.getId())
+                        .param("startsAt", "2020").param("endsAt", "2025")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isNotFound());
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/courses/" + course.getId() + "/accreditations/987654")
+                        .param("startsAt", "2020").param("endsAt", "2025")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isNotFound());
+    }
+
+    @Test
+    void accreditationLinkedOnlyToCourseCannotBeDeleted() throws Exception {
+        var course = courseService.save(courseMapper.toEntity(TestDataUtil.createCourseDto()));
+        Accreditation accreditation = accreditationService.save(accreditationMapper.toEntity(TestDataUtil.createAccreditationDto()));
+        String url = "/api/v1/courses/" + course.getId() + "/accreditations/" + accreditation.getId();
+        mockMvc.perform(MockMvcRequestBuilders.post(url)
+                        .param("startsAt", "2020").param("endsAt", "2025")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isCreated());
+        mockMvc.perform(MockMvcRequestBuilders.delete("/api/v1/accreditations/" + accreditation.getId())
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isConflict());
+        mockMvc.perform(MockMvcRequestBuilders.get(url))
+                .andExpect(MockMvcResultMatchers.status().isOk());
     }
 
     @Test

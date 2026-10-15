@@ -56,6 +56,13 @@ describe('CourseForm', () => {
     fixture.componentRef.setInput('programId', 4);
     fixture.componentRef.setInput('course', course);
     fixture.detectChanges();
+    if (course) {
+      backend.expectOne((request) => request.url === `${api}/courses/${course.id}/accreditations`)
+        .flush({ content: [] });
+      backend.expectOne((request) => request.url === `${api}/accreditations`)
+        .flush({ content: [{ id: 2, name: 'AACSB' }] });
+      fixture.detectChanges();
+    }
   }
 
   afterEach(() => backend.verify());
@@ -71,6 +78,12 @@ describe('CourseForm', () => {
     expect(q<HTMLInputElement>('#name')!.value).toBe('Algèbre');
     expect(q<HTMLInputElement>('#code')!.value).toBe('ALG');
     expect(el().textContent).toContain('déjà enregistrée');
+  });
+
+  it('offers course-specific accreditation links when editing a saved course', () => {
+    setup(existing);
+    expect(q('app-course-accreditations')).not.toBeNull();
+    expect(el().textContent).toContain('AACSB');
   });
 
   it('requires a name and sends nothing while invalid', () => {
