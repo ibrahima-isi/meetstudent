@@ -10,6 +10,9 @@
 > - **§1 registration fix — DONE.** `register-form.component.ts` now sends
 >   `confirmedPassword` and no `role`; `AuthService.register()` is typed with a
 >   `RegisterPayload` interface instead of the payload described here.
+> - **Update #107 (2026-10-15):** the no-`role` statement above is superseded.
+>   Public registration now accepts `ROLE_STUDENT` or `ROLE_EXPERT` as a string;
+>   an absent role defaults to student. Other roles return a field error.
 > - **§2's three "broken template bindings" — DONE.** All three now bind to
 >   the resolved `cover`/`logo`/`photo` media objects.
 > - **§2's `environment.prod.ts` instruction is wrong for this repo — there is

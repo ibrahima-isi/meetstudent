@@ -1,4 +1,4 @@
-import { Component, signal, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -28,11 +28,13 @@ const API_FIELDS: Record<string, { step: 1 | 2; control: string }> = {
   email: { step: 1, control: 'email' },
   password: { step: 2, control: 'password' },
   confirmedPassword: { step: 2, control: 'confirmPassword' },
+  role: { step: 1, control: 'role' },
 };
 
 @Component({
   selector: 'app-register-form',
   imports: [CommonModule, ReactiveFormsModule, LucideAngularModule, TranslocoDirective],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './register-form.component.html'
 })
 export class RegisterFormComponent {
@@ -138,6 +140,7 @@ export class RegisterFormComponent {
 
   setUserType(type: 'student' | 'teacher') {
     this.userType.set(type);
+    this.serverErrors.update(({ role: _dropped, ...rest }) => rest);
     if (type === 'student') {
       this.step1Form.get('bacType')?.setValidators(Validators.required);
       this.step1Form.get('collegeLevel')?.setValidators(Validators.required);
@@ -222,10 +225,7 @@ export class RegisterFormComponent {
     this.isLoading.set(true);
 
     const email = this.step1Form.value.email;
-    // Payload must match the backend RegisterRequest exactly:
-    // firstname, lastname, email, password, confirmedPassword, birthday, qualification.
-    // `role` is deliberately NOT sent — registration always creates a STUDENT, and
-    // role changes go through PATCH /users/{id}/role (admin-only).
+    // Only the two public registration roles are sent; the API enforces the allowlist.
     // The step1 fields bacType / collegeLevel / specialty / town have no backend
     // counterpart and are dropped rather than silently posted and ignored.
     const userData: RegisterPayload = {
@@ -234,6 +234,8 @@ export class RegisterFormComponent {
       email,
       password,
       confirmedPassword: confirmPassword,
+      role: this.userType() === 'teacher' ? 'ROLE_EXPERT'
+        : this.userType() === 'student' ? 'ROLE_STUDENT' : undefined,
       lang: this.locale.active()
     };
 
