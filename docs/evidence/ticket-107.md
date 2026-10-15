@@ -15,4 +15,4 @@ Base isolée : squash #106 sur `dev` à `4ed101e0c6d08f6627de855557743fee204c6a3
 - Backoffice inchangé : 300 tests headless, contrôle TypeScript et build de production verts.
 - PostgreSQL 18 jetable : Flyway V1–V23, schéma validé et trois tests HTTP ciblés verts. Requête SQL : un compte `ROLE_EXPERT`, un `ROLE_STUDENT` et aucun compte issu des demandes de rôles interdits. Conteneur arrêté et supprimé.
 
-Revues indépendantes Standards/Spec, PR, CI sur le head final et squash restent à effectuer.
+Les revues Sol Standards et Spec n’ont aucun constat actionnable après suppression de la validation de rôle dupliquée dans le DTO. [PR #138](https://github.com/ibrahima-isi/meetstudent/pull/138) vers `dev` ; CI sur le head final et squash restent à effectuer.
