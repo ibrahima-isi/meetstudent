@@ -155,16 +155,12 @@ class UserControllerIntegrationTests {
     }
 
     @Test
-    void testThatPublicRegistrationAssignsStudentRoleEvenWhenAdminRoleIsRequested() throws Exception {
+    void testThatPublicRegistrationDefaultsToStudentWhenRoleIsAbsent() throws Exception {
         Role studentRole = ensureRole("ROLE_STUDENT");
-        Role adminRole = ensureRole("ROLE_ADMIN");
-        UserDTO userDTO = TestDataUtil.createUserDto();
-        userDTO.setRole(adminRole);
-
         mockMvc.perform(
                 MockMvcRequestBuilders.post("/api/v1/users")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(userDTO))
+                        .content("{\"firstname\":\"Awa\",\"lastname\":\"Diop\",\"email\":\"student107@example.com\",\"password\":\"password107\",\"confirmedPassword\":\"password107\"}")
         ).andExpect(
                 MockMvcResultMatchers.status().isCreated()
         ).andExpect(
@@ -172,6 +168,33 @@ class UserControllerIntegrationTests {
         ).andExpect(
                 MockMvcResultMatchers.jsonPath("$.role.name").value("ROLE_STUDENT")
         );
+    }
+
+    @Test
+    void testThatPublicRegistrationCanChooseTeacherRole() throws Exception {
+        ensureRole("ROLE_STUDENT");
+        ensureRole("ROLE_EXPERT");
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"firstname\":\"Awa\",\"lastname\":\"Diop\",\"email\":\"awa107@example.com\",\"password\":\"password107\",\"confirmedPassword\":\"password107\",\"role\":\"ROLE_EXPERT\",\"lang\":\"en\"}"))
+                .andExpect(MockMvcResultMatchers.status().isCreated())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.role.name").value("ROLE_EXPERT"));
+    }
+
+    @Test
+    void testThatPublicRegistrationRejectsAdminAndUnknownRolesAsFieldErrors() throws Exception {
+        ensureRole("ROLE_STUDENT");
+        ensureRole("ROLE_ADMIN");
+        for (String role : new String[] {"ROLE_ADMIN", "ROLE_MANAGER"}) {
+            String email = role.toLowerCase() + "107@example.com";
+            mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/users")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"firstname\":\"Awa\",\"lastname\":\"Diop\",\"email\":\"" + email
+                                    + "\",\"password\":\"password107\",\"confirmedPassword\":\"password107\",\"role\":\"" + role + "\"}"))
+                    .andExpect(MockMvcResultMatchers.status().isBadRequest())
+                    .andExpect(MockMvcResultMatchers.jsonPath("$.role").isNotEmpty());
+            org.junit.jupiter.api.Assertions.assertTrue(userService.getUserByEmail(email).isEmpty());
+        }
     }
 
     @Test

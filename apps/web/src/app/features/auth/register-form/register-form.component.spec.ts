@@ -15,8 +15,8 @@ import { environment } from '../../../../environments/environment';
 
 /**
  * The backend binds RegisterRequest, which requires `confirmedPassword` and
- * always creates a STUDENT. Sending `confirmPassword` (or omitting it) makes
- * every signup 400, and any `role` in the payload is silently ignored.
+ * accepts only STUDENT or EXPERT. Sending `confirmPassword` (or omitting it)
+ * makes every signup 400; the selected role must reach the API.
  */
 describe('RegisterFormComponent registration payload', () => {
   let fixture: ComponentFixture<RegisterFormComponent>;
@@ -100,6 +100,26 @@ describe('RegisterFormComponent registration payload', () => {
       expect(navigate).toHaveBeenCalledOnceWith(['/', 'en', 'home']);
     });
 
+    it('keeps the automatic sign-in and English route for a teacher', () => {
+      const navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+      spyOn(TestBed.inject(LocaleService), 'active').and.returnValue('en');
+      login.and.returnValue(of(user));
+      fillValidForm();
+      component.setUserType('teacher');
+      component.step1Form.patchValue({ specialty: 'Mathématiques' });
+      component.handleNextStep();
+      expect(component.step()).toBe(2);
+      component.handleSubmit();
+
+      const request = httpMock.expectOne(`${environment.apiUrl}/users`);
+      expect(request.request.body.role).toBe('ROLE_EXPERT');
+      expect(request.request.body.lang).toBe('en');
+      request.flush({});
+
+      expect(login).toHaveBeenCalledOnceWith('awa@example.com', 'sup3rsecret');
+      expect(navigate).toHaveBeenCalledOnceWith(['/', 'en', 'home']);
+    });
+
     it('goes back to the page the guard interrupted when the visitor came from one', () => {
       const router = TestBed.inject(Router);
       const navigate = spyOn(router, 'navigate').and.resolveTo(true);
@@ -145,15 +165,23 @@ describe('RegisterFormComponent registration payload', () => {
     req.flush({});
   });
 
-  // Opposite of the rule: role must NOT be client-controlled. Registration
-  // always yields a STUDENT; role changes go through PATCH /users/{id}/role.
-  it('never sends a role in the registration payload', () => {
+  it('sends ROLE_EXPERT when the visitor chooses teacher', () => {
     fillValidForm();
     component.setUserType('teacher');
     component.handleSubmit();
 
     const req = httpMock.expectOne(`${environment.apiUrl}/users`);
-    expect(req.request.body.role).toBeUndefined();
+    expect(req.request.body.role).toBe('ROLE_EXPERT');
+    req.flush({});
+  });
+
+  it('sends ROLE_STUDENT when the visitor chooses student', () => {
+    fillValidForm();
+    component.setUserType('student');
+    component.handleSubmit();
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/users`);
+    expect(req.request.body.role).toBe('ROLE_STUDENT');
     req.flush({});
   });
 
@@ -282,6 +310,19 @@ describe('RegisterFormComponent translations', () => {
     expect(component.step()).toBe(2);
     const message = fixture.nativeElement.querySelector('[data-testid="error-confirmedPassword"]') as HTMLElement;
     expect(message.textContent).toContain('Les mots de passe ne correspondent pas');
+  });
+
+  it('shows the API role message beside the account type choices', async () => {
+    await render('en');
+    await submitWith({ role: 'Choose Student or Teacher' });
+    await settle();
+
+    expect(fixture.componentInstance.step()).toBe(1);
+    const message = fixture.nativeElement.querySelector('[data-testid="error-role"]') as HTMLElement;
+    expect(message.textContent).toContain('Choose Student or Teacher');
+    fixture.componentInstance.setUserType('teacher');
+    await settle();
+    expect(fixture.nativeElement.querySelector('[data-testid="error-role"]')).toBeNull();
   });
 
   it('clears a field error as soon as the visitor edits that field', async () => {

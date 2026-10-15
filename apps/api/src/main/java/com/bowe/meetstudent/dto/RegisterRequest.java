@@ -42,6 +42,9 @@ public class RegisterRequest {
 
     private String qualification;
 
+    /** The public role policy is enforced by UserService; absent means student. */
+    private String role;
+
     /** Language of the verification email; defaults to French when absent. */
     @Pattern(regexp = "fr|en", message = "Langue non supportée")
     private String lang;

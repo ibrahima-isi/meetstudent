@@ -7,7 +7,7 @@ import { environment } from '../../environments/environment';
 
 /**
  * Exactly the backend `RegisterRequest` fields (`UserController.saveUser`).
- * `role` is deliberately absent — registration always creates a STUDENT.
+ * Public registration accepts only the student or teacher role.
  */
 export interface RegisterPayload {
   firstname: string;
@@ -17,6 +17,7 @@ export interface RegisterPayload {
   confirmedPassword: string;
   birthday?: string;
   qualification?: string;
+  role?: 'ROLE_STUDENT' | 'ROLE_EXPERT';
   /** The language of the confirmation email. */
   lang?: string;
 }

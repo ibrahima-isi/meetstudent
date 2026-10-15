@@ -49,7 +49,7 @@ public class UserController {
     private final EmailVerificationService emailVerificationService;
 
     @PostMapping
-    @Operation(summary = "Create a new user", description = "Registers a new student account.")
+    @Operation(summary = "Create a new user", description = "Registers a student or teacher account; student is the default.")
     @ApiResponse(responseCode = "201", description = "User created successfully")
     @ApiResponse(responseCode = "400", description = "Invalid input data or email already exists")
     public ResponseEntity<?> saveUser(@RequestBody @Validated RegisterRequest request) {
@@ -69,7 +69,7 @@ public class UserController {
                 .birthday(request.getBirthday())
                 .qualification(request.getQualification())
                 .build();
-        UserEntity savedUser = this.userService.registerStudent(userEntity, encoder);
+        UserEntity savedUser = this.userService.registerPublic(userEntity, request.getRole(), encoder);
         // The account exists at this point: whatever goes wrong while preparing the mail must not fail it.
         try {
             emailVerificationService.sendVerification(savedUser, request.getLang());

@@ -100,6 +100,8 @@
         <button
           type="button"
           (click)="setUserType('student')"
+          [attr.aria-pressed]="userType() === 'student'"
+          [attr.aria-describedby]="fieldError('role') ? 'role-error' : null"
           class="flex items-center justify-center gap-2 px-4 py-3 border-2 rounded-lg transition-all"
           [class]="userType() === 'student' ? 'border-brand bg-brand-soft text-brand-soft-foreground' : 'border-border-strong hover:border-brand'"
         >
@@ -109,6 +111,8 @@
         <button
           type="button"
           (click)="setUserType('teacher')"
+          [attr.aria-pressed]="userType() === 'teacher'"
+          [attr.aria-describedby]="fieldError('role') ? 'role-error' : null"
           class="flex items-center justify-center gap-2 px-4 py-3 border-2 rounded-lg transition-all"
           [class]="userType() === 'teacher' ? 'border-brand bg-brand-soft text-brand-soft-foreground' : 'border-border-strong hover:border-brand'"
         >
@@ -116,6 +120,9 @@
           <span>{{ t('auth.register.teacher') }}</span>
         </button>
       </div>
+      @if (fieldError('role'); as message) {
+        <p class="text-red-600 dark:text-red-400 mt-1" id="role-error" role="alert" data-testid="error-role">{{ message }}</p>
+      }
 
       @if (userType() === 'student') {
         <div class="relative">
