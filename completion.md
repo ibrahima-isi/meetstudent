@@ -111,4 +111,10 @@ Preuves locales : [docs/evidence/ticket-105.md](docs/evidence/ticket-105.md). AP
 
 - [x] [#106](https://github.com/ibrahima-isi/meetstudent/issues/106) : implémentation et validation terminées dans `fix/accreditation-unlink-106` depuis le squash #105 `93635e0`.
 
-[Preuves](docs/evidence/ticket-106.md) : retrait du seul lien programme/accréditation et nouveau lien direct cours/accréditation sur choix explicite du propriétaire ; donnée et autres liens conservés, erreurs 403/404/409. API 558 tests, backoffice 300 tests/types/build, web 940 tests/types/build SSR, PostgreSQL V1–V23 avec schéma validé et HTTP de partage cours/programme vert. Revues Sol Standards/Spec sans écart. [CI API/web/backoffice verte](https://github.com/ibrahima-isi/meetstudent/actions/runs/38774480762) sur `e177808` ; le présent closeout documentaire doit passer les trois CI sur son head final avant squash de la [PR #137](https://github.com/ibrahima-isi/meetstudent/pull/137). #107 non commencé.
+[Preuves](docs/evidence/ticket-106.md) : retrait du seul lien programme/accréditation et nouveau lien direct cours/accréditation sur choix explicite du propriétaire ; donnée et autres liens conservés, erreurs 403/404/409. API 558 tests, backoffice 300 tests/types/build, web 940 tests/types/build SSR, PostgreSQL V1–V23 avec schéma validé et HTTP de partage cours/programme vert. Revues Sol Standards/Spec sans écart. [PR #137](https://github.com/ibrahima-isi/meetstudent/pull/137) squashée dans dev à `4ed101e` après [CI finale API/web/backoffice verte](https://github.com/ibrahima-isi/meetstudent/actions/runs/38792763175) sur `a4006f1` ; issue #106 fermée, contenu du squash vérifié, worktree archivé. #107 suit.
+
+### #107 — choix étudiant ou enseignant (2026-10-15)
+
+- [ ] [#107](https://github.com/ibrahima-isi/meetstudent/issues/107) : issue assignée, branche isolée `feat/registration-role-107` depuis le squash #106 `4ed101e`.
+
+[Preuves en cours](docs/evidence/ticket-107.md) : tests HTTP et formulaire rouges puis verts pour le choix enseignant, le défaut étudiant, le refus des rôles interdits, l’erreur de champ et l’auto-connexion enseignant en anglais. API 561 tests, web 943 tests/types/build SSR, backoffice 300 tests/types/build verts ; PostgreSQL V1–V23 et trois tests HTTP verts. Revues, PR et CI à terminer. #108 attend la livraison de #107.
