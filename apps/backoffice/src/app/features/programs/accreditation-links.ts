@@ -148,9 +148,8 @@ export class AccreditationLinks implements OnInit {
         failed();
       },
     });
-    // The endpoint is paginated: one large page feeds the select.
-    this.accreditations.list(0, ACCREDITATIONS_SIZE).subscribe({
-      next: (res) => res.content.forEach((accreditation) => this.remember(accreditation)),
+    this.loadCatalog(0).subscribe({
+      next: (items) => items.forEach((accreditation) => this.remember(accreditation)),
       error: failed,
     });
   }
@@ -222,6 +221,14 @@ export class AccreditationLinks implements OnInit {
     return this.courses.accreditationsOf(this.resourceId(), pageNumber).pipe(
       switchMap((page) => pageNumber + 1 < page.totalPages
         ? this.loadCourseLinks(pageNumber + 1).pipe(map((next) => [...page.content, ...next]))
+        : of(page.content)),
+    );
+  }
+
+  private loadCatalog(pageNumber: number): Observable<Accreditation[]> {
+    return this.accreditations.list(pageNumber, ACCREDITATIONS_SIZE).pipe(
+      switchMap((page) => pageNumber + 1 < page.totalPages
+        ? this.loadCatalog(pageNumber + 1).pipe(map((next) => [...page.content, ...next]))
         : of(page.content)),
     );
   }

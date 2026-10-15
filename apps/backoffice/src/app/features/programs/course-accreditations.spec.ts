@@ -28,7 +28,7 @@ describe('CourseAccreditations', () => {
     select.dispatchEvent(new Event('change'));
   };
 
-  function setup(links = linked, laterLinks: typeof linked | null = null) {
+  function setup(links = linked, laterLinks: typeof linked | null = null, laterCatalog: typeof known | null = null) {
     TestBed.configureTestingModule({
       providers: [
         provideZonelessChangeDetection(),
@@ -47,7 +47,12 @@ describe('CourseAccreditations', () => {
       backend.expectOne((request) => request.url === `${api}/courses/9/accreditations` && request.params.get('page') === '1')
         .flush({ content: laterLinks, totalPages: 2 });
     }
-    backend.expectOne((request) => request.url === `${api}/accreditations`).flush({ content: known });
+    backend.expectOne((request) => request.url === `${api}/accreditations` && request.params.get('page') === '0')
+      .flush({ content: known, totalPages: laterCatalog ? 2 : 1 });
+    if (laterCatalog) {
+      backend.expectOne((request) => request.url === `${api}/accreditations` && request.params.get('page') === '1')
+        .flush({ content: laterCatalog, totalPages: 2 });
+    }
     fixture.detectChanges();
   }
 
@@ -115,6 +120,11 @@ describe('CourseAccreditations', () => {
       .flush(null, { status: 204, statusText: 'No Content' });
     fixture.detectChanges();
     expect(rows().length).toBe(1);
+    expect(options()).toContain('AMBA');
+  });
+
+  it('can select a preserved accreditation beyond page one after reopening', () => {
+    setup([], null, [{ id: 250, name: 'AMBA' }]);
     expect(options()).toContain('AMBA');
   });
 });
