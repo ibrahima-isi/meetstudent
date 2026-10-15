@@ -28,7 +28,7 @@ describe('CourseAccreditations', () => {
     select.dispatchEvent(new Event('change'));
   };
 
-  function setup(links = linked) {
+  function setup(links = linked, laterLinks: typeof linked | null = null) {
     TestBed.configureTestingModule({
       providers: [
         provideZonelessChangeDetection(),
@@ -41,8 +41,12 @@ describe('CourseAccreditations', () => {
     fixture = TestBed.createComponent(CourseAccreditations);
     fixture.componentRef.setInput('courseId', 9);
     fixture.detectChanges();
-    backend.expectOne((request) => request.url === `${api}/courses/9/accreditations`)
-      .flush({ content: links });
+    backend.expectOne((request) => request.url === `${api}/courses/9/accreditations` && request.params.get('page') === '0')
+      .flush({ content: links, totalPages: laterLinks ? 2 : 1 });
+    if (laterLinks) {
+      backend.expectOne((request) => request.url === `${api}/courses/9/accreditations` && request.params.get('page') === '1')
+        .flush({ content: laterLinks, totalPages: 2 });
+    }
     backend.expectOne((request) => request.url === `${api}/accreditations`).flush({ content: known });
     fixture.detectChanges();
   }
@@ -100,6 +104,17 @@ describe('CourseAccreditations', () => {
     backend.expectOne(`${api}/courses/9/accreditations/250`)
       .flush(null, { status: 204, statusText: 'No Content' });
     fixture.detectChanges();
+    expect(options()).toContain('AMBA');
+  });
+
+  it('loads later pages of course links so every association can be removed', () => {
+    setup(linked, [{ courseId: 9, accreditationId: 250, accreditation: { id: 250, name: 'AMBA' }, startsAt: 2020, endsAt: 2025 }]);
+    expect(rows().length).toBe(2);
+    q<HTMLButtonElement>('[data-link-row]:last-child [data-unlink]')!.click();
+    backend.expectOne(`${api}/courses/9/accreditations/250`)
+      .flush(null, { status: 204, statusText: 'No Content' });
+    fixture.detectChanges();
+    expect(rows().length).toBe(1);
     expect(options()).toContain('AMBA');
   });
 });

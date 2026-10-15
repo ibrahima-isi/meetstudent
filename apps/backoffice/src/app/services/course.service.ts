@@ -22,9 +22,9 @@ export class CourseService {
     return this.http.delete<Course>(`${this.base}/${id}`);
   }
 
-  accreditationsOf(courseId: number): Observable<Page<CourseAccreditation>> {
+  accreditationsOf(courseId: number, page = 0): Observable<Page<CourseAccreditation>> {
     return this.http.get<Page<CourseAccreditation>>(`${this.base}/${courseId}/accreditations`, {
-      params: { page: 0, size: 200 },
+      params: { page, size: 200 },
     });
   }
 

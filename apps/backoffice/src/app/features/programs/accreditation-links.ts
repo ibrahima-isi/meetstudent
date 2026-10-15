@@ -4,7 +4,7 @@ import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Accreditation } from '@models/accreditation';
 import { CourseAccreditation } from '@models/course';
 import { ProgramAccreditation } from '@models/program';
-import { Observable, map } from 'rxjs';
+import { Observable, map, of, switchMap } from 'rxjs';
 import { AccreditationService } from '@services/accreditation.service';
 import { CourseService } from '@services/course.service';
 import { ProgramService } from '@services/program.service';
@@ -214,8 +214,16 @@ export class AccreditationLinks implements OnInit {
 
   private loadLinks(): Observable<AccreditationLink[]> {
     return this.kind() === 'course'
-      ? this.courses.accreditationsOf(this.resourceId()).pipe(map((page) => page.content))
+      ? this.loadCourseLinks(0)
       : this.programs.accreditationsOf(this.resourceId());
+  }
+
+  private loadCourseLinks(pageNumber: number): Observable<AccreditationLink[]> {
+    return this.courses.accreditationsOf(this.resourceId(), pageNumber).pipe(
+      switchMap((page) => pageNumber + 1 < page.totalPages
+        ? this.loadCourseLinks(pageNumber + 1).pipe(map((next) => [...page.content, ...next]))
+        : of(page.content)),
+    );
   }
 
   private linkResource(accreditationId: number, startsAt: number, endsAt: number): Observable<AccreditationLink> {
