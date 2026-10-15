@@ -175,13 +175,13 @@ describe('AccreditationsSection', () => {
       expect(q('[data-error=name]')?.textContent).toContain('Nom invalide');
     });
 
-    it('explains a 500 (the API answers so on a duplicate code) and keeps the form', () => {
+    it('explains a 409 duplicate code and keeps the form', () => {
       fill('acc-name', 'EQUIS');
       fill('acc-code', 'A1');
       submit();
-      backend.expectOne(`${api}/accreditations`).flush(null, { status: 500, statusText: 'err' });
+      backend.expectOne(`${api}/accreditations`).flush({ message: 'Code already exists' }, { status: 409, statusText: 'Conflict' });
       settle();
-      expect(q('form[data-form] [role=alert]')?.textContent).toContain('code existe peut-être déjà');
+      expect(q('form[data-form] [role=alert]')?.textContent).toContain('code existe déjà');
       expect(q<HTMLInputElement>('#acc-name')!.value).toBe('EQUIS');
     });
 
@@ -250,14 +250,14 @@ describe('AccreditationsSection', () => {
       expect(q('[data-notice]')?.textContent).toContain('Accréditation supprimée');
     });
 
-    for (const status of [409, 500]) {
-      it(`explains a ${status} on delete (accreditation still used by programs)`, () => {
+    for (const [status, message] of [[409, 'encore associée'], [500, 'suppression a échoué']] as const) {
+      it(`handles ${status} on delete while keeping the list`, () => {
         ask();
         settle();
         q<HTMLButtonElement>('[data-confirm-delete]')!.click();
         backend.expectOne(`${api}/accreditations/1`).flush(null, { status, statusText: 'err' });
         settle();
-        expect(q('[role=alert]')?.textContent).toContain('encore associée');
+        expect(q('[role=alert]')?.textContent?.toLowerCase()).toContain(message);
         expect(q('[data-confirm-delete]')).toBeNull();
         expect(all('tr[data-accreditation]').length).toBe(2);
       });

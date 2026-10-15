@@ -70,6 +70,63 @@ class ProgramControllerIntegrationTests {
     }
 
     @Test
+    void duplicateProgramCodeReturnsConflictOnCreateAndPatch() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/programs")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"First\",\"code\":\"P105A\"}")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isCreated());
+        String secondBody = mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/programs")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Second\",\"code\":\"P105B\"}")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        int secondId = objectMapper.readTree(secondBody).get("id").asInt();
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/programs")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Twin\",\"code\":\"P105A\"}")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isConflict())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.message").isNotEmpty());
+        mockMvc.perform(MockMvcRequestBuilders.patch("/api/v1/programs/" + secondId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"code\":\"P105A\"}")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isConflict());
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/programs/" + secondId)
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.code").value("P105B"));
+    }
+
+    @Test
+    void nonexistentSchoolIdReturnsUsefulFieldError() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/programs")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Programme\",\"code\":\"P105Y\",\"schoolId\":987654}")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isBadRequest())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.schoolId").isNotEmpty());
+    }
+
+    @Test
+    void patchingProgramWithUnknownSchoolReturnsFieldErrorAndKeepsAssociation() throws Exception {
+        String response = mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/programs")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Programme\",\"code\":\"P105Z\"}")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        int id = objectMapper.readTree(response).get("id").asInt();
+        mockMvc.perform(MockMvcRequestBuilders.patch("/api/v1/programs/" + id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"schoolId\":987654}")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isBadRequest())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.schoolId").isNotEmpty());
+    }
+
+    @Test
     void deleteProgramReturns200WithDeletedDto() throws Exception {
         Program program = programService.save(programMapper.toEntity(TestDataUtil.createProgramDto()));
 
@@ -201,6 +258,18 @@ class ProgramControllerIntegrationTests {
         ).andExpect(
                 MockMvcResultMatchers.jsonPath("$.startsAt").value(2020)
         );
+    }
+
+    @Test
+    void linkingTheSameAccreditationTwiceReturnsConflict() throws Exception {
+        Program program = programService.save(programMapper.toEntity(TestDataUtil.createProgramDto()));
+        Accreditation acc = accreditationService.save(accreditationMapper.toEntity(TestDataUtil.createAccreditationDto()));
+        String url = "/api/v1/programs/" + program.getId() + "/accreditations/" + acc.getId()
+                + "?startsAt=2020&endsAt=2025";
+        mockMvc.perform(MockMvcRequestBuilders.post(url).with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isCreated());
+        mockMvc.perform(MockMvcRequestBuilders.post(url).with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isConflict());
     }
 
     @Test

@@ -56,6 +56,48 @@ class CourseControllerIntegrationTests {
     }
 
     @Test
+    void duplicateCourseCodeReturnsConflict() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/courses")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"First\",\"code\":\"C105A\"}")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isCreated());
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/courses")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Second\",\"code\":\"C105A\"}")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isConflict())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.message").isNotEmpty());
+    }
+
+    @Test
+    void unknownProgramIdOnCreateReturnsFieldError() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/courses")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Cours\",\"code\":\"C105B\",\"programId\":987654}")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isBadRequest())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.programId").isNotEmpty());
+    }
+
+    @Test
+    void unknownProgramIdOnPatchReturnsFieldError() throws Exception {
+        String response = mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/courses")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Cours\",\"code\":\"C105C\"}")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        int id = objectMapper.readTree(response).get("id").asInt();
+        mockMvc.perform(MockMvcRequestBuilders.patch("/api/v1/courses/" + id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"programId\":987654}")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isBadRequest())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.programId").isNotEmpty());
+    }
+
+    @Test
     void deleteCourseReturns200WithDeletedDto() throws Exception {
         com.bowe.meetstudent.entities.Course course =
                 courseService.save(courseMapper.toEntity(TestDataUtil.createCourseDto()));

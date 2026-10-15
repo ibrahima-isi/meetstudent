@@ -53,6 +53,69 @@ class AccreditationControllerIntegrationTests {
     }
 
     @Test
+    void duplicateAccreditationCodeReturnsConflict() throws Exception {
+        var existing = TestDataUtil.createAccreditationDto();
+        accreditationService.save(accreditationMapper.toEntity(existing));
+        var duplicate = TestDataUtil.createAccreditationDto();
+        duplicate.setCode(existing.getCode());
+
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/accreditations")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(duplicate))
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isConflict())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.message").isNotEmpty());
+    }
+
+    @Test
+    void accreditationWithoutNameReturnsFieldError() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/accreditations")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"code\":\"ACC42\"}")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isBadRequest())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.name").isNotEmpty());
+    }
+
+    @Test
+    void updatingAccreditationWithItsOwnCodeStillWorks() throws Exception {
+        var existing = accreditationService.save(accreditationMapper.toEntity(TestDataUtil.createAccreditationDto()));
+        var updated = TestDataUtil.createAccreditationDto();
+        updated.setCode(existing.getCode());
+        updated.setName("Updated accreditation");
+
+        mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/accreditations/" + existing.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updated))
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.name").value("Updated accreditation"));
+    }
+
+    @Test
+    void deletingAnAccreditationStillLinkedToAProgramReturnsConflictAndKeepsIt() throws Exception {
+        var accreditation = accreditationService.save(accreditationMapper.toEntity(TestDataUtil.createAccreditationDto()));
+        String programBody = mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/programs")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Programme\",\"code\":\"P105X\"}")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        int programId = objectMapper.readTree(programBody).get("id").asInt();
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/programs/" + programId
+                        + "/accreditations/" + accreditation.getId() + "?startsAt=2020&endsAt=2025")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isCreated());
+
+        mockMvc.perform(MockMvcRequestBuilders.delete("/api/v1/accreditations/" + accreditation.getId())
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isConflict());
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/accreditations/" + accreditation.getId())
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isOk());
+    }
+
+    @Test
     void testThatAccreditationCanBeCreatedSuccessfullyAndRecalled() throws Exception {
         AccreditationDTO accreditationDTO = TestDataUtil.createAccreditationDto();
 

@@ -2,6 +2,7 @@ package com.bowe.meetstudent.unit.services;
 
 import com.bowe.meetstudent.entities.Role;
 import com.bowe.meetstudent.repositories.RoleRepository;
+import com.bowe.meetstudent.repositories.UserRepository;
 import com.bowe.meetstudent.services.RoleService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,6 +22,9 @@ class RoleServiceTest {
 
     @Mock
     private RoleRepository roleRepository;
+
+    @Mock
+    private UserRepository userRepository;
 
     @InjectMocks
     private RoleService roleService;
@@ -61,8 +65,10 @@ class RoleServiceTest {
 
     @Test
     void deleteRole_shouldDeleteById() {
+        Role role = Role.builder().id(10).name("ROLE_TEMP").build();
+        Mockito.when(roleRepository.findById(10)).thenReturn(Optional.of(role));
         roleService.deleteRole(10);
 
-        Mockito.verify(roleRepository).deleteById(10);
+        Mockito.verify(roleRepository).delete(role);
     }
 }

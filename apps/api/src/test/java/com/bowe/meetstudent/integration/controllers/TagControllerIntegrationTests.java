@@ -16,6 +16,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
+import java.util.UUID;
 
 @SpringBootTest
 @ExtendWith(SpringExtension.class)
@@ -48,6 +49,48 @@ class TagControllerIntegrationTests {
         ).andExpect(
                 MockMvcResultMatchers.jsonPath("$.name").value("ENGINEERING")
         );
+    }
+
+    @Test
+    void duplicateTagReturnsConflictWithoutLeakingDatabaseDetails() throws Exception {
+        tagService.findOrCreate("ENGINEERING");
+
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/tags")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"ENGINEERING\"}")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isConflict())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.message").isNotEmpty());
+    }
+
+    @Test
+    void tagWithoutNameReturnsFieldError() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/tags")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isBadRequest())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.name").isNotEmpty());
+    }
+
+    @Test
+    void deletingATagUsedBySchoolReturnsConflictAndKeepsBoth() throws Exception {
+        var tag = tagService.findOrCreate("USED_TAG");
+        String schoolCode = UUID.randomUUID().toString().substring(0, 5);
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/schools")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Tagged school\",\"code\":\"" + schoolCode
+                                + "\",\"tags\":[{\"id\":" + tag.getId() + ",\"name\":\"USED_TAG\"}]}")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isCreated());
+
+        mockMvc.perform(MockMvcRequestBuilders.delete("/api/v1/tags/" + tag.getId())
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isConflict())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.message").isNotEmpty());
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/tags/" + tag.getId())
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isOk());
     }
 
     @Test

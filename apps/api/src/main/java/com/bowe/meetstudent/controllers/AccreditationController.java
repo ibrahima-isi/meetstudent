@@ -16,6 +16,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.validation.annotation.Validated;
+import com.bowe.meetstudent.dto.validation.OnCreate;
+import jakarta.validation.groups.Default;
 
 import java.util.Optional;
 
@@ -33,7 +36,8 @@ public class AccreditationController {
     @Operation(summary = "Create a new accreditation", description = "Adds a new accreditation type to the system.")
     @ApiResponse(responseCode = "201", description = "Accreditation created successfully")
     @ApiResponse(responseCode = "400", description = "Invalid input data")
-    public ResponseEntity<AccreditationDTO> create(@RequestBody AccreditationDTO accreditationDTO) {
+    @ApiResponse(responseCode = "409", description = "Accreditation code already exists")
+    public ResponseEntity<AccreditationDTO> create(@RequestBody @Validated({Default.class, OnCreate.class}) AccreditationDTO accreditationDTO) {
         Accreditation accreditation = accreditationMapper.toEntity(accreditationDTO);
         Accreditation saved = accreditationService.save(accreditation);
         return new ResponseEntity<>(accreditationMapper.toDTO(saved), HttpStatus.CREATED);
@@ -70,8 +74,9 @@ public class AccreditationController {
     @Operation(summary = "Update an accreditation by ID", description = "Performs a full update of an existing accreditation.")
     @ApiResponse(responseCode = "200", description = "Accreditation updated successfully")
     @ApiResponse(responseCode = "404", description = "Accreditation not found")
+    @ApiResponse(responseCode = "409", description = "Accreditation code already exists")
     public ResponseEntity<AccreditationDTO> update(
-            @RequestBody AccreditationDTO newAccDTO,
+            @RequestBody @Validated AccreditationDTO newAccDTO,
             @Parameter(description = "ID of the accreditation to update") @PathVariable int id) {
         
         Optional<Accreditation> existingOpt = accreditationService.findById(id);
@@ -89,8 +94,9 @@ public class AccreditationController {
     @Operation(summary = "Partially update an accreditation by ID", description = "Updates only the provided fields of an existing accreditation.")
     @ApiResponse(responseCode = "200", description = "Accreditation patched successfully")
     @ApiResponse(responseCode = "404", description = "Accreditation not found")
+    @ApiResponse(responseCode = "409", description = "Accreditation code already exists")
     public ResponseEntity<AccreditationDTO> patch(
-            @RequestBody AccreditationDTO accDTO,
+            @RequestBody @Validated AccreditationDTO accDTO,
             @Parameter(description = "ID of the accreditation to patch") @PathVariable int id) {
         
         Optional<Accreditation> existingOpt = accreditationService.findById(id);
@@ -108,6 +114,7 @@ public class AccreditationController {
     @Operation(summary = "Delete an accreditation by ID", description = "Removes an accreditation from the system.")
     @ApiResponse(responseCode = "200", description = "Accreditation deleted successfully")
     @ApiResponse(responseCode = "404", description = "Accreditation not found")
+    @ApiResponse(responseCode = "409", description = "Accreditation is still linked to programs")
     public ResponseEntity<AccreditationDTO> delete(@Parameter(description = "ID of the accreditation to delete") @PathVariable int id) {
         return accreditationService.findById(id).map(toDelete -> {
             accreditationService.delete(toDelete.getId());

@@ -233,8 +233,19 @@ describe('ProgramForm', () => {
     submit();
     backend.expectOne(`${api}/programs`).flush(null, { status: 500, statusText: 'x' });
     fixture.detectChanges();
-    expect(q('[role=alert]')!.textContent).toContain('unique');
+    expect(q('[role=alert]')!.textContent).toContain("enregistrement a échoué");
+    expect(q('[role=alert]')!.textContent).not.toContain('unique');
     expect(q<HTMLButtonElement>('button[type=submit]')!.disabled).toBeFalse();
+  });
+
+  it('shows a code conflict on 409 without resetting the form', () => {
+    setup();
+    type('#name', 'Master');
+    submit();
+    backend.expectOne(`${api}/programs`).flush({ message: 'A program with this code already exists' }, { status: 409, statusText: 'Conflict' });
+    fixture.detectChanges();
+    expect(q('[role=alert]')!.textContent).toContain('code existe déjà');
+    expect(q<HTMLInputElement>('#name')!.value).toBe('Master');
   });
 
   it('does not submit twice while saving', () => {

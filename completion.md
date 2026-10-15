@@ -57,7 +57,7 @@ Preuves : [docs/evidence/ticket-102.md](docs/evidence/ticket-102.md). Arrêt apr
 - [x] [#102](https://github.com/ibrahima-isi/meetstudent/issues/102) — [03/30] Révoquer les sessions après confirmation du nouvel email
 - [x] [#103](https://github.com/ibrahima-isi/meetstudent/issues/103) — [04/30] Faire expirer chaque session après 7 jours d’inactivité
 - [x] [#104](https://github.com/ibrahima-isi/meetstudent/issues/104) — [05/30] Supprimer un compte avec confirmation et nettoyage fiable
-- [ ] [#105](https://github.com/ibrahima-isi/meetstudent/issues/105) — [06/30] Retourner des erreurs API utiles sur les mutations et conflits
+- [x] [#105](https://github.com/ibrahima-isi/meetstudent/issues/105) — [06/30] Retourner des erreurs API utiles sur les mutations et conflits
 - [ ] [#106](https://github.com/ibrahima-isi/meetstudent/issues/106) — [07/30] Désassocier une accréditation sans détruire la donnée partagée
 - [ ] [#107](https://github.com/ibrahima-isi/meetstudent/issues/107) — [08/30] Choisir étudiant ou enseignant à l’inscription
 - [ ] [#108](https://github.com/ibrahima-isi/meetstudent/issues/108) — [09/30] Valider la spécialité enseignant et afficher les erreurs au bon champ
@@ -100,3 +100,9 @@ Livraison : [PR #134](https://github.com/ibrahima-isi/meetstudent/pull/134) vers
 Mot de passe actuel requis pour soi (administrateur inclus), exemption admin uniquement sur autrui, 204 vide et erreurs 400/401/403/404. Sessions et trois types de notes nettoyés sous verrou du compte ; documents/wishlist supprimés, autres comptes/notes/catalogue préservés. Jetons d'action orphelins inutilisables, budget d'adresse et rétention existants conservés. Aucun nouveau parcours client.
 
 Preuves : [docs/evidence/ticket-104.md](docs/evidence/ticket-104.md). API complète **226 unitaires + 308 intégrations**, PostgreSQL **35 HTTP/courses** avec V1–V21 et schéma validé, web **940** et backoffice **286** tests, types et builds verts. Revues Sol : Standards **0 violation ferme**, une répétition JPA facultative conservée ; Spec **0 écart**. PostgreSQL jetable nettoyé et inventaire vide vérifié. Livraison : [PR #135](https://github.com/ibrahima-isi/meetstudent/pull/135) vers dev ; [CI API/web/backoffice verte](https://github.com/ibrahima-isi/meetstudent/actions/runs/38584026934) sur `8b8a202f26891279d69f99de06c1c328f708f0ee` (API 3m33s, web 1m05s, backoffice 33s). Le présent closeout documentaire doit à son tour passer les trois CI sur son head final avant squash ; statut définitif sur la PR, bilan de fusion/nettoyage conservé dans la copie locale exportée. Arrêt après #104, sans commencer #105.
+
+### #105 — erreurs de mutations (2026-10-15)
+
+- [x] [#105](https://github.com/ibrahima-isi/meetstudent/issues/105) : implémentation et validation locales terminées. Worktree isolé `meetstudent-ticket-105` depuis `ab5d08b`, branche `fix/api-mutation-errors-105`.
+
+Preuves locales : [docs/evidence/ticket-105.md](docs/evidence/ticket-105.md). API 226 unitaires + 325 intégrations ; PostgreSQL V1–V22 et deux cas HTTP verts ; backoffice 289 tests/types/build, web 940 tests/types/build SSR. Revues Sol Standards/Spec finales : 0 écart ; [CI API/web/backoffice verte](https://github.com/ibrahima-isi/meetstudent/actions/runs/38751277592) sur `abbd474`. PostgreSQL jetable nettoyé. [PR #136](https://github.com/ibrahima-isi/meetstudent/pull/136) : CI du closeout documentaire, squash et issue close encore requis. #106 non commencé.

@@ -1,6 +1,7 @@
 package com.bowe.meetstudent.services;
 
 import com.bowe.meetstudent.entities.Tag;
+import com.bowe.meetstudent.exceptions.ConflictException;
 import com.bowe.meetstudent.repositories.TagRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -17,6 +18,9 @@ public class TagService {
 
     @Transactional
     public Tag save(Tag tag) {
+        if (tag.getName() != null && tagRepository.existsByNameIgnoreCase(tag.getName())) {
+            throw new ConflictException("A tag with this name already exists");
+        }
         return tagRepository.save(tag);
     }
 
@@ -41,6 +45,11 @@ public class TagService {
 
     @Transactional
     public void delete(Integer id) {
-        tagRepository.deleteById(id);
+        tagRepository.findById(id).ifPresent(tag -> {
+            if (tag.getSchools() != null && !tag.getSchools().isEmpty()) {
+                throw new ConflictException("This tag is still used by schools");
+            }
+            tagRepository.delete(tag);
+        });
     }
 }

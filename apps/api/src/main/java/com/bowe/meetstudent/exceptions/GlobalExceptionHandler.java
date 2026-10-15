@@ -3,6 +3,7 @@ package com.bowe.meetstudent.exceptions;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -126,6 +127,29 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request);
     }
 
+    /** Constraint races can outlive a service pre-check; only known SQL states become client errors. */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrity(DataIntegrityViolationException ex, WebRequest request) {
+        String sqlState = null;
+        for (Throwable cause = ex; cause != null; cause = cause.getCause()) {
+            if (cause instanceof java.sql.SQLException sql && sql.getSQLState() != null) {
+                sqlState = sql.getSQLState();
+                break;
+            }
+            if (cause.getCause() == cause) break;
+        }
+        if ("23505".equals(sqlState)) {
+            return build(HttpStatus.CONFLICT, "A resource with the same unique value already exists", request);
+        }
+        if ("23503".equals(sqlState)) {
+            return build(HttpStatus.CONFLICT, "This resource is still in use", request);
+        }
+        if ("23502".equals(sqlState) || "22001".equals(sqlState)) {
+            return build(HttpStatus.BAD_REQUEST, "A submitted value is missing or too long", request);
+        }
+        return handleGlobalException(ex, request);
+    }
+
     @ExceptionHandler(ServiceUnavailableException.class)
     public ResponseEntity<ErrorResponse> handleServiceUnavailable(ServiceUnavailableException ex, WebRequest request) {
         return build(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage(), request);
@@ -237,7 +261,7 @@ public class GlobalExceptionHandler {
                 LocalDateTime.now(),
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 "Internal Server Error",
-                ex.getMessage(),
+                "Unexpected server error",
                 request.getDescription(false).replace("uri=", "")
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);

@@ -1,6 +1,7 @@
 package com.bowe.meetstudent.controllers;
 
 import com.bowe.meetstudent.dto.ProgramDTO;
+import com.bowe.meetstudent.exceptions.FieldValidationException;
 import com.bowe.meetstudent.entities.Program;
 import com.bowe.meetstudent.entities.School;
 import com.bowe.meetstudent.mappers.implementations.ProgramMapper;
@@ -50,6 +51,7 @@ public class ProgramController {
     @Operation(summary = "Link an accreditation to a program", description = "Associates a specific accreditation with a program, specifying start and end years.")
     @ApiResponse(responseCode = "201", description = "Accreditation linked successfully")
     @ApiResponse(responseCode = "404", description = "Program or Accreditation not found")
+    @ApiResponse(responseCode = "409", description = "Accreditation is already linked to this program")
     public ResponseEntity<ProgramAccreditationDTO> linkAccreditation(
             @Parameter(description = "ID of the program") @PathVariable Integer programId,
             @Parameter(description = "ID of the accreditation") @PathVariable Integer accreditationId,
@@ -111,13 +113,14 @@ public class ProgramController {
     @Operation(summary = "Create a new program", description = "Adds a new educational program to the system, optionally linking it to a school.")
     @ApiResponse(responseCode = "201", description = "Program created successfully")
     @ApiResponse(responseCode = "400", description = "Invalid School ID or input data")
+    @ApiResponse(responseCode = "409", description = "Program code already exists")
     public ResponseEntity<ProgramDTO> create(@RequestBody @Validated({Default.class, OnCreate.class}) ProgramDTO programDTO) {
         Program program = programMapper.toEntity(programDTO);
         
         if (programDTO.getSchoolId() != null) {
             Optional<School> schoolOpt = schoolService.getSchoolById(programDTO.getSchoolId());
             if (schoolOpt.isEmpty()) {
-                return ResponseEntity.badRequest().build();
+                throw new FieldValidationException("schoolId", "School not found");
             }
             program.setSchool(schoolOpt.get());
         } else {
@@ -185,6 +188,7 @@ public class ProgramController {
     @ApiResponse(responseCode = "200", description = "Program updated successfully")
     @ApiResponse(responseCode = "404", description = "Program not found")
     @ApiResponse(responseCode = "400", description = "Invalid School ID")
+    @ApiResponse(responseCode = "409", description = "Program code already exists")
     public ResponseEntity<ProgramDTO> update(
             @RequestBody @Validated ProgramDTO newProgramDTO,
             @Parameter(description = "ID of the program to update") @PathVariable int id) {
@@ -192,7 +196,7 @@ public class ProgramController {
         Program updates = programMapper.toEntity(newProgramDTO);
         if (newProgramDTO.getSchoolId() != null) {
             Optional<School> schoolOpt = schoolService.getSchoolById(newProgramDTO.getSchoolId());
-            if (schoolOpt.isEmpty()) return ResponseEntity.badRequest().build();
+            if (schoolOpt.isEmpty()) throw new FieldValidationException("schoolId", "School not found");
             updates.setSchool(schoolOpt.get());
         }
 
@@ -205,6 +209,7 @@ public class ProgramController {
     @ApiResponse(responseCode = "200", description = "Program patched successfully")
     @ApiResponse(responseCode = "404", description = "Program not found")
     @ApiResponse(responseCode = "400", description = "Invalid School ID")
+    @ApiResponse(responseCode = "409", description = "Program code already exists")
     public ResponseEntity<ProgramDTO> patch(
             @RequestBody @Validated ProgramDTO programDTO,
             @Parameter(description = "ID of the program to patch") @PathVariable int id) {
@@ -212,7 +217,8 @@ public class ProgramController {
         Program updates = programMapper.toEntity(programDTO);
         if (programDTO.getSchoolId() != null) {
             Optional<School> schoolOpt = schoolService.getSchoolById(programDTO.getSchoolId());
-            if (schoolOpt.isPresent()) updates.setSchool(schoolOpt.get());
+            if (schoolOpt.isEmpty()) throw new FieldValidationException("schoolId", "School not found");
+            updates.setSchool(schoolOpt.get());
         }
 
         Program saved = programService.patch(id, updates);

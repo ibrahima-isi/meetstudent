@@ -1,6 +1,7 @@
 package com.bowe.meetstudent.services;
 
 import com.bowe.meetstudent.entities.Program;
+import com.bowe.meetstudent.exceptions.ConflictException;
 import com.bowe.meetstudent.repositories.ProgramRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -20,6 +21,11 @@ public class ProgramService {
 
     @Transactional
     public Program save(Program program) {
+        if (program.getCode() != null && (program.getId() == null
+                ? programRepository.existsByCodeIgnoreCase(program.getCode())
+                : programRepository.existsByCodeIgnoreCaseAndIdNot(program.getCode(), program.getId()))) {
+            throw new ConflictException("A program with this code already exists");
+        }
         return this.programRepository.save(program);
     }
 
@@ -64,6 +70,9 @@ public class ProgramService {
     @Transactional
     public Program patch(Integer id, Program updates) {
         return programRepository.findById(id).map(existing -> {
+            if (updates.getCode() != null && programRepository.existsByCodeIgnoreCaseAndIdNot(updates.getCode(), id)) {
+                throw new ConflictException("A program with this code already exists");
+            }
             if (updates.getPhotoMediaId() != null
                     && !updates.getPhotoMediaId().equals(existing.getPhotoMediaId())) {
                 mediaService.deleteById(existing.getPhotoMediaId());

@@ -1,6 +1,7 @@
 package com.bowe.meetstudent.services;
 
 import com.bowe.meetstudent.entities.Course;
+import com.bowe.meetstudent.exceptions.ConflictException;
 import com.bowe.meetstudent.repositories.CourseRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -19,6 +20,11 @@ public class CourseService {
 
     @Transactional
     public Course save(Course course) {
+        if (course.getCode() != null && (course.getId() == null
+                ? courseRepository.existsByCodeIgnoreCase(course.getCode())
+                : courseRepository.existsByCodeIgnoreCaseAndIdNot(course.getCode(), course.getId()))) {
+            throw new ConflictException("A course with this code already exists");
+        }
         return this.courseRepository.save(course);
     }
 
@@ -58,6 +64,9 @@ public class CourseService {
     @Transactional
     public Course patch(Integer id, Course updates) {
         return courseRepository.findById(id).map(existing -> {
+            if (updates.getCode() != null && courseRepository.existsByCodeIgnoreCaseAndIdNot(updates.getCode(), id)) {
+                throw new ConflictException("A course with this code already exists");
+            }
             if (updates.getPhotoMediaId() != null
                     && !updates.getPhotoMediaId().equals(existing.getPhotoMediaId())) {
                 mediaService.deleteById(existing.getPhotoMediaId());

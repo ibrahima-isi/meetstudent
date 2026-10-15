@@ -179,8 +179,19 @@ describe('CourseForm', () => {
     submit();
     backend.expectOne(`${api}/courses`).flush(null, { status: 500, statusText: 'x' });
     fixture.detectChanges();
-    expect(q('[role=alert]')!.textContent).toContain('unique');
+    expect(q('[role=alert]')!.textContent).toContain("enregistrement a échoué");
+    expect(q('[role=alert]')!.textContent).not.toContain('unique');
     expect(q<HTMLButtonElement>('button[type=submit]')!.disabled).toBeFalse();
+  });
+
+  it('shows a code conflict on 409 and keeps the course name', () => {
+    setup();
+    type('#name', 'Algèbre');
+    submit();
+    backend.expectOne(`${api}/courses`).flush({ message: 'A course with this code already exists' }, { status: 409, statusText: 'Conflict' });
+    fixture.detectChanges();
+    expect(q('[role=alert]')!.textContent).toContain('code existe déjà');
+    expect(q<HTMLInputElement>('#name')!.value).toBe('Algèbre');
   });
 
   it('does not submit twice while saving', () => {

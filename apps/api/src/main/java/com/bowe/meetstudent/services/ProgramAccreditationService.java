@@ -4,6 +4,7 @@ import com.bowe.meetstudent.entities.Accreditation;
 import com.bowe.meetstudent.entities.Program;
 import com.bowe.meetstudent.entities.ProgramAccreditation;
 import com.bowe.meetstudent.entities.embedded.ProgramAccreditationId;
+import com.bowe.meetstudent.exceptions.ConflictException;
 import com.bowe.meetstudent.exceptions.ResourceNotFoundException;
 import com.bowe.meetstudent.repositories.AccreditationRepository;
 import com.bowe.meetstudent.repositories.ProgramAccreditationRepository;
@@ -51,6 +52,10 @@ public class ProgramAccreditationService {
 
         Accreditation accreditation = accreditationRepository.findById(accreditationId)
                 .orElseThrow(() ->  new ResourceNotFoundException("Accréditation non trouvée"));
+
+        if (programAccreditationRepository.existsById(new ProgramAccreditationId(programId, accreditationId))) {
+            throw new ConflictException("This accreditation is already linked to the program");
+        }
 
         ProgramAccreditation programAccreditation = new ProgramAccreditation();
         programAccreditation.setId(new ProgramAccreditationId(programId, accreditationId));

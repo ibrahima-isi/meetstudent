@@ -15,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.validation.annotation.Validated;
 
 import java.util.List;
 
@@ -30,9 +31,10 @@ public class TagController {
     @PostMapping
     @Operation(summary = "Create a new tag", description = "Adds a new classification tag to the system.")
     @ApiResponse(responseCode = "201", description = "Tag created successfully")
-    @ApiResponse(responseCode = "400", description = "Invalid tag data or name already exists")
+    @ApiResponse(responseCode = "400", description = "Invalid tag data")
+    @ApiResponse(responseCode = "409", description = "Tag name already exists")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<TagDTO> create(@RequestBody TagDTO tagDTO) {
+    public ResponseEntity<TagDTO> create(@RequestBody @Validated TagDTO tagDTO) {
         com.bowe.meetstudent.entities.Tag tag = tagMapper.toEntity(tagDTO);
         com.bowe.meetstudent.entities.Tag saved = tagService.save(tag);
         return new ResponseEntity<>(tagMapper.toDTO(saved), HttpStatus.CREATED);
@@ -70,9 +72,10 @@ public class TagController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Delete a tag by ID", description = "Removes a tag from the system. Note: This may affect schools associated with this tag.")
+    @Operation(summary = "Delete a tag by ID", description = "Removes a tag when no school uses it.")
     @ApiResponse(responseCode = "204", description = "Tag deleted successfully")
     @ApiResponse(responseCode = "404", description = "Tag not found")
+    @ApiResponse(responseCode = "409", description = "Tag is still used by a school")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable Integer id) {
         if (!tagService.findById(id).isPresent()) {
