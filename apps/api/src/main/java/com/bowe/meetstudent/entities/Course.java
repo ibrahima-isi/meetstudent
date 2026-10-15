@@ -28,4 +28,7 @@ public class Course extends BaseEntity {
 
     @OneToMany(mappedBy = "course")
     private List<CourseRate> courseRates;
+
+    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<CourseAccreditation> courseAccreditations;
 }

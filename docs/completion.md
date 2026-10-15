@@ -17,7 +17,7 @@ Handoff: implementation and local verification are complete. Check PR #97 for de
 Track individual deliveries in [../completion.md](../completion.md). Preserve this workstream list until all its child tickets pass their own verification; implementing #100 alone does not complete point 1.
 
 - [ ] 1. Credential/session security (#100–104).
-- [ ] 2. Reliable API mutations and backoffice behavior (#105–106, deletion in #104).
+- [x] 2. Reliable API mutations and backoffice behavior (#105–106, deletion in #104).
 - [ ] 3. Student/teacher registration, wishlist and unique ratings (#107–112).
 - [ ] 4. Engineering-skills worktree cleanup (#113).
 - [ ] 5. Safe auto-login worktree cleanup (#114).
@@ -100,4 +100,10 @@ Preuves : [ticket-104.md](evidence/ticket-104.md). API complète **226 unitaires
 
 - [x] [#105](https://github.com/ibrahima-isi/meetstudent/issues/105) : implémentation et validation locales terminées, base isolée `ab5d08b`, branche `fix/api-mutation-errors-105`.
 
-Contrats HTTP 400/404/409 des tags, accréditations, programmes/cours et rôles, validation des références, conservation des relations à supprimer en cas de conflit, backoffice adapté aux 409 et migration V22 de l’identité des rôles. [Preuves locales](evidence/ticket-105.md) : API 226 unitaires + 325 intégrations ; PostgreSQL V1–V22 et deux HTTP ; backoffice 289 tests/types/build, web 940 tests/types/build. Revues Sol Standards/Spec finales : 0 écart ; [CI API/web/backoffice verte](https://github.com/ibrahima-isi/meetstudent/actions/runs/38751277592) sur `abbd474`. PostgreSQL jetable nettoyé. [PR #136](https://github.com/ibrahima-isi/meetstudent/pull/136) : CI du closeout documentaire, squash et issue close encore requis. #106 reste distinct.
+Contrats HTTP 400/404/409 des tags, accréditations, programmes/cours et rôles, validation des références, conservation des relations à supprimer en cas de conflit, backoffice adapté aux 409 et migration V22 de l’identité des rôles. [Preuves locales](evidence/ticket-105.md) : API 226 unitaires + 325 intégrations ; PostgreSQL V1–V22 et deux HTTP ; backoffice 289 tests/types/build, web 940 tests/types/build. Revues Sol Standards/Spec finales : 0 écart. [PR #136](https://github.com/ibrahima-isi/meetstudent/pull/136) squashée dans dev à `93635e0` après [CI finale API/web/backoffice verte](https://github.com/ibrahima-isi/meetstudent/actions/runs/38752013959) sur `c5b86a4` ; issue #105 fermée, PostgreSQL jetable nettoyé et worktree archivé. #106 reste distinct.
+
+### #106 — désassociation d’accréditation (2026-10-15)
+
+- [x] [#106](https://github.com/ibrahima-isi/meetstudent/issues/106) : implémentation et validation terminées dans la branche isolée `fix/accreditation-unlink-106` depuis `93635e0` ; lien programme corrigé et lien direct cours/accréditation ajouté sur choix explicite du propriétaire.
+
+[Preuves](evidence/ticket-106.md) : HTTP et UI rouges → verts ; API complète 558 tests, backoffice 300 tests/types/build, web 940 tests/types/build SSR verts ; PostgreSQL V1–V23 et HTTP de partage cours/programme verts avec schéma validé. Revues Sol Standards/Spec sans écart. [CI API/web/backoffice verte](https://github.com/ibrahima-isi/meetstudent/actions/runs/38774480762) sur `e177808` ; le présent closeout documentaire doit passer les trois CI sur son head final avant squash de la [PR #137](https://github.com/ibrahima-isi/meetstudent/pull/137). #107 suit après livraison de #106.

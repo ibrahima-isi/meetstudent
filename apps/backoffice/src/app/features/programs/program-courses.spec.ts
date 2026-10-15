@@ -87,6 +87,11 @@ describe('ProgramCourses', () => {
   it('opens the form prefilled from a row', () => {
     setup();
     click('[data-edit]', 0);
+    backend.expectOne((request) => request.url === `${api}/courses/11/accreditations`)
+      .flush({ content: [] });
+    backend.expectOne((request) => request.url === `${api}/accreditations`)
+      .flush({ content: [] });
+    fixture.detectChanges();
     expect(q<HTMLInputElement>('#name')!.value).toBe('Algèbre');
   });
 

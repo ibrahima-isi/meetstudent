@@ -31,7 +31,7 @@ describe('ProgramAccreditations', () => {
   };
   const options = () => all('#accreditation option').map((o) => o.textContent!.trim());
 
-  function setup(links = linked) {
+  function setup(links = linked, laterCatalog: typeof accreditations | null = null) {
     TestBed.configureTestingModule({
       providers: [
         provideZonelessChangeDetection(),
@@ -45,7 +45,12 @@ describe('ProgramAccreditations', () => {
     fixture.componentRef.setInput('programId', 5);
     fixture.detectChanges();
     backend.expectOne(`${api}/programs/5/accreditations`).flush(links);
-    backend.expectOne((r) => r.url === `${api}/accreditations`).flush({ content: accreditations });
+    backend.expectOne((r) => r.url === `${api}/accreditations` && r.params.get('page') === '0')
+      .flush({ content: accreditations, totalPages: laterCatalog ? 2 : 1 });
+    if (laterCatalog) {
+      backend.expectOne((r) => r.url === `${api}/accreditations` && r.params.get('page') === '1')
+        .flush({ content: laterCatalog, totalPages: 2 });
+    }
     fixture.detectChanges();
   }
 
@@ -63,6 +68,20 @@ describe('ProgramAccreditations', () => {
   it('only offers the accreditations that are not linked yet', () => {
     setup();
     expect(options()).toEqual(['Choisir…', 'EQUIS']);
+  });
+
+  it('offers a linked accreditation outside the first catalog page after unlink', () => {
+    setup([{ programId: 5, accreditationId: 250, accreditation: { id: 250, name: 'AMBA' }, startsAt: 2020, endsAt: 2025 }]);
+    q<HTMLButtonElement>('[data-unlink]')!.click();
+    backend.expectOne(`${api}/programs/5/accreditations/250`)
+      .flush(null, { status: 204, statusText: 'No Content' });
+    fixture.detectChanges();
+    expect(options()).toContain('AMBA');
+  });
+
+  it('can select a preserved accreditation beyond page one after reopening', () => {
+    setup([], [{ id: 250, name: 'AMBA' }]);
+    expect(options()).toContain('AMBA');
   });
 
   it('says so when nothing is linked', () => {
@@ -145,6 +164,17 @@ describe('ProgramAccreditations', () => {
     fixture.detectChanges();
     expect(all('li[data-link-row]').length).toBe(0);
     expect(options()).toEqual(['Choisir…', 'AACSB', 'EQUIS']);
+    expect(q('[data-notice]')!.textContent).toContain('Lien retiré');
+  });
+
+  it('explains a missing association and keeps the visible link', () => {
+    setup();
+    q<HTMLButtonElement>('[data-unlink]')!.click();
+    backend.expectOne(`${api}/programs/5/accreditations/2`)
+      .flush({ message: 'Association non trouvée' }, { status: 404, statusText: 'Not Found' });
+    fixture.detectChanges();
+    expect(q('[role=alert]')!.textContent).toContain('introuvable');
+    expect(all('li[data-link-row]').length).toBe(1);
   });
 
   it('shows an alert when the lists cannot be loaded', () => {

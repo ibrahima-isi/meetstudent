@@ -341,6 +341,58 @@ class ProgramControllerIntegrationTests {
     }
 
     @Test
+    void unlinkRemovesOnlyTargetAssociationAndPreservesSharedAccreditation() throws Exception {
+        Program first = programService.save(programMapper.toEntity(TestDataUtil.createProgramDto()));
+        ProgramDTO otherDto = TestDataUtil.createProgramDto();
+        otherDto.setCode("P106B");
+        Program other = programService.save(programMapper.toEntity(otherDto));
+        Accreditation accreditation = accreditationService.save(accreditationMapper.toEntity(TestDataUtil.createAccreditationDto()));
+        programAccreditationService.addAccreditationToProgram(first.getId(), accreditation.getId(), 2020, 2025);
+        programAccreditationService.addAccreditationToProgram(other.getId(), accreditation.getId(), 2021, 2026);
+
+        mockMvc.perform(MockMvcRequestBuilders.delete("/api/v1/programs/" + first.getId()
+                        + "/accreditations/" + accreditation.getId()).with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isNoContent());
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/programs/" + first.getId()
+                        + "/accreditations/" + accreditation.getId()))
+                .andExpect(MockMvcResultMatchers.status().isNotFound());
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/programs/" + other.getId()
+                        + "/accreditations/" + accreditation.getId()))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.startsAt").value(2021));
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/accreditations/" + accreditation.getId()))
+                .andExpect(MockMvcResultMatchers.status().isOk());
+    }
+
+    @Test
+    void unlinkMissingAssociationReturnsNotFoundWithoutChangingAnotherLink() throws Exception {
+        Program program = programService.save(programMapper.toEntity(TestDataUtil.createProgramDto()));
+        Accreditation accreditation = accreditationService.save(accreditationMapper.toEntity(TestDataUtil.createAccreditationDto()));
+        int missingProgramId = program.getId() + 1000;
+        programAccreditationService.addAccreditationToProgram(program.getId(), accreditation.getId(), 2020, 2025);
+
+        mockMvc.perform(MockMvcRequestBuilders.delete("/api/v1/programs/" + missingProgramId
+                        + "/accreditations/" + accreditation.getId()).with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isNotFound());
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/programs/" + program.getId()
+                        + "/accreditations/" + accreditation.getId()))
+                .andExpect(MockMvcResultMatchers.status().isOk());
+    }
+
+    @Test
+    void studentCannotUnlinkAnAccreditation() throws Exception {
+        Program program = programService.save(programMapper.toEntity(TestDataUtil.createProgramDto()));
+        Accreditation accreditation = accreditationService.save(accreditationMapper.toEntity(TestDataUtil.createAccreditationDto()));
+        programAccreditationService.addAccreditationToProgram(program.getId(), accreditation.getId(), 2020, 2025);
+
+        String url = "/api/v1/programs/" + program.getId() + "/accreditations/" + accreditation.getId();
+        mockMvc.perform(MockMvcRequestBuilders.delete(url).with(TestDataUtil.mockUser("ROLE_STUDENT")))
+                .andExpect(MockMvcResultMatchers.status().isForbidden());
+        mockMvc.perform(MockMvcRequestBuilders.get(url))
+                .andExpect(MockMvcResultMatchers.status().isOk());
+    }
+
+    @Test
     void testThatGetProgramsSortedByRateReturnsCorrectOrder() throws Exception {
         ProgramDTO p1 = TestDataUtil.createProgramDto();
         p1.setName("Best Program");

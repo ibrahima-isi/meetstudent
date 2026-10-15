@@ -27,7 +27,7 @@ public class ProgramAccreditation {
     @JoinColumn(name = "program_id")
     private Program program;
 
-    @ManyToOne(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+    @ManyToOne(fetch = FetchType.EAGER)
     @MapsId("accreditationId")
     @JoinColumn(name = "accreditation_id")
     private Accreditation accreditation;

@@ -24,4 +24,7 @@ public class Accreditation extends BaseEntity {
 
     @OneToMany(mappedBy = "accreditation")
     private List<ProgramAccreditation> programAccreditations;
+
+    @OneToMany(mappedBy = "accreditation")
+    private List<CourseAccreditation> courseAccreditations;
 }
