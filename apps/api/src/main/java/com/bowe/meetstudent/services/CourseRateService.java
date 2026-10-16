@@ -17,6 +17,11 @@ import java.util.Optional;
 public class CourseRateService {
     private final CourseRateRepository courseRateRepository;
 
+    /** The rating this user already gave to this target, if any (one rating per user per target). */
+    public Optional<CourseRate> findByUserAndCourse(Integer userId, Integer courseId) {
+        return courseRateRepository.findByUserEntityIdAndCourseId(userId, courseId);
+    }
+
     @Transactional
     public CourseRate save(CourseRate courseRate) {
         return courseRateRepository.save(courseRate);

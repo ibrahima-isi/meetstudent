@@ -44,6 +44,12 @@ public class ProgramRateController {
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestBody @Valid ProgramRateDTO dto) {
         ProgramRate rate = mapper.toEntity(dto);
+        // Never trust client-supplied identity/audit fields: a copied id would make save() merge into someone else's row.
+        rate.setId(null);
+        rate.setCreatedAt(null);
+        rate.setCreatedBy(null);
+        rate.setModifiedAt(null);
+        rate.setModifiedBy(null);
         
         if (dto.getProgramId() != null) {
             var program = programService.findById(dto.getProgramId());
@@ -56,8 +62,25 @@ public class ProgramRateController {
                 dto.getUserId()
         ));
 
-        var saved = this.service.save(rate);
-        return new ResponseEntity<>(mapper.toDTO(saved), HttpStatus.CREATED);
+        // One rating per user per target: rating again updates it in place (200) instead of adding a row.
+        var existing = rate.getProgram() == null ? java.util.Optional.<ProgramRate>empty()
+                : service.findByUserAndProgram(rate.getUserEntity().getId(), rate.getProgram().getId());
+        try {
+            if (existing.isPresent()) {
+                var current = existing.get();
+                current.setNote(rate.getNote());
+                // null = keep the previous comment (PUT convention); an empty string clears it.
+                if (rate.getComment() != null) current.setComment(rate.getComment());
+                return ResponseEntity.ok(mapper.toDTO(this.service.save(current)));
+            }
+            return new ResponseEntity<>(mapper.toDTO(this.service.save(rate)), HttpStatus.CREATED);
+        } catch (org.springframework.dao.DataIntegrityViolationException ex) {
+            // A concurrent request created the same pair between the lookup and the insert.
+            if (UniqueRateViolation.matches(ex)) {
+                throw new com.bowe.meetstudent.exceptions.ConflictException("Vous avez déjà noté cet élément");
+            }
+            throw ex;
+        }
     }
 
     @GetMapping

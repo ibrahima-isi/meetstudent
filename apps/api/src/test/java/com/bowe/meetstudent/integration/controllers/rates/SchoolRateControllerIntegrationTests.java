@@ -214,4 +214,107 @@ class SchoolRateControllerIntegrationTests {
                 MockMvcResultMatchers.status().isForbidden()
         );
     }
+
+    @Test
+    void testThatRatingTheSameSchoolTwiceUpdatesTheRatingInPlace() throws Exception {
+        setupUser("ROLE_STUDENT");
+        var target = schoolService.save(schoolMapper.toEntity(TestDataUtil.createSchoolDto()));
+        var body = SchoolRateDTO.builder().note(2.0).comment("first").schoolId(target.getId()).userId(testUser.getId()).build();
+        var first = mockMvc.perform(
+                MockMvcRequestBuilders.post("/api/v1/school-rates").contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)).with(TestDataUtil.mockUser(testUser.getId(), "ROLE_STUDENT"))
+        ).andExpect(MockMvcResultMatchers.status().isCreated()).andReturn().getResponse().getContentAsString();
+        int id = objectMapper.readValue(first, SchoolRateDTO.class).getId();
+
+        body.setNote(5.0);
+        body.setComment("second");
+        mockMvc.perform(
+                MockMvcRequestBuilders.post("/api/v1/school-rates").contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)).with(TestDataUtil.mockUser(testUser.getId(), "ROLE_STUDENT"))
+        ).andExpect(MockMvcResultMatchers.status().isOk())
+         .andExpect(MockMvcResultMatchers.jsonPath("$.id").value(id))
+         .andExpect(MockMvcResultMatchers.jsonPath("$.note").value(5.0))
+         .andExpect(MockMvcResultMatchers.jsonPath("$.comment").value("second"));
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/school-rates").with(TestDataUtil.mockUser(testUser.getId(), "ROLE_STUDENT")))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.totalElements").value(1));
+    }
+
+    @Test
+    void testThatTwoUsersCanEachRateTheSameSchool() throws Exception {
+        setupUser("ROLE_STUDENT");
+        UserEntity other = createUser("ROLE_STUDENT", "second-rater@example.com");
+        var target = schoolService.save(schoolMapper.toEntity(TestDataUtil.createSchoolDto()));
+        for (var user : new UserEntity[] {testUser, other}) {
+            var body = SchoolRateDTO.builder().note(3.0).schoolId(target.getId()).userId(user.getId()).build();
+            mockMvc.perform(
+                    MockMvcRequestBuilders.post("/api/v1/school-rates").contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(body)).with(TestDataUtil.mockUser(user.getId(), "ROLE_STUDENT"))
+            ).andExpect(MockMvcResultMatchers.status().isCreated());
+        }
+    }
+
+    @Test
+    void testThatPostingAnotherUsersRateIdCannotOverwriteThatRating() throws Exception {
+        setupUser("ROLE_STUDENT");
+        UserEntity other = createUser("ROLE_STUDENT", "thief@example.com");
+        var target = schoolService.save(schoolMapper.toEntity(TestDataUtil.createSchoolDto()));
+        var victimBody = SchoolRateDTO.builder().note(4.0).comment("victim").schoolId(target.getId()).userId(testUser.getId()).build();
+        var created = mockMvc.perform(
+                MockMvcRequestBuilders.post("/api/v1/school-rates").contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(victimBody)).with(TestDataUtil.mockUser(testUser.getId(), "ROLE_STUDENT"))
+        ).andExpect(MockMvcResultMatchers.status().isCreated()).andReturn().getResponse().getContentAsString();
+        int victimId = objectMapper.readValue(created, SchoolRateDTO.class).getId();
+
+        var attack = SchoolRateDTO.builder().id(victimId).note(1.0).comment("stolen").schoolId(target.getId()).userId(other.getId()).build();
+        var attackResult = mockMvc.perform(
+                MockMvcRequestBuilders.post("/api/v1/school-rates").contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(attack)).with(TestDataUtil.mockUser(other.getId(), "ROLE_STUDENT"))
+        ).andExpect(MockMvcResultMatchers.status().isCreated()).andReturn().getResponse().getContentAsString();
+        org.junit.jupiter.api.Assertions.assertNotEquals(victimId, objectMapper.readValue(attackResult, SchoolRateDTO.class).getId());
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/school-rates/" + victimId).with(TestDataUtil.mockUser(testUser.getId(), "ROLE_STUDENT")))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.note").value(4.0))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.comment").value("victim"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.userId").value(testUser.getId()));
+    }
+
+    @Test
+    void testThatACommentLongerThanTheColumnIsRejectedWith400() throws Exception {
+        setupUser("ROLE_STUDENT");
+        var target = schoolService.save(schoolMapper.toEntity(TestDataUtil.createSchoolDto()));
+        var body = SchoolRateDTO.builder().note(3.0).comment("x".repeat(151)).schoolId(target.getId()).userId(testUser.getId()).build();
+        mockMvc.perform(
+                MockMvcRequestBuilders.post("/api/v1/school-rates").contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)).with(TestDataUtil.mockUser(testUser.getId(), "ROLE_STUDENT"))
+        ).andExpect(MockMvcResultMatchers.status().isBadRequest())
+         .andExpect(MockMvcResultMatchers.jsonPath("$.comment").exists());
+    }
+
+    @Test
+    void testThatReRatingWithoutACommentKeepsItButAnEmptyOneClearsIt() throws Exception {
+        setupUser("ROLE_STUDENT");
+        var target = schoolService.save(schoolMapper.toEntity(TestDataUtil.createSchoolDto()));
+        var auth = TestDataUtil.mockUser(testUser.getId(), "ROLE_STUDENT");
+        var body = SchoolRateDTO.builder().note(2.0).comment("keep me").schoolId(target.getId()).userId(testUser.getId()).build();
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/school-rates").contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(body)).with(auth)).andExpect(MockMvcResultMatchers.status().isCreated());
+
+        body.setNote(4.0);
+        body.setComment(null);
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/school-rates").contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(body)).with(auth))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.note").value(4.0))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.comment").value("keep me"));
+
+        body.setNote(5.0);
+        body.setComment("");
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/school-rates").contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(body)).with(auth))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.note").value(5.0))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.comment").value(""));
+    }
 }

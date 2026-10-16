@@ -5,7 +5,10 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.data.mapping.PropertyReferenceException;
+import org.springframework.http.MediaType;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -131,20 +134,27 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleDataIntegrity(DataIntegrityViolationException ex, WebRequest request) {
         String sqlState = null;
+        String constraint = null;
         for (Throwable cause = ex; cause != null; cause = cause.getCause()) {
-            if (cause instanceof java.sql.SQLException sql && sql.getSQLState() != null) {
+            if (constraint == null && cause instanceof org.hibernate.exception.ConstraintViolationException cv) {
+                constraint = cv.getConstraintName();
+            }
+            if (sqlState == null && cause instanceof java.sql.SQLException sql && sql.getSQLState() != null) {
                 sqlState = sql.getSQLState();
-                break;
             }
             if (cause.getCause() == cause) break;
         }
+        String uri = request.getDescription(false);
         if ("23505".equals(sqlState)) {
+            log.error("Unique constraint violation (SQLSTATE 23505, constraint {}) on {}", constraint, uri);
             return build(HttpStatus.CONFLICT, "A resource with the same unique value already exists", request);
         }
         if ("23503".equals(sqlState)) {
+            log.error("Foreign key violation (SQLSTATE 23503, constraint {}) on {}", constraint, uri);
             return build(HttpStatus.CONFLICT, "This resource is still in use", request);
         }
         if ("23502".equals(sqlState) || "22001".equals(sqlState)) {
+            log.warn("Missing or too long value (SQLSTATE {}, constraint {}) on {}", sqlState, constraint, uri);
             return build(HttpStatus.BAD_REQUEST, "A submitted value is missing or too long", request);
         }
         return handleGlobalException(ex, request);
@@ -233,10 +243,30 @@ public class GlobalExceptionHandler {
                 + "' is not supported. Supported: " + ex.getSupportedMediaTypes(), request);
     }
 
+    /** The JSON body is forced: the client's Accept header may exclude every type we could write. */
+    @ExceptionHandler(HttpMediaTypeNotAcceptableException.class)
+    public ResponseEntity<ErrorResponse> handleMediaTypeNotAcceptable(
+            HttpMediaTypeNotAcceptableException ex, WebRequest request) {
+        var body = build(HttpStatus.NOT_ACCEPTABLE,
+                "Cannot produce a response matching the Accept header. Supported: application/json", request).getBody();
+        return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).contentType(MediaType.APPLICATION_JSON).body(body);
+    }
+
+    /** Unknown {@code ?sort=} property. */
+    @ExceptionHandler(PropertyReferenceException.class)
+    public ResponseEntity<ErrorResponse> handleUnknownSortProperty(
+            PropertyReferenceException ex, WebRequest request) {
+        return build(HttpStatus.BAD_REQUEST, "Unknown sort property '" + truncate(ex.getPropertyName(), 64) + "'", request);
+    }
+
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<ErrorResponse> handleMethodNotSupported(
             HttpRequestMethodNotSupportedException ex, WebRequest request) {
         return build(HttpStatus.METHOD_NOT_ALLOWED, "Method '" + ex.getMethod() + "' is not supported for this endpoint", request);
+    }
+
+    private static String truncate(String value, int max) {
+        return value == null || value.length() <= max ? value : value.substring(0, max);
     }
 
     private ResponseEntity<ErrorResponse> build(HttpStatus status, String message, WebRequest request) {
