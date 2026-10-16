@@ -123,4 +123,4 @@ Preuves locales : [docs/evidence/ticket-105.md](docs/evidence/ticket-105.md). AP
 
 - [ ] [#108](https://github.com/ibrahima-isi/meetstudent/issues/108) : issue assignée, branche isolée `feat/teacher-specialty-108` depuis le squash #107 `745ada7`.
 
-[Preuves provisoires](docs/evidence/ticket-108.md) : tests HTTP et formulaire rouges puis verts pour spécialité absente/blanche, 100/101 caractères, affichage local/API et changement enseignant → étudiant. API 564 tests, web 948 tests/types/build SSR, backoffice 300 tests/types/build verts ; PostgreSQL V1–V23 et cinq HTTP verts. Revues, PR/CI et squash à venir ; #109 attend la livraison de #108.
+[Preuves provisoires](docs/evidence/ticket-108.md) : tests HTTP et formulaire rouges puis verts pour spécialité absente/blanche, 100/101 caractères, affichage local/API et changement enseignant → étudiant. API 564 tests, web 948 tests/types/build SSR, backoffice 300 tests/types/build verts ; PostgreSQL V1–V23 et cinq HTTP verts. Revue Spec sans écart, remarque Standards corrigée ; relecture finale, CI et squash de la [PR #139](https://github.com/ibrahima-isi/meetstudent/pull/139) à venir. #109 attend la livraison de #108.

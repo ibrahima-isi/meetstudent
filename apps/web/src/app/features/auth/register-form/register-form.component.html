@@ -159,6 +159,8 @@
       }
 
       @if (userType() === 'teacher') {
+        @let qualificationError = fieldError('qualification');
+        @let specialtyKey = specialtyErrorKey();
         <div>
           <label for="specialty" class="block text-foreground mb-2">{{ t('auth.register.specialty') }}</label>
           <div class="relative">
@@ -167,17 +169,15 @@
               id="specialty"
               type="text"
               formControlName="specialty"
-              [attr.aria-invalid]="fieldError('qualification') || specialtyErrorKey() ? 'true' : null"
-              [attr.aria-describedby]="fieldError('qualification') || specialtyErrorKey() ? 'specialty-error' : null"
+              [attr.aria-invalid]="qualificationError || specialtyKey ? 'true' : null"
+              [attr.aria-describedby]="qualificationError || specialtyKey ? 'specialty-error' : null"
               (focus)="filteredSpecialties().length > 0 && showSuggestions.set(true)"
               (blur)="showSuggestions.set(false)"
               class="field-input pl-11"
               [placeholder]="t('auth.register.specialtyPlaceholder')"
             />
-            @if (fieldError('qualification'); as message) {
-              <p class="text-red-600 dark:text-red-400 mt-1" id="specialty-error" role="alert" data-testid="error-specialty">{{ message }}</p>
-            } @else if (specialtyErrorKey(); as key) {
-              <p class="text-red-600 dark:text-red-400 mt-1" id="specialty-error" role="alert" data-testid="error-specialty">{{ t(key) }}</p>
+            @if (qualificationError || specialtyKey) {
+              <p class="text-red-600 dark:text-red-400 mt-1" id="specialty-error" role="alert" data-testid="error-specialty">{{ qualificationError || t(specialtyKey || '') }}</p>
             }
             @if (showSuggestions() && filteredSpecialties().length > 0) {
               <div class="absolute z-20 w-full mt-1 bg-card border border-border-strong rounded-lg shadow-lg max-h-60 overflow-y-auto">
