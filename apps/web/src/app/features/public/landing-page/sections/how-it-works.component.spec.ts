@@ -1,5 +1,12 @@
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { RouterTestingHarness } from '@angular/router/testing';
+import { SchoolsPageComponent } from '../../schools-page/schools-page.component';
+import { ProgramsPageComponent } from '../../programs-page/programs-page.component';
+import { CoursesPageComponent } from '../../courses-page/courses-page.component';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter, Router } from '@angular/router';
 import { provideTransloco } from '@jsverse/transloco';
 import { firstValueFrom } from 'rxjs';
 import { translocoOptions } from '@i18n/transloco.config';
@@ -23,8 +30,21 @@ describe('HowItWorksComponent', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [provideZonelessChangeDetection(), provideTransloco(translocoOptions)],
+      providers: [provideZonelessChangeDetection(), provideRouter([]), provideTransloco(translocoOptions)],
     });
+  });
+
+  it('submits the French school search through the accessible form', async () => {
+    await render('fr');
+    const field = root().querySelector('input[type=search]') as HTMLInputElement;
+    expect(field).not.toBeNull();
+    if (!field) return;
+    expect(root().querySelector(`label[for="${field.id}"]`)?.textContent).toContain('Nom à rechercher');
+    const navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    field.value = '  Dakar  ';
+    field.dispatchEvent(new Event('input'));
+    (root().querySelector('button[type=submit]') as HTMLButtonElement).click();
+    expect(navigate).toHaveBeenCalledWith(['/', 'fr', 'schools'], { queryParams: { q: 'Dakar' } });
   });
 
   it('is an anchor target; the global scroll-padding clears the navbar', async () => {
@@ -90,4 +110,104 @@ describe('HowItWorksComponent', () => {
     await render('fr');
     expect(root().querySelector('ol')!.getAttribute('role')).toBe('list');
   });
+});
+
+
+describe('Cherchez catalogue journeys', () => {
+  let harness: RouterTestingHarness;
+  let http: HttpTestingController;
+  const root = () => harness.routeNativeElement as HTMLElement;
+  const settle = async () => {
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+  };
+  const page = (content: unknown[]) => ({ content, last: true, totalElements: content.length });
+
+  async function open(lang: 'fr' | 'en') {
+    TestBed.configureTestingModule({ providers: [
+      provideZonelessChangeDetection(), provideHttpClient(), provideHttpClientTesting(),
+      provideTransloco(translocoOptions),
+      provideRouter([{ path: ':lang', children: [
+        { path: '', component: HowItWorksComponent },
+        { path: 'schools', component: SchoolsPageComponent },
+        { path: 'programs', component: ProgramsPageComponent },
+        { path: 'courses', component: CoursesPageComponent },
+      ] }]),
+    ] });
+    await firstValueFrom(TestBed.inject(LocaleService).use(lang));
+    http = TestBed.inject(HttpTestingController);
+    harness = await RouterTestingHarness.create('/' + lang);
+    await settle();
+  }
+
+  async function submit(resource: string, term: string) {
+    const select = root().querySelector('select') as HTMLSelectElement;
+    select.value = resource;
+    select.dispatchEvent(new Event('change'));
+    const field = root().querySelector('input[type=search]') as HTMLInputElement;
+    field.value = term;
+    field.dispatchEvent(new Event('input'));
+    (root().querySelector('button[type=submit]') as HTMLButtonElement).click();
+    await settle();
+  }
+
+  afterEach(() => http?.verify());
+
+  for (const lang of ['fr', 'en'] as const) {
+    for (const resource of ['schools', 'programs', 'courses']) {
+      it(`${lang}: submits ${resource}, displays HTTP loading/results and preserves the query`, async () => {
+        await open(lang);
+        const select = root().querySelector('select') as HTMLSelectElement;
+        expect(root().querySelector(`label[for="${select.id}"]`)).not.toBeNull();
+        expect(Array.from(select.options).map(o => o.text)).toEqual(lang === 'fr'
+          ? ['Établissement', 'Formation', 'Cours'] : ['School', 'Programme', 'Course']);
+        expect(root().querySelector('button')?.textContent?.trim()).toBe(lang === 'fr' ? 'Cherchez' : 'Search');
+        await submit(resource, '  École & été  ');
+        const router = TestBed.inject(Router);
+        expect(router.parseUrl(router.url).queryParams['q']).toBe('École & été');
+        expect(router.url.startsWith('/' + lang + '/' + resource + '?')).toBeTrue();
+        expect(root().querySelector('input')?.value).toBe('École & été');
+        expect(root().querySelector('[aria-busy="true"]')).not.toBeNull();
+        const request = http.expectOne(r => r.url === '/api/v1/' + resource + '/name/' + encodeURIComponent('École & été'));
+        expect(request.request.params.get('page')).toBe('0');
+        expect(request.request.params.get('size')).toBe('12');
+        request.flush(page([{ id: 31, name: 'École & été' }]));
+        await settle();
+        expect(root().textContent).toContain('École & été');
+        expect(root().querySelector('[aria-busy="true"]')).toBeNull();
+      });
+    }
+  }
+
+  for (const [resource, empty] of [
+    ['schools', 'Aucun établissement trouvé avec ces critères'],
+    ['programs', 'Aucune formation ne correspond à cette recherche'],
+    ['courses', 'Aucun cours ne correspond à cette recherche'],
+  ]) {
+    it(`${resource}: displays HTTP failure, retries the same search and shows an empty result`, async () => {
+      await open('fr');
+      await submit(resource, 'introuvable');
+      const url = '/api/v1/' + resource + '/name/introuvable';
+      http.expectOne(r => r.url === url).flush({}, { status: 500, statusText: 'Unavailable' });
+      await settle();
+      expect(root().querySelector('app-error-state')).not.toBeNull();
+      (root().querySelector('app-error-state button') as HTMLButtonElement).click();
+      await settle();
+      expect(root().querySelector('[aria-busy="true"]')).not.toBeNull();
+      http.expectOne(r => r.url === url).flush(page([]));
+      await settle();
+      expect(root().querySelector('app-error-state')).toBeNull();
+      expect(root().textContent).toContain(empty);
+    });
+
+    it(`${resource}: opens the plain catalogue for a blank query`, async () => {
+      await open('en');
+      await submit(resource, '   ');
+      expect(TestBed.inject(Router).url).toBe('/en/' + resource);
+      http.expectOne(r => r.url === '/api/v1/' + resource).flush(page([]));
+      await settle();
+    });
+  }
 });

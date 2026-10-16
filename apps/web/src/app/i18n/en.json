@@ -490,7 +490,7 @@
     "steps": {
       "title": "How it works",
       "subtitle": "Three steps to choose with confidence.",
-      "search": { "title": "Search", "text": "Filter by city, type of school or programme to find what fits." },
+      "search": {"title": "Search", "text": "Filter by city, type of school or programme to find what fits.", "typeLabel": "Search type", "queryLabel": "Name to search", "schools": "School", "programs": "Programme", "courses": "Course"},
       "compare": { "title": "Compare", "text": "Read reviews from students and experts, browse programmes and accreditations." },
       "choose": { "title": "Decide", "text": "Save your favourites and keep your application documents in one place." }
     },

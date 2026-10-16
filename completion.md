@@ -73,7 +73,7 @@ Preuves : [docs/evidence/ticket-102.md](docs/evidence/ticket-102.md). Arrêt apr
 - [ ] [#118](https://github.com/ibrahima-isi/meetstudent/issues/118) — [19/30] Découvrir et rechercher les programmes
 - [ ] [#119](https://github.com/ibrahima-isi/meetstudent/issues/119) — [20/30] Découvrir et rechercher les cours
 - [ ] [#120](https://github.com/ibrahima-isi/meetstudent/issues/120) — [21/30] Découvrir les accréditations dans un catalogue fonctionnel
-- [ ] [#121](https://github.com/ibrahima-isi/meetstudent/issues/121) — [22/30] Relier Cherchez aux recherches établissement, programme et cours
+- [ ] [#121](https://github.com/ibrahima-isi/meetstudent/issues/121) — [22/30] Relier Cherchez aux recherches établissement, programme et cours — formulaire et parcours locaux vérifiés (1063 tests web, build/types verts) ; navigateur, revue et livraison en attente. [Preuves](docs/evidence/ticket-121.md).
 - [ ] [#122](https://github.com/ibrahima-isi/meetstudent/issues/122) — [23/30] Compléter les quatre liens Produit dans le footer
 - [ ] [#123](https://github.com/ibrahima-isi/meetstudent/issues/123) — [24/30] Comparer des établissements de bout en bout
 - [ ] [#124](https://github.com/ibrahima-isi/meetstudent/issues/124) — [25/30] Comparer des programmes

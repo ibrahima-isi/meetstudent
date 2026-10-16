@@ -150,3 +150,12 @@ Contrats HTTP 400/404/409 des tags, accréditations, programmes/cours et rôles,
 - [x] #112 — comportement existant et qualification HTTP/PostgreSQL vérifiés ; suite API entière verte.
 - [x] #112 — revues Standards/Spec indépendantes terminées ; constats confirmés corrigés, API complète relancée verte (615 tests).
 - [ ] #112 — PR vers `dev`, trois CI, squash et clôture encore requis ; suivi programme à décider.
+
+
+### #121 — entrée Cherchez vers les trois catalogues (2026-10-16)
+
+- [ ] [#121](https://github.com/ibrahima-isi/meetstudent/issues/121) : implémentation et vérification locale automatisée terminées ; vérification navigateur, revues indépendantes et livraison PR/CI à compléter.
+
+Base isolée `d73428d`, branche `feat/search-entry-121`. Formulaire accessible dans Cherchez : choix établissement/formation/cours, nom et bouton Cherchez/Search, navigation publique localisée avec `q`. Les catalogues et leurs services HTTP/états existants sont réutilisés.
+
+Preuves : [ticket-121.md](evidence/ticket-121.md). Rouge : formulaire absent (1 échec, 9 tests existants verts). Vert : 22 tests ciblés DOM/router/HTTP, suite web complète **1063**, types application/tests et build production SSR. Aucun changement API, accréditations ou autre ticket. Point 10 laissé décoché jusqu’aux vérifications restantes ; livraison et nettoyage à enregistrer par le coordinateur.
