@@ -48,7 +48,7 @@ import { nextDockVisible, SCROLL_DELTA_PX } from './dock-visibility';
     '(window:blur)': 'forgetPointer()',
     '(document:keydown.escape)': 'closeOverlays()',
     '(document:pointerdown)': 'onPointerDown($event)',
-    '(document:keydown)': 'mouseDriven = false',
+    '(document:keydown)': 'onKeyDown()',
     '(focusin)': 'onFocusIn()',
     '(focusout)': 'onFocusOut($event)',
   },
@@ -297,6 +297,11 @@ export class DockNavbarComponent {
         this.accountOpen.set(false);
       }
     }
+  }
+
+  /** A listener expression must not evaluate to `false`: Angular would cancel the key's default action. */
+  protected onKeyDown(): void {
+    this.mouseDriven = false;
   }
 
   protected onPointerDown(event: Event): void {
