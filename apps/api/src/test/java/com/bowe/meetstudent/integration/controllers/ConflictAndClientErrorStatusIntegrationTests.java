@@ -151,4 +151,22 @@ class ConflictAndClientErrorStatusIntegrationTests {
                 .andExpect(jsonPath("$.status").value(406))
                 .andExpect(jsonPath("$.error").value("Not Acceptable"));
     }
+
+    @Test
+    void aSchoolReferencingAnUnknownTagAnswers400OnCreateAndUpdate() throws Exception {
+        String body = "{\"name\":\"Ghost tag\",\"code\":\"" + code() + "\",\"tags\":[{\"id\":987654}]}";
+        send(post("/api/v1/schools"), ADMIN, body)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.tags").isNotEmpty());
+
+        String c = code();
+        int id = create("/api/v1/schools", "School " + c, c);
+        String update = "{\"tags\":[{\"id\":987654}]}";
+        send(put("/api/v1/schools/" + id), ADMIN, update)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.tags").isNotEmpty());
+        send(patch("/api/v1/schools/" + id), ADMIN, update)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.tags").isNotEmpty());
+    }
 }
