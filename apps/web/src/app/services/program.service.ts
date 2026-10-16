@@ -41,10 +41,8 @@ export class ProgramService {
   private mapProgramFields(program: Program): Program {
     return {
       ...program,
-      rating: (program as any).averageRate || program.rating || 0,
-      reviewCount: program.reviewCount || 0,
-      level: program.level || 'Licence',
-      // No default description: the template shows one in the active language.
+      // Nothing is invented: no rate, review count, level or description unless the API sent one.
+      rating: program.averageRate ?? program.rating ?? undefined,
       accreditations: program.accreditations || [],
       photoImageUrl: this.mediaService.resolveUrl(program.photo) ?? program.photoImageUrl
     };
@@ -57,10 +55,14 @@ export class ProgramService {
   }
 
   searchProgramsByName(name: string, page: number = 0, size: number = 10): Observable<Page<Program>> {
+    const term = name.trim();
+    if (!term) {
+      return this.getPrograms(page, size);
+    }
     const params = new HttpParams()
       .set('page', page.toString())
       .set('size', size.toString());
-    return this.http.get<Page<Program>>(`${this.apiUrl}/name/${name}`, { params }).pipe(
+    return this.http.get<Page<Program>>(`${this.apiUrl}/name/${encodeURIComponent(term)}`, { params }).pipe(
       map(res => ({
         ...res,
         content: res.content.map(p => this.mapProgramFields(p))

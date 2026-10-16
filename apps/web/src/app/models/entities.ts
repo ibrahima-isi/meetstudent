@@ -117,6 +117,11 @@ export interface Program extends BaseEntity {
   photoMediaId?: number;
   photo?: Media | null;
   schoolId?: number;
+  /** Name of the school the program belongs to; absent when the API has none. */
+  schoolName?: string | null;
+  schoolCode?: string | null;
+  /** Average of the ratings, as the API names it; absent until someone rates. */
+  averageRate?: number | null;
   school?: School;
   courses?: Course[];
   programRates?: ProgramRate[];

@@ -76,6 +76,15 @@ export const routes: Routes = [
               ),
           },
           {
+            path: 'programs',
+            pathMatch: 'full',
+            title: 'pageTitle.programs',
+            loadComponent: () =>
+              import('./features/public/programs-page/programs-page.component').then(
+                (m) => m.ProgramsPageComponent,
+              ),
+          },
+          {
             path: 'about',
             title: 'pageTitle.about',
             loadComponent: () =>

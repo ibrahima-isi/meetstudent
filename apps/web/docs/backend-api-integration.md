@@ -108,6 +108,12 @@ School, Course, and Program no longer carry image URL strings.
 
 The contract is **asymmetric**: you *write* an id, you *read* an object.
 
+### ProgramDTO: school and name search (ticket #118)
+
+- `ProgramDTO` carries optional `schoolName` and `schoolCode` (both `null`/absent when the program has no school), next to `schoolId`. The programs catalogue (`/:lang/programs`) links the school name to `/:lang/schools/:schoolId`.
+- `GET /api/v1/programs/name/{name}` sorts by `name,id` by default, so pages are stable. The client trims the term and `encodeURIComponent`s the path segment; an empty term lists all programs instead (`GET /programs`).
+- `ProgramService` no longer invents `level` (`'Licence'`), `rating` (0) or `reviewCount` (0): what the API did not send stays absent. `rating` is the API's `averageRate`.
+
 ### MediaDTO shape
 
 ```ts
