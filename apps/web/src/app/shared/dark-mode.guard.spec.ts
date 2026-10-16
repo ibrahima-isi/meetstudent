@@ -28,6 +28,7 @@ import { LandingPageComponent } from '../features/public/landing-page/landing-pa
 import { LandingHeroComponent } from '../features/public/landing-page/sections/landing-hero.component';
 import { SchoolsPageComponent } from '../features/public/schools-page/schools-page.component';
 import { ProgramsPageComponent } from '../features/public/programs-page/programs-page.component';
+import { CoursesPageComponent } from '../features/public/courses-page/courses-page.component';
 import { HomePageComponent } from '../features/student/home-page/home-page.component';
 import { ProfilePageComponent } from '../features/student/profile-page/profile-page.component';
 import { SchoolDetailPageComponent } from '../features/student/school-detail-page/school-detail-page.component';
@@ -271,6 +272,16 @@ describe('dark mode: no light-only palette classes', () => {
     ],
     ['programs page loading', ProgramsPageComponent, (c) => c.status.set('loading')],
     ['programs page error', ProgramsPageComponent, (c) => c.status.set('error')],
+    [
+      'courses page with courses',
+      CoursesPageComponent,
+      (c) => {
+        c.courses.set([{ id: 1, name: 'Algorithms', code: 'ALG', programId: 1, programName: 'Program', averageRate: 4 }]);
+        c.status.set('loaded');
+      },
+    ],
+    ['courses page loading', CoursesPageComponent, (c) => c.status.set('loading')],
+    ['courses page error', CoursesPageComponent, (c) => c.status.set('error')],
     ['error state', ErrorStateComponent, undefined],
     [
       'image with fallback',
