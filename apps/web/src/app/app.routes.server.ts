@@ -25,6 +25,7 @@ export const serverRoutes: ServerRoute[] = [
   { path: ':lang/profile', renderMode: RenderMode.Client },
   { path: ':lang/schools/compare', renderMode: RenderMode.Server },
   { path: ':lang/programs/compare', renderMode: RenderMode.Server },
+  { path: ':lang/courses/compare', renderMode: RenderMode.Server },
   { path: ':lang/schools/:id', renderMode: RenderMode.Client },
   { path: ':lang/reset-password', renderMode: RenderMode.Client },
   { path: ':lang/verify-email', renderMode: RenderMode.Client },
