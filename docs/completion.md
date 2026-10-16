@@ -116,6 +116,6 @@ Contrats HTTP 400/404/409 des tags, accréditations, programmes/cours et rôles,
 
 ### #108 — spécialité enseignant et erreurs de champ (2026-10-15)
 
-- [ ] [#108](https://github.com/ibrahima-isi/meetstudent/issues/108) : issue assignée, branche isolée `feat/teacher-specialty-108` depuis le squash #107 `745ada7`.
+- [x] [#108](https://github.com/ibrahima-isi/meetstudent/issues/108) : implémentation et validation terminées dans `feat/teacher-specialty-108` depuis le squash #107 `745ada7`.
 
-[Preuves provisoires](evidence/ticket-108.md) : tests HTTP et formulaire rouges puis verts pour spécialité absente/blanche, 100/101 caractères, affichage local/API et changement enseignant → étudiant. API 564 tests, web 948 tests/types/build SSR, backoffice 300 tests/types/build verts ; PostgreSQL V1–V23 et cinq HTTP verts. Revue Spec sans écart, remarque Standards corrigée ; relecture finale, CI et squash de la [PR #139](https://github.com/ibrahima-isi/meetstudent/pull/139) à venir. #109 attend la livraison de #108.
+[Preuves](evidence/ticket-108.md) : tests HTTP et formulaire rouges puis verts pour spécialité absente/blanche, 100/101 caractères, affichage local/API et changement enseignant → étudiant. API 564 tests, web 948 tests/types/build SSR, backoffice 300 tests/types/build verts ; PostgreSQL V1–V23 et cinq HTTP verts. Revues Sol Standards/Spec sans écart. [CI API/web/backoffice verte](https://github.com/ibrahima-isi/meetstudent/actions/runs/38840438774) sur `cce4c21` ; le présent closeout documentaire doit passer les trois CI sur son head final avant squash de la [PR #139](https://github.com/ibrahima-isi/meetstudent/pull/139). #109 suit après livraison de #108.
