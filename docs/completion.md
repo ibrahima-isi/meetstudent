@@ -129,4 +129,8 @@ Contrats HTTP 400/404/409 des tags, accréditations, programmes/cours et rôles,
 
 ### #110 — une note par utilisateur et établissement (2026-10-16)
 
-- [ ] [#110](https://github.com/ibrahima-isi/meetstudent/issues/110) : claimed dans `fix/school-rating-uniqueness-110`, base `557adcd`. Qualification des garanties déjà présentes terminée : 14 tests HTTP H2 ciblés, 3 HTTP PostgreSQL, V23→V24 sur doublons historiques puis schéma validé, API complète 608 tests verts. Aucun code métier ni migration modifiés ; nouveaux tests verts sur la base existante, sans faux rouge. Stack jetable supprimée. Revue indépendante et livraison PR/CI/squash en attente. [Preuves](evidence/ticket-110.md).
+- [ ] [#110](https://github.com/ibrahima-isi/meetstudent/issues/110) : claimed dans `fix/school-rating-uniqueness-110`, base `557adcd`. Qualification des garanties déjà présentes terminée : 14 tests HTTP H2 ciblés, 3 HTTP PostgreSQL, V23→V24 sur doublons historiques puis schéma validé, API complète 608 tests verts. Aucun code métier ni migration modifiés ; nouveaux tests verts sur la base existante, sans faux rouge. Stack jetable supprimée. Revues indépendantes Standards et Spec sur `24afa44` : zéro constat sur chaque axe. Livraison PR/CI finale/squash en attente. [Preuves](evidence/ticket-110.md).
+
+- [x] #110 — implémentation existante et qualification HTTP/PostgreSQL validées.
+- [x] #110 — tests affectés et revues indépendantes Standards/Spec terminés, sans constat.
+- [ ] #110 — PR vers `dev`, trois CI vertes sur le head documentaire final, squash et clôture à relier par l’orchestrateur.

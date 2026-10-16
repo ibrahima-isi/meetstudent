@@ -62,7 +62,7 @@ Preuves : [docs/evidence/ticket-102.md](docs/evidence/ticket-102.md). Arrêt apr
 - [x] [#107](https://github.com/ibrahima-isi/meetstudent/issues/107) — [08/30] Choisir étudiant ou enseignant à l’inscription
 - [x] [#108](https://github.com/ibrahima-isi/meetstudent/issues/108) — [09/30] Valider la spécialité enseignant et afficher les erreurs au bon champ
 - [x] [#109](https://github.com/ibrahima-isi/meetstudent/issues/109) — [10/30] Masquer les favoris étudiants pour les enseignants
-- [ ] [#110](https://github.com/ibrahima-isi/meetstudent/issues/110) — [11/30] Conserver une seule note par utilisateur et établissement — qualification HTTP/PostgreSQL verte ; [preuves](docs/evidence/ticket-110.md), revue indépendante et livraison à suivre.
+- [ ] [#110](https://github.com/ibrahima-isi/meetstudent/issues/110) — [11/30] Conserver une seule note par utilisateur et établissement — implémentation/qualification et revues Standards/Spec validées ; [preuves](docs/evidence/ticket-110.md), livraison PR/CI/squash en attente.
 - [ ] [#111](https://github.com/ibrahima-isi/meetstudent/issues/111) — [12/30] Conserver une seule note par utilisateur et programme
 - [ ] [#112](https://github.com/ibrahima-isi/meetstudent/issues/112) — [13/30] Conserver une seule note par utilisateur et cours
 - [ ] [#113](https://github.com/ibrahima-isi/meetstudent/issues/113) — [14/30] Archiver le worktree de configuration des skills
@@ -134,4 +134,8 @@ Preuves locales : [docs/evidence/ticket-105.md](docs/evidence/ticket-105.md). AP
 
 ### #110 — une note par utilisateur et établissement (2026-10-16)
 
-- [ ] [#110](https://github.com/ibrahima-isi/meetstudent/issues/110) : claimed dans `fix/school-rating-uniqueness-110`, base `557adcd`. Qualification des garanties déjà présentes terminée : 14 tests HTTP H2 ciblés, 3 HTTP PostgreSQL, V23→V24 sur doublons historiques puis schéma validé, API complète 608 tests verts. Aucun code métier ni migration modifiés ; nouveaux tests verts sur la base existante, sans faux rouge. Stack jetable supprimée. Revue indépendante et livraison PR/CI/squash en attente. [Preuves](docs/evidence/ticket-110.md).
+- [ ] [#110](https://github.com/ibrahima-isi/meetstudent/issues/110) : claimed dans `fix/school-rating-uniqueness-110`, base `557adcd`. Qualification des garanties déjà présentes terminée : 14 tests HTTP H2 ciblés, 3 HTTP PostgreSQL, V23→V24 sur doublons historiques puis schéma validé, API complète 608 tests verts. Aucun code métier ni migration modifiés ; nouveaux tests verts sur la base existante, sans faux rouge. Stack jetable supprimée. Revues indépendantes Standards et Spec sur `24afa44` : zéro constat sur chaque axe. Livraison PR/CI finale/squash en attente. [Preuves](docs/evidence/ticket-110.md).
+
+- [x] #110 — implémentation existante et qualification HTTP/PostgreSQL validées.
+- [x] #110 — tests affectés et revues indépendantes Standards/Spec terminés, sans constat.
+- [ ] #110 — PR vers `dev`, trois CI vertes sur le head documentaire final, squash et clôture à relier par l’orchestrateur.

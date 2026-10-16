@@ -60,8 +60,17 @@ Enfin l'application Spring démarre sur cette même base réconciliée avec `ddl
 
 Flyway 10.20.1 avertit que PostgreSQL 18.6 est plus récent que sa version testée (17) ; migration, validation et HTTP ont effectivement réussi. Deux erreurs de lancement corrigées ne sont pas des rouges produit : option Surefire initiale de sélection sans `surefire.failIfNoSpecifiedTests=false`, puis DevTools incompatible avec le lanceur Java source temporaire (relancé avec `-Dspring.devtools.restart.enabled=false`, sans changement de configuration du dépôt).
 
+## Revues indépendantes
+
+Le 2026-10-16, deux sous-agents read-only ont revu séparément `git diff 557adcd425c51733e31170f0eb9ae052733d7d05...HEAD` sur le commit d’implémentation `24afa4454fbb5d77d01bd4ee07d4afba479de9c9` :
+
+- **Standards : 0 violation documentée, 0 smell actionnable ; aucun blocage.** Guides racine/API et suivi respectés ; coordination JDBC localisée, barrière libérée en `finally`, `ThreadLocal` retiré, exécuteur fermé, assertions persistées et HTTP cohérentes.
+- **Spec : 0 constat ; aucune exigence manquante/partielle, aucun dépassement de portée, aucune mise en œuvre erronée.** Répétition, indépendance, agrégat, rôles, collision réelle puis retry et réconciliation historique PostgreSQL concordent avec #110/#99.
+
+Les deux axes ont vérifié l’interleaving des véritables INSERT et la portée des assertions. Les preuves PostgreSQL et les journaux de tests ont été relus ; aucun correctif ni nouvelle exécution de tests n’était nécessaire. `git diff --check` est vert. Le commit de clôture de revue ne modifie que les trois documents de suivi ; les trois CI devront porter sur ce head documentaire final avant squash.
+
 ## Livraison et nettoyage
 
 `docker compose -p ms110 -f /tmp/ms110-compose.yml down -v` a supprimé le conteneur et réseau #110. L'inventaire Docker filtré sur le projet `ms110` est vide. Les conteneurs préexistants et les autres worktrees sont préservés. Aucun SMTP réel, déploiement ou promotion main.
 
-Revues indépendantes Standards/Spec, CI finale API/web/backoffice, PR vers dev et squash restent à exécuter et à relier par l'orchestrateur. Le suivi reste unchecked tant que les vérifications requises ne sont pas toutes acquises.
+Implémentation/qualification, tests et revues indépendantes Standards/Spec sont terminés. La livraison reste unchecked : CI finale API/web/backoffice, PR vers dev, squash et clôture restent à exécuter et à relier par l’orchestrateur. Aucun push, PR ni merge n’a été effectué par le reviewer/fixer.
