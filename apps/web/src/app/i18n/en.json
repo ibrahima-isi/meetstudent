@@ -46,6 +46,7 @@
     "who": "Undergraduate student · Dakar"
   },
   "pageTitle": {
+    "programs": "Programmes",
     "landing": "Find the school that suits you",
     "schools": "Schools and universities in Senegal",
     "login": "Sign in",
@@ -237,6 +238,28 @@
     "loadError": "Schools could not be loaded.",
     "loadMore": "Load more",
     "loadMoreError": "More schools could not be loaded."
+  },
+  "programs": {
+    "heroTitle": "Explore the programmes",
+    "heroText": "Search the programmes offered by schools and universities in Senegal.",
+    "searchPlaceholder": "Search for a programme...",
+    "found": {
+      "one": "{{ count }} programme found",
+      "other": "{{ count }} programmes found"
+    },
+    "years": {
+      "one": "{{ count }} year",
+      "other": "{{ count }} years"
+    },
+    "code": "Code",
+    "duration": "Duration",
+    "school": "School",
+    "notProvided": "Not provided",
+    "noResults": "No programme matches this search",
+    "empty": "No programmes are listed yet",
+    "loadError": "Programmes could not be loaded.",
+    "loadMore": "Load more",
+    "loadMoreError": "More programmes could not be loaded."
   },
   "schoolDetail": {
     "loginRequired": "Sign-in required",

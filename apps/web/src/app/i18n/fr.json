@@ -46,6 +46,7 @@
     "who": "Étudiante en licence · Dakar"
   },
   "pageTitle": {
+    "programs": "Formations",
     "landing": "Trouvez l'école qui vous correspond",
     "schools": "Établissements et universités au Sénégal",
     "login": "Connexion",
@@ -237,6 +238,28 @@
     "loadError": "Les établissements n'ont pas pu être chargés.",
     "loadMore": "Voir plus",
     "loadMoreError": "Impossible de charger d'autres établissements."
+  },
+  "programs": {
+    "heroTitle": "Explorez les formations",
+    "heroText": "Recherchez les formations proposées par les écoles et universités du Sénégal.",
+    "searchPlaceholder": "Rechercher une formation...",
+    "found": {
+      "one": "{{ count }} formation trouvée",
+      "other": "{{ count }} formations trouvées"
+    },
+    "years": {
+      "one": "{{ count }} an",
+      "other": "{{ count }} ans"
+    },
+    "code": "Code",
+    "duration": "Durée",
+    "school": "Établissement",
+    "notProvided": "Non renseigné",
+    "noResults": "Aucune formation ne correspond à cette recherche",
+    "empty": "Aucune formation n'est encore référencée",
+    "loadError": "Les formations n'ont pas pu être chargées.",
+    "loadMore": "Voir plus",
+    "loadMoreError": "Impossible de charger d'autres formations."
   },
   "schoolDetail": {
     "loginRequired": "Connexion requise",

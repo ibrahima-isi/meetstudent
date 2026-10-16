@@ -168,10 +168,12 @@
                   </div>
                   
                   <div class="flex items-center gap-4 flex-wrap text-muted-foreground mb-3 text-sm font-medium">
-                    <div class="flex items-center gap-2">
-                      <lucide-icon [img]="GraduationCap" class="w-4 h-4 text-indigo-500 dark:text-indigo-400"></lucide-icon>
-                      <span>{{ programme.level }}</span>
-                    </div>
+                    @if (programme.level) {
+                      <div data-testid="programme-level" class="flex items-center gap-2">
+                        <lucide-icon [img]="GraduationCap" class="w-4 h-4 text-indigo-500 dark:text-indigo-400"></lucide-icon>
+                        <span>{{ programme.level }}</span>
+                      </div>
+                    }
                     @if (programme.duration != null && programme.duration > 0) {
                       <div data-testid="programme-duration" class="flex items-center gap-2">
                         <lucide-icon [img]="Clock" class="w-4 h-4 text-indigo-500 dark:text-indigo-400"></lucide-icon>

@@ -27,6 +27,7 @@ import { TestimonialsComponent } from '../features/public/landing-page/sections/
 import { LandingPageComponent } from '../features/public/landing-page/landing-page.component';
 import { LandingHeroComponent } from '../features/public/landing-page/sections/landing-hero.component';
 import { SchoolsPageComponent } from '../features/public/schools-page/schools-page.component';
+import { ProgramsPageComponent } from '../features/public/programs-page/programs-page.component';
 import { HomePageComponent } from '../features/student/home-page/home-page.component';
 import { ProfilePageComponent } from '../features/student/profile-page/profile-page.component';
 import { SchoolDetailPageComponent } from '../features/student/school-detail-page/school-detail-page.component';
@@ -260,6 +261,16 @@ describe('dark mode: no light-only palette classes', () => {
     ],
     ['schools page loading', SchoolsPageComponent, (c) => c.status.set('loading')],
     ['schools page error', SchoolsPageComponent, (c) => c.status.set('error')],
+    [
+      'programs page with programs',
+      ProgramsPageComponent,
+      (c) => {
+        c.programs.set([{ id: 1, name: 'Data', code: 'DS', schoolId: 1, schoolName: 'School' }]);
+        c.status.set('loaded');
+      },
+    ],
+    ['programs page loading', ProgramsPageComponent, (c) => c.status.set('loading')],
+    ['programs page error', ProgramsPageComponent, (c) => c.status.set('error')],
     ['error state', ErrorStateComponent, undefined],
     [
       'image with fallback',

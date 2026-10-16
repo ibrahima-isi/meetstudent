@@ -543,6 +543,25 @@ describe('SchoolDetailPageComponent', () => {
       });
     }
 
+    it('leaves no empty level or lone icon for a programme without a level', async () => {
+      await renderWith(mockSchool, [{ id: 1, name: 'Prog', duration: 3 }]);
+
+      expect(text()).toContain('Prog');
+      expect(text()).not.toContain('Licence');
+      expect(harness.routeNativeElement!.querySelector('[data-testid="programme-level"]')).toBeNull();
+      const emptySpans = Array.from(harness.routeNativeElement!.querySelectorAll('span'))
+        .filter((s) => s.children.length === 0 && (s.textContent ?? '').trim() === '');
+      expect(emptySpans.length).withContext('empty spans left on the page').toBe(0);
+    });
+
+    it('shows the level, with its icon, when the programme has one', async () => {
+      await renderWith(mockSchool, [{ id: 1, name: 'Prog', duration: 3, level: 'Master' }]);
+
+      const level = harness.routeNativeElement!.querySelector('[data-testid="programme-level"]');
+      expect(level?.textContent?.trim()).toBe('Master');
+      expect(level?.querySelector('lucide-icon')).not.toBeNull();
+    });
+
     it('shows no availability, waiting list or intake for a programme without capacity or start date', async () => {
       await renderWith(mockSchool, [{ id: 1, name: 'Prog', duration: 3 }]);
 
