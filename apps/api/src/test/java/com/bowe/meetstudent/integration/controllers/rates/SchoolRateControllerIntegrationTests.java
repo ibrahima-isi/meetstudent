@@ -317,4 +317,64 @@ class SchoolRateControllerIntegrationTests {
                 .andExpect(MockMvcResultMatchers.jsonPath("$.note").value(5.0))
                 .andExpect(MockMvcResultMatchers.jsonPath("$.comment").value(""));
     }
+    @Test
+    void reRatingChangesOnlyTheAuthorsSchoolRatingAndRecomputesTheAverage() throws Exception {
+        setupUser("ROLE_STUDENT");
+        var other = createUser("ROLE_EXPERT", "independent-expert@example.com");
+        var school = schoolService.save(schoolMapper.toEntity(TestDataUtil.createSchoolDto()));
+        var anotherDto = TestDataUtil.createSchoolDto();
+        anotherDto.setCode("OTHER");
+        var anotherSchool = schoolService.save(schoolMapper.toEntity(anotherDto));
+        var first = postRating(testUser, "ROLE_STUDENT", school.getId(), 2.0, 201);
+        var independent = postRating(other, "ROLE_EXPERT", school.getId(), 3.0, 201);
+        var elsewhere = postRating(testUser, "ROLE_STUDENT", anotherSchool.getId(), 1.0, 201);
+
+        var updated = postRating(testUser, "ROLE_STUDENT", school.getId(), 5.0, 200);
+        org.junit.jupiter.api.Assertions.assertEquals(first.getId(), updated.getId());
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/school-rates/school/" + school.getId()))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.length()").value(2));
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/school-rates/" + independent.getId()))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.userId").value(other.getId()))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.note").value(3.0));
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/school-rates/" + elsewhere.getId()))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.note").value(1.0));
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/schools/" + school.getId()))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.averageRate").value(4.0));
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/schools/" + anotherSchool.getId()))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.averageRate").value(1.0));
+    }
+
+    @Test
+    void administratorCannotCreateOrReplaceASchoolRating() throws Exception {
+        setupUser("ROLE_ADMIN");
+        var school = schoolService.save(schoolMapper.toEntity(TestDataUtil.createSchoolDto()));
+        var student = createUser("ROLE_STUDENT", "student-rating@example.com");
+        var existing = postRating(student, "ROLE_STUDENT", school.getId(), 4.0, 201);
+        var body = SchoolRateDTO.builder().id(existing.getId()).userId(testUser.getId())
+                .schoolId(school.getId()).note(1.0).build();
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/school-rates")
+                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(body))
+                        .with(TestDataUtil.mockUser(testUser.getId(), "ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isForbidden());
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/school-rates/school/" + school.getId()))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.length()").value(1))
+                .andExpect(MockMvcResultMatchers.jsonPath("$[0].id").value(existing.getId()))
+                .andExpect(MockMvcResultMatchers.jsonPath("$[0].note").value(4.0));
+    }
+
+    private SchoolRateDTO postRating(UserEntity user, String role, Integer schoolId, double note, int status) throws Exception {
+        var body = SchoolRateDTO.builder().schoolId(schoolId).userId(user.getId()).note(note).build();
+        var response = mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/school-rates")
+                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(body))
+                        .with(TestDataUtil.mockUser(user.getId(), role)))
+                .andExpect(MockMvcResultMatchers.status().is(status)).andReturn().getResponse();
+        return objectMapper.readValue(response.getContentAsString(), SchoolRateDTO.class);
+    }
+
 }

@@ -125,3 +125,8 @@ Contrats HTTP 400/404/409 des tags, accréditations, programmes/cours et rôles,
 - [x] [#109](https://github.com/ibrahima-isi/meetstudent/issues/109) : implémentation et validation terminées dans `fix/hide-teacher-wishlist-109` depuis le squash #108 `502f489`.
 
 [Preuves](evidence/ticket-109.md) : huit tests rouges puis verts sur service, frontière réseau, accueil, fiche établissement, profil et navigation. Web 957 tests/types/build SSR verts ; revues Sol Standards/Spec sans écart. [CI API/web/backoffice verte](https://github.com/ibrahima-isi/meetstudent/actions/runs/38890633643) sur `71515c8` ; le présent closeout documentaire doit passer les trois CI sur son head final avant squash de la [PR #140](https://github.com/ibrahima-isi/meetstudent/pull/140). Arrêt après #109, avant #110.
+
+
+### #110 — une note par utilisateur et établissement (2026-10-16)
+
+- [ ] [#110](https://github.com/ibrahima-isi/meetstudent/issues/110) : claimed dans `fix/school-rating-uniqueness-110`, base `557adcd`. Qualification des garanties déjà présentes terminée : 14 tests HTTP H2 ciblés, 3 HTTP PostgreSQL, V23→V24 sur doublons historiques puis schéma validé, API complète 608 tests verts. Aucun code métier ni migration modifiés ; nouveaux tests verts sur la base existante, sans faux rouge. Stack jetable supprimée. Revue indépendante et livraison PR/CI/squash en attente. [Preuves](evidence/ticket-110.md).
