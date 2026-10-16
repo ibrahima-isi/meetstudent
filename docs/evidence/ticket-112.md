@@ -4,15 +4,19 @@ Ticket : [#112](https://github.com/ibrahima-isi/meetstudent/issues/112), spécif
 
 ## Portée et résultats observables
 
-PR #142 avait déjà livré l'upsert, le 409 et V24 pour les trois types de notes. Aucun fichier produit ni migration n'a été modifié. Les nouveaux tests qualifient ce comportement existant et sont verts sans correctif : aucun rouge métier artificiel n'est revendiqué.
+PR #142 avait déjà livré l'upsert, le 409 et V24 pour les trois types de notes. Aucune migration n'a été modifiée ; un seul fichier produit a changé, `CourseRateDTO` (voir le trou `courseId` plus bas). Les nouveaux tests qualifient ce comportement existant et sont verts sans correctif : aucun rouge métier artificiel n'est revendiqué.
 
 - HTTP : deux EXPERT notent le même cours (2 et 3), le premier renote 5 : 200, même identifiant, deux notes, moyenne 4. La note indépendante reste 3 ; la note du premier sur un autre cours reste 1, moyenne 1.
 - HTTP : STUDENT et ADMIN reçoivent 403 ; anonyme reçoit 401. Après chaque refus, GET confirme l'unique note de l'expert (identifiant, auteur, valeur 4) et la moyenne inchangée à 4.
 - Concurrence : deux requêtes EXPERT du même auteur atteignent les véritables INSERT `course_rates` après avoir trouvé la paire absente (barrière JDBC, sans mock de service/dépôt). Résultat exactement 201/409 structuré ; une seule note et la moyenne du gagnant ; retry : 200, même identifiant, une note, moyenne 4. La classe tourne aussi sur H2 dans la suite complète, sans skip.
 
-## Constat à décision propriétaire (non corrigé)
+## Trou `courseId` nul : constaté puis fermé (décision propriétaire)
 
-`CourseRateDTO.courseId` n'a pas de `@NotNull` et le contrôleur ne renseigne la cible que si `courseId != null`. Sonde jetable (retirée) sur H2 : deux POST EXPERT sans `courseId` renvoient chacun **201** avec `"courseId":null` (identifiants 1 et 2). `UNIQUE (user_id, course_id)` n'empêche pas ces doublons, car NULL n'est jamais égal à NULL. `ProgramRateDTO` a le même schéma (non sondé). Aucun code modifié ; test d'échec à écrire après décision : POST sans `courseId` doit répondre 400 avec un message sur `courseId`.
+`CourseRateDTO.courseId` n'avait pas de `@NotNull` et le contrôleur ne renseigne la cible que si `courseId != null`. Sonde sur H2 : deux POST EXPERT sans `courseId` renvoient chacun 201 avec `"courseId":null`; `UNIQUE (user_id, course_id)` ne les arrête pas (NULL n'est jamais égal à NULL).
+
+TDD : test `testThatCreateCourseRateWithoutCourseIdIsRejectedWith400` ajouté d'abord. **Rouge réel** : `Status expected:<400> but was:<201>` (1 test, 1 échec). Correctif minimal : `@NotNull(message = "Course ID is required")` sur `CourseRateDTO.courseId` (même style que `SchoolRateDTO`, sans `@Positive`). **Vert** : le test attend 400 avec `$.courseId = "Course ID is required"` sur deux POST, puis zéro note en base. Ciblé : `CourseRateControllerIntegrationTests` 14, `CourseRatePostgresConcurrencyIntegrationTests` 1, `RateValidationIntegrationTests` 5, `RateRaceConflictIntegrationTests` 3, `CourseControllerIntegrationTests` 15, `CourseRateControllerTest` 2, zéro échec/erreur/skip.
+
+Suivi hors périmètre, non traité : `ProgramRateDTO.programId` n'a pas de `@NotNull` (même trou probable, non sondé). `SchoolRateDTO.schoolId` est déjà `@NotNull`.
 
 ## Commandes et tests
 
@@ -26,7 +30,7 @@ Depuis `apps/api`, passer `JAVA_HOME=/Users/ibrahimadiallo/.sdkman/candidates/ja
 
 H2 ciblé : `CourseRateControllerIntegrationTests` 13 tests (11 existants + 2 nouveaux), `CourseRatePostgresConcurrencyIntegrationTests` 1 test. Famille cours et notes : `CourseControllerIntegrationTests` 15, programme 13+1, établissement 13+1, validation 5, course critique 3. Zéro échec/erreur/skip partout.
 
-Suite API finale : **614 tests (239 unitaires + 375 intégration), zéro échec/erreur/skip**, BUILD SUCCESS, 2 min 18 s.
+Suite API finale (après correctif `courseId`) : **615 tests (239 unitaires + 376 intégration), zéro échec/erreur/skip**, BUILD SUCCESS, 2 min 18 s.
 
 ## PostgreSQL
 

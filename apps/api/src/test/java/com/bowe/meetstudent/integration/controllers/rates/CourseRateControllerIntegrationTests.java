@@ -377,4 +377,19 @@ class CourseRateControllerIntegrationTests {
                 .andExpect(MockMvcResultMatchers.status().is(status)).andReturn().getResponse();
         return objectMapper.readValue(response.getContentAsString(), CourseRateDTO.class);
     }
+
+    @Test
+    void testThatCreateCourseRateWithoutCourseIdIsRejectedWith400() throws Exception {
+        setupUser("ROLE_EXPERT");
+        for (int i = 0; i < 2; i++) {
+            mockMvc.perform(
+                    MockMvcRequestBuilders.post("/api/v1/course-rates").contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"note\":3.0,\"userId\":" + testUser.getId() + "}")
+                            .with(TestDataUtil.mockUser(testUser.getId(), "ROLE_EXPERT"))
+            ).andExpect(MockMvcResultMatchers.status().isBadRequest())
+             .andExpect(MockMvcResultMatchers.jsonPath("$.courseId").value("Course ID is required"));
+        }
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/course-rates").with(TestDataUtil.mockUser(testUser.getId(), "ROLE_EXPERT")))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.totalElements").value(0));
+    }
 }
