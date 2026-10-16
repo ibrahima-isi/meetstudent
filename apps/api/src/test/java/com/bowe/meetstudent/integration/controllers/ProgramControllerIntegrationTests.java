@@ -211,6 +211,77 @@ class ProgramControllerIntegrationTests {
     }
 
     @Test
+    void programReadsExposeTheSchoolNameAndCodeAndNullWhenDetached() throws Exception {
+        School school = new School();
+        school.setName("Ecole Alpha");
+        school.setCode("ALPH");
+        school = schoolService.save(school);
+
+        ProgramDTO attached = TestDataUtil.createProgramDto();
+        attached.setName("Zeta Attached");
+        attached.setCode("ZATT");
+        attached.setSchoolId(school.getId());
+        ProgramDTO detached = TestDataUtil.createProgramDto();
+        detached.setName("Zeta Detached");
+        detached.setCode("ZDET");
+        detached.setSchoolId(null);
+        programService.save(programMapper.toEntity(attached));
+        programService.save(programMapper.toEntity(detached));
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/programs/name/Zeta")
+                        .with(TestDataUtil.mockUser("ROLE_STUDENT")))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].name").value("Zeta Attached"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].schoolId").value(school.getId()))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].schoolName").value("Ecole Alpha"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].schoolCode").value("ALPH"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[1].name").value("Zeta Detached"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[1].schoolId").doesNotExist())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[1].schoolName").doesNotExist())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[1].schoolCode").doesNotExist());
+    }
+
+    @Test
+    void nameSearchWithoutSortPagesByNameThenId() throws Exception {
+        for (var entry : new String[][] {{"Srch Zulu", "SZ1"}, {"Srch Alpha", "SA1"}, {"Srch Alpha", "SA2"}, {"Srch Mike", "SM1"}}) {
+            ProgramDTO dto = TestDataUtil.createProgramDto();
+            dto.setName(entry[0]);
+            dto.setCode(entry[1]);
+            dto.setSchoolId(null);
+            programService.save(programMapper.toEntity(dto));
+        }
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/programs/name/Srch")
+                        .with(TestDataUtil.mockUser("ROLE_STUDENT")))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].code").value("SA1"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[1].code").value("SA2"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[2].code").value("SM1"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[3].code").value("SZ1"));
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/programs/name/Srch?size=2&page=1")
+                        .with(TestDataUtil.mockUser("ROLE_STUDENT")))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].code").value("SM1"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[1].code").value("SZ1"));
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/programs/name/Srch?sort=name,desc")
+                        .with(TestDataUtil.mockUser("ROLE_STUDENT")))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].code").value("SZ1"));
+    }
+
+    @Test
+    void nameSearchKeepsTheDefaultPageSizeAndRejectsAnUnknownSort() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/programs/name/Srch")
+                        .with(TestDataUtil.mockUser("ROLE_STUDENT")))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.size").value(20));
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/programs/name/Srch?sort=doesNotExist,asc")
+                        .with(TestDataUtil.mockUser("ROLE_STUDENT")))
+                .andExpect(MockMvcResultMatchers.status().isBadRequest());
+    }
+
+    @Test
     void testThatGetAllProgramsReturnsHttpStatus200() throws Exception {
         mockMvc.perform(
                 MockMvcRequestBuilders.get("/api/v1/programs")

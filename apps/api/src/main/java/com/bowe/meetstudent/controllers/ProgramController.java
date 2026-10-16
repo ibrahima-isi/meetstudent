@@ -16,6 +16,7 @@ import org.modelmapper.ModelMapper;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.SortDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -171,11 +172,11 @@ public class ProgramController {
     }
 
     @GetMapping(path = "/name/{name}")
-    @Operation(summary = "Search programs by name (paginated)", description = "Searches for programs whose name contains the given string.")
+    @Operation(summary = "Search programs by name (paginated)", description = "Searches for programs whose name contains the given string. Each result carries its school (schoolId, schoolName, schoolCode; null when the program has no school). Without ?sort= results are ordered by name, then id; an explicit ?sort= replaces that order and an unknown property answers 400.")
     @ApiResponse(responseCode = "200", description = "Search results retrieved")
     public Page<ProgramDTO> getProgramByName(
             @Parameter(description = "Name to search for") @PathVariable String name,
-            @ParameterObject Pageable pageable) {
+            @ParameterObject @SortDefault(sort = {"name", "id"}) Pageable pageable) {
         return programService.findByName(name, pageable).map(program -> {
             ProgramDTO dto = programMapper.toDTO(program);
             dto.setAverageRate(programRateService.getAverageNoteByProgramId(program.getId()));

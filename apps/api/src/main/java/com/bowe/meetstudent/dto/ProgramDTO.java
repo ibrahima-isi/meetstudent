@@ -20,6 +20,8 @@ public class ProgramDTO extends BaseDTO {
     private Integer photoMediaId;
     private MediaDTO photo;
     private Integer schoolId;
+    private String schoolName;
+    private String schoolCode;
     private Double averageRate;
 
     private List<CourseDTO> courses;
