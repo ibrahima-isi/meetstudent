@@ -270,6 +270,18 @@ class ProgramControllerIntegrationTests {
     }
 
     @Test
+    void nameSearchKeepsTheDefaultPageSizeAndRejectsAnUnknownSort() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/programs/name/Srch")
+                        .with(TestDataUtil.mockUser("ROLE_STUDENT")))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.size").value(20));
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/programs/name/Srch?sort=doesNotExist,asc")
+                        .with(TestDataUtil.mockUser("ROLE_STUDENT")))
+                .andExpect(MockMvcResultMatchers.status().isBadRequest());
+    }
+
+    @Test
     void testThatGetAllProgramsReturnsHttpStatus200() throws Exception {
         mockMvc.perform(
                 MockMvcRequestBuilders.get("/api/v1/programs")
