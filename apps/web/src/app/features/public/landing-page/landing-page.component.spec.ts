@@ -21,7 +21,6 @@ describe('LandingPageComponent', () => {
     'app-featured-schools',
     'app-testimonials',
     'app-cta-band',
-    'app-site-footer',
   ];
 
   async function create(schools: unknown, programs: unknown) {
@@ -49,7 +48,7 @@ describe('LandingPageComponent', () => {
       ),
     );
 
-    it('renders the seven sections in order', () => {
+    it('renders the sections in order', () => {
       const all = Array.from(root().querySelectorAll(SECTIONS.join(',')));
 
       expect(all.map((e) => e.tagName.toLowerCase())).toEqual(SECTIONS);
@@ -63,8 +62,8 @@ describe('LandingPageComponent', () => {
       expect(root().querySelector('app-key-figures h2')).toBeTruthy();
     });
 
-    it('has a footer landmark with the contentinfo role', () => {
-      expect(root().querySelector('app-site-footer footer[role="contentinfo"]')).toBeTruthy();
+    it('renders no footer itself (the shell provides the single common one)', () => {
+      expect(root().querySelector('app-site-footer, footer')).toBeNull();
     });
 
     it('relies on the global scroll-padding to clear the navbar', () => {
@@ -108,7 +107,7 @@ describe('LandingPageComponent', () => {
     );
 
     it('keeps every static section', () => {
-      for (const selector of ['app-landing-hero', 'app-how-it-works', 'app-testimonials', 'app-cta-band', 'app-site-footer']) {
+      for (const selector of ['app-landing-hero', 'app-how-it-works', 'app-testimonials', 'app-cta-band']) {
         expect(root().querySelector(selector)).withContext(selector).toBeTruthy();
       }
       expect(root().querySelectorAll('h1').length).toBe(1);

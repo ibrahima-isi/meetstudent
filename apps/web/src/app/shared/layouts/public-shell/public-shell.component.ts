@@ -4,12 +4,16 @@ import { RouterOutlet } from '@angular/router';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { DockNavbarComponent } from '@shared/components/dock-navbar/dock-navbar.component';
 import { EmailVerificationBannerComponent } from '@shared/components/email-verification-banner/email-verification-banner.component';
+import { SiteFooterComponent } from '../../../features/public/landing-page/sections/site-footer.component';
 
-/** Frame of every page but the 404 (public and signed-in): skip link, floating navbar, and the page itself. */
+/** Frame of every page but the 404 (public and signed-in): skip link, floating navbar, the page itself, and the single common footer. */
 @Component({
   selector: 'app-public-shell',
-  imports: [RouterOutlet, TranslocoDirective, DockNavbarComponent, EmailVerificationBannerComponent],
+  imports: [RouterOutlet, TranslocoDirective, DockNavbarComponent, EmailVerificationBannerComponent, SiteFooterComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  // A column at least as tall as the viewport whose main landmark takes the spare
+  // height: on a short page the footer sits at the bottom, not mid-screen.
+  host: { class: 'flex min-h-screen flex-col' },
   template: `
     <ng-container *transloco="let t">
       <a
@@ -21,7 +25,8 @@ import { EmailVerificationBannerComponent } from '@shared/components/email-verif
     </ng-container>
     <app-dock-navbar />
     <app-email-verification-banner />
-    <main id="main" tabindex="-1"><router-outlet /></main>
+    <main id="main" tabindex="-1" class="flex-1"><router-outlet /></main>
+    <app-site-footer />
   `,
 })
 export class PublicShellComponent {
