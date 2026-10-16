@@ -117,7 +117,7 @@ The contract is **asymmetric**: you *write* an id, you *read* an object.
 ### CourseDTO: program and name search (ticket #119)
 
 - `CourseDTO` carries optional `programName` next to `programId` (both `null`/absent when the course has no program). The courses catalogue (`/:lang/courses`) shows the program name as plain text: there is no public program page to link to.
-- `GET /api/v1/courses` and `GET /api/v1/courses/name/{name}` sort by `name,id` by default (an explicit `?sort=` wins, an unknown property is 400). `?sortRate=most|less` keeps its own aggregate order and ignores `sort`.
+- `GET /api/v1/courses` and `GET /api/v1/courses/name/{name}` sort by `name,id` by default (an explicit `?sort=` wins, an unknown property is 400). `?sortRate=most|less` sorts by the average rate first; that `name,id` (or explicit `sort`) order only breaks ties, so rate pages are stable too.
 - `CourseService.searchCoursesByName` trims the term, `encodeURIComponent`s the path segment and answers an empty page, without a request, for a term containing `/ \ % ;` or equal to `.`/`..`; a blank term lists all courses.
 
 ### MediaDTO shape

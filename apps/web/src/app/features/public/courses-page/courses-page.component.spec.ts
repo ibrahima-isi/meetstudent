@@ -189,6 +189,29 @@ describe('CoursesPageComponent', () => {
     expect(q('[data-testid="load-more"]')).toBeNull();
   });
 
+  it('keeps the loaded courses when the next page fails, then appends it on retry', async () => {
+    let nextPageFails = true;
+    listCourses.and.callFake((n: number) => {
+      if (n === 0) return of(page([full], 0, false, 2));
+      return nextPageFails ? throwError(() => new Error('down')) : of(page([bare], 1, true, 2));
+    });
+    await open('/courses');
+
+    (q('[data-testid="load-more"]') as HTMLButtonElement).click();
+    await settle();
+    expect(q('[data-testid="load-more-error"]')?.textContent).toContain('Retry');
+    expect(el().querySelectorAll('[data-testid="course-card"]').length).toBe(1);
+    expect(q('app-error-state')).toBeNull();
+
+    nextPageFails = false;
+    (q('[data-testid="load-more-error"] button') as HTMLButtonElement).click();
+    await settle();
+
+    expect(listCourses.calls.mostRecent().args.slice(0, 2)).toEqual([1, 12]);
+    expect(el().querySelectorAll('[data-testid="course-card"]').length).toBe(2);
+    expect(q('[data-testid="load-more-error"]')).toBeNull();
+  });
+
   it('keeps the search icon inside the input padding, clear of the typed text', async () => {
     await open('/courses');
     const icon = input().parentElement!.querySelector('svg')!.getBoundingClientRect();

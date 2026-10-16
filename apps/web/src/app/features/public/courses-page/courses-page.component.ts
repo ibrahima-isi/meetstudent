@@ -157,8 +157,8 @@ export class CoursesPageComponent implements OnInit {
     const content = result.content ?? [];
     this.courses.update((current) => {
       if (page === 0) return content;
-      const seen = new Set(current.map((p) => p.id));
-      return [...current, ...content.filter((p) => !seen.has(p.id))];
+      const seen = new Set(current.map((c) => c.id));
+      return [...current, ...content.filter((c) => !seen.has(c.id))];
     });
     this.pageNumber.set(page);
     this.lastPage.set(result.last ?? true);
