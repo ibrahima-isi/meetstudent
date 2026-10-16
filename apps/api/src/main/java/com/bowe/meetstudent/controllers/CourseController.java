@@ -19,7 +19,9 @@ import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.SortDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -114,18 +116,20 @@ public class CourseController {
     }
 
     @GetMapping
-    @Operation(summary = "Get all courses (paginated)", description = "Provides a paginated list of all courses, including their average ratings. Can be sorted by rating (most/less).")
+    @Operation(summary = "Get all courses (paginated)", description = "Provides a paginated list of all courses, including their average ratings. Can be sorted by rating (most/less). Each course carries its program (programId, programName; null when detached). Without ?sort= results are ordered by name, then id; an explicit ?sort= replaces that order and an unknown property answers 400.")
     @ApiResponse(responseCode = "200", description = "List of courses retrieved")
     public Page<CourseDTO> getCourses(
             @Parameter(description = "Sort by rate: 'most' for highest rated, 'less' for lowest rated") 
             @RequestParam(required = false) String sortRate,
-            @ParameterObject Pageable pageable) {
+            @ParameterObject @SortDefault(sort = {"name", "id"}) Pageable pageable) {
         
         Page<Course> coursePage;
+        // The rate queries own their ORDER BY (aggregate); the default name sort must not leak into them.
+        var unsorted = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
         if ("most".equalsIgnoreCase(sortRate)) {
-            coursePage = courseService.findAllOrderByRateDesc(pageable);
+            coursePage = courseService.findAllOrderByRateDesc(unsorted);
         } else if ("less".equalsIgnoreCase(sortRate)) {
-            coursePage = courseService.findAllOrderByRateAsc(pageable);
+            coursePage = courseService.findAllOrderByRateAsc(unsorted);
         } else {
             coursePage = courseService.findAll(pageable);
         }
@@ -153,11 +157,11 @@ public class CourseController {
     }
 
     @GetMapping(path = "/name/{name}")
-    @Operation(summary = "Search courses by name (paginated)", description = "Searches for courses whose name contains the given string.")
+    @Operation(summary = "Search courses by name (paginated)", description = "Searches for courses whose name contains the given string. Each result carries its program (programId, programName; null when detached). Without ?sort= results are ordered by name, then id; an explicit ?sort= replaces that order and an unknown property answers 400.")
     @ApiResponse(responseCode = "200", description = "Search results retrieved")
     public Page<CourseDTO> getCourseByName(
             @Parameter(description = "Name to search for") @PathVariable String name,
-            @ParameterObject Pageable pageable) {
+            @ParameterObject @SortDefault(sort = {"name", "id"}) Pageable pageable) {
         return courseService.findByName(name, pageable).map(course -> {
             CourseDTO dto = courseMapper.toDTO(course);
             dto.setAverageRate(courseRateService.getAverageNoteByCourseId(course.getId()));

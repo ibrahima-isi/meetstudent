@@ -359,4 +359,99 @@ class CourseControllerIntegrationTests {
                 MockMvcResultMatchers.jsonPath("$.content[1].id").value(course2.getId())
         );
     }
+
+    private void saveCourse(String name, String code) {
+        CourseDTO dto = TestDataUtil.createCourseDto();
+        dto.setName(name);
+        dto.setCode(code);
+        courseService.save(courseMapper.toEntity(dto));
+    }
+
+    @Test
+    void anonymousCanListAndSearchCoursesAndWritesAreRefused() throws Exception {
+        saveCourse("Anon Course", "ANC01");
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/courses"))
+                .andExpect(MockMvcResultMatchers.status().isOk());
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/courses/name/Anon"))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].name").value("Anon Course"));
+
+        var body = "{\"name\":\"Nope\",\"code\":\"NOPE1\"}";
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/courses")
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(MockMvcResultMatchers.status().isUnauthorized());
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/courses")
+                        .contentType(MediaType.APPLICATION_JSON).content(body)
+                        .with(TestDataUtil.mockUser("ROLE_STUDENT")))
+                .andExpect(MockMvcResultMatchers.status().isForbidden());
+        mockMvc.perform(MockMvcRequestBuilders.delete("/api/v1/courses/1")
+                        .with(TestDataUtil.mockUser("ROLE_EXPERT")))
+                .andExpect(MockMvcResultMatchers.status().isForbidden());
+    }
+
+    @Test
+    void courseReadsExposeTheProgramIdAndNameAndNullWhenDetached() throws Exception {
+        Program program = new Program();
+        program.setName("Programme Alpha");
+        program.setCode("PALPH");
+        program = programService.save(program);
+
+        CourseDTO attached = TestDataUtil.createCourseDto();
+        attached.setName("Zeta Attached");
+        attached.setCode("ZATT1");
+        var attachedEntity = courseMapper.toEntity(attached);
+        attachedEntity.setProgram(program);
+        courseService.save(attachedEntity);
+        saveCourse("Zeta Detached", "ZDET1");
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/courses/name/Zeta"))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].name").value("Zeta Attached"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].programId").value(program.getId()))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].programName").value("Programme Alpha"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[1].name").value("Zeta Detached"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[1].programId").doesNotExist())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[1].programName").doesNotExist());
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/courses"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].programName").value("Programme Alpha"));
+    }
+
+    @Test
+    void nameSearchAndListWithoutSortPageByNameThenId() throws Exception {
+        for (var entry : new String[][] {{"Srch Zulu", "SZ1"}, {"Srch Alpha", "SA1"}, {"Srch Alpha", "SA2"}, {"Srch Mike", "SM1"}}) {
+            saveCourse(entry[0], entry[1]);
+        }
+
+        for (var path : new String[] {"/api/v1/courses/name/Srch", "/api/v1/courses"}) {
+            mockMvc.perform(MockMvcRequestBuilders.get(path))
+                    .andExpect(MockMvcResultMatchers.status().isOk())
+                    .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].code").value("SA1"))
+                    .andExpect(MockMvcResultMatchers.jsonPath("$.content[1].code").value("SA2"))
+                    .andExpect(MockMvcResultMatchers.jsonPath("$.content[2].code").value("SM1"))
+                    .andExpect(MockMvcResultMatchers.jsonPath("$.content[3].code").value("SZ1"));
+        }
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/courses/name/Srch?size=2&page=1"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].code").value("SM1"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[1].code").value("SZ1"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.totalElements").value(4));
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/courses/name/Srch?sort=name,desc"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].code").value("SZ1"));
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/courses?sort=name,desc"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].code").value("SZ1"));
+    }
+
+    @Test
+    void listAndSearchKeepTheDefaultPageSizeAndRejectAnUnknownSort() throws Exception {
+        for (var path : new String[] {"/api/v1/courses", "/api/v1/courses/name/Srch"}) {
+            mockMvc.perform(MockMvcRequestBuilders.get(path))
+                    .andExpect(MockMvcResultMatchers.status().isOk())
+                    .andExpect(MockMvcResultMatchers.jsonPath("$.size").value(20));
+            mockMvc.perform(MockMvcRequestBuilders.get(path + "?sort=doesNotExist,asc"))
+                    .andExpect(MockMvcResultMatchers.status().isBadRequest());
+        }
+    }
 }
