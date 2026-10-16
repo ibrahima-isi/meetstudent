@@ -2,23 +2,41 @@
 
 ## Scope and implementation
 
-Issue [#121](https://github.com/ibrahima-isi/meetstudent/issues/121), parent [#99](https://github.com/ibrahima-isi/meetstudent/issues/99). Base `d73428d`, isolated branch `feat/search-entry-121`. Owner explicitly authorized the exact seven-file manifest and the proposed form on 2026-10-16.
+Issue [#121](https://github.com/ibrahima-isi/meetstudent/issues/121), parent [#99](https://github.com/ibrahima-isi/meetstudent/issues/99), [PR #157](https://github.com/ibrahima-isi/meetstudent/pull/157) into `dev`. Initial isolated base `d73428d`; updated from `origin/dev` at `b0dbba8` (documentation-only #156). Branch `feat/search-entry-121`. Owner explicitly authorized the form and exact seven-file manifest on 2026-10-16. Shared checkout changes and other worktrees were preserved.
 
-The first discovery card now contains a native resource select, labelled search field and Cherchez/Search submit button. Schools are selected initially; programmes and courses are explicit choices. Reactive controls feed the existing localized public catalogue routes. A trimmed nonempty query travels as `q`; blank input opens the selected catalogue. No additional query-length restriction, catalogue implementation, HTTP contract or authorization change was introduced. Existing theme tokens and field/button classes are reused.
+The first discovery card contains a native resource selector, labelled search field and Cherchez/Search button. Schools are selected initially; programmes and courses are explicit choices. Reactive controls feed the existing localized public catalogue routes. A trimmed nonempty query travels as `q`; blank input opens the selected catalogue. Existing catalogue components, HTTP contracts, authorization and theme tokens are reused.
 
-## Automated evidence
+The existing name-search path contracts cannot carry `/`, `\`, `%`, `;`, or whole `.` / `..` terms. The new entry explains that limit in French/English before navigation rather than letting the existing services fabricate an empty page. It retains query/type, focuses the field and associates a visible alert with `aria-invalid`/`aria-describedby`; correcting the input clears the error. Internal dots, accents and `&` remain accepted. No new length restriction, API change or unrelated ticket implementation was introduced.
 
-- Red before implementation: focused ChromeHeadless run failed the new rendered-form regression because no search field existed; 9 existing specs passed. Log `/private/tmp/121-red.log`.
-- First form iteration exposed missing native submit handling; corrected with preventDefault and the existing router navigation interface.
-- Green focused run: **22/22**. Log `/private/tmp/121-green3.log`.
-- The same rendered-component/router/HTTP seams approved in #99 exercise all three real catalogue components with real services and HTTP contract fixtures: fr/en labels, native select/input/button submission, locale/query preservation including accents and reserved `&`, loading before HTTP completion, matching result rendering, HTTP 500, retry of the same resource/query, empty results, and plain catalogue navigation for blank input.
-- Full affected web ChromeHeadless suite: **1063/1063**. Log `/private/tmp/121-full.log`.
-- Application and test TypeScript checks: `tsc --noEmit -p tsconfig.app.json` and `tsc --noEmit -p tsconfig.spec.json` passed.
-- Production SSR build: passed, 13.015 seconds; output `apps/web/dist/frontend`. Log `/private/tmp/121-build.log`.
-- `git diff --check`: passed.
+## TDD and automated verification
 
-HTTP fixture tests prove the frontend contract and state transitions; they do not by themselves prove a running backend/browser session. The coordinator owns the real PostgreSQL/API/browser verification, independent Standards/Spec review, final-head CI, PR, squash, closure and cleanup. These remain pending in this record until their actual results are added.
+- Initial red: new rendered-form regression failed because no search field existed; **1 failed, 9 passed** (`/private/tmp/121-red.log`).
+- Initial green: **22/22** focused rendered-component/router/HTTP tests; **1063/1063** full web tests, app/spec types and production SSR build passed.
+- Independent Spec review found the inherited unsupported-query false-empty behavior reachable through the new form. Correction red reproduced navigation with `100% anglais` and loss of the form: **1 failed, 22 passed** (`/private/tmp/121-review-red.log`).
+- Corrected final code: **29/29** focused tests and **1070/1070** full web tests; application and test TypeScript checks, production SSR build and diff whitespace check passed (`/private/tmp/121-review-{focused,full,types-app,types-spec,build}.log`).
+- Tests use the approved rendered Angular component/router and public HTTP seams, real catalogue components/services and controlled contract fixtures. They cover three destinations in fr/en, labels and native submission, locale/query preservation, accents and reserved `&`, loading, results, HTTP failure/retry, empty results, blank query and explicit unsupported-input validation.
+- Full API Maven verification: **630 tests** = 239 unit + 391 integration, zero failures/errors/skips (`/private/tmp/meetstudent-121-api-verify.log`).
+- Backoffice: **300/300** tests and production build passed (`/private/tmp/meetstudent-121-backoffice-{test,build}.log`). API/backoffice sources were unchanged by #121.
 
-## Browser handoff
+## Real browser and PostgreSQL verification
 
-Run this branch’s production SSR server against the dedicated API. On `/fr` and `/en`, scroll to `#how-it-works`; use the visible type selector, name field and Cherchez/Search button for each resource type. Confirm the destination locale and `q`, matching API fixture names, native keyboard/Enter submission, and mobile 375px/light/dark presentation. Use a no-match term and retry after a temporary API failure. Empty search must reach the selected plain catalogue. Existing results views remain responsible for all loading, empty and retry states.
+Production SSR build with a dedicated prod-profile API, disposable PostgreSQL 18 and same-origin proxy; mail disabled. Flyway history query confirmed **24 successful migrations, versions 1–24**; JPA `ddl-auto=validate` boot succeeded. Three disposable resources were created through authenticated public HTTP endpoints, not fabricated marketing data.
+
+- **24 real search journeys** = schools/programmes/courses × fr/en × 1440px desktop/375px mobile × light/dark. Trimmed `q`, native Enter on desktop and button activation on mobile reached the right localized catalogue and displayed the corresponding real HTTP 200 result.
+- **8 layout checks**: visible associated labels, native focus, no horizontal overflow. Mobile dark and desktop light captures inspected visually.
+- **3 empty searches** returned real HTTP 200 with zero results. **3 one-shot network faults** exercised the error/retry UI; each retry recovered through the real API and displayed its resource. Fault injection was limited to testing failure behavior.
+- **0 JavaScript page errors** in the 24-journey matrix (`/private/tmp/meetstudent-121-browser-results.json`).
+- Additional real authenticated session: landscape **812×375**, select→input Tab order, course search and direct catalogue reload passed (`/private/tmp/meetstudent-121-browser-extra.log`).
+- After the review correction and rebuilt SSR: **12 validation/recovery journeys** = three types × fr/en × desktop/mobile. Unsupported input stayed on the form without a name-search request, retained query/type/focus, displayed translated ARIA-associated error and cleared it on correction; the corrected query then displayed the real API result. No horizontal overflow (`/private/tmp/meetstudent-121-browser-validation-results.json`). Mobile English dark error capture inspected visually.
+
+Both smoke runs were cleaned: only their own API, SSR/proxy processes and `ms121-pg` container/anonymous volume were removed. Ports 18121/42121/42122 had no listeners and container inventory for `ms121` was empty. The pre-existing shared stack was not touched.
+
+## Independent review and delivery
+
+Exactly three primary phase agents were used with the requested models/efforts: reader gpt-5.6-sol medium, planner/implementer gpt-6.1-sol medium, reviewer/fixer gpt-6.1-sol high. The reviewer ran independent Standards and Spec child agents in separate contexts.
+
+- Initial Standards: **0** documented violations / actionable smells.
+- Initial Spec: **1 P2**, inherited unsupported-query behavior reached through the new entry; corrected in signed commit `e04d056`.
+- Final independent review on signed integration head `83af31f`: **Standards 0 / Spec 0 remaining**. Signed implementation `834ffe0`; signed merge of current `dev` `83af31f`.
+
+The first [API/web/backoffice CI](https://github.com/ibrahima-isi/meetstudent/actions/runs/38973287376) passed on `83af31f4778201dd336523caf03aef50dfc52085`. The final documentation head must independently pass all three checks before squash; earlier green checks do not qualify a later head. Final documentation, exact-head CI, squash verification, explicit issue closure and worktree/branch cleanup are owned by the coordinator. The PR provides the authoritative final CI/merge state; the exported delivery record and successor handoff retain exact final hashes and cleanup results after merge.
