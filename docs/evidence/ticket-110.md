@@ -73,4 +73,4 @@ Les deux axes ont vérifié l’interleaving des véritables INSERT et la porté
 
 `docker compose -p ms110 -f /tmp/ms110-compose.yml down -v` a supprimé le conteneur et réseau #110. L'inventaire Docker filtré sur le projet `ms110` est vide. Les conteneurs préexistants et les autres worktrees sont préservés. Aucun SMTP réel, déploiement ou promotion main.
 
-Implémentation/qualification, tests et revues indépendantes Standards/Spec sont terminés. La livraison reste unchecked : CI finale API/web/backoffice, PR vers dev, squash et clôture restent à exécuter et à relier par l’orchestrateur. Aucun push, PR ni merge n’a été effectué par le reviewer/fixer.
+Implémentation/qualification, tests et revues indépendantes Standards/Spec sont terminés. [PR #144](https://github.com/ibrahima-isi/meetstudent/pull/144) ouverte vers `dev`. La livraison reste unchecked : CI finale API/web/backoffice sur le présent head documentaire, squash et clôture restent à vérifier. Le bilan définitif et le nettoyage sont conservés dans le suivi local après fusion.
