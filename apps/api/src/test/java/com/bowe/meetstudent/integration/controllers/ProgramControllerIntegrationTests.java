@@ -4,12 +4,16 @@ import com.bowe.meetstudent.TestDataUtil;
 import com.bowe.meetstudent.dto.ProgramDTO;
 import com.bowe.meetstudent.entities.Accreditation;
 import com.bowe.meetstudent.entities.Program;
+import com.bowe.meetstudent.entities.Role;
+import com.bowe.meetstudent.entities.UserEntity;
 import com.bowe.meetstudent.entities.School;
 import com.bowe.meetstudent.mappers.implementations.AccreditationMapper;
 import com.bowe.meetstudent.mappers.implementations.ProgramMapper;
 import com.bowe.meetstudent.services.AccreditationService;
 import com.bowe.meetstudent.services.ProgramAccreditationService;
 import com.bowe.meetstudent.services.ProgramService;
+import com.bowe.meetstudent.services.RoleService;
+import com.bowe.meetstudent.services.UserService;
 import com.bowe.meetstudent.services.SchoolService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -18,6 +22,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -55,6 +60,15 @@ class ProgramControllerIntegrationTests {
 
     @Autowired
     private AccreditationMapper accreditationMapper;
+
+    @Autowired
+    private UserService userService;
+
+    @Autowired
+    private RoleService roleService;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @Autowired
     private com.bowe.meetstudent.repositories.MediaRepository mediaRepository;
@@ -463,38 +477,80 @@ class ProgramControllerIntegrationTests {
                 .andExpect(MockMvcResultMatchers.status().isOk());
     }
 
+    private int saveExpert() {
+        var role = roleService.findRoleByName("ROLE_EXPERT")
+                .orElseGet(() -> roleService.createRole(Role.builder().name("ROLE_EXPERT").build()));
+        return userService.saveUser(UserEntity.builder().firstname("Rate").lastname("Expert")
+                .email("rate.expert@example.com").password("password").role(role).build(), passwordEncoder).getId();
+    }
+
+    private int saveProgram(String name, String code) {
+        ProgramDTO dto = TestDataUtil.createProgramDto();
+        dto.setName(name);
+        dto.setCode(code);
+        dto.setSchoolId(null);
+        return programService.save(programMapper.toEntity(dto)).getId();
+    }
+
+    private int saveRatedProgram(String name, String code, double note, int expertId) throws Exception {
+        var id = saveProgram(name, code);
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/program-rates")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"note\": " + note + ", \"programId\": " + id + ", \"userId\": " + expertId + "}")
+                        .with(TestDataUtil.mockUser(expertId, "ROLE_EXPERT")))
+                .andExpect(MockMvcResultMatchers.status().isCreated());
+        return id;
+    }
+
     @Test
-    void testThatGetProgramsSortedByRateReturnsCorrectOrder() throws Exception {
-        ProgramDTO p1 = TestDataUtil.createProgramDto();
-        p1.setName("Best Program");
-        p1.setCode("BP001");
-        Program program1 = programService.save(programMapper.toEntity(p1));
+    void listWithoutSortPagesByNameThenIdAndAnExplicitSortWins() throws Exception {
+        for (var entry : new String[][] {{"Srch Zulu", "SZ1"}, {"Srch Alpha", "SA1"}, {"Srch Alpha", "SA2"}, {"Srch Mike", "SM1"}}) {
+            saveProgram(entry[0], entry[1]);
+        }
 
-        ProgramDTO p2 = TestDataUtil.createProgramDto();
-        p2.setName("Average Program");
-        p2.setCode("AP001");
-        Program program2 = programService.save(programMapper.toEntity(p2));
-        
-        // Rate program1 with 5.0, program2 with 3.0
-        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/program-rates")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"note\": 5.0, \"programId\": " + program1.getId() + ", \"userId\": 1}")
-                .with(TestDataUtil.mockUser("ROLE_STUDENT")));
-        
-        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/program-rates")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"note\": 3.0, \"programId\": " + program2.getId() + ", \"userId\": 1}")
-                .with(TestDataUtil.mockUser("ROLE_STUDENT")));
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/programs"))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].code").value("SA1"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[1].code").value("SA2"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[2].code").value("SM1"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[3].code").value("SZ1"));
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/programs?size=2&page=1"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].code").value("SM1"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[1].code").value("SZ1"));
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/programs?sort=name,desc"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].code").value("SZ1"));
+    }
 
-        mockMvc.perform(
-                MockMvcRequestBuilders.get("/api/v1/programs?sortRate=most")
-                        .with(TestDataUtil.mockUser("ROLE_STUDENT"))
-        ).andExpect(
-                MockMvcResultMatchers.status().isOk()
-        ).andExpect(
-                MockMvcResultMatchers.jsonPath("$.content[0].id").value(program1.getId())
-        ).andExpect(
-                MockMvcResultMatchers.jsonPath("$.content[1].id").value(program2.getId())
-        );
+    @Test
+    void listKeepsTheDefaultPageSizeAndRejectsAnUnknownSort() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/programs"))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.size").value(20));
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/programs?sort=doesNotExist,asc"))
+                .andExpect(MockMvcResultMatchers.status().isBadRequest());
+    }
+
+    // Rate first, then name/id as tie-break. Unrated programs are not asserted: Hibernate
+    // drops NULLS LAST on H2, whose test URL sorts nulls high.
+    @Test
+    void sortRateOrdersByRateThenNameAndIdWithRealRatings() throws Exception {
+        var expertId = saveExpert();
+        var tieBravo = saveRatedProgram("Tie Bravo", "TB001", 4.0, expertId);
+        var tieAlpha = saveRatedProgram("Tie Alpha", "TA001", 4.0, expertId);
+        var best = saveRatedProgram("Rated Zulu", "RZ001", 5.0, expertId);
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/programs?sortRate=most"))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].id").value(best))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[1].id").value(tieAlpha))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[2].id").value(tieBravo));
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/programs?sortRate=less"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].id").value(tieAlpha))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[1].id").value(tieBravo))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[2].id").value(best));
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/programs?sortRate=most&sort=name,desc"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].id").value(best))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[1].id").value(tieBravo))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[2].id").value(tieAlpha));
     }
 }

@@ -2,12 +2,16 @@ package com.bowe.meetstudent.integration.controllers;
 
 import com.bowe.meetstudent.TestDataUtil;
 import com.bowe.meetstudent.dto.SchoolDTO;
+import com.bowe.meetstudent.entities.Role;
 import com.bowe.meetstudent.entities.School;
 import com.bowe.meetstudent.entities.Tag;
+import com.bowe.meetstudent.entities.UserEntity;
 import com.bowe.meetstudent.mappers.implementations.SchoolMapper;
 import com.bowe.meetstudent.mappers.implementations.TagMapper;
+import com.bowe.meetstudent.services.RoleService;
 import com.bowe.meetstudent.services.SchoolService;
 import com.bowe.meetstudent.services.TagService;
+import com.bowe.meetstudent.services.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -45,6 +50,15 @@ class SchoolControllerIntegrationTests {
 
     @Autowired
     private TagMapper tagMapper;
+
+    @Autowired
+    private UserService userService;
+
+    @Autowired
+    private RoleService roleService;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -169,38 +183,80 @@ class SchoolControllerIntegrationTests {
         );
     }
 
+    private int saveStudent() {
+        var role = roleService.findRoleByName("ROLE_STUDENT")
+                .orElseGet(() -> roleService.createRole(Role.builder().name("ROLE_STUDENT").build()));
+        return userService.saveUser(UserEntity.builder().firstname("Rate").lastname("Student")
+                .email("rate.student@example.com").password("password").role(role).build(), passwordEncoder).getId();
+    }
+
+    private int saveSchool(String name, String code) {
+        SchoolDTO dto = TestDataUtil.createSchoolDto();
+        dto.setName(name);
+        dto.setCode(code);
+        return schoolService.save(schoolMapper.toEntity(dto)).getId();
+    }
+
+    private int saveRatedSchool(String name, String code, double note, int studentId) throws Exception {
+        var id = saveSchool(name, code);
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/school-rates")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"note\": " + note + ", \"schoolId\": " + id + ", \"userId\": " + studentId + "}")
+                        .with(TestDataUtil.mockUser(studentId, "ROLE_STUDENT")))
+                .andExpect(MockMvcResultMatchers.status().isCreated());
+        return id;
+    }
+
     @Test
-    void testThatGetSchoolsSortedByRateReturnsCorrectOrder() throws Exception {
-        SchoolDTO s1 = TestDataUtil.createSchoolDto();
-        s1.setName("Best School");
-        s1.setCode("BS001");
-        School school1 = schoolService.save(schoolMapper.toEntity(s1));
+    void listWithoutSortPagesByNameThenIdAndAnExplicitSortWins() throws Exception {
+        for (var entry : new String[][] {{"Srch Zulu", "SZ1"}, {"Srch Alpha", "SA1"}, {"Srch Alpha", "SA2"}, {"Srch Mike", "SM1"}}) {
+            saveSchool(entry[0], entry[1]);
+        }
 
-        SchoolDTO s2 = TestDataUtil.createSchoolDto();
-        s2.setName("Average School");
-        s2.setCode("AS001");
-        School school2 = schoolService.save(schoolMapper.toEntity(s2));
-        
-        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/school-rates")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"note\": 5.0, \"schoolId\": " + school1.getId() + ", \"userId\": 1}")
-                .with(TestDataUtil.mockUser("ROLE_STUDENT")));
-        
-        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/school-rates")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"note\": 3.0, \"schoolId\": " + school2.getId() + ", \"userId\": 1}")
-                .with(TestDataUtil.mockUser("ROLE_STUDENT")));
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/schools"))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].code").value("SA1"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[1].code").value("SA2"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[2].code").value("SM1"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[3].code").value("SZ1"));
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/schools?size=2&page=1"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].code").value("SM1"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[1].code").value("SZ1"));
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/schools?sort=name,desc"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].code").value("SZ1"));
+    }
 
-        mockMvc.perform(
-                MockMvcRequestBuilders.get("/api/v1/schools?sortRate=most")
-                        .with(TestDataUtil.mockUser("ROLE_STUDENT"))
-        ).andExpect(
-                MockMvcResultMatchers.status().isOk()
-        ).andExpect(
-                MockMvcResultMatchers.jsonPath("$.content[0].id").value(school1.getId())
-        ).andExpect(
-                MockMvcResultMatchers.jsonPath("$.content[1].id").value(school2.getId())
-        );
+    @Test
+    void listKeepsTheDefaultPageSizeAndRejectsAnUnknownSort() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/schools"))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.size").value(20));
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/schools?sort=doesNotExist,asc"))
+                .andExpect(MockMvcResultMatchers.status().isBadRequest());
+    }
+
+    // Rate first, then name/id as tie-break. Unrated schools are not asserted: Hibernate
+    // drops NULLS LAST on H2, whose test URL sorts nulls high.
+    @Test
+    void sortRateOrdersByRateThenNameAndIdWithRealRatings() throws Exception {
+        var studentId = saveStudent();
+        var tieBravo = saveRatedSchool("Tie Bravo", "TB001", 4.0, studentId);
+        var tieAlpha = saveRatedSchool("Tie Alpha", "TA001", 4.0, studentId);
+        var best = saveRatedSchool("Rated Zulu", "RZ001", 5.0, studentId);
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/schools?sortRate=most"))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].id").value(best))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[1].id").value(tieAlpha))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[2].id").value(tieBravo));
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/schools?sortRate=less"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].id").value(tieAlpha))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[1].id").value(tieBravo))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[2].id").value(best));
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/schools?sortRate=most&sort=name,desc"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].id").value(best))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[1].id").value(tieBravo))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[2].id").value(tieAlpha));
     }
 
     @Test
