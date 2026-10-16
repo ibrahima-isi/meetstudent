@@ -63,7 +63,8 @@
     "verifyEmail": "Confirmer l’e-mail",
     "resetPassword": "Nouveau mot de passe",
     "compare": "Comparer des établissements",
-    "comparePrograms": "Comparer des formations"
+    "comparePrograms": "Comparer des formations",
+    "compareCourses": "Comparer des cours"
   },
   "about": {
     "title": "À propos de MeetStudent",
@@ -335,7 +336,29 @@
     "empty": "Aucun cours n'est encore référencé",
     "loadError": "Les cours n'ont pas pu être chargés.",
     "loadMore": "Voir plus",
-    "loadMoreError": "Impossible de charger d'autres cours."
+    "loadMoreError": "Impossible de charger d'autres cours.",
+    "compareSelect": "Sélectionner {{name}} pour comparer",
+    "compareSelected": {
+      "one": "{{ count }} cours sélectionné",
+      "other": "{{ count }} cours sélectionnés"
+    },
+    "compareLimit": "Vous pouvez comparer jusqu'à 3 cours",
+    "compareAction": "Comparer",
+    "compareClear": "Vider la sélection"
+  },
+  "coursesCompare": {
+    "title": "Comparer des cours",
+    "invalid": "Choisissez entre 2 et 3 cours pour les comparer.",
+    "backToCatalogue": "Retour aux cours",
+    "editSelection": "Modifier la sélection",
+    "loadError": "Impossible de charger la comparaison.",
+    "notFound": "Un de ces cours n'existe plus. Revenez au catalogue pour compléter la sélection.",
+    "notProvided": "Non renseigné",
+    "notRated": "Non noté",
+    "rowName": "Cours",
+    "rowCode": "Code",
+    "rowProgram": "Formation",
+    "rowRate": "Note moyenne"
   },
   "accreditations": {
     "heroTitle": "Explorez les accréditations",

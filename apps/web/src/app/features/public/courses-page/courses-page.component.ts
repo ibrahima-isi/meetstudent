@@ -12,11 +12,15 @@ import { MediaService } from '@services/media.service';
 import { CourseService } from '@services/course.service';
 import { ErrorStateComponent } from '@shared/components/error-state/error-state.component';
 import { ImageWithFallbackComponent } from '@shared/components/image-with-fallback/image-with-fallback.component';
+import { parseIdList } from '@shared/compare-selection';
 import { roundRating } from '@shared/format-rating';
 
 /** Quiet time after the last keystroke before the URL (and so the API) is updated. */
 const SEARCH_DEBOUNCE_MS = 300;
 const PAGE_SIZE = 12;
+/** A comparison holds 2 to 3 courses. */
+const COMPARE_MIN = 2;
+const COMPARE_MAX = 3;
 
 @Component({
   selector: 'app-courses-page',
@@ -53,6 +57,13 @@ export class CoursesPageComponent implements OnInit {
   protected readonly loadMoreFailed = signal(false);
   protected readonly hasMore = computed(() => !this.lastPage());
   protected readonly resultCount = computed(() => this.totalElements() ?? this.courses().length);
+
+  /** Ids picked for comparison; the `?compare=` URL parameter is the source of truth. */
+  protected readonly selectedIds = signal<number[]>([]);
+  protected readonly limitReached = signal(false);
+  protected readonly canCompare = computed(
+    () => this.selectedIds().length >= COMPARE_MIN && this.selectedIds().length <= COMPARE_MAX,
+  );
 
   private readonly typed$ = new Subject<string>();
   private readonly pageRequests$ = new Subject<number>();
@@ -96,8 +107,55 @@ export class CoursesPageComponent implements OnInit {
 
   ngOnInit(): void {
     this.applyUrlTerm(this.route.snapshot.queryParamMap.get('q'));
+    this.selectedIds.set(parseIdList(this.route.snapshot.queryParamMap.get('compare'), COMPARE_MAX));
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       this.applyUrlTerm(params.get('q'));
+      this.selectedIds.set(parseIdList(params.get('compare'), COMPARE_MAX));
+    });
+  }
+
+  protected isSelected(course: Course): boolean {
+    return course.id !== undefined && this.selectedIds().includes(course.id);
+  }
+
+  protected toggleSelection(course: Course, event: Event): void {
+    const id = course.id;
+    if (id === undefined) return;
+    const current = this.selectedIds();
+    let next: number[];
+    if (current.includes(id)) {
+      next = current.filter((other) => other !== id);
+      this.limitReached.set(false);
+    } else if (current.length >= COMPARE_MAX) {
+      // The box was ticked by the click; the URL stays as it is, so untick it again.
+      (event.target as HTMLInputElement).checked = false;
+      this.limitReached.set(true);
+      return;
+    } else {
+      next = [...current, id];
+      this.limitReached.set(false);
+    }
+    this.writeSelection(next);
+  }
+
+  protected clearSelection(): void {
+    this.limitReached.set(false);
+    this.writeSelection([]);
+  }
+
+  private writeSelection(ids: number[]): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { compare: ids.length > 0 ? ids.join(',') : null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  }
+
+  protected compare(): void {
+    if (!this.canCompare()) return;
+    void this.router.navigate(['/', this.locale.active(), 'courses', 'compare'], {
+      queryParams: { ids: this.selectedIds().join(',') },
     });
   }
 
