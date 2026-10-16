@@ -142,3 +142,10 @@ Contrats HTTP 400/404/409 des tags, accréditations, programmes/cours et rôles,
 - [x] #111 — comportement existant et qualification HTTP/PostgreSQL vérifiés ; suite API entière verte.
 - [x] #111 — revues Standards/Spec indépendantes terminées ; aucun correctif requis.
 - [ ] #111 — [PR #145](https://github.com/ibrahima-isi/meetstudent/pull/145) vers `dev` ouverte ; trois CI sur le présent head documentaire final, squash et clôture encore requis. Le bilan définitif sera ajouté au suivi local après fusion.
+
+### #112 — une note par utilisateur et cours (2026-10-16)
+
+- [x] [#112](https://github.com/ibrahima-isi/meetstudent/issues/112) : qualification et vérifications locales terminées dans `test/course-rating-uniqueness-112`, base immuable `66f2ca52817054c63de31f9195f26b5a3438d12a`. Manifeste de quatre fichiers autorisé ; qualification HTTP (renote, agrégat, rôles) et concurrence 201/409, migration PostgreSQL V23→V24 (survivants 700001/700005/700007/700008/700009, SQLSTATE 23505, Hibernate validate). API complète 614 tests verts (239 unitaires + 375 intégration), trois HTTP PostgreSQL verts, conteneur ms112-pg supprimé. Aucun code métier/migration modifié, aucun faux rouge. [Preuves](evidence/ticket-112.md). Point ouvert pour le propriétaire : `courseId` absent accepté en 201 (voir preuves). [PR](#) en attente.
+
+- [x] #112 — comportement existant et qualification HTTP/PostgreSQL vérifiés ; suite API entière verte.
+- [ ] #112 — revues Standards/Spec, PR vers `dev`, trois CI, squash et clôture encore requis ; décision propriétaire sur `courseId` nul à prendre.
