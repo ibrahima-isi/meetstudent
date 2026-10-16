@@ -132,6 +132,73 @@ class AccreditationControllerIntegrationTests {
         );
     }
 
+    private void saveAccreditation(String name, String code) {
+        AccreditationDTO dto = TestDataUtil.createAccreditationDto();
+        dto.setName(name);
+        dto.setCode(code);
+        accreditationService.save(accreditationMapper.toEntity(dto));
+    }
+
+    @Test
+    void anonymousCanListAndSearchAccreditationsAndWritesAreRefused() throws Exception {
+        saveAccreditation("Anon Accreditation", "ANA01");
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/accreditations"))
+                .andExpect(MockMvcResultMatchers.status().isOk());
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/accreditations/name/Anon"))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].name").value("Anon Accreditation"));
+
+        var body = "{\"name\":\"Nope\",\"code\":\"NOPE1\"}";
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/accreditations")
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(MockMvcResultMatchers.status().isUnauthorized());
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/accreditations")
+                        .contentType(MediaType.APPLICATION_JSON).content(body)
+                        .with(TestDataUtil.mockUser("ROLE_STUDENT")))
+                .andExpect(MockMvcResultMatchers.status().isForbidden());
+        mockMvc.perform(MockMvcRequestBuilders.delete("/api/v1/accreditations/1")
+                        .with(TestDataUtil.mockUser("ROLE_EXPERT")))
+                .andExpect(MockMvcResultMatchers.status().isForbidden());
+    }
+
+    @Test
+    void nameSearchAndListWithoutSortPageByNameThenId() throws Exception {
+        for (var entry : new String[][] {{"Srch Zulu", "SZ1"}, {"Srch Alpha", "SA1"}, {"Srch Alpha", "SA2"}, {"Srch Mike", "SM1"}}) {
+            saveAccreditation(entry[0], entry[1]);
+        }
+
+        for (var path : new String[] {"/api/v1/accreditations/name/Srch", "/api/v1/accreditations"}) {
+            mockMvc.perform(MockMvcRequestBuilders.get(path))
+                    .andExpect(MockMvcResultMatchers.status().isOk())
+                    .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].code").value("SA1"))
+                    .andExpect(MockMvcResultMatchers.jsonPath("$.content[1].code").value("SA2"))
+                    .andExpect(MockMvcResultMatchers.jsonPath("$.content[2].code").value("SM1"))
+                    .andExpect(MockMvcResultMatchers.jsonPath("$.content[3].code").value("SZ1"));
+        }
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/accreditations/name/Srch?size=2&page=1"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].code").value("SM1"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[1].code").value("SZ1"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.totalElements").value(4));
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/accreditations/name/Srch?sort=name,desc"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].code").value("SZ1"));
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/accreditations?sort=name,desc"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].code").value("SZ1"));
+    }
+
+    @Test
+    void listsKeepTheDefaultPageSizeAndRejectAnUnknownSort() throws Exception {
+        for (var path : new String[] {"/api/v1/accreditations", "/api/v1/accreditations/name/x"}) {
+            mockMvc.perform(MockMvcRequestBuilders.get(path))
+                    .andExpect(MockMvcResultMatchers.status().isOk())
+                    .andExpect(MockMvcResultMatchers.jsonPath("$.size").value(20));
+            mockMvc.perform(MockMvcRequestBuilders.get(path + "?sort=doesNotExist,asc"))
+                    .andExpect(MockMvcResultMatchers.status().isBadRequest());
+        }
+    }
+
     @Test
     void testThatGetAllAccreditationsReturnsHttpStatus200() throws Exception {
         mockMvc.perform(

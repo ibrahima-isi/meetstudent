@@ -94,6 +94,15 @@ export const routes: Routes = [
               ),
           },
           {
+            path: 'accreditations',
+            pathMatch: 'full',
+            title: 'pageTitle.accreditations',
+            loadComponent: () =>
+              import('./features/public/accreditations-page/accreditations-page.component').then(
+                (m) => m.AccreditationsPageComponent,
+              ),
+          },
+          {
             path: 'about',
             title: 'pageTitle.about',
             loadComponent: () =>

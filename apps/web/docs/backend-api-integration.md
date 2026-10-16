@@ -120,6 +120,12 @@ The contract is **asymmetric**: you *write* an id, you *read* an object.
 - `GET /api/v1/courses` and `GET /api/v1/courses/name/{name}` sort by `name,id` by default (an explicit `?sort=` wins, an unknown property is 400). `?sortRate=most|less` sorts by the average rate first; that `name,id` (or explicit `sort`) order only breaks ties, so rate pages are stable too.
 - `CourseService.searchCoursesByName` trims the term, `encodeURIComponent`s the path segment and answers an empty page, without a request, for a term containing `/ \ % ;` or equal to `.`/`..`; a blank term lists all courses.
 
+### AccreditationDTO: name search (ticket #120)
+
+- The API gives an accreditation only `id`, `code`, `name` and `description`; the public catalogue (`/:lang/accreditations`, SSR, no guard) shows exactly those and writes "Not provided" for an absent or blank description. No rating, comparison, ranking, logo or issuer: the `Accreditation` model lost its never-sent `issuer`/`logoUrl`.
+- `GET /api/v1/accreditations` and `GET /api/v1/accreditations/name/{name}` are public, page size 20, and sort by `name,id` by default (an explicit `?sort=` wins, an unknown property is 400). Writes stay ADMIN-only.
+- `AccreditationService.listAccreditations` / `searchAccreditationsByName` replace the unpaged `getAccreditations()` (with its signal cache) and `getSchoolAccreditations()` (it called `/accreditations/school/{id}`, which does not exist); nothing consumed them. The search trims the term, `encodeURIComponent`s the path segment and answers an empty page, without a request, for a term containing `/ \ % ;` or equal to `.`/`..`; a blank term lists all.
+
 ### MediaDTO shape
 
 ```ts

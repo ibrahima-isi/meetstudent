@@ -28,6 +28,7 @@ import { LandingPageComponent } from '../features/public/landing-page/landing-pa
 import { LandingHeroComponent } from '../features/public/landing-page/sections/landing-hero.component';
 import { SchoolsPageComponent } from '../features/public/schools-page/schools-page.component';
 import { ProgramsPageComponent } from '../features/public/programs-page/programs-page.component';
+import { AccreditationsPageComponent } from '../features/public/accreditations-page/accreditations-page.component';
 import { CoursesPageComponent } from '../features/public/courses-page/courses-page.component';
 import { HomePageComponent } from '../features/student/home-page/home-page.component';
 import { ProfilePageComponent } from '../features/student/profile-page/profile-page.component';
@@ -282,6 +283,19 @@ describe('dark mode: no light-only palette classes', () => {
     ],
     ['courses page loading', CoursesPageComponent, (c) => c.status.set('loading')],
     ['courses page error', CoursesPageComponent, (c) => c.status.set('error')],
+    [
+      'accreditations page with accreditations',
+      AccreditationsPageComponent,
+      (c) => {
+        c.accreditations.set([
+          { id: 1, name: 'AACSB', code: 'AACSB', description: 'Label' },
+          { id: 2, name: 'Bare', code: 'BARE' },
+        ]);
+        c.status.set('loaded');
+      },
+    ],
+    ['accreditations page loading', AccreditationsPageComponent, (c) => c.status.set('loading')],
+    ['accreditations page error', AccreditationsPageComponent, (c) => c.status.set('error')],
     ['error state', ErrorStateComponent, undefined],
     [
       'image with fallback',
