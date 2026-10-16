@@ -46,6 +46,22 @@ describe('PublicShellComponent', () => {
     expect(order.indexOf('app-email-verification-banner')).toBeLessThan(order.indexOf('main'));
   });
 
+  it('renders exactly one common footer, after the main landmark', () => {
+    expect(root.querySelectorAll('footer[role="contentinfo"]').length).toBe(1);
+    const order = Array.from(root.children).map((c) => c.tagName.toLowerCase());
+    expect(order.indexOf('app-site-footer')).toBeGreaterThan(order.indexOf('main'));
+  });
+
+  it('pins the footer to the bottom of the viewport when the page is short', () => {
+    // The frame spans at least the viewport, and the main landmark absorbs the
+    // spare height, so a short page never leaves the footer floating mid-screen.
+    expect(getComputedStyle(root).minHeight).toBe(`${window.innerHeight}px`);
+    root.style.height = '2000px';
+    const frame = root.getBoundingClientRect();
+    const footer = root.querySelector('footer[role="contentinfo"]')!.getBoundingClientRect();
+    expect(Math.round(footer.bottom)).toBe(Math.round(frame.bottom));
+  });
+
   it('offers a skip link that is hidden until focused', () => {
     const skip = root.querySelector('a[href="#main"]') as HTMLElement;
     expect(skip).not.toBeNull();

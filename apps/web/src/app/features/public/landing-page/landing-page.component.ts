@@ -7,7 +7,6 @@ import { FeaturedSchoolsComponent } from './sections/featured-schools.component'
 import { HowItWorksComponent } from './sections/how-it-works.component';
 import { KeyFiguresComponent } from './sections/key-figures.component';
 import { LandingHeroComponent } from './sections/landing-hero.component';
-import { SiteFooterComponent } from './sections/site-footer.component';
 import { TestimonialsComponent } from './sections/testimonials.component';
 
 /** The marketing home of `/:lang`. The school catalogue lives at `/:lang/schools`. */
@@ -20,7 +19,6 @@ import { TestimonialsComponent } from './sections/testimonials.component';
     FeaturedSchoolsComponent,
     TestimonialsComponent,
     CtaBandComponent,
-    SiteFooterComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -30,7 +28,6 @@ import { TestimonialsComponent } from './sections/testimonials.component';
     <app-featured-schools />
     <app-testimonials />
     <app-cta-band />
-    <app-site-footer />
   `,
 })
 export class LandingPageComponent {
