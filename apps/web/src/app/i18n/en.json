@@ -46,6 +46,7 @@
     "who": "Undergraduate student · Dakar"
   },
   "pageTitle": {
+    "accreditations": "Accreditations",
     "courses": "Courses",
     "programs": "Programmes",
     "landing": "Find the school that suits you",
@@ -278,6 +279,23 @@
     "loadError": "Courses could not be loaded.",
     "loadMore": "Load more",
     "loadMoreError": "More courses could not be loaded."
+  },
+  "accreditations": {
+    "heroTitle": "Explore the accreditations",
+    "heroText": "Search accreditations by name and see the code and description of each one.",
+    "searchPlaceholder": "Search for an accreditation...",
+    "found": {
+      "one": "{{ count }} accreditation found",
+      "other": "{{ count }} accreditations found"
+    },
+    "code": "Code",
+    "description": "Description",
+    "notProvided": "Not provided",
+    "noResults": "No accreditation matches this search",
+    "empty": "No accreditations are listed yet",
+    "loadError": "Accreditations could not be loaded.",
+    "loadMore": "Load more",
+    "loadMoreError": "More accreditations could not be loaded."
   },
   "schoolDetail": {
     "loginRequired": "Sign-in required",
