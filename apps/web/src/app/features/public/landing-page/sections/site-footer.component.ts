@@ -34,17 +34,17 @@ import { LocaleService } from '@services/locale.service';
         </nav>
         <nav [attr.aria-label]="t('lp.footer.account')">
           <p class="text-sm font-semibold text-foreground">{{ t('lp.footer.account') }}</p>
-          <ul role="list" class="mt-3 space-y-2 text-sm">
+          <ul role="list" class="mt-3 flex flex-wrap items-center gap-3 text-sm">
             <li>
               <a
-                class="text-muted-foreground hover:text-foreground"
+                class="btn btn-secondary"
                 [routerLink]="['/', lang(), 'login']"
                 >{{ t('nav.login') }}</a
               >
             </li>
             <li>
               <a
-                class="text-muted-foreground hover:text-foreground"
+                class="btn btn-primary"
                 [routerLink]="['/', lang(), 'register']"
                 >{{ t('nav.register') }}</a
               >
