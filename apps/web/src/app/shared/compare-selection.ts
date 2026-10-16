@@ -1,13 +1,16 @@
-/** Shared by the schools and programs comparisons. */
+/** Shared by the schools, programs and courses comparisons. */
 
-/** Positive whole ids from a comma-separated list, without repeats; at most `limit` when given. */
+/** Ids are Java `int` path variables on the API: anything larger is a 400, never a record. */
+const MAX_API_ID = 2_147_483_647;
+
+/** Positive whole ids the API can read, from a comma-separated list, without repeats; at most `limit` when given. */
 export function parseIdList(raw: string | null | undefined, limit?: number): number[] {
   const ids = (raw ?? '')
     .split(',')
     .map((part) => part.trim())
     .filter((part) => /^\d+$/.test(part))
     .map(Number)
-    .filter((id) => id > 0);
+    .filter((id) => id > 0 && id <= MAX_API_ID);
   const unique = [...new Set(ids)];
   return limit === undefined ? unique : unique.slice(0, limit);
 }
@@ -25,6 +28,7 @@ export function byRatingThenNameThenId<T extends { id?: number; name: string }>(
       if (rateB === null) return -1;
       return rateB - rateA;
     }
-    return a.name.localeCompare(b.name, locale) || (a.id ?? 0) - (b.id ?? 0);
+    // `name` is nullable in the database for legacy rows; a missing one sorts as empty.
+    return (a.name ?? '').localeCompare(b.name ?? '', locale) || (a.id ?? 0) - (b.id ?? 0);
   };
 }
