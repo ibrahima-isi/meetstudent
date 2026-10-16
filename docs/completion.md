@@ -25,7 +25,7 @@ Track individual deliveries in [../completion.md](../completion.md). Preserve th
 - [ ] 7. Footer account buttons (#117).
 - [ ] 8. Four footer product destinations (#118–120, #122).
 - [ ] 9. School/programme/course comparison (#123–125).
-- [ ] 10. Search entry across three resource types (#121).
+- [x] 10. Search entry across three resource types (#121).
 - [ ] 11. School/programme rankings (#126–127).
 - [ ] 12. Découvrir / Discover navigation (#128).
 - [ ] 13. Exactly one About footer (#116).
@@ -150,3 +150,12 @@ Contrats HTTP 400/404/409 des tags, accréditations, programmes/cours et rôles,
 - [x] #112 — comportement existant et qualification HTTP/PostgreSQL vérifiés ; suite API entière verte.
 - [x] #112 — revues Standards/Spec indépendantes terminées ; constats confirmés corrigés, API complète relancée verte (615 tests).
 - [ ] #112 — PR vers `dev`, trois CI, squash et clôture encore requis ; suivi programme à décider.
+
+
+### #121 — entrée Cherchez vers les trois catalogues (2026-10-16)
+
+- [x] [#121](https://github.com/ibrahima-isi/meetstudent/issues/121) : implémentation, validations locales et première CI complète terminées ; état définitif de livraison dans la [PR #157](https://github.com/ibrahima-isi/meetstudent/pull/157) vers `dev`.
+
+Base isolée `d73428d`, actualisée sur `b0dbba8`, branche `feat/search-entry-121`. Formulaire accessible : type établissement/formation/cours, nom, bouton Cherchez/Search, langue et `q` conservés. Les catalogues et leurs états HTTP existants sont réutilisés. Les termes incompatibles avec leurs contrats sont signalés avant navigation ; saisie/type/focus et associations ARIA conservés, erreur effacée après correction.
+
+[Preuves](evidence/ticket-121.md) : deux rouges réels (formulaire absent puis faux vide sur terme non transportable), **29** tests ciblés, **1070** tests web, types et build SSR verts ; API **630** tests, backoffice **300** tests et build verts. PostgreSQL 18 : V1–V24 réussies et schéma validé ; navigateur SSR production : **24** parcours réels fr/en/mobile/desktop/clair/sombre, trois vides, trois erreurs/réessais, session authentifiée/paysage/rechargement, puis **12** validations/récupérations après correctif. Revues indépendantes finales : **Standards 0 / Spec 0** sur `83af31f` après correction du P2. Ressources smoke propres à #121 supprimées ; stack partagée préservée. [Première CI API/web/backoffice verte](https://github.com/ibrahima-isi/meetstudent/actions/runs/38973287376) sur `83af31f4778201dd336523caf03aef50dfc52085`. Le head documentaire final doit aussi obtenir les trois checks verts avant squash ; état définitif de CI/fusion sur la PR, clôture et archivage dans le bilan exporté après fusion.
