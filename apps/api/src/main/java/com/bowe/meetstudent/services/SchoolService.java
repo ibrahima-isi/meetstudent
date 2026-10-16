@@ -85,8 +85,8 @@ public class SchoolService {
 
     @Transactional
     public School patch(Integer id, School updates) {
-        requireExistingTags(updates);
         return schoolRepository.findById(id).map(existing -> {
+            requireExistingTags(updates);
             // Check for media changes before updating
             if (updates.getLogoMediaId() != null
                     && !updates.getLogoMediaId().equals(existing.getLogoMediaId())) {
@@ -112,12 +112,16 @@ public class SchoolService {
 
     /** An unknown tag id in the body is a client error, not a foreign-key failure at flush time. */
     private void requireExistingTags(School school) {
-        if (school.getTags() == null) return;
+        if (school.getTags() == null || school.getTags().isEmpty()) return;
+        var ids = new java.util.LinkedHashSet<Integer>();
         for (var tag : school.getTags()) {
-            if (tag == null || tag.getId() == null || !tagRepository.existsById(tag.getId())) {
-                throw new FieldValidationException("tags",
-                        "Unknown tag" + (tag != null && tag.getId() != null ? " " + tag.getId() : ""));
-            }
+            if (tag == null || tag.getId() == null) throw new FieldValidationException("tags", "Unknown tag");
+            ids.add(tag.getId());
+        }
+        var found = new java.util.HashSet<Integer>();
+        tagRepository.findAllById(ids).forEach(t -> found.add(t.getId()));
+        for (var id : ids) {
+            if (!found.contains(id)) throw new FieldValidationException("tags", "Unknown tag " + id);
         }
     }
 }

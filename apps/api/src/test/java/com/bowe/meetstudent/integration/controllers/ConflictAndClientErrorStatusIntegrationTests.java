@@ -169,4 +169,34 @@ class ConflictAndClientErrorStatusIntegrationTests {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.tags").isNotEmpty());
     }
+
+    @Test
+    void anUnknownSchoolWithAnUnknownTagAnswers404() throws Exception {
+        send(put("/api/v1/schools/987654"), ADMIN, "{\"tags\":[{\"id\":987655}]}")
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void putWithAValidTagKeepsItAndAnEmptyListClearsTags() throws Exception {
+        String name = "VALID" + unique();
+        int tagId = createTag(name);
+        String c = code();
+        int id = create("/api/v1/schools", "School " + c, c);
+
+        send(put("/api/v1/schools/" + id), ADMIN, "{\"tags\":[{\"id\":" + tagId + "},{\"id\":" + tagId + "}]}")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tags.length()").value(2));
+        send(put("/api/v1/schools/" + id), ADMIN, "{\"tags\":[]}")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tags.length()").value(0));
+    }
+
+    @Test
+    void theUnknownSortMessageNamesAndTruncatesTheProperty() throws Exception {
+        send(get("/api/v1/schools?sort=doesNotExist,asc"), "ROLE_STUDENT", null)
+                .andExpect(jsonPath("$.message").value("Unknown sort property 'doesNotExist'"));
+        send(get("/api/v1/schools?sort=" + "x".repeat(200)), "ROLE_STUDENT", null)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Unknown sort property '" + "x".repeat(64) + "'"));
+    }
 }

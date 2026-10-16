@@ -158,6 +158,8 @@ class GlobalExceptionHandlerTest {
             assertEquals(Level.ERROR, appender.list.get(0).getLevel());
             assertTrue(appender.list.get(0).getFormattedMessage().contains("uk_schools_code"));
             assertTrue(appender.list.get(0).getFormattedMessage().contains("23505"));
+            assertEquals(null, appender.list.get(0).getThrowableProxy());
+            assertTrue(!appender.list.get(0).getFormattedMessage().contains("violates"));
         } finally {
             detach(appender);
         }
@@ -172,6 +174,7 @@ class GlobalExceptionHandlerTest {
             assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
             assertEquals(Level.ERROR, appender.list.get(0).getLevel());
             assertTrue(appender.list.get(0).getFormattedMessage().contains("fk_program_school"));
+            assertEquals(null, appender.list.get(0).getThrowableProxy());
         } finally {
             detach(appender);
         }

@@ -146,11 +146,11 @@ public class GlobalExceptionHandler {
         }
         String uri = request.getDescription(false);
         if ("23505".equals(sqlState)) {
-            log.error("Unique constraint violation (SQLSTATE 23505, constraint {}) on {}", constraint, uri, ex);
+            log.error("Unique constraint violation (SQLSTATE 23505, constraint {}) on {}", constraint, uri);
             return build(HttpStatus.CONFLICT, "A resource with the same unique value already exists", request);
         }
         if ("23503".equals(sqlState)) {
-            log.error("Foreign key violation (SQLSTATE 23503, constraint {}) on {}", constraint, uri, ex);
+            log.error("Foreign key violation (SQLSTATE 23503, constraint {}) on {}", constraint, uri);
             return build(HttpStatus.CONFLICT, "This resource is still in use", request);
         }
         if ("23502".equals(sqlState) || "22001".equals(sqlState)) {
@@ -256,13 +256,17 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(PropertyReferenceException.class)
     public ResponseEntity<ErrorResponse> handleUnknownSortProperty(
             PropertyReferenceException ex, WebRequest request) {
-        return build(HttpStatus.BAD_REQUEST, "Unknown sort property '" + ex.getPropertyName() + "'", request);
+        return build(HttpStatus.BAD_REQUEST, "Unknown sort property '" + truncate(ex.getPropertyName(), 64) + "'", request);
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<ErrorResponse> handleMethodNotSupported(
             HttpRequestMethodNotSupportedException ex, WebRequest request) {
         return build(HttpStatus.METHOD_NOT_ALLOWED, "Method '" + ex.getMethod() + "' is not supported for this endpoint", request);
+    }
+
+    private static String truncate(String value, int max) {
+        return value == null || value.length() <= max ? value : value.substring(0, max);
     }
 
     private ResponseEntity<ErrorResponse> build(HttpStatus status, String message, WebRequest request) {
