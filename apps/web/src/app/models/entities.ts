@@ -83,9 +83,9 @@ export interface Tag extends AbstractEntity {
 
 export interface Accreditation extends AbstractEntity {
   name: string;
-  description?: string;
-  issuer?: string;
-  logoUrl?: string;
+  /** The API sends only id, code, name and description; nothing else is invented. */
+  code?: string;
+  description?: string | null;
 }
 
 export interface School extends BaseEntity {

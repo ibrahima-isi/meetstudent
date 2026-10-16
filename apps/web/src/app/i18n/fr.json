@@ -46,6 +46,7 @@
     "who": "Étudiante en licence · Dakar"
   },
   "pageTitle": {
+    "accreditations": "Accréditations",
     "courses": "Cours",
     "programs": "Formations",
     "landing": "Trouvez l'école qui vous correspond",
@@ -278,6 +279,23 @@
     "loadError": "Les cours n'ont pas pu être chargés.",
     "loadMore": "Voir plus",
     "loadMoreError": "Impossible de charger d'autres cours."
+  },
+  "accreditations": {
+    "heroTitle": "Explorez les accréditations",
+    "heroText": "Recherchez les accréditations reconnues pour les écoles et formations du Sénégal.",
+    "searchPlaceholder": "Rechercher une accréditation...",
+    "found": {
+      "one": "{{ count }} accréditation trouvée",
+      "other": "{{ count }} accréditations trouvées"
+    },
+    "code": "Code",
+    "description": "Description",
+    "notProvided": "Non renseigné",
+    "noResults": "Aucune accréditation ne correspond à cette recherche",
+    "empty": "Aucune accréditation n'est encore référencée",
+    "loadError": "Les accréditations n'ont pas pu être chargées.",
+    "loadMore": "Voir plus",
+    "loadMoreError": "Impossible de charger d'autres accréditations."
   },
   "schoolDetail": {
     "loginRequired": "Connexion requise",
