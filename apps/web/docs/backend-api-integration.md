@@ -4,6 +4,12 @@
 **Backend state:** `main` @ `f34ee3a` (PR #13 merged: media access control + school/course/program media FK reconciliation)
 **Frontend state:** `customer_frontend` @ `49cd873` (Angular 20 + SSR + Tailwind 4)
 
+> **Status (2026-10-16): §7 onwards (password reset, email verification, email
+> change, profile password, account deletion, HTTP status corrections) describe
+> the current behaviour; §0-§6 are the historical pre-work analysis.** Names such as `customer_frontend`, `backend/`
+> and `environment.prod.ts` are obsolete (the repo is the `apps/` monorepo with a
+> single `environment.ts`).
+>
 > **Status (2026-08-09): this is the pre-work analysis, not a current-state
 > description.** It was written *before* `feat/backend-api-migration` and is
 > kept for historical context. Since then, on that branch:

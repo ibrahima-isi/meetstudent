@@ -282,6 +282,10 @@ Keep the host patched (`unattended-upgrades`) and the Traefik image current.
   cannot recover it (an admin must intervene in the database), and the web hides the verification banner.
   Set `MAIL_FROM`, `FRONTEND_BASE_URL` (https) and the `SPRING_MAIL_*` variables above; the API refuses to
   start if `MAIL_FROM` or `SPRING_MAIL_HOST` is missing while mail is enabled.
+- Migration `V24` permanently deletes older duplicate ratings (it keeps the latest per user and target) before
+  adding the unique constraints: run `scripts/backup.sh` before the first deploy that includes it.
+- Anyone can register as a teacher (`ROLE_EXPERT`) with no admin validation; experts can rate programs and
+  courses (one rating per user per target). Promote or demote through the back office if that becomes a problem.
 - Single server, single database: no high availability; recovery depends on
   your off-site backups.
 - No full CSP, and no WAF or CDN in front.
