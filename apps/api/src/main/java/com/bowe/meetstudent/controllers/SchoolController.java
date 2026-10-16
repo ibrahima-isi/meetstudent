@@ -14,6 +14,7 @@ import org.modelmapper.ModelMapper;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.SortDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -47,12 +48,12 @@ public class SchoolController {
     }
 
     @GetMapping
-    @Operation(summary = "Get all schools (paginated)", description = "Provides a paginated list of all schools, including their average ratings. Can be sorted by rating (most/less).")
+    @Operation(summary = "Get all schools (paginated)", description = "Provides a paginated list of all schools, including their average ratings. Can be sorted by rating (most/less). Without ?sort= results are ordered by name, then id; an explicit ?sort= replaces that order and an unknown property answers 400. With ?sortRate= the rate comes first and that order only breaks ties.")
     @ApiResponse(responseCode = "200", description = "List of schools retrieved")
     public Page<SchoolDTO> getSchools(
             @Parameter(description = "Sort by rate: 'most' for highest rated, 'less' for lowest rated") 
             @RequestParam(required = false) String sortRate,
-            @ParameterObject Pageable pageable) {
+            @ParameterObject @SortDefault(sort = {"name", "id"}) Pageable pageable) {
         
         Page<School> schoolPage;
         if ("most".equalsIgnoreCase(sortRate)) {

@@ -133,12 +133,12 @@ public class ProgramController {
     }
 
     @GetMapping
-    @Operation(summary = "Get all programs (paginated)", description = "Provides a paginated list of all programs, including their average ratings. Can be sorted by rating (most/less).")
+    @Operation(summary = "Get all programs (paginated)", description = "Provides a paginated list of all programs, including their average ratings. Can be sorted by rating (most/less). Without ?sort= results are ordered by name, then id; an explicit ?sort= replaces that order and an unknown property answers 400. With ?sortRate= the rate comes first and that order only breaks ties.")
     @ApiResponse(responseCode = "200", description = "List of programs retrieved")
     public Page<ProgramDTO> getPrograms(
             @Parameter(description = "Sort by rate: 'most' for highest rated, 'less' for lowest rated") 
             @RequestParam(required = false) String sortRate,
-            @ParameterObject Pageable pageable) {
+            @ParameterObject @SortDefault(sort = {"name", "id"}) Pageable pageable) {
         
         Page<Program> programPage;
         if ("most".equalsIgnoreCase(sortRate)) {
