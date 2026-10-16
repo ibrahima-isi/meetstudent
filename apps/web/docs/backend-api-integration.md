@@ -13,6 +13,7 @@
 > - **Update #107 (2026-10-15):** the no-`role` statement above is superseded.
 >   Public registration now accepts `ROLE_STUDENT` or `ROLE_EXPERT` as a string;
 >   an absent role defaults to student. Other roles return a field error.
+> - **One rating per user per target (`V24`).** `POST /school-rates`, `/program-rates` and `/course-rates` now update the caller's existing rating in place (200, same `id`) instead of adding a row; the first rating is still 201. `RatingService.rateSchool/rateProgram/rateCourse` need no change (`HttpClient` treats 200 and 201 alike): re-rating just works. A lost insert race on the unique constraint is 409 `ErrorResponse`. A client-supplied `id` in the body is ignored (it can no longer overwrite another user's rating), and When re-rating, an absent/`null` `comment` keeps the previous comment and `""` clears it (the star-rating textarea has `maxlength="150"`). `comment` is limited to 150 characters (400 `{"comment": ...}`, it used to say 500 and fail at the database).
 > - **§2's three "broken template bindings" — DONE.** All three now bind to
 >   the resolved `cover`/`logo`/`photo` media objects.
 > - **§2's `environment.prod.ts` instruction is wrong for this repo — there is

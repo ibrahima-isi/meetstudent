@@ -19,7 +19,7 @@ public class RateDTO extends AbstractDTO {
     @Max(value = 5, message = "Note cannot exceed 5")
     private Double note;
 
-    @Size(max = 500, message = "Comment cannot exceed 500 characters")
+    @Size(max = 150, message = "Comment cannot exceed 150 characters")
     private String comment;
 
     @Positive(message = "User ID must be positive")
