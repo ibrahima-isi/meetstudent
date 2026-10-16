@@ -5,7 +5,10 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.data.mapping.PropertyReferenceException;
+import org.springframework.http.MediaType;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -231,6 +234,22 @@ public class GlobalExceptionHandler {
             HttpMediaTypeNotSupportedException ex, WebRequest request) {
         return build(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "Content type '" + ex.getContentType()
                 + "' is not supported. Supported: " + ex.getSupportedMediaTypes(), request);
+    }
+
+    /** The JSON body is forced: the client's Accept header may exclude every type we could write. */
+    @ExceptionHandler(HttpMediaTypeNotAcceptableException.class)
+    public ResponseEntity<ErrorResponse> handleMediaTypeNotAcceptable(
+            HttpMediaTypeNotAcceptableException ex, WebRequest request) {
+        var body = build(HttpStatus.NOT_ACCEPTABLE,
+                "Cannot produce a response matching the Accept header. Supported: application/json", request).getBody();
+        return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).contentType(MediaType.APPLICATION_JSON).body(body);
+    }
+
+    /** Unknown {@code ?sort=} property. */
+    @ExceptionHandler(PropertyReferenceException.class)
+    public ResponseEntity<ErrorResponse> handleUnknownSortProperty(
+            PropertyReferenceException ex, WebRequest request) {
+        return build(HttpStatus.BAD_REQUEST, "Unknown sort property '" + ex.getPropertyName() + "'", request);
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
