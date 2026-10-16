@@ -1,6 +1,6 @@
 import { School } from '@models/entities';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideZonelessChangeDetection, signal } from '@angular/core';
+import { computed, provideZonelessChangeDetection, signal } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter, Router } from '@angular/router';
@@ -191,6 +191,7 @@ describe('HomePageComponent wishlist', () => {
   let error: ReturnType<typeof signal<boolean>>;
   let toggle: jasmine.Spy;
   let load: jasmine.Spy;
+  let currentUser: ReturnType<typeof signal<{ id: number; role: { name: string } } | null>>;
   const q = (sel: string) => (fixture.nativeElement as HTMLElement).querySelector(sel);
 
   beforeEach(async () => {
@@ -198,6 +199,7 @@ describe('HomePageComponent wishlist', () => {
     error = signal(false);
     toggle = jasmine.createSpy('toggle');
     load = jasmine.createSpy('load');
+    currentUser = signal<{ id: number; role: { name: string } } | null>({ id: 9, role: { name: 'ROLE_STUDENT' } });
     TestBed.configureTestingModule({
       imports: [HomePageComponent],
       providers: [
@@ -207,10 +209,11 @@ describe('HomePageComponent wishlist', () => {
         provideRouter([]),
         provideTransloco(translocoOptions),
         { provide: SchoolService, useValue: { getSchools: () => of({ content: [school] }) } },
-        { provide: TokenService, useValue: { isAuthenticated: signal(true), user: signal(null), clear: () => {} } },
+        { provide: TokenService, useValue: { isAuthenticated: signal(true), user: currentUser, clear: () => {} } },
         {
           provide: WishlistService,
           useValue: {
+            available: computed(() => currentUser()?.role?.name === 'ROLE_STUDENT'),
             schools: saved,
             error,
             status: signal('loaded'),
@@ -231,6 +234,31 @@ describe('HomePageComponent wishlist', () => {
 
   it('loads the wishlist itself, since the navbar cart only mounts after hydration', () => {
     expect(load).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows no student hearts and loads no wishlist when an expert opens home', async () => {
+    fixture.destroy();
+    currentUser.set({ id: 9, role: { name: 'ROLE_EXPERT' } });
+    load.calls.reset();
+    fixture = TestBed.createComponent(HomePageComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(q('[data-testid="wishlist-toggle"]')).toBeNull();
+    expect(load).not.toHaveBeenCalled();
+  });
+
+  it('updates the hearts when the same session changes between student and expert', async () => {
+    expect(q('[data-testid="wishlist-toggle"]')).not.toBeNull();
+    currentUser.set({ id: 9, role: { name: 'ROLE_EXPERT' } });
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(q('[data-testid="wishlist-toggle"]')).toBeNull();
+
+    currentUser.set({ id: 9, role: { name: 'ROLE_STUDENT' } });
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(q('[data-testid="wishlist-toggle"]')).not.toBeNull();
   });
 
   it('puts an unpressed add-to-wishlist button on each card and toggles on click', () => {

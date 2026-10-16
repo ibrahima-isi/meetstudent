@@ -44,20 +44,22 @@
       </button>
     </div>
 
-    <button
-      type="button"
-      data-testid="wishlist-toggle"
-      [attr.aria-pressed]="wishlist.has(detail.id)"
-      [attr.aria-label]="t(wishlist.has(detail.id) ? 'wishlist.removeAction' : 'wishlist.addAction')"
-      [disabled]="wishlist.isPending(detail.id)"
-      (click)="toggleWishlist(detail)"
-      class="absolute top-36 left-4 p-3 rounded-full shadow-md transition-colors cursor-pointer z-10 disabled:opacity-60"
-      [class]="wishlist.has(detail.id) ? 'bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-400' : 'bg-card text-muted-foreground'"
-    >
-      <lucide-icon [img]="Heart" class="w-5 h-5" [class.fill-current]="wishlist.has(detail.id)"></lucide-icon>
-    </button>
+    @if (!isAuthenticated() || canWishlist()) {
+      <button
+        type="button"
+        data-testid="wishlist-toggle"
+        [attr.aria-pressed]="wishlist.has(detail.id)"
+        [attr.aria-label]="t(wishlist.has(detail.id) ? 'wishlist.removeAction' : 'wishlist.addAction')"
+        [disabled]="wishlist.isPending(detail.id)"
+        (click)="toggleWishlist(detail)"
+        class="absolute top-36 left-4 p-3 rounded-full shadow-md transition-colors cursor-pointer z-10 disabled:opacity-60"
+        [class]="wishlist.has(detail.id) ? 'bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-400' : 'bg-card text-muted-foreground'"
+      >
+        <lucide-icon [img]="Heart" class="w-5 h-5" [class.fill-current]="wishlist.has(detail.id)"></lucide-icon>
+      </button>
+    }
 
-    @if (wishlist.error()) {
+    @if (canWishlist() && wishlist.error()) {
       <div role="alert" data-testid="wishlist-error" class="absolute top-52 left-4 right-4 sm:right-auto z-10 flex items-center gap-3 px-4 py-3 bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-400 rounded-lg shadow-md text-sm">
         <span>{{ t('wishlist.updateError') }}</span>
         <button type="button" (click)="wishlist.dismissError()" class="font-medium underline cursor-pointer">{{ t('wishlist.dismiss') }}</button>

@@ -164,6 +164,7 @@ describe('dark mode: no light-only palette classes', () => {
         {
           provide: WishlistService,
           useValue: {
+            available: signal(true),
             schools: signal([school]),
             status: signal('loaded'),
             error: signal(true),

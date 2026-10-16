@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { provideZonelessChangeDetection, signal } from '@angular/core';
+import { computed, provideZonelessChangeDetection, signal } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter, withComponentInputBinding, Router } from '@angular/router';
@@ -26,6 +26,7 @@ describe('SchoolDetailPageComponent', () => {
   let locale: ReturnType<typeof signal<'fr' | 'en'>>;
   let harness: RouterTestingHarness;
   let wishlist: {
+    available: () => boolean;
     schools: ReturnType<typeof signal<School[]>>;
     error: ReturnType<typeof signal<boolean>>;
     load: jasmine.Spy;
@@ -71,6 +72,7 @@ describe('SchoolDetailPageComponent', () => {
     currentUser = signal<{ id: number; role: { name: string } } | null>({ id: 3, role: { name: 'ROLE_STUDENT' } });
     const saved = signal<School[]>([]);
     wishlist = {
+      available: computed(() => currentUser()?.role?.name === 'ROLE_STUDENT'),
       schools: saved,
       error: signal(false),
       load: jasmine.createSpy('load'),
@@ -229,6 +231,16 @@ describe('SchoolDetailPageComponent', () => {
       await renderAt('/schools/7');
 
       expect(wishlist.load).toHaveBeenCalled();
+    });
+
+    it('shows no student heart or wishlist load to an expert', async () => {
+      currentUser.set({ id: 4, role: { name: 'ROLE_EXPERT' } });
+      await renderAt('/schools/7');
+      await settle();
+
+      expect(button()).toBeNull();
+      expect(wishlist.load).not.toHaveBeenCalled();
+      expect(wishlist.toggle).not.toHaveBeenCalled();
     });
 
     it('offers to add a school that is not wishlisted, and toggles it on click', async () => {

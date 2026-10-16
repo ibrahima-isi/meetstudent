@@ -221,7 +221,7 @@
       }
     </div>
 
-    @if (isStudent()) {
+    @if (canWishlist()) {
       <aside class="min-w-0 lg:col-span-1">
         <section class="rounded-2xl border border-border bg-card p-5 lg:sticky lg:top-28">
           <h2 class="text-xl font-semibold tracking-tight text-foreground">{{ t('profile.wishlistTitle') }}</h2>

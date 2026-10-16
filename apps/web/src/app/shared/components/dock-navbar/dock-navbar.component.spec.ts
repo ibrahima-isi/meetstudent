@@ -1,4 +1,4 @@
-import { Component, provideZonelessChangeDetection, signal } from '@angular/core';
+import { Component, computed, provideZonelessChangeDetection, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { provideTransloco, TranslocoService } from '@jsverse/transloco';
@@ -17,6 +17,7 @@ class BlankComponent {}
 describe('DockNavbarComponent', () => {
   let fixture: ComponentFixture<DockNavbarComponent>;
   let authenticated: ReturnType<typeof signal<boolean>>;
+  let currentUser: ReturnType<typeof signal<{ firstname: string; lastname: string; role: { name: string } }>>;
   let scrollY: number;
   let logout: jasmine.Spy;
 
@@ -52,6 +53,7 @@ describe('DockNavbarComponent', () => {
 
   beforeEach(async () => {
     authenticated = signal(false);
+    currentUser = signal({ firstname: 'Ada', lastname: 'Lovelace', role: { name: 'ROLE_STUDENT' } });
     scrollY = 0;
     logout = jasmine.createSpy('logout');
     spyOnProperty(window, 'scrollY', 'get').and.callFake(() => scrollY);
@@ -64,14 +66,14 @@ describe('DockNavbarComponent', () => {
         { provide: AuthService, useValue: { logout } },
         {
           provide: WishlistService,
-          useValue: { schools: signal([]), status: signal('idle'), error: signal(false), load: () => undefined, toggle: () => undefined, isPending: () => false, has: () => false },
+          useValue: { available: computed(() => currentUser().role.name === 'ROLE_STUDENT'), schools: signal([]), status: signal('idle'), error: signal(false), load: () => undefined, toggle: () => undefined, isPending: () => false, has: () => false },
         },
         { provide: LocaleService, useValue: { active: signal('fr'), remember: () => undefined } },
         {
           provide: TokenService,
           useValue: {
             isAuthenticated: authenticated,
-            user: signal({ firstname: 'Ada', lastname: 'Lovelace' }),
+            user: currentUser,
           },
         },
       ],
@@ -671,6 +673,18 @@ describe('DockNavbarComponent', () => {
       await fixture.whenStable();
       fixture.detectChanges();
 
+      expect(root().querySelector('app-wishlist-cart')).toBeTruthy();
+    });
+
+    it('hides the student wishlist cart for an expert and restores it after a role change', async () => {
+      authenticated.set(true);
+      currentUser.set({ firstname: 'Ada', lastname: 'Lovelace', role: { name: 'ROLE_EXPERT' } });
+      await render();
+      expect(root().querySelector('app-wishlist-cart')).toBeNull();
+
+      currentUser.set({ firstname: 'Ada', lastname: 'Lovelace', role: { name: 'ROLE_STUDENT' } });
+      fixture.detectChanges();
+      await fixture.whenStable();
       expect(root().querySelector('app-wishlist-cart')).toBeTruthy();
     });
 
