@@ -369,15 +369,6 @@ class CourseRateControllerIntegrationTests {
         }
     }
 
-    private CourseRateDTO postRating(UserEntity user, String role, Integer courseId, double note, int status) throws Exception {
-        var body = CourseRateDTO.builder().courseId(courseId).userId(user.getId()).note(note).build();
-        var response = mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/course-rates")
-                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(body))
-                        .with(TestDataUtil.mockUser(user.getId(), role)))
-                .andExpect(MockMvcResultMatchers.status().is(status)).andReturn().getResponse();
-        return objectMapper.readValue(response.getContentAsString(), CourseRateDTO.class);
-    }
-
     @Test
     void testThatCreateCourseRateWithoutCourseIdIsRejectedWith400() throws Exception {
         setupUser("ROLE_EXPERT");
@@ -390,6 +381,16 @@ class CourseRateControllerIntegrationTests {
              .andExpect(MockMvcResultMatchers.jsonPath("$.courseId").value("Course ID is required"));
         }
         mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/course-rates").with(TestDataUtil.mockUser(testUser.getId(), "ROLE_EXPERT")))
+                .andExpect(MockMvcResultMatchers.status().isOk())
                 .andExpect(MockMvcResultMatchers.jsonPath("$.totalElements").value(0));
+    }
+
+    private CourseRateDTO postRating(UserEntity user, String role, Integer courseId, double note, int status) throws Exception {
+        var body = CourseRateDTO.builder().courseId(courseId).userId(user.getId()).note(note).build();
+        var response = mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/course-rates")
+                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(body))
+                        .with(TestDataUtil.mockUser(user.getId(), role)))
+                .andExpect(MockMvcResultMatchers.status().is(status)).andReturn().getResponse();
+        return objectMapper.readValue(response.getContentAsString(), CourseRateDTO.class);
     }
 }

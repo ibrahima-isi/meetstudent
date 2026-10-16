@@ -1,10 +1,10 @@
 # #112 — une note par utilisateur et cours
 
-Ticket : [#112](https://github.com/ibrahima-isi/meetstudent/issues/112), spécification [#99](https://github.com/ibrahima-isi/meetstudent/issues/99). Base immuable `66f2ca52817054c63de31f9195f26b5a3438d12a`, branche `test/course-rating-uniqueness-112`. Qualification du 2026-10-16 avec Java 21.0.11, manifeste de quatre fichiers autorisé par le propriétaire.
+Ticket : [#112](https://github.com/ibrahima-isi/meetstudent/issues/112), spécification [#99](https://github.com/ibrahima-isi/meetstudent/issues/99). Base immuable `66f2ca52817054c63de31f9195f26b5a3438d12a`, branche `test/course-rating-uniqueness-112`. Qualification du 2026-10-16 avec Java 21.0.11, manifeste de quatre fichiers autorisé par le propriétaire, puis `CourseRateDTO.java` ajouté sur décision du propriétaire.
 
 ## Portée et résultats observables
 
-PR #142 avait déjà livré l'upsert, le 409 et V24 pour les trois types de notes. Aucune migration n'a été modifiée ; un seul fichier produit a changé, `CourseRateDTO` (voir le trou `courseId` plus bas). Les nouveaux tests qualifient ce comportement existant et sont verts sans correctif : aucun rouge métier artificiel n'est revendiqué.
+PR #142 avait déjà livré l'upsert, le 409 et V24 pour les trois types de notes. Aucune migration n'a été modifiée ; un seul fichier produit a changé, `CourseRateDTO` (voir le trou `courseId` plus bas). Les tests de renote, de rôles et de concurrence qualifient ce comportement existant et sont verts sans correctif : aucun rouge métier artificiel n'est revendiqué. Seul le test `courseId` a été rouge, réellement (section suivante).
 
 - HTTP : deux EXPERT notent le même cours (2 et 3), le premier renote 5 : 200, même identifiant, deux notes, moyenne 4. La note indépendante reste 3 ; la note du premier sur un autre cours reste 1, moyenne 1.
 - HTTP : STUDENT et ADMIN reçoivent 403 ; anonyme reçoit 401. Après chaque refus, GET confirme l'unique note de l'expert (identifiant, auteur, valeur 4) et la moyenne inchangée à 4.
@@ -28,7 +28,7 @@ Depuis `apps/api`, passer `JAVA_HOME=/Users/ibrahimadiallo/.sdkman/candidates/ja
 ./mvnw clean verify
 ```
 
-H2 ciblé : `CourseRateControllerIntegrationTests` 13 tests (11 existants + 2 nouveaux), `CourseRatePostgresConcurrencyIntegrationTests` 1 test. Famille cours et notes : `CourseControllerIntegrationTests` 15, programme 13+1, établissement 13+1, validation 5, course critique 3. Zéro échec/erreur/skip partout.
+H2 ciblé : `CourseRateControllerIntegrationTests` 14 tests (11 existants + 3 nouveaux ; 13 avant l'ajout du test `courseId`), `CourseRatePostgresConcurrencyIntegrationTests` 1 test. Famille cours et notes : `CourseControllerIntegrationTests` 15, programme 13+1, établissement 13+1, validation 5, course critique 3. Zéro échec/erreur/skip partout.
 
 Suite API finale (après correctif `courseId`) : **615 tests (239 unitaires + 376 intégration), zéro échec/erreur/skip**, BUILD SUCCESS, 2 min 18 s.
 
@@ -62,4 +62,10 @@ Les identités MockMvc testent l'autorisation du rating ; ces tests ne prétende
 
 ## Nettoyage
 
-Conteneur `ms112-pg` supprimé ; aucun conteneur ni volume `ms112` restant. Aucun autre conteneur touché. Aucun SMTP, déploiement ni promotion main. Revues indépendantes et PR vers `dev` : en attente.
+Conteneur `ms112-pg` supprimé ; aucun conteneur ni volume `ms112` restant. Aucun autre conteneur touché. Aucun SMTP, déploiement ni promotion main. PR vers `dev` : en attente.
+
+## Revues indépendantes (sur `3d4af30`)
+
+Standards et Spec lancées en contextes séparés. Constats confirmés puis corrigés : la ligne #111 de `docs/completion.md` avait été réécrite avec le trou `courseId` de #112 (restaurée à l'identique de la base) ; lien PR factice `[PR](#)` retiré ; ce document annonçait 13 tests et un manifeste de quatre fichiers (corrigé) ; le GET final du test `courseId` ne vérifiait pas le statut (`status().isOk()` ajouté) et le test se trouvait après le helper `postRating` (remis avant). Remarques non corrigées, sur précédent accepté : classe de concurrence copiée de Programme/École (barrière JDBC dupliquée), nom « Postgres » alors qu'elle tourne aussi sur H2, rouge et correctif `courseId` dans le même commit.
+
+Vérification après correctifs : rouge rejoué en retirant temporairement `@NotNull` (`Status expected:<400> but was:<201>`, 1 test, 1 échec), puis annotation restaurée. `./mvnw clean verify` : **615 tests (239 unitaires + 376 intégration), zéro échec/erreur/skip**, BUILD SUCCESS, 2 min 12 s (dont `CourseRateControllerIntegrationTests` 14, concurrence 1, validation 5, course critique 3, `CourseControllerIntegrationTests` 15, `CourseRateControllerTest` 2). Classe de concurrence relancée seule trois fois sur H2 : 3/3 vertes. PostgreSQL non relancé lors de la revue (aucun code produit ni migration modifiés par les correctifs).
