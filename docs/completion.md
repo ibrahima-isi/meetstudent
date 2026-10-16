@@ -23,7 +23,7 @@ Track individual deliveries in [../completion.md](../completion.md). Preserve th
 - [ ] 5. Safe auto-login worktree cleanup (#114).
 - [ ] 6. Hide authenticated landing signup band (#115).
 - [ ] 7. Footer account buttons (#117).
-- [ ] 8. Four footer product destinations (#118–120, #122).
+- [x] 8. Four footer product destinations (#118–120, #122).
 - [ ] 9. School/programme/course comparison (#123–125).
 - [x] 10. Search entry across three resource types (#121).
 - [ ] 11. School/programme rankings (#126–127).
@@ -160,7 +160,6 @@ Base isolée `d73428d`, actualisée sur `b0dbba8`, branche `feat/search-entry-12
 
 [Preuves](evidence/ticket-121.md) : deux rouges réels (formulaire absent puis faux vide sur terme non transportable), **29** tests ciblés, **1070** tests web, types et build SSR verts ; API **630** tests, backoffice **300** tests et build verts. PostgreSQL 18 : V1–V24 réussies et schéma validé ; navigateur SSR production : **24** parcours réels fr/en/mobile/desktop/clair/sombre, trois vides, trois erreurs/réessais, session authentifiée/paysage/rechargement, puis **12** validations/récupérations après correctif. Revues indépendantes finales : **Standards 0 / Spec 0** sur `83af31f` après correction du P2. Ressources smoke propres à #121 supprimées ; stack partagée préservée. [Première CI API/web/backoffice verte](https://github.com/ibrahima-isi/meetstudent/actions/runs/38973287376) sur `83af31f4778201dd336523caf03aef50dfc52085`. Le head documentaire final doit aussi obtenir les trois checks verts avant squash ; état définitif de CI/fusion sur la PR, clôture et archivage dans le bilan exporté après fusion.
 
-
 ### #122 — quatre liens Produit du footer (2026-10-16)
 
-- [ ] [#122](https://github.com/ibrahima-isi/meetstudent/issues/122) : implémentation locale en validation dans `feat/footer-product-122`, base isolée `7b90310` ; quatre destinations réelles fr/en, cibles tactiles 44 × 44 et focus clavier explicite. [Preuves](evidence/ticket-122.md) : trois rouges réels puis 33 tests ciblés, 1075 tests web, types app/spec et build SSR finaux verts. Navigation réelle, revues indépendantes et livraison PR/CI encore requises. Aucun blocage connu ; prochaine action : consigner ces validations avant de cocher le ticket et le point 8.
+- [x] [#122](https://github.com/ibrahima-isi/meetstudent/issues/122) : implémentation et validations terminées dans `feat/footer-product-122`, base isolée `7b90310` ; quatre destinations réelles fr/en, cibles tactiles 44 × 44 et focus clavier explicite. [Preuves](evidence/ticket-122.md) : trois rouges réels, **33** tests ciblés et **1075** web, types app/spec et build SSR verts ; **96** parcours Produit et **48** parcours compte réels (Accueil/About/Contact, fr/en, bureau/mobile, clair/sombre), PostgreSQL 18 V1–V24 et JPA validate, aucune erreur JS. Revues indépendantes **Standards 0 / Spec 0** ; ressources smoke propres nettoyées, partagé préservé. [PR #158](https://github.com/ibrahima-isi/meetstudent/pull/158) vers dev ; trois CI du head documentaire définitif requises avant squash. Livraison/clôture/nettoyage définitifs sur la PR et dans le bilan exporté après fusion. Aucun blocage connu ; prochaine action : CI finale, squash, clôture et archivage ciblé, puis nouvelle session #123.
