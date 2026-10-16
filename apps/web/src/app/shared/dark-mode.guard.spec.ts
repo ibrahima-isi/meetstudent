@@ -28,6 +28,7 @@ import { LandingPageComponent } from '../features/public/landing-page/landing-pa
 import { LandingHeroComponent } from '../features/public/landing-page/sections/landing-hero.component';
 import { SchoolsPageComponent } from '../features/public/schools-page/schools-page.component';
 import { SchoolsComparePageComponent } from '../features/public/schools-compare-page/schools-compare-page.component';
+import { ProgramsComparePageComponent } from '../features/public/programs-compare-page/programs-compare-page.component';
 import { ProgramsPageComponent } from '../features/public/programs-page/programs-page.component';
 import { AccreditationsPageComponent } from '../features/public/accreditations-page/accreditations-page.component';
 import { CoursesPageComponent } from '../features/public/courses-page/courses-page.component';
@@ -159,7 +160,7 @@ describe('dark mode: no light-only palette classes', () => {
             getSchool: () => of(detailedSchool),
           },
         },
-        { provide: ProgramService, useValue: { getPrograms: () => of({ content: [] }) } },
+        { provide: ProgramService, useValue: { getPrograms: () => of({ content: [] }), getProgram: () => of({ id: 1, name: 'P' }) } },
         { provide: MediaService, useValue: { mine: () => of(documents), resolveUrl: () => null } },
         {
           provide: TokenService,
@@ -384,6 +385,8 @@ describe('dark mode: no light-only palette classes', () => {
   };
   const compareWith = (answer: (id: number) => unknown) => withUrl('/?ids=1,2', () =>
     spyOn(TestBed.inject(SchoolService), 'getSchool').and.callFake(answer as never));
+  const compareProgramsWith = (answer: (id: number) => unknown) => withUrl('/?ids=1,2', () =>
+    spyOn(TestBed.inject(ProgramService), 'getProgram').and.callFake(answer as never));
   const comparisonCases: [string, Type<unknown>, (c: any) => void, string][] = [
     [
       'schools page with a full comparison selection and the limit message',
@@ -410,6 +413,31 @@ describe('dark mode: no light-only palette classes', () => {
       '[role="alert"] a',
     ],
     ['compare page with too few schools', SchoolsComparePageComponent, withUrl('/?ids=1'), 'a[href="/en/schools"]'],
+    [
+      'programs page with a full comparison selection and the limit message',
+      ProgramsPageComponent,
+      withUrl('/?compare=1,2,3', (c) => {
+        c.programs.set([{ id: 1, name: 'Data' }, { id: 4, name: 'Web' }]);
+        c.status.set('loaded');
+        c.limitReached.set(true);
+      }),
+      '[data-testid="compare-limit"]',
+    ],
+    [
+      'programs compare page loaded',
+      ProgramsComparePageComponent,
+      compareProgramsWith((id) => of({ id, name: `P${id}`, code: 'C', duration: 2, rating: id === 2 ? undefined : 4, schoolId: 1, schoolName: 'S', courses: [] })),
+      'table',
+    ],
+    ['programs compare page loading', ProgramsComparePageComponent, compareProgramsWith(() => NEVER), '[aria-busy="true"]'],
+    ['programs compare page error', ProgramsComparePageComponent, compareProgramsWith(() => throwError(() => new Error('x'))), 'app-error-state'],
+    [
+      'programs compare page with an unknown program',
+      ProgramsComparePageComponent,
+      compareProgramsWith((id) => (id === 2 ? throwError(() => new HttpErrorResponse({ status: 404 })) : of({ id, name: 'P' }))),
+      '[role="alert"] a',
+    ],
+    ['programs compare page with too few programs', ProgramsComparePageComponent, withUrl('/?ids=1'), 'a[href="/en/programs"]'],
   ];
 
   for (const [name, type, setup, shown] of comparisonCases) {

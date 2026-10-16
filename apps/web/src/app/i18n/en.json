@@ -62,7 +62,8 @@
     "forgotPassword": "Forgot password",
     "verifyEmail": "Confirm your email",
     "resetPassword": "New password",
-    "compare": "Compare schools"
+    "compare": "Compare schools",
+    "comparePrograms": "Compare programmes"
   },
   "about": {
     "title": "About MeetStudent",
@@ -290,7 +291,34 @@
     "empty": "No programmes are listed yet",
     "loadError": "Programmes could not be loaded.",
     "loadMore": "Load more",
-    "loadMoreError": "More programmes could not be loaded."
+    "loadMoreError": "More programmes could not be loaded.",
+    "compareSelect": "Select {{name}} to compare",
+    "compareSelected": {
+      "one": "{{ count }} programme selected",
+      "other": "{{ count }} programmes selected"
+    },
+    "compareLimit": "You can compare up to 3 programmes",
+    "compareAction": "Compare",
+    "compareClear": "Clear selection"
+  },
+  "programsCompare": {
+    "title": "Compare programmes",
+    "invalid": "Choose between 2 and 3 programmes to compare them.",
+    "backToCatalogue": "Back to the programmes",
+    "editSelection": "Change the selection",
+    "loadError": "The comparison could not be loaded.",
+    "notFound": "One of these programmes no longer exists. Go back to the catalogue to complete the selection.",
+    "notProvided": "Not provided",
+    "notRated": "Not rated",
+    "rowName": "Programme",
+    "rowSchool": "School",
+    "rowDuration": "Duration",
+    "rowRate": "Average rating",
+    "rowCourses": "Courses",
+    "courseCount": {
+      "one": "{{ count }} course",
+      "other": "{{ count }} courses"
+    }
   },
   "courses": {
     "heroTitle": "Explore the courses",
