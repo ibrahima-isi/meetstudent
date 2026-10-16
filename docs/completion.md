@@ -112,4 +112,10 @@ Contrats HTTP 400/404/409 des tags, accréditations, programmes/cours et rôles,
 
 - [x] [#107](https://github.com/ibrahima-isi/meetstudent/issues/107) : implémentation et validation terminées dans `feat/registration-role-107` depuis le squash #106 `4ed101e`.
 
-[Preuves](evidence/ticket-107.md) : tests HTTP et formulaire rouges puis verts pour `ROLE_EXPERT`, défaut étudiant, rejet des rôles interdits, erreur de champ et auto-connexion enseignant en anglais. API 561 tests, web 943 tests/types/build SSR, backoffice 300 tests/types/build verts ; PostgreSQL V1–V23 et trois tests HTTP verts. Revues Sol Standards/Spec sans écart. [CI API/web/backoffice verte](https://github.com/ibrahima-isi/meetstudent/actions/runs/38795669488) sur `6488b54` ; le présent closeout documentaire doit passer les trois CI sur son head final avant squash de la [PR #138](https://github.com/ibrahima-isi/meetstudent/pull/138). #108 suit après livraison de #107.
+[Preuves](evidence/ticket-107.md) : tests HTTP et formulaire rouges puis verts pour `ROLE_EXPERT`, défaut étudiant, rejet des rôles interdits, erreur de champ et auto-connexion enseignant en anglais. API 561 tests, web 943 tests/types/build SSR, backoffice 300 tests/types/build verts ; PostgreSQL V1–V23 et trois tests HTTP verts. Revues Sol Standards/Spec sans écart. [PR #138](https://github.com/ibrahima-isi/meetstudent/pull/138) squashée dans dev à `745ada7` après [CI finale API/web/backoffice verte](https://github.com/ibrahima-isi/meetstudent/actions/runs/38797021310) sur `7e23cfa` ; issue #107 fermée, contenu du squash vérifié, worktree archivé. #108 suit.
+
+### #108 — spécialité enseignant et erreurs de champ (2026-10-15)
+
+- [ ] [#108](https://github.com/ibrahima-isi/meetstudent/issues/108) : issue assignée, branche isolée `feat/teacher-specialty-108` depuis le squash #107 `745ada7`.
+
+[Preuves provisoires](evidence/ticket-108.md) : tests HTTP et formulaire rouges puis verts pour spécialité absente/blanche, 100/101 caractères, affichage local/API et changement enseignant → étudiant. API 564 tests, web 948 tests/types/build SSR, backoffice 300 tests/types/build verts ; PostgreSQL V1–V23 et cinq HTTP verts. Revues, PR/CI et squash à venir ; #109 attend la livraison de #108.
