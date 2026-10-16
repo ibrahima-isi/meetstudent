@@ -69,7 +69,8 @@ public class ProgramRateController {
             if (existing.isPresent()) {
                 var current = existing.get();
                 current.setNote(rate.getNote());
-                current.setComment(rate.getComment());
+                // null = keep the previous comment (PUT convention); an empty string clears it.
+                if (rate.getComment() != null) current.setComment(rate.getComment());
                 return ResponseEntity.ok(mapper.toDTO(this.service.save(current)));
             }
             return new ResponseEntity<>(mapper.toDTO(this.service.save(rate)), HttpStatus.CREATED);

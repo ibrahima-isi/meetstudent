@@ -286,4 +286,30 @@ class ProgramRateControllerIntegrationTests {
         ).andExpect(MockMvcResultMatchers.status().isBadRequest())
          .andExpect(MockMvcResultMatchers.jsonPath("$.comment").exists());
     }
+
+    @Test
+    void testThatReRatingWithoutACommentKeepsItButAnEmptyOneClearsIt() throws Exception {
+        setupUser("ROLE_EXPERT");
+        var target = programService.save(programMapper.toEntity(TestDataUtil.createProgramDto()));
+        var auth = TestDataUtil.mockUser(testUser.getId(), "ROLE_EXPERT");
+        var body = ProgramRateDTO.builder().note(2.0).comment("keep me").programId(target.getId()).userId(testUser.getId()).build();
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/program-rates").contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(body)).with(auth)).andExpect(MockMvcResultMatchers.status().isCreated());
+
+        body.setNote(4.0);
+        body.setComment(null);
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/program-rates").contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(body)).with(auth))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.note").value(4.0))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.comment").value("keep me"));
+
+        body.setNote(5.0);
+        body.setComment("");
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/program-rates").contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(body)).with(auth))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.note").value(5.0))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.comment").value(""));
+    }
 }

@@ -1,5 +1,6 @@
 package com.bowe.meetstudent.controllers.rates;
 
+import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.Locale;
@@ -15,13 +16,24 @@ final class UniqueRateViolation {
     }
 
     static boolean matches(DataIntegrityViolationException ex) {
+        // Hibernate names the violated constraint; that is the reliable signal.
+        for (Throwable cause = ex; cause != null; cause = cause.getCause() == cause ? null : cause.getCause()) {
+            if (cause instanceof ConstraintViolationException cve && cve.getConstraintName() != null) {
+                return isRateConstraint(cve.getConstraintName());
+            }
+        }
+        // Fallback for drivers/dialects that do not expose it: scan the messages.
         for (Throwable cause = ex; cause != null; cause = cause.getCause() == cause ? null : cause.getCause()) {
             var message = cause.getMessage();
-            if (message == null) continue;
-            var lower = message.toLowerCase(Locale.ROOT);
-            for (var name : CONSTRAINTS) {
-                if (lower.contains(name)) return true;
-            }
+            if (message != null && isRateConstraint(message)) return true;
+        }
+        return false;
+    }
+
+    private static boolean isRateConstraint(String text) {
+        var lower = text.toLowerCase(Locale.ROOT);
+        for (var name : CONSTRAINTS) {
+            if (lower.contains(name)) return true;
         }
         return false;
     }

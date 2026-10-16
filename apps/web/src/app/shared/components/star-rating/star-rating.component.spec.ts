@@ -71,6 +71,15 @@ describe('StarRatingComponent', () => {
     expect(compiled.querySelector('textarea')).toBeTruthy();
   });
 
+  it('should cap the comment at the 150 characters the API accepts', () => {
+    fixture.componentRef.setInput('showCommentInput', true);
+    component.rating.set(3);
+    fixture.detectChanges();
+
+    const textarea = (fixture.nativeElement as HTMLElement).querySelector('textarea');
+    expect(textarea?.getAttribute('maxlength')).toBe('150');
+  });
+
   it('should not show comment input when readonly is true', () => {
     fixture.componentRef.setInput('readonly', true);
     fixture.componentRef.setInput('showCommentInput', true);

@@ -47,6 +47,7 @@ import { roundRating } from '@shared/format-rating';
             [placeholder]="'rating.commentPlaceholder' | transloco"
             class="w-full p-3 text-sm border border-border rounded-lg bg-card text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none resize-none"
             rows="3"
+            maxlength="150"
           ></textarea>
           <button
             (click)="submitRating()"
