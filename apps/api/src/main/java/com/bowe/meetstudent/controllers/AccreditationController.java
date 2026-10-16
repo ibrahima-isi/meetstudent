@@ -13,6 +13,7 @@ import org.modelmapper.ModelMapper;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.SortDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -44,9 +45,9 @@ public class AccreditationController {
     }
 
     @GetMapping
-    @Operation(summary = "Get all accreditations (paginated)", description = "Retrieves a paginated list of all available accreditations.")
+    @Operation(summary = "Get all accreditations (paginated)", description = "Retrieves a paginated list of all available accreditations. Without ?sort= results are ordered by name, then id; an explicit ?sort= replaces that order and an unknown property answers 400.")
     @ApiResponse(responseCode = "200", description = "List of accreditations retrieved")
-    public Page<AccreditationDTO> getAccreditations(@ParameterObject Pageable pageable) {
+    public Page<AccreditationDTO> getAccreditations(@ParameterObject @SortDefault(sort = {"name", "id"}) Pageable pageable) {
         return accreditationService.findAll(pageable).map(accreditationMapper::toDTO);
     }
 
@@ -62,11 +63,11 @@ public class AccreditationController {
     }
 
     @GetMapping(path = "/name/{name}")
-    @Operation(summary = "Search accreditations by name (paginated)", description = "Searches for accreditations whose name contains the given string.")
+    @Operation(summary = "Search accreditations by name (paginated)", description = "Searches for accreditations whose name contains the given string. Without ?sort= results are ordered by name, then id; an explicit ?sort= replaces that order and an unknown property answers 400.")
     @ApiResponse(responseCode = "200", description = "Search results retrieved")
     public Page<AccreditationDTO> getAccreditationByName(
             @Parameter(description = "Name to search for") @PathVariable String name,
-            @ParameterObject Pageable pageable) {
+            @ParameterObject @SortDefault(sort = {"name", "id"}) Pageable pageable) {
         return accreditationService.findByName(name, pageable).map(accreditationMapper::toDTO);
     }
 
