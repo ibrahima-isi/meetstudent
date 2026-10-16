@@ -1,8 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal, Type } from '@angular/core';
-import { provideHttpClient } from '@angular/common/http';
+import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { provideTransloco } from '@jsverse/transloco';
 import { NEVER, firstValueFrom, of, throwError } from 'rxjs';
 import { translocoOptions } from '@i18n/transloco.config';
@@ -27,6 +27,7 @@ import { TestimonialsComponent } from '../features/public/landing-page/sections/
 import { LandingPageComponent } from '../features/public/landing-page/landing-page.component';
 import { LandingHeroComponent } from '../features/public/landing-page/sections/landing-hero.component';
 import { SchoolsPageComponent } from '../features/public/schools-page/schools-page.component';
+import { SchoolsComparePageComponent } from '../features/public/schools-compare-page/schools-compare-page.component';
 import { ProgramsPageComponent } from '../features/public/programs-page/programs-page.component';
 import { AccreditationsPageComponent } from '../features/public/accreditations-page/accreditations-page.component';
 import { CoursesPageComponent } from '../features/public/courses-page/courses-page.component';
@@ -372,6 +373,49 @@ describe('dark mode: no light-only palette classes', () => {
   for (const [name, type, setup] of cases) {
     it(`${name} has none`, async () => {
       const root = await render(type, setup);
+      expect(lightOnlyClasses(root)).toEqual([]);
+    });
+  }
+
+  /** Comparison screens need a URL; each case also proves its state is on screen. */
+  const withUrl = (url: string, extra?: (c: any) => void) => (c: any) => {
+    void TestBed.inject(Router).navigateByUrl(url);
+    extra?.(c);
+  };
+  const compareWith = (answer: (id: number) => unknown) => withUrl('/?ids=1,2', () =>
+    spyOn(TestBed.inject(SchoolService), 'getSchool').and.callFake(answer as never));
+  const comparisonCases: [string, Type<unknown>, (c: any) => void, string][] = [
+    [
+      'schools page with a full comparison selection and the limit message',
+      SchoolsPageComponent,
+      withUrl('/?compare=1,2,3', (c) => {
+        c.schools.set([school, secondSchool]);
+        c.status.set('loaded');
+        c.limitReached.set(true);
+      }),
+      '[data-testid="compare-limit"]',
+    ],
+    [
+      'compare page loaded',
+      SchoolsComparePageComponent,
+      compareWith((id) => of({ ...detailedSchool, id, rating: id === 2 ? undefined : 4 })),
+      'table',
+    ],
+    ['compare page loading', SchoolsComparePageComponent, compareWith(() => NEVER), '[aria-busy="true"]'],
+    ['compare page error', SchoolsComparePageComponent, compareWith(() => throwError(() => new Error('x'))), 'app-error-state'],
+    [
+      'compare page with an unknown school',
+      SchoolsComparePageComponent,
+      compareWith((id) => (id === 2 ? throwError(() => new HttpErrorResponse({ status: 404 })) : of(detailedSchool))),
+      '[role="alert"] a',
+    ],
+    ['compare page with too few schools', SchoolsComparePageComponent, withUrl('/?ids=1'), 'a[href="/en/schools"]'],
+  ];
+
+  for (const [name, type, setup, shown] of comparisonCases) {
+    it(`${name} has none`, async () => {
+      const root = await render(type, setup);
+      expect(root.querySelector(shown)).withContext(shown).not.toBeNull();
       expect(lightOnlyClasses(root)).toEqual([]);
     });
   }
