@@ -282,7 +282,7 @@
   },
   "accreditations": {
     "heroTitle": "Explorez les accréditations",
-    "heroText": "Recherchez les accréditations reconnues pour les écoles et formations du Sénégal.",
+    "heroText": "Recherchez une accréditation par son nom et consultez son code et sa description.",
     "searchPlaceholder": "Rechercher une accréditation...",
     "found": {
       "one": "{{ count }} accréditation trouvée",

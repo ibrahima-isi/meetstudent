@@ -220,6 +220,36 @@ describe('AccreditationsPageComponent', () => {
     expect(icon.right).toBeLessThanOrEqual(textStart);
   });
 
+  // The API says nothing about who recognises an accreditation or where, so neither does the page.
+  for (const [lang, invented] of [
+    ['en', ['recognised', 'Senegal']],
+    ['fr', ['reconnues', 'Sénégal']],
+  ] as const) {
+    it(`introduces the catalogue without claims the data cannot support (${lang})`, async () => {
+      await open('/accreditations', lang);
+      const hero = q('h1')!.parentElement!.textContent ?? '';
+
+      for (const word of invented) {
+        expect(hero).not.toContain(word);
+      }
+    });
+  }
+
+  it('shows the longest name and description the API allows in full, inside a phone-width card', async () => {
+    const longest = accreditation(9, 'W'.repeat(50), { code: 'WWWWW', description: 'W'.repeat(255) });
+    listAccreditations.and.returnValue(of(page([longest])));
+    await open('/accreditations');
+    el().style.display = 'block';
+    el().style.width = '375px';
+    await settle();
+    const card = q('[data-testid="accreditation-card"]') as HTMLElement;
+    const name = card.querySelector('h2') as HTMLElement;
+
+    expect(card.scrollWidth).toBeLessThanOrEqual(card.clientWidth);
+    expect(name.scrollHeight).toBeLessThanOrEqual(name.clientHeight);
+    expect(card.querySelector('dd:last-of-type')!.scrollWidth).toBeLessThanOrEqual(card.clientWidth);
+  });
+
   it('renders in French, the source language', async () => {
     await open('/accreditations', 'fr');
 

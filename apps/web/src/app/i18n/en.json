@@ -282,7 +282,7 @@
   },
   "accreditations": {
     "heroTitle": "Explore the accreditations",
-    "heroText": "Search the accreditations recognised for schools and programmes in Senegal.",
+    "heroText": "Search accreditations by name and see the code and description of each one.",
     "searchPlaceholder": "Search for an accreditation...",
     "found": {
       "one": "{{ count }} accreditation found",
