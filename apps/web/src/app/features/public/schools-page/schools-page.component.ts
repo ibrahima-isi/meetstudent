@@ -17,6 +17,9 @@ import { roundRating } from '@shared/format-rating';
 /** Quiet time after the last keystroke before the URL (and so the API) is updated. */
 const SEARCH_DEBOUNCE_MS = 300;
 const PAGE_SIZE = 12;
+/** A comparison holds 2 to 3 schools. */
+const COMPARE_MIN = 2;
+const COMPARE_MAX = 3;
 
 @Component({
   selector: 'app-schools-page',
@@ -66,6 +69,13 @@ export class SchoolsPageComponent implements OnInit {
   protected readonly loadingMore = signal(false);
   protected readonly loadMoreFailed = signal(false);
   protected readonly hasMore = computed(() => !this.lastPage());
+
+  /** Ids picked for comparison; the `?compare=` URL parameter is the source of truth. */
+  protected readonly selectedIds = signal<number[]>([]);
+  protected readonly limitReached = signal(false);
+  protected readonly canCompare = computed(
+    () => this.selectedIds().length >= COMPARE_MIN && this.selectedIds().length <= COMPARE_MAX,
+  );
 
   private readonly typed$ = new Subject<string>();
   private readonly pageRequests$ = new Subject<number>();
@@ -122,9 +132,66 @@ export class SchoolsPageComponent implements OnInit {
     // effect during the first change detection (still SSR-safe), after this has
     // run, so it already carries the term and needs no debounce.
     this.applyUrlTerm(this.route.snapshot.queryParamMap.get('q'));
+    this.selectedIds.set(this.parseSelection(this.route.snapshot.queryParamMap.get('compare')));
     // External navigation (hero deep link, Back) moves the term later on.
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       this.applyUrlTerm(params.get('q'));
+      this.selectedIds.set(this.parseSelection(params.get('compare')));
+    });
+  }
+
+  /** Positive whole ids only, without repeats, at most the comparison limit. */
+  private parseSelection(raw: string | null): number[] {
+    const ids = (raw ?? '')
+      .split(',')
+      .map((part) => (/^\d+$/.test(part.trim()) ? Number(part.trim()) : 0))
+      .filter((id) => id > 0);
+    return [...new Set(ids)].slice(0, COMPARE_MAX);
+  }
+
+  protected isSelected(school: School): boolean {
+    return school.id !== undefined && this.selectedIds().includes(school.id);
+  }
+
+  protected toggleSelection(school: School, event: Event): void {
+    event.stopPropagation();
+    const id = school.id;
+    if (id === undefined) return;
+    const current = this.selectedIds();
+    let next: number[];
+    if (current.includes(id)) {
+      next = current.filter((other) => other !== id);
+      this.limitReached.set(false);
+    } else if (current.length >= COMPARE_MAX) {
+      // The box was ticked by the click; the URL stays as it is, so untick it again.
+      (event.target as HTMLInputElement).checked = false;
+      this.limitReached.set(true);
+      return;
+    } else {
+      next = [...current, id];
+      this.limitReached.set(false);
+    }
+    this.writeSelection(next);
+  }
+
+  protected clearSelection(): void {
+    this.limitReached.set(false);
+    this.writeSelection([]);
+  }
+
+  private writeSelection(ids: number[]): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { compare: ids.length > 0 ? ids.join(',') : null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  }
+
+  protected compare(): void {
+    if (!this.canCompare()) return;
+    void this.router.navigate(['/', this.locale.active(), 'schools', 'compare'], {
+      queryParams: { ids: this.selectedIds().join(',') },
     });
   }
 

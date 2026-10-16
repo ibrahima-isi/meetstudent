@@ -155,6 +155,18 @@ describe('SchoolsPageComponent translations', () => {
     expect(text()).not.toContain('reviews)');
   });
 
+  it('says Not rated instead of a false 0 when the school has no rating', async () => {
+    await render('en');
+    fixture.componentInstance.schools.set([
+      { id: 1, name: 'Unrated', address: { location: 'Loc', city: 'Dakar', country: 'Senegal' } },
+    ]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const rating = (fixture.nativeElement as HTMLElement).querySelector('[data-testid="card-rating"]');
+    expect(rating?.textContent?.trim()).toBe('Not rated');
+  });
+
   it('shows the review count when the API sends one', async () => {
     await render('en');
     fixture.componentInstance.schools.set([
@@ -671,5 +683,149 @@ describe('SchoolsPageComponent server search', () => {
     button.click();
     await settle();
     expect(getSchools.calls.allArgs().filter((a) => a[0] === 1).length).toBe(1);
+  });
+});
+
+describe('SchoolsPageComponent comparison selection', () => {
+  let harness: RouterTestingHarness;
+  let router: Router;
+
+  const school = (id: number, name: string) => ({
+    id,
+    name,
+    address: { city: 'Dakar', location: 'L', country: 'SN' },
+  });
+  const el = () => harness.routeNativeElement as HTMLElement;
+  const q = (sel: string) => el().querySelector(sel);
+  const boxes = () => Array.from(el().querySelectorAll<HTMLInputElement>('input[type="checkbox"]'));
+  const box = (name: string) => el().querySelector<HTMLInputElement>(`input[aria-label="Select ${name} to compare"]`);
+  const bar = () => q('[data-testid="compare-bar"]');
+  const compareButton = () => q('[data-testid="compare-action"]') as HTMLButtonElement | null;
+
+  async function settle(): Promise<void> {
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+  }
+
+  async function open(url: string) {
+    const content = [1, 2, 3, 4].map((id) => school(id, ['Alpha', 'Beta', 'Gamma', 'Delta'][id - 1]));
+    const getSchools = jasmine.createSpy('getSchools').and.returnValue(of({ content, number: 0, last: true, totalElements: 4 }));
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([
+          { path: 'schools', component: SchoolsPageComponent },
+          { path: 'en/schools/compare', children: [] },
+        ]),
+        provideTransloco(translocoOptions),
+        { provide: SchoolService, useValue: { getSchools, searchSchoolsByName: getSchools } },
+      ],
+    });
+    await firstValueFrom(TestBed.inject(LocaleService).use('en'));
+    router = TestBed.inject(Router);
+    harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl(url, SchoolsPageComponent);
+    await settle();
+  }
+
+  async function check(name: string): Promise<void> {
+    box(name)!.click();
+    await settle();
+  }
+
+  it('gives every card a select checkbox with an accessible label', async () => {
+    await open('/schools');
+
+    expect(boxes().length).toBe(4);
+    expect(box('Alpha')).not.toBeNull();
+  });
+
+  it('shows no bar until something is selected', async () => {
+    await open('/schools');
+
+    expect(bar()).toBeNull();
+  });
+
+  it('announces the count and the limit in a live region that exists before the first pick', async () => {
+    await open('/schools');
+    const live = q('[data-testid="compare-status"]');
+    expect(live?.getAttribute('role')).toBe('status');
+    expect(live?.textContent?.trim()).toBe('');
+
+    await check('Alpha');
+    expect(q('[data-testid="compare-status"]')).toBe(live);
+    expect(live?.textContent).toContain('1 school selected');
+
+    await check('Beta');
+    await check('Gamma');
+    await check('Delta');
+    expect(live?.textContent).toContain('You can compare up to 3 schools');
+  });
+
+  it('keeps Compare disabled with one school and enables it at two, mirroring the selection in the URL next to ?q=', async () => {
+    await open('/schools?q=a');
+    await check('Alpha');
+
+    expect(bar()?.textContent).toContain('1 school selected');
+    expect(compareButton()?.disabled).toBeTrue();
+
+    await check('Beta');
+
+    expect(bar()?.textContent).toContain('2 schools selected');
+    expect(compareButton()?.disabled).toBeFalse();
+    const params = router.parseUrl(router.url).queryParams;
+    expect(params['compare']).toBe('1,2');
+    expect(params['q']).toBe('a');
+  });
+
+  it('refuses a 4th school with a message and leaves the box unchecked', async () => {
+    await open('/schools');
+    await check('Alpha');
+    await check('Beta');
+    await check('Gamma');
+    await check('Delta');
+
+    expect(box('Delta')!.checked).toBeFalse();
+    expect(router.parseUrl(router.url).queryParams['compare']).toBe('1,2,3');
+    expect(q('[data-testid="compare-limit"]')?.textContent).toContain('You can compare up to 3 schools');
+  });
+
+  it('restores the selection from ?compare= on load, and drops a school when unchecked', async () => {
+    await open('/schools?compare=1,2');
+
+    expect(box('Alpha')!.checked).toBeTrue();
+    expect(box('Beta')!.checked).toBeTrue();
+    expect(box('Gamma')!.checked).toBeFalse();
+
+    await check('Alpha');
+
+    expect(router.parseUrl(router.url).queryParams['compare']).toBe('2');
+  });
+
+  it('ignores invalid and surplus ids in ?compare=', async () => {
+    await open('/schools?compare=1,x,1,-2,2,3,4');
+
+    expect(bar()?.textContent).toContain('3 schools selected');
+    expect(box('Delta')!.checked).toBeFalse();
+  });
+
+  it('does not open the school when its checkbox is clicked', async () => {
+    await open('/schools');
+    await check('Alpha');
+
+    expect(router.url.startsWith('/schools?')).toBeTrue();
+  });
+
+  it('goes to the comparison page with the selected ids', async () => {
+    await open('/schools?compare=2,3');
+
+    compareButton()!.click();
+    await settle();
+
+    expect(router.url).toBe('/en/schools/compare?ids=2,3');
   });
 });

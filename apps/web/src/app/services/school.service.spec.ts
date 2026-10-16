@@ -27,6 +27,15 @@ describe('SchoolService', () => {
     httpMock.verify();
   });
 
+  it('keeps a null averageRate unrated and a real one as is', () => {
+    const ratings: (number | undefined)[] = [];
+    service.getSchool(1).subscribe((s) => ratings.push(s.rating));
+    httpMock.expectOne((r) => r.url.endsWith('/schools/1')).flush({ id: 1, name: 'A', averageRate: null });
+    service.getSchool(2).subscribe((s) => ratings.push(s.rating));
+    httpMock.expectOne((r) => r.url.endsWith('/schools/2')).flush({ id: 2, name: 'B', averageRate: 3.5 });
+    expect(ratings).toEqual([undefined, 3.5]);
+  });
+
   it('should be created', () => {
     expect(service).toBeTruthy();
   });
@@ -57,7 +66,8 @@ describe('SchoolService', () => {
       // The service stays locale-free: no French default; the template supplies one.
       expect(page.content[0].type).toBeUndefined();
       expect(page.content[0].description).toBeUndefined();
-      expect(page.content[0].rating).toBe(0);
+      // Unrated stays unrated: a false 0 would rank it below a school rated 1.
+      expect(page.content[0].rating).toBeUndefined();
       // The API sends no review count: the service must not invent a 0.
       expect(page.content[0].reviewCount).toBeUndefined();
       // No shared state: callers own their results.

@@ -58,6 +58,15 @@ describe('server routes', () => {
     expect(route?.canActivate).toBeUndefined();
   });
 
+  it('server-renders the public comparison page, listed before the client-rendered schools/:id which would swallow it', () => {
+    const paths = serverRoutes.map((r) => r.path);
+
+    expect(modeOf(':lang/schools/compare')).toBe(RenderMode.Server);
+    expect(guardedPaths(routes)).not.toContain(':lang/schools/compare');
+    expect(paths.indexOf(':lang/schools/compare')).toBeGreaterThanOrEqual(0);
+    expect(paths.indexOf(':lang/schools/compare')).toBeLessThan(paths.indexOf(':lang/schools/:id'));
+  });
+
   it('keeps the public pages server-rendered for SEO', () => {
     expect(modeOf('**')).toBe(RenderMode.Server);
   });
