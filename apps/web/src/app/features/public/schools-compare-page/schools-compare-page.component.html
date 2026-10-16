@@ -1,0 +1,82 @@
+<div class="min-h-screen bg-muted/50" *transloco="let t">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-12">
+    <h1 class="mb-6 text-3xl font-bold text-foreground">{{ t('schoolsCompare.title') }}</h1>
+
+    @if (!validSelection()) {
+      <div class="rounded-xl border border-border bg-card p-8 text-center">
+        <p class="text-foreground mb-4">{{ t('schoolsCompare.invalid') }}</p>
+        <a
+          [routerLink]="['/', lang(), 'schools']"
+          class="inline-block px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+        >
+          {{ t('schoolsCompare.backToCatalogue') }}
+        </a>
+      </div>
+    } @else if (status() === 'loading') {
+      <div role="status" aria-busy="true" class="rounded-xl border border-border bg-card p-8 animate-pulse">
+        <span class="sr-only">{{ t('common.loading') }}</span>
+        <div class="h-5 bg-muted rounded w-1/2 mb-4" aria-hidden="true"></div>
+        <div class="h-5 bg-muted rounded w-3/4" aria-hidden="true"></div>
+      </div>
+    } @else if (status() === 'error') {
+      <app-error-state [message]="t('schoolsCompare.loadError')" (retry)="load()" />
+    } @else {
+      <!-- The scroll stays inside this wrapper, never on the page. -->
+      <div class="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
+        <table class="w-full min-w-[32rem] text-left text-sm">
+          <caption class="sr-only">{{ t('schoolsCompare.title') }}</caption>
+          <thead>
+            <tr class="border-b border-border">
+              <th scope="col" class="p-4 text-muted-foreground font-medium">{{ t('schoolsCompare.rowName') }}</th>
+              @for (school of schools(); track school.id) {
+                <th scope="col" class="p-4 text-base font-bold text-foreground">
+                  <a [routerLink]="['/', lang(), 'schools', school.id]" class="hover:underline">{{ school.name }}</a>
+                </th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="border-b border-border">
+              <th scope="row" class="p-4 text-muted-foreground font-medium">{{ t('schoolsCompare.rowLocation') }}</th>
+              @for (school of schools(); track school.id) {
+                <td class="p-4 text-foreground">{{ place(school) || t('schoolsCompare.notProvided') }}</td>
+              }
+            </tr>
+            <tr class="border-b border-border">
+              <th scope="row" class="p-4 text-muted-foreground font-medium">{{ t('schoolsCompare.rowRate') }}</th>
+              @for (school of schools(); track school.id) {
+                <td class="p-4 text-foreground">
+                  {{ rated(school) ? roundRating(school.rating) : t('schoolsCompare.notRated') }}
+                </td>
+              }
+            </tr>
+            <tr class="border-b border-border">
+              <th scope="row" class="p-4 text-muted-foreground font-medium">{{ t('schoolsCompare.rowPrograms') }}</th>
+              @for (school of schools(); track school.id) {
+                <td class="p-4 text-foreground">
+                  {{ t(plural('schoolsCompare.programCount', school.programs?.length ?? 0), { count: school.programs?.length ?? 0 }) }}
+                </td>
+              }
+            </tr>
+            <tr>
+              <th scope="row" class="p-4 text-muted-foreground font-medium">{{ t('schoolsCompare.rowTags') }}</th>
+              @for (school of schools(); track school.id) {
+                <td class="p-4 text-foreground">
+                  @if (school.tags && school.tags.length > 0) {
+                    <ul class="flex flex-wrap gap-1">
+                      @for (tag of school.tags; track tag.id) {
+                        <li class="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 text-xs font-bold">{{ tag.name }}</li>
+                      }
+                    </ul>
+                  } @else {
+                    {{ t('schoolsCompare.notProvided') }}
+                  }
+                </td>
+              }
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+</div>

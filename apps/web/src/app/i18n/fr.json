@@ -61,7 +61,8 @@
     "notFound": "Page introuvable",
     "forgotPassword": "Mot de passe oublié",
     "verifyEmail": "Confirmer l’e-mail",
-    "resetPassword": "Nouveau mot de passe"
+    "resetPassword": "Nouveau mot de passe",
+    "compare": "Comparer des établissements"
   },
   "about": {
     "title": "À propos de MeetStudent",
@@ -239,7 +240,32 @@
     "empty": "Aucun établissement n'est encore référencé",
     "loadError": "Les établissements n'ont pas pu être chargés.",
     "loadMore": "Voir plus",
-    "loadMoreError": "Impossible de charger d'autres établissements."
+    "loadMoreError": "Impossible de charger d'autres établissements.",
+    "compareSelect": "Sélectionner {{name}} pour comparer",
+    "compareSelected": {
+      "one": "{{ count }} établissement sélectionné",
+      "other": "{{ count }} établissements sélectionnés"
+    },
+    "compareLimit": "Vous pouvez comparer jusqu'à 3 établissements",
+    "compareAction": "Comparer",
+    "compareClear": "Vider la sélection"
+  },
+  "schoolsCompare": {
+    "title": "Comparer des établissements",
+    "invalid": "Choisissez entre 2 et 3 établissements pour les comparer.",
+    "backToCatalogue": "Retour aux établissements",
+    "loadError": "Impossible de charger la comparaison.",
+    "notProvided": "Non renseigné",
+    "notRated": "Non noté",
+    "rowName": "Établissement",
+    "rowLocation": "Ville et pays",
+    "rowRate": "Note moyenne",
+    "rowPrograms": "Formations",
+    "rowTags": "Étiquettes",
+    "programCount": {
+      "one": "{{ count }} formation",
+      "other": "{{ count }} formations"
+    }
   },
   "programs": {
     "heroTitle": "Explorez les formations",

@@ -34,7 +34,8 @@ export class SchoolService {
   private mapSchoolFields(school: School): School {
     return {
       ...school,
-      rating: (school as any).averageRate || school.rating || 0,
+      // No `|| 0`: an unrated school stays unrated (undefined), never a false 0.
+      rating: (school as any).averageRate ?? school.rating ?? undefined,
       // No default for type or description: the service stays locale-free and
       // the template shows a fallback in the active language.
       accreditations: school.accreditations || [],

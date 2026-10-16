@@ -61,7 +61,8 @@
     "notFound": "Page not found",
     "forgotPassword": "Forgot password",
     "verifyEmail": "Confirm your email",
-    "resetPassword": "New password"
+    "resetPassword": "New password",
+    "compare": "Compare schools"
   },
   "about": {
     "title": "About MeetStudent",
@@ -239,7 +240,32 @@
     "empty": "No schools are listed yet",
     "loadError": "Schools could not be loaded.",
     "loadMore": "Load more",
-    "loadMoreError": "More schools could not be loaded."
+    "loadMoreError": "More schools could not be loaded.",
+    "compareSelect": "Select {{name}} to compare",
+    "compareSelected": {
+      "one": "{{ count }} school selected",
+      "other": "{{ count }} schools selected"
+    },
+    "compareLimit": "You can compare up to 3 schools",
+    "compareAction": "Compare",
+    "compareClear": "Clear selection"
+  },
+  "schoolsCompare": {
+    "title": "Compare schools",
+    "invalid": "Choose between 2 and 3 schools to compare them.",
+    "backToCatalogue": "Back to the schools",
+    "loadError": "The comparison could not be loaded.",
+    "notProvided": "Not provided",
+    "notRated": "Not rated",
+    "rowName": "School",
+    "rowLocation": "City and country",
+    "rowRate": "Average rating",
+    "rowPrograms": "Programmes",
+    "rowTags": "Tags",
+    "programCount": {
+      "one": "{{ count }} programme",
+      "other": "{{ count }} programmes"
+    }
   },
   "programs": {
     "heroTitle": "Explore the programmes",

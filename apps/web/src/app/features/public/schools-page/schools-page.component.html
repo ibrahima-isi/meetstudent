@@ -121,6 +121,41 @@
       </p>
     </div>
 
+    <!-- Comparison bar -->
+    @if (selectedIds().length > 0) {
+      <div
+        data-testid="compare-bar"
+        class="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-4 shadow-sm"
+      >
+        <p class="text-foreground font-medium" aria-live="polite">
+          {{ t(plural('schools.compareSelected', selectedIds().length), { count: selectedIds().length }) }}
+        </p>
+        @if (limitReached()) {
+          <p data-testid="compare-limit" role="status" class="text-sm text-red-700 dark:text-red-400">
+            {{ t('schools.compareLimit') }}
+          </p>
+        }
+        <div class="ml-auto flex items-center gap-3">
+          <button
+            type="button"
+            (click)="clearSelection()"
+            class="px-3 py-2 text-sm text-foreground underline cursor-pointer"
+          >
+            {{ t('schools.compareClear') }}
+          </button>
+          <button
+            type="button"
+            data-testid="compare-action"
+            [disabled]="!canCompare()"
+            (click)="compare()"
+            class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {{ t('schools.compareAction') }}
+          </button>
+        </div>
+      </div>
+    }
+
     <!-- School Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       @for (school of sortedSchools(); track school.id) {
@@ -134,6 +169,18 @@
               [alt]="school.name"
               class="w-full h-full object-cover block"
             ></app-image-with-fallback>
+            <label
+              class="absolute top-3 left-3 flex items-center justify-center w-9 h-9 bg-card rounded-full shadow-sm cursor-pointer"
+              (click)="$event.stopPropagation()"
+            >
+              <input
+                type="checkbox"
+                class="w-5 h-5 accent-indigo-600 cursor-pointer"
+                [checked]="isSelected(school)"
+                [attr.aria-label]="t('schools.compareSelect', { name: school.name })"
+                (click)="toggleSelection(school, $event)"
+              />
+            </label>
             <div class="absolute top-3 right-3 flex flex-col items-end gap-2">
               <div class="px-3 py-1 bg-card rounded-full shadow-sm">
                 <span class="text-indigo-600 dark:text-indigo-400 text-sm font-bold">{{ school.type || t('common.defaultSchoolType') }}</span>

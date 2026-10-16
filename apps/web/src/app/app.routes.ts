@@ -40,6 +40,17 @@ export const routes: Routes = [
               ),
           },
           {
+            // Public, and before `schools/:id` or "compare" would be taken for an id
+            // and bounced to the login.
+            path: 'schools/compare',
+            pathMatch: 'full',
+            title: 'pageTitle.compare',
+            loadComponent: () =>
+              import('./features/public/schools-compare-page/schools-compare-page.component').then(
+                (m) => m.SchoolsComparePageComponent,
+              ),
+          },
+          {
             path: 'schools/:id',
             title: 'pageTitle.school',
             canActivate: [authGuard],
