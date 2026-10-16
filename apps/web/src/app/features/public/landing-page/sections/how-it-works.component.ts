@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { LocaleService } from '@services/locale.service';
@@ -65,7 +65,7 @@ import { RevealDirective } from '@shared/directives/reveal.directive';
               {{ t('lp.steps.search.title') }}
             </h3>
             <p class="mt-2 text-muted-foreground">{{ t('lp.steps.search.text') }}</p>
-            <form class="mt-5 flex flex-col gap-3" role="search" [attr.aria-label]="t('lp.steps.search.title')" (submit)="search($event)">
+            <form class="mt-5 flex flex-col gap-3" role="search" [attr.aria-label]="t('lp.steps.search.title')" (submit)="search($event, searchField)">
               <label for="discovery-type" class="text-sm font-medium text-foreground">{{ t('lp.steps.search.typeLabel') }}</label>
               <select id="discovery-type" class="field-input w-full min-w-0" [formControl]="resource">
                 <option value="schools">{{ t('lp.steps.search.schools') }}</option>
@@ -73,7 +73,13 @@ import { RevealDirective } from '@shared/directives/reveal.directive';
                 <option value="courses">{{ t('lp.steps.search.courses') }}</option>
               </select>
               <label for="discovery-query" class="text-sm font-medium text-foreground">{{ t('lp.steps.search.queryLabel') }}</label>
-              <input id="discovery-query" type="search" class="field-input w-full min-w-0" [formControl]="query" />
+              <input #searchField id="discovery-query" type="search" class="field-input w-full min-w-0"
+                [formControl]="query" (input)="updateSearchError(searchField.value)"
+                [attr.aria-invalid]="searchError() ? 'true' : null"
+                [attr.aria-describedby]="searchError() ? 'discovery-query-error' : null" />
+              @if (searchError()) {
+                <p id="discovery-query-error" role="alert" class="text-sm text-destructive">{{ t('lp.steps.search.unsupportedQuery') }}</p>
+              }
               <button type="submit" class="btn btn-primary">{{ t('lp.steps.search.title') }}</button>
             </form>
           </div>
@@ -128,9 +134,26 @@ export class HowItWorksComponent {
   protected readonly resource = new FormControl<'schools' | 'programs' | 'courses'>('schools', { nonNullable: true });
   protected readonly query = new FormControl('', { nonNullable: true });
 
-  protected search(event: Event): void {
+  protected readonly searchError = signal(false);
+
+  protected updateSearchError(value: string): void {
+    if (this.searchError()) this.searchError.set(this.unsupportedQuery(value));
+  }
+
+  // These terms cannot travel through the existing name-search path contract.
+  private unsupportedQuery(value: string): boolean {
+    const term = value.trim();
+    return /^\.{1,2}$/.test(term) || /[/\\%;]/.test(term);
+  }
+
+  protected search(event: Event, field: HTMLInputElement): void {
     event.preventDefault();
     const q = this.query.value.trim();
+    this.searchError.set(this.unsupportedQuery(q));
+    if (this.searchError()) {
+      field.focus();
+      return;
+    }
     void this.router.navigate(['/', this.locale.active(), this.resource.value], { queryParams: q ? { q } : {} });
   }
 

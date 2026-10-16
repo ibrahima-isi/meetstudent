@@ -155,8 +155,50 @@ describe('Cherchez catalogue journeys', () => {
 
   afterEach(() => http?.verify());
 
+  it('explains an unsupported term without losing the selected type, query or field focus', async () => {
+    await open('fr');
+    await submit('courses', '100% anglais');
+    expect(TestBed.inject(Router).url).toBe('/fr');
+    http.expectNone(r => r.url.startsWith('/api/v1/'));
+    const field = root().querySelector('input[type=search]') as HTMLInputElement;
+    expect(field).not.toBeNull();
+    if (!field) return;
+    expect(field.value).toBe('100% anglais');
+    expect((root().querySelector('select') as HTMLSelectElement).value).toBe('courses');
+    expect(field.getAttribute('aria-invalid')).toBe('true');
+    const messageId = field.getAttribute('aria-describedby');
+    expect(messageId).toBeTruthy();
+    expect(root().querySelector('#' + messageId)?.textContent).toContain('La recherche ne peut pas traiter');
+    expect(document.activeElement).toBe(field);
+    field.value = 'Anglais';
+    field.dispatchEvent(new Event('input'));
+    await settle();
+    expect(field.getAttribute('aria-invalid')).toBeNull();
+    expect(field.getAttribute('aria-describedby')).toBeNull();
+    expect(root().querySelector('[role=alert]')).toBeNull();
+    (root().querySelector('button[type=submit]') as HTMLButtonElement).click();
+    await settle();
+    expect(TestBed.inject(Router).url).toBe('/fr/courses?q=Anglais');
+    http.expectOne(r => r.url === '/api/v1/courses/name/Anglais').flush(page([]));
+    await settle();
+  });
+
   for (const lang of ['fr', 'en'] as const) {
     for (const resource of ['schools', 'programs', 'courses']) {
+      it(`${lang}: explains all unsupported path terms for ${resource} without showing false empty results`, async () => {
+        await open(lang);
+        for (const term of ['génie / civil', 'a\\b', '100% anglais', 'a;b', '.', '..']) {
+          await submit(resource, term);
+          expect(TestBed.inject(Router).url).toBe('/' + lang);
+          const field = root().querySelector('input[type=search]') as HTMLInputElement;
+          expect(field.value).toBe(term);
+          expect(field.getAttribute('aria-invalid')).toBe('true');
+          expect((root().querySelector('select') as HTMLSelectElement).value).toBe(resource);
+          expect(root().querySelector('[role=alert]')?.textContent).toContain(lang === 'fr'
+            ? 'La recherche ne peut pas traiter' : 'Search cannot process');
+        }
+        http.expectNone(r => r.url.startsWith('/api/v1/'));
+      });
       it(`${lang}: submits ${resource}, displays HTTP loading/results and preserves the query`, async () => {
         await open(lang);
         const select = root().querySelector('select') as HTMLSelectElement;
@@ -164,18 +206,18 @@ describe('Cherchez catalogue journeys', () => {
         expect(Array.from(select.options).map(o => o.text)).toEqual(lang === 'fr'
           ? ['Établissement', 'Formation', 'Cours'] : ['School', 'Programme', 'Course']);
         expect(root().querySelector('button')?.textContent?.trim()).toBe(lang === 'fr' ? 'Cherchez' : 'Search');
-        await submit(resource, '  École & été  ');
+        await submit(resource, '  École & été. 2  ');
         const router = TestBed.inject(Router);
-        expect(router.parseUrl(router.url).queryParams['q']).toBe('École & été');
+        expect(router.parseUrl(router.url).queryParams['q']).toBe('École & été. 2');
         expect(router.url.startsWith('/' + lang + '/' + resource + '?')).toBeTrue();
-        expect(root().querySelector('input')?.value).toBe('École & été');
+        expect(root().querySelector('input')?.value).toBe('École & été. 2');
         expect(root().querySelector('[aria-busy="true"]')).not.toBeNull();
-        const request = http.expectOne(r => r.url === '/api/v1/' + resource + '/name/' + encodeURIComponent('École & été'));
+        const request = http.expectOne(r => r.url === '/api/v1/' + resource + '/name/' + encodeURIComponent('École & été. 2'));
         expect(request.request.params.get('page')).toBe('0');
         expect(request.request.params.get('size')).toBe('12');
-        request.flush(page([{ id: 31, name: 'École & été' }]));
+        request.flush(page([{ id: 31, name: 'École & été. 2' }]));
         await settle();
-        expect(root().textContent).toContain('École & été');
+        expect(root().textContent).toContain('École & été. 2');
         expect(root().querySelector('[aria-busy="true"]')).toBeNull();
       });
     }

@@ -490,7 +490,7 @@
     "steps": {
       "title": "Comment ça marche",
       "subtitle": "Trois étapes pour choisir sereinement.",
-      "search": {"title": "Cherchez", "text": "Filtrez par ville, type d'établissement ou formation pour cibler ce qui vous convient.", "typeLabel": "Type de recherche", "queryLabel": "Nom à rechercher", "schools": "Établissement", "programs": "Formation", "courses": "Cours"},
+      "search": {"title": "Cherchez", "text": "Filtrez par ville, type d'établissement ou formation pour cibler ce qui vous convient.", "typeLabel": "Type de recherche", "queryLabel": "Nom à rechercher", "schools": "Établissement", "programs": "Formation", "courses": "Cours", "unsupportedQuery": "La recherche ne peut pas traiter les caractères /, \\, %, ; ni les termes « . » et « .. ». Modifiez le nom recherché."},
       "compare": { "title": "Comparez", "text": "Lisez les avis d'étudiants et d'experts, consultez les formations et les accréditations." },
       "choose": { "title": "Décidez", "text": "Enregistrez vos favoris et préparez votre dossier avec vos documents au même endroit." }
     },
