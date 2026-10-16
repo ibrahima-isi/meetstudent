@@ -12,6 +12,7 @@ import { SchoolService } from '@services/school.service';
 import { LocaleService } from '@services/locale.service';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { pluralKey } from '@i18n/plural';
+import { parseIdList } from '@shared/compare-selection';
 import { roundRating } from '@shared/format-rating';
 
 /** Quiet time after the last keystroke before the URL (and so the API) is updated. */
@@ -132,21 +133,12 @@ export class SchoolsPageComponent implements OnInit {
     // effect during the first change detection (still SSR-safe), after this has
     // run, so it already carries the term and needs no debounce.
     this.applyUrlTerm(this.route.snapshot.queryParamMap.get('q'));
-    this.selectedIds.set(this.parseSelection(this.route.snapshot.queryParamMap.get('compare')));
+    this.selectedIds.set(parseIdList(this.route.snapshot.queryParamMap.get('compare'), COMPARE_MAX));
     // External navigation (hero deep link, Back) moves the term later on.
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       this.applyUrlTerm(params.get('q'));
-      this.selectedIds.set(this.parseSelection(params.get('compare')));
+      this.selectedIds.set(parseIdList(params.get('compare'), COMPARE_MAX));
     });
-  }
-
-  /** Positive whole ids only, without repeats, at most the comparison limit. */
-  private parseSelection(raw: string | null): number[] {
-    const ids = (raw ?? '')
-      .split(',')
-      .map((part) => (/^\d+$/.test(part.trim()) ? Number(part.trim()) : 0))
-      .filter((id) => id > 0);
-    return [...new Set(ids)].slice(0, COMPARE_MAX);
   }
 
   protected isSelected(school: School): boolean {

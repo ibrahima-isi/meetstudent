@@ -9,6 +9,7 @@ import { School } from '@models/entities';
 import { LocaleService } from '@services/locale.service';
 import { SchoolService } from '@services/school.service';
 import { ErrorStateComponent } from '@shared/components/error-state/error-state.component';
+import { byRatingThenNameThenId, parseIdList } from '@shared/compare-selection';
 import { roundRating } from '@shared/format-rating';
 
 const MIN_SCHOOLS = 2;
@@ -40,15 +41,7 @@ export class SchoolsComparePageComponent {
   private readonly retry$ = new Subject<void>();
 
   /** Whole positive ids without repeats; unreadable parts are ignored. */
-  protected readonly ids = computed(() => {
-    const parsed = (this.params().get('ids') ?? '')
-      .split(',')
-      .map((part) => part.trim())
-      .filter((part) => /^\d+$/.test(part))
-      .map(Number)
-      .filter((id) => id > 0);
-    return [...new Set(parsed)];
-  });
+  protected readonly ids = computed(() => parseIdList(this.params().get('ids')));
   protected readonly validSelection = computed(
     () => this.ids().length >= MIN_SCHOOLS && this.ids().length <= MAX_SCHOOLS,
   );
@@ -60,16 +53,7 @@ export class SchoolsComparePageComponent {
 
   /** Best rated first, unrated last; ties by name, then by id. */
   protected readonly schools = computed(() =>
-    [...this.loaded()].sort((a, b) => {
-      const rateA = this.rateOf(a);
-      const rateB = this.rateOf(b);
-      if (rateA !== rateB) {
-        if (rateA === null) return 1;
-        if (rateB === null) return -1;
-        return rateB - rateA;
-      }
-      return a.name.localeCompare(b.name, this.locale.active()) || (a.id ?? 0) - (b.id ?? 0);
-    }),
+    [...this.loaded()].sort(byRatingThenNameThenId((school) => this.rateOf(school), this.locale.active())),
   );
 
   constructor() {
