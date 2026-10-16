@@ -72,6 +72,35 @@ describe('SiteFooterComponent', () => {
     expect(hrefs().some((h) => h?.startsWith('/fr'))).toBeFalse();
   });
 
+  describe('account links as buttons', () => {
+    const link = (path: string) =>
+      root().querySelector<HTMLAnchorElement>(`footer nav a[href$="/${path}"]`)!;
+
+    it('renders register as a primary button and login as a secondary button', async () => {
+      await render('fr');
+      expect(link('register').classList).toContain('btn');
+      expect(link('register').classList).toContain('btn-primary');
+      expect(link('login').classList).toContain('btn');
+      expect(link('login').classList).toContain('btn-secondary');
+    });
+
+    it('uses the default button size', async () => {
+      await render('fr');
+      expect(link('register').classList).not.toContain('btn-lg');
+      expect(link('login').classList).not.toContain('btn-lg');
+    });
+
+    it('keeps localized real links, not role=button', async () => {
+      await render('en');
+      for (const path of ['login', 'register']) {
+        const a = link(path);
+        expect(a.tagName).toBe('A');
+        expect(a.getAttribute('href')).toBe(`/en/${path}`);
+        expect(a.hasAttribute('role')).toBeFalse();
+      }
+    });
+  });
+
   it('has only internal links', async () => {
     await render('fr');
     const links = Array.from(root().querySelectorAll('a'));
