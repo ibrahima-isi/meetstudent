@@ -142,7 +142,8 @@ Preuves locales : [docs/evidence/ticket-105.md](docs/evidence/ticket-105.md). AP
 
 ### #111 — une note par utilisateur et programme (2026-10-16)
 
-- [ ] [#111](https://github.com/ibrahima-isi/meetstudent/issues/111) : claimed dans `test/program-rating-uniqueness-111`, base immuable `e18edf84e5a0f8df105febe6563681dcf43d1453`. Manifeste de cinq fichiers autorisé ; qualification HTTP/agrégat/rôles/concurrence et migration PostgreSQL V23→V24 terminée. API complète 611 tests verts (239 unitaires +372 intégration), trois HTTP PostgreSQL verts, survivants déterministes et SQLSTATE23505 vérifiés, stack ms111 supprimée. Aucun code métier/migration modifié, aucun faux rouge. [Preuves](docs/evidence/ticket-111.md). Aucun blocage ; prochaine étape : revues Standards/Spec indépendantes, puis PR/CI/squash/clôture.
+- [ ] [#111](https://github.com/ibrahima-isi/meetstudent/issues/111) : claimed dans `test/program-rating-uniqueness-111`, base immuable `e18edf84e5a0f8df105febe6563681dcf43d1453`. Manifeste de cinq fichiers autorisé ; qualification HTTP/agrégat/rôles/concurrence et migration PostgreSQL V23→V24 terminée. API complète 611 tests verts (239 unitaires +372 intégration), trois HTTP PostgreSQL verts, survivants déterministes et SQLSTATE23505 vérifiés, stack ms111 supprimée. Aucun code métier/migration modifié, aucun faux rouge. [Preuves](docs/evidence/ticket-111.md). Revues indépendantes sur `22668c6` : Standards zéro violation certaine (deux remarques facultatives conservées), Spec zéro constat ; 14 HTTP H2 relancés par le reviewer, verts. Aucun blocage ; prochaine étape : PR/CI/squash/clôture.
 
 - [x] #111 — comportement existant et qualification HTTP/PostgreSQL vérifiés ; suite API entière verte.
-- [ ] #111 — revue indépendante et livraison PR/CI finale/squash/clôture à effectuer.
+- [x] #111 — revues Standards/Spec indépendantes terminées ; aucun correctif requis.
+- [ ] #111 — livraison PR/CI finale/squash/clôture à effectuer.

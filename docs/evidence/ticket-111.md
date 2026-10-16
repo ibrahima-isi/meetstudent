@@ -141,8 +141,27 @@ public class Ms111Validate {
 
 Résultat : `MS111_UPGRADED_SCHEMA_VALIDATED`, serveur sur port éphémère, fermeture propre (`/tmp/ms111-upgraded-validate.log`). Flyway 10.20.1 avertit que PostgreSQL18.6 dépasse sa version testée17 ; migration, validation et HTTP ont effectivement réussi.
 
+## Revues indépendantes
+
+Base immuable : `e18edf84e5a0f8df105febe6563681dcf43d1453`. Commit examiné : `22668c6ee20732d13b7016644a8f0465cb2793b0` — `test(api): qualify program rating uniqueness (#111)`. Diff : `git diff e18edf84e5a0f8df105febe6563681dcf43d1453...HEAD`. Deux agents enfants distincts ont examiné ce même diff en parallèle, après la fin des phases lecture et implémentation.
+
+### Standards
+
+**Zéro violation certaine ; deux remarques facultatives.** Sources : `CLAUDE.md`, `apps/api/CLAUDE.md`, `docs/agents/issue-tracker.md`, `docs/MONOREPO.md` ; aucun `CODING_STANDARDS.md` ni `CONTRIBUTING.md` trouvé. Baseline Fowler examinée : Mysterious Name, Duplicated Code, Feature Envy, Data Clumps, Primitive Obsession, Repeated Switches, Shotgun Surgery, Divergent Change, Speculative Generality, Message Chains, Middle Man, Refused Bequest ; priorité aux règles documentées et exclusion des contrôles déjà imposés par les outils.
+
+- Injection par champs dans `ProgramRatePostgresConcurrencyIntegrationTests:45–51` : la règle constructeur/Lombok de la section Architecture du guide API vise les couches de production ; les fixtures voisines utilisent déjà les champs. Portée ambiguë, aucune violation dure retenue.
+- Possible Duplicated Code dans les observations HTTP note/cardinalité/moyenne (`ProgramRatePostgresConcurrencyIntegrationTests:75–90`, `ProgramRateControllerIntegrationTests:359–367`). Les assertions courtes exposent les états vérifiés ; extraction facultative, aucun défaut fonctionnel établi.
+
+Arbitrage reviewer : conserver ces fixtures et assertions lisibles, conformément à la portée autorisée et à la règle de modifications chirurgicales ; aucun correctif requis.
+
+### Spec
+
+**Zéro constat.** Sources GitHub : [#111](https://github.com/ibrahima-isi/meetstudent/issues/111) et [parent #99](https://github.com/ibrahima-isi/meetstudent/issues/99), relus pendant la revue. Répétition avec identifiant conservé, indépendance auteurs/cibles, agrégats, refus STUDENT/ADMIN/anonyme sans effet, vraie course INSERT 201/409 puis retry 200 : couverts par les tests HTTP. Les journaux corroborent V23→V24, cinq survivants déterministes, SQLSTATE23505, contrainte exacte et démarrage Hibernate validate. Aucun manque, dépassement de portée ou comportement incorrect relevé. Qualification honnête du comportement existant de PR #142 ; livraison encore en attente.
+
+Les deux agents ont effectué une revue statique en lecture seule ; l'axe Spec a aussi recoupé les journaux existants. Ils n'ont pas relancé les tests. Le reviewer a relancé séparément les 14 tests HTTP programme H2, zéro échec/erreur/skip (`/tmp/ms111-review-targeted.log`). Aucun changement de code depuis la suite API complète et les preuves PostgreSQL ; le présent ajout est documentaire.
+
 ## Livraison et nettoyage
 
 `docker compose -p ms111 -f /tmp/ms111-compose.yml down -v` effectué ; inventaires containers/volumes/networks filtrés par `com.docker.compose.project=ms111` vides. Ressources préexistantes préservées. Aucun SMTP réel, déploiement ni promotion main.
 
-Qualification terminée après suite finale ; revue indépendante, PR vers dev, trois CI sur head final, squash et clôture restent à effectuer par l'orchestrateur. Le suivi reste unchecked pour la livraison.
+Qualification et revues indépendantes terminées ; PR vers dev, trois CI sur head final, squash et clôture restent à effectuer par l'orchestrateur. Le suivi reste unchecked pour la livraison.
