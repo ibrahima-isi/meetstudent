@@ -312,4 +312,69 @@ class ProgramRateControllerIntegrationTests {
                 .andExpect(MockMvcResultMatchers.jsonPath("$.note").value(5.0))
                 .andExpect(MockMvcResultMatchers.jsonPath("$.comment").value(""));
     }
+    @Test
+    void reRatingChangesOnlyTheAuthorsProgramRatingAndRecomputesTheAverage() throws Exception {
+        setupUser("ROLE_EXPERT");
+        var other = createUser("ROLE_EXPERT", "independent-expert@example.com");
+        var program = programService.save(programMapper.toEntity(TestDataUtil.createProgramDto()));
+        var anotherDto = TestDataUtil.createProgramDto();
+        anotherDto.setCode("OTHER");
+        var anotherProgram = programService.save(programMapper.toEntity(anotherDto));
+        var first = postRating(testUser, "ROLE_EXPERT", program.getId(), 2.0, 201);
+        var independent = postRating(other, "ROLE_EXPERT", program.getId(), 3.0, 201);
+        var elsewhere = postRating(testUser, "ROLE_EXPERT", anotherProgram.getId(), 1.0, 201);
+
+        var updated = postRating(testUser, "ROLE_EXPERT", program.getId(), 5.0, 200);
+        org.junit.jupiter.api.Assertions.assertEquals(first.getId(), updated.getId());
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/program-rates/program/" + program.getId()))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.length()").value(2));
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/program-rates/" + independent.getId()))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.userId").value(other.getId()))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.note").value(3.0));
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/program-rates/" + elsewhere.getId()))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.note").value(1.0));
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/programs/" + program.getId()))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.averageRate").value(4.0));
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/programs/" + anotherProgram.getId()))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.averageRate").value(1.0));
+    }
+
+    @Test
+    void unauthorizedRolesAndAnonymousCannotCreateOrReplaceAProgramRating() throws Exception {
+        setupUser("ROLE_EXPERT");
+        var program = programService.save(programMapper.toEntity(TestDataUtil.createProgramDto()));
+        var existing = postRating(testUser, "ROLE_EXPERT", program.getId(), 4.0, 201);
+        for (var role : new String[] {"ROLE_STUDENT", "ROLE_ADMIN", "ANONYMOUS"}) {
+            var body = ProgramRateDTO.builder().id(existing.getId()).userId(testUser.getId())
+                    .programId(program.getId()).note(1.0).build();
+            var request = MockMvcRequestBuilders.post("/api/v1/program-rates")
+                    .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(body));
+            if (!role.equals("ANONYMOUS")) request.with(TestDataUtil.mockUser(testUser.getId(), role));
+            mockMvc.perform(request).andExpect(MockMvcResultMatchers.status().is(role.equals("ANONYMOUS") ? 401 : 403));
+            mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/program-rates/program/" + program.getId()))
+                    .andExpect(MockMvcResultMatchers.status().isOk())
+                    .andExpect(MockMvcResultMatchers.jsonPath("$.length()").value(1))
+                    .andExpect(MockMvcResultMatchers.jsonPath("$[0].id").value(existing.getId()))
+                    .andExpect(MockMvcResultMatchers.jsonPath("$[0].userId").value(testUser.getId()))
+                    .andExpect(MockMvcResultMatchers.jsonPath("$[0].note").value(4.0));
+            mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/programs/" + program.getId()))
+                    .andExpect(MockMvcResultMatchers.status().isOk())
+                    .andExpect(MockMvcResultMatchers.jsonPath("$.averageRate").value(4.0));
+        }
+    }
+
+    private ProgramRateDTO postRating(UserEntity user, String role, Integer programId, double note, int status) throws Exception {
+        var body = ProgramRateDTO.builder().programId(programId).userId(user.getId()).note(note).build();
+        var response = mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/program-rates")
+                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(body))
+                        .with(TestDataUtil.mockUser(user.getId(), role)))
+                .andExpect(MockMvcResultMatchers.status().is(status)).andReturn().getResponse();
+        return objectMapper.readValue(response.getContentAsString(), ProgramRateDTO.class);
+    }
+
 }

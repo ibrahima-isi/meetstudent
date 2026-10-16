@@ -62,7 +62,7 @@ Preuves : [docs/evidence/ticket-102.md](docs/evidence/ticket-102.md). Arrêt apr
 - [x] [#107](https://github.com/ibrahima-isi/meetstudent/issues/107) — [08/30] Choisir étudiant ou enseignant à l’inscription
 - [x] [#108](https://github.com/ibrahima-isi/meetstudent/issues/108) — [09/30] Valider la spécialité enseignant et afficher les erreurs au bon champ
 - [x] [#109](https://github.com/ibrahima-isi/meetstudent/issues/109) — [10/30] Masquer les favoris étudiants pour les enseignants
-- [ ] [#110](https://github.com/ibrahima-isi/meetstudent/issues/110) — [11/30] Conserver une seule note par utilisateur et établissement — implémentation/qualification et revues Standards/Spec validées ; [preuves](docs/evidence/ticket-110.md), livraison PR/CI/squash en attente.
+- [x] [#110](https://github.com/ibrahima-isi/meetstudent/issues/110) — [11/30] Conserver une seule note par utilisateur et établissement — livré par [PR #144](https://github.com/ibrahima-isi/meetstudent/pull/144), squash signé `e18edf8` ; [preuves](docs/evidence/ticket-110.md).
 - [ ] [#111](https://github.com/ibrahima-isi/meetstudent/issues/111) — [12/30] Conserver une seule note par utilisateur et programme
 - [ ] [#112](https://github.com/ibrahima-isi/meetstudent/issues/112) — [13/30] Conserver une seule note par utilisateur et cours
 - [ ] [#113](https://github.com/ibrahima-isi/meetstudent/issues/113) — [14/30] Archiver le worktree de configuration des skills
@@ -134,8 +134,16 @@ Preuves locales : [docs/evidence/ticket-105.md](docs/evidence/ticket-105.md). AP
 
 ### #110 — une note par utilisateur et établissement (2026-10-16)
 
-- [ ] [#110](https://github.com/ibrahima-isi/meetstudent/issues/110) : claimed dans `fix/school-rating-uniqueness-110`, base `557adcd`. Qualification des garanties déjà présentes terminée : 14 tests HTTP H2 ciblés, 3 HTTP PostgreSQL, V23→V24 sur doublons historiques puis schéma validé, API complète 608 tests verts. Aucun code métier ni migration modifiés ; nouveaux tests verts sur la base existante, sans faux rouge. Stack jetable supprimée. Revues indépendantes Standards et Spec sur `24afa44` : zéro constat sur chaque axe. [PR #144](https://github.com/ibrahima-isi/meetstudent/pull/144) ouverte vers `dev` ; CI finale/squash en attente. [Preuves](docs/evidence/ticket-110.md).
+- [x] [#110](https://github.com/ibrahima-isi/meetstudent/issues/110) : livré dans `fix/school-rating-uniqueness-110`, base `557adcd`. Qualification des garanties déjà présentes terminée : 14 tests HTTP H2 ciblés, 3 HTTP PostgreSQL, V23→V24 sur doublons historiques puis schéma validé, API complète 608 tests verts. Aucun code métier ni migration modifiés ; nouveaux tests verts sur la base existante, sans faux rouge. Stack jetable supprimée. Revues indépendantes Standards et Spec sur `24afa44` : zéro constat sur chaque axe. [PR #144](https://github.com/ibrahima-isi/meetstudent/pull/144) fusionnée dans `dev` ; trois CI finales vertes sur `d3b4f1388d610cfdbb64664cd64f624c69a7abe9` ([run](https://github.com/ibrahima-isi/meetstudent/actions/runs/38940528079)), squash signé vérifié `e18edf84e5a0f8df105febe6563681dcf43d1453`, arbre identique au head final ; ticket clôturé et worktree/branche locale #110 nettoyés. [Preuves](docs/evidence/ticket-110.md).
 
 - [x] #110 — implémentation existante et qualification HTTP/PostgreSQL validées.
 - [x] #110 — tests affectés et revues indépendantes Standards/Spec terminés, sans constat.
-- [ ] #110 — [PR #144](https://github.com/ibrahima-isi/meetstudent/pull/144) vers `dev` ouverte ; trois CI vertes sur le head documentaire final, squash et clôture encore requis.
+- [x] #110 — [PR #144](https://github.com/ibrahima-isi/meetstudent/pull/144) fusionnée ; trois CI vertes sur le head final `d3b4f13`, squash signé `e18edf8`, ticket clôturé et nettoyage ciblé terminé.
+
+### #111 — une note par utilisateur et programme (2026-10-16)
+
+- [x] [#111](https://github.com/ibrahima-isi/meetstudent/issues/111) : qualification et vérifications locales terminées dans `test/program-rating-uniqueness-111`, base immuable `e18edf84e5a0f8df105febe6563681dcf43d1453`. Manifeste de cinq fichiers autorisé ; qualification HTTP/agrégat/rôles/concurrence et migration PostgreSQL V23→V24 terminée. API complète 611 tests verts (239 unitaires +372 intégration), trois HTTP PostgreSQL verts, survivants déterministes et SQLSTATE23505 vérifiés, stack ms111 supprimée. Aucun code métier/migration modifié, aucun faux rouge. [Preuves](docs/evidence/ticket-111.md). Revues indépendantes sur `22668c6` : Standards zéro violation certaine (deux remarques facultatives conservées), Spec zéro constat ; 14 HTTP H2 relancés par le reviewer, verts. Aucun blocage ; [PR #145](https://github.com/ibrahima-isi/meetstudent/pull/145) ouverte vers `dev` ; livraison suivie séparément.
+
+- [x] #111 — comportement existant et qualification HTTP/PostgreSQL vérifiés ; suite API entière verte.
+- [x] #111 — revues Standards/Spec indépendantes terminées ; aucun correctif requis.
+- [ ] #111 — [PR #145](https://github.com/ibrahima-isi/meetstudent/pull/145) vers `dev` ouverte ; trois CI sur le présent head documentaire final, squash et clôture encore requis. Le bilan définitif sera ajouté au suivi local après fusion.
