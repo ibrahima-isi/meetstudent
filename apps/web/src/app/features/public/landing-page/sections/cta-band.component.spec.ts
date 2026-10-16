@@ -1,14 +1,16 @@
-import { provideZonelessChangeDetection } from '@angular/core';
+import { provideZonelessChangeDetection, signal, WritableSignal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideTransloco } from '@jsverse/transloco';
 import { firstValueFrom } from 'rxjs';
 import { translocoOptions } from '@i18n/transloco.config';
 import { LocaleService } from '@services/locale.service';
+import { TokenService } from '@services/token.service';
 import { CtaBandComponent } from './cta-band.component';
 
 describe('CtaBandComponent', () => {
   let fixture: ComponentFixture<CtaBandComponent>;
+  let authenticated: WritableSignal<boolean>;
 
   const root = () => fixture.nativeElement as HTMLElement;
 
@@ -21,8 +23,14 @@ describe('CtaBandComponent', () => {
   }
 
   beforeEach(() => {
+    authenticated = signal(false);
     TestBed.configureTestingModule({
-      providers: [provideZonelessChangeDetection(), provideRouter([]), provideTransloco(translocoOptions)],
+      providers: [
+        provideZonelessChangeDetection(),
+        provideRouter([]),
+        provideTransloco(translocoOptions),
+        { provide: TokenService, useValue: { isAuthenticated: authenticated } },
+      ],
     });
   });
 
@@ -79,5 +87,63 @@ describe('CtaBandComponent', () => {
     for (const cls of ['relative', 'isolate', 'overflow-hidden']) {
       expect(container.classList).withContext(cls).toContain(cls);
     }
+  });
+
+  describe('when the visitor is signed in', () => {
+    beforeEach(() => authenticated.set(true));
+
+    it('renders no section, text or buttons', async () => {
+      await render('fr');
+      expect(root().querySelector('section')).toBeNull();
+      expect(root().querySelector('h2')).toBeNull();
+      expect(root().querySelectorAll('a').length).toBe(0);
+      expect(root().textContent!.trim()).toBe('');
+    });
+
+    it('leaves no spacing classes on the host, so no gap remains', async () => {
+      await render('fr');
+      expect(root().className).not.toMatch(/(^|\s)(block|px-4|py-20)(\s|$)/);
+    });
+  });
+
+  describe('on a server-rendered document', () => {
+    beforeEach(() => document.body.setAttribute('ng-server-context', 'ssr'));
+    afterEach(() => document.body.removeAttribute('ng-server-context'));
+
+    it('renders the band first, so hydration matches the server markup', () => {
+      authenticated.set(true);
+      fixture = TestBed.createComponent(CtaBandComponent);
+      expect((fixture.componentInstance as unknown as { signedIn(): boolean }).signedIn()).toBeFalse();
+    });
+
+    it('hides the band for a signed-in user once the first render is done', async () => {
+      authenticated.set(true);
+      await render('fr');
+      expect(root().querySelector('section')).toBeNull();
+      expect(root().classList).not.toContain('py-20');
+    });
+  });
+
+  describe('when the visitor is signed out', () => {
+    it('keeps both actions and the host spacing', async () => {
+      await render('fr');
+      expect(root().querySelectorAll('a.btn').length).toBe(2);
+      expect(root().classList).toContain('py-20');
+    });
+  });
+
+  it('follows login and logout without a reload', async () => {
+    await render('fr');
+    expect(root().querySelector('section')).not.toBeNull();
+
+    authenticated.set(true);
+    fixture.detectChanges();
+    expect(root().querySelector('section')).toBeNull();
+    expect(root().classList).not.toContain('py-20');
+
+    authenticated.set(false);
+    fixture.detectChanges();
+    expect(root().querySelectorAll('a.btn').length).toBe(2);
+    expect(root().classList).toContain('py-20');
   });
 });
