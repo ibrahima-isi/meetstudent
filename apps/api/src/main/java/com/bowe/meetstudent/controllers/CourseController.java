@@ -19,7 +19,6 @@ import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.SortDefault;
 import org.springframework.http.HttpStatus;
@@ -116,7 +115,7 @@ public class CourseController {
     }
 
     @GetMapping
-    @Operation(summary = "Get all courses (paginated)", description = "Provides a paginated list of all courses, including their average ratings. Can be sorted by rating (most/less). Each course carries its program (programId, programName; null when detached). Without ?sort= results are ordered by name, then id; an explicit ?sort= replaces that order and an unknown property answers 400.")
+    @Operation(summary = "Get all courses (paginated)", description = "Provides a paginated list of all courses, including their average ratings. Can be sorted by rating (most/less). Each course carries its program (programId, programName; null when detached). Without ?sort= results are ordered by name, then id; an explicit ?sort= replaces that order and an unknown property answers 400. With ?sortRate= the rate comes first and that order only breaks ties.")
     @ApiResponse(responseCode = "200", description = "List of courses retrieved")
     public Page<CourseDTO> getCourses(
             @Parameter(description = "Sort by rate: 'most' for highest rated, 'less' for lowest rated") 
@@ -124,12 +123,11 @@ public class CourseController {
             @ParameterObject @SortDefault(sort = {"name", "id"}) Pageable pageable) {
         
         Page<Course> coursePage;
-        // The rate queries own their ORDER BY (aggregate); the default name sort must not leak into them.
-        var unsorted = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
+        // The rate queries keep AVG as the first ORDER BY key; the page sort (name, id by default) is appended as the tie-break.
         if ("most".equalsIgnoreCase(sortRate)) {
-            coursePage = courseService.findAllOrderByRateDesc(unsorted);
+            coursePage = courseService.findAllOrderByRateDesc(pageable);
         } else if ("less".equalsIgnoreCase(sortRate)) {
-            coursePage = courseService.findAllOrderByRateAsc(unsorted);
+            coursePage = courseService.findAllOrderByRateAsc(pageable);
         } else {
             coursePage = courseService.findAll(pageable);
         }

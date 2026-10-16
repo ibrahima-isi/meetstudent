@@ -4,12 +4,16 @@ import com.bowe.meetstudent.TestDataUtil;
 import com.bowe.meetstudent.dto.CourseDTO;
 import com.bowe.meetstudent.entities.Accreditation;
 import com.bowe.meetstudent.entities.Program;
+import com.bowe.meetstudent.entities.Role;
+import com.bowe.meetstudent.entities.UserEntity;
 import com.bowe.meetstudent.mappers.implementations.AccreditationMapper;
 import com.bowe.meetstudent.mappers.implementations.CourseMapper;
 import com.bowe.meetstudent.services.AccreditationService;
 import com.bowe.meetstudent.services.CourseService;
 import com.bowe.meetstudent.services.ProgramAccreditationService;
 import com.bowe.meetstudent.services.ProgramService;
+import com.bowe.meetstudent.services.RoleService;
+import com.bowe.meetstudent.services.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -45,6 +50,15 @@ class CourseControllerIntegrationTests {
 
     @Autowired
     private CourseMapper courseMapper;
+
+    @Autowired
+    private UserService userService;
+
+    @Autowired
+    private RoleService roleService;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @Autowired
     private AccreditationService accreditationService;
@@ -337,16 +351,19 @@ class CourseControllerIntegrationTests {
         c2.setCode("AC001");
         com.bowe.meetstudent.entities.Course course2 = courseService.save(courseMapper.toEntity(c2));
         
-        // Rate course1 with 5.0, course2 with 3.0
+        // Rate course1 with 5.0, course2 with 3.0 (only experts rate courses, and the user must exist)
+        var expertId = saveExpert();
         mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/course-rates")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"note\": 5.0, \"courseId\": " + course1.getId() + ", \"userId\": 1}")
-                .with(TestDataUtil.mockUser("ROLE_STUDENT")));
+                .content("{\"note\": 5.0, \"courseId\": " + course1.getId() + ", \"userId\": " + expertId + "}")
+                .with(TestDataUtil.mockUser(expertId, "ROLE_EXPERT")))
+                .andExpect(MockMvcResultMatchers.status().isCreated());
         
         mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/course-rates")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"note\": 3.0, \"courseId\": " + course2.getId() + ", \"userId\": 1}")
-                .with(TestDataUtil.mockUser("ROLE_STUDENT")));
+                .content("{\"note\": 3.0, \"courseId\": " + course2.getId() + ", \"userId\": " + expertId + "}")
+                .with(TestDataUtil.mockUser(expertId, "ROLE_EXPERT")))
+                .andExpect(MockMvcResultMatchers.status().isCreated());
 
         mockMvc.perform(
                 MockMvcRequestBuilders.get("/api/v1/courses?sortRate=most")
@@ -442,6 +459,50 @@ class CourseControllerIntegrationTests {
                 .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].code").value("SZ1"));
         mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/courses?sort=name,desc"))
                 .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].code").value("SZ1"));
+    }
+
+    private int saveExpert() {
+        var role = roleService.findRoleByName("ROLE_EXPERT")
+                .orElseGet(() -> roleService.createRole(Role.builder().name("ROLE_EXPERT").build()));
+        return userService.saveUser(UserEntity.builder().firstname("Rate").lastname("Expert")
+                .email("rate.expert@example.com").password("password").role(role).build(), passwordEncoder).getId();
+    }
+
+    private int saveRatedCourse(String name, String code, double note, int expertId) throws Exception {
+        CourseDTO dto = TestDataUtil.createCourseDto();
+        dto.setName(name);
+        dto.setCode(code);
+        var id = courseService.save(courseMapper.toEntity(dto)).getId();
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/course-rates")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"note\": " + note + ", \"courseId\": " + id + ", \"userId\": " + expertId + "}")
+                        .with(TestDataUtil.mockUser(expertId, "ROLE_EXPERT")))
+                .andExpect(MockMvcResultMatchers.status().isCreated());
+        return id;
+    }
+
+    // Approved rule: rate first, then name/id, so equal rates page stably too. Unrated courses
+    // are not asserted here: Hibernate drops NULLS LAST on H2, whose test URL sorts nulls high.
+    @Test
+    void sortRateOrdersByRateThenNameAndIdAndKeepsTheRateFirstOverAnExplicitSort() throws Exception {
+        var expertId = saveExpert();
+        var tieBravo = saveRatedCourse("Tie Bravo", "TB001", 4.0, expertId);
+        var tieAlpha = saveRatedCourse("Tie Alpha", "TA001", 4.0, expertId);
+        var best = saveRatedCourse("Rated Zulu", "RZ001", 5.0, expertId);
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/courses?sortRate=most"))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].id").value(best))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[1].id").value(tieAlpha))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[2].id").value(tieBravo));
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/courses?sortRate=less"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].id").value(tieAlpha))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[1].id").value(tieBravo))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[2].id").value(best));
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/courses?sortRate=most&sort=name,desc"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].id").value(best))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[1].id").value(tieBravo))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[2].id").value(tieAlpha));
     }
 
     @Test
