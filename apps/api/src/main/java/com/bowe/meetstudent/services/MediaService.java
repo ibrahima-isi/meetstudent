@@ -8,6 +8,7 @@ import com.bowe.meetstudent.exceptions.ResourceNotFoundException;
 import com.bowe.meetstudent.repositories.MediaRepository;
 import com.bowe.meetstudent.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
@@ -16,6 +17,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -28,6 +31,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class MediaService {
@@ -317,17 +321,37 @@ public class MediaService {
         });
     }
 
+    /**
+     * Deletes the rows now and the stored files only after the transaction commits, so a rollback
+     * (or a failing later step) never leaves rows pointing at files that are already gone.
+     * File cleanup is best-effort: a failure is logged by media key and never fails the request.
+     */
     @Transactional
     public void deleteAllOwnedBy(Integer ownerId) {
         List<Media> owned = mediaRepository.findByOwnerId(ownerId);
-        for (Media media : owned) {
+        List<String> keys = owned.stream().map(Media::getStorageKey).toList();
+        mediaRepository.deleteAll(owned);
+        if (keys.isEmpty()) return;
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    deleteFilesQuietly(keys);
+                }
+            });
+        } else {
+            deleteFilesQuietly(keys);
+        }
+    }
+
+    private void deleteFilesQuietly(List<String> keys) {
+        for (String key : keys) {
             try {
-                storageService.delete(media.getStorageKey());
-            } catch (IOException e) {
-                // best-effort file cleanup; the row is still removed
+                storageService.delete(key);
+            } catch (IOException | RuntimeException e) {
+                log.warn("Could not delete stored file for media key {}: {}", key, e.toString());
             }
         }
-        mediaRepository.deleteAll(owned);
     }
 
 }

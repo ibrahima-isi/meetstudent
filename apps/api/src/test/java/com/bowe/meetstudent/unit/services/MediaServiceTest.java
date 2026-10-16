@@ -18,6 +18,8 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.io.IOException;
 import java.util.List;
@@ -286,5 +288,76 @@ class MediaServiceTest {
         mediaService.deleteById(null);
         verifyNoInteractions(mediaRepository);
         verify(storageService, never()).delete(any());
+    }
+
+    // --- deleteAllOwnedBy: files go only after commit, best-effort ---
+
+    private Media owned(String key) {
+        return Media.builder().storageKey(key).build();
+    }
+
+    @Test
+    void deleteAllOwnedByKeepsFilesUntilCommit() throws IOException {
+        var a = owned("private/a.pdf");
+        var b = owned("private/b.pdf");
+        when(mediaRepository.findByOwnerId(5)).thenReturn(List.of(a, b));
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            mediaService.deleteAllOwnedBy(5);
+
+            verify(mediaRepository).deleteAll(List.of(a, b));
+            verify(storageService, never()).delete(any());
+
+            TransactionSynchronizationManager.getSynchronizations().forEach(TransactionSynchronization::afterCommit);
+
+            verify(storageService).delete("private/a.pdf");
+            verify(storageService).delete("private/b.pdf");
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+    }
+
+    @Test
+    void deleteAllOwnedByNeverTouchesFilesOnRollback() throws IOException {
+        when(mediaRepository.findByOwnerId(5)).thenReturn(List.of(owned("private/a.pdf")));
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            mediaService.deleteAllOwnedBy(5);
+
+            TransactionSynchronizationManager.getSynchronizations()
+                    .forEach(s -> s.afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK));
+
+            verify(storageService, never()).delete(any());
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+    }
+
+    @Test
+    void deleteAllOwnedByDeletesImmediatelyWithoutATransaction() throws IOException {
+        when(mediaRepository.findByOwnerId(5)).thenReturn(List.of(owned("private/a.pdf")));
+
+        mediaService.deleteAllOwnedBy(5);
+
+        verify(storageService).delete("private/a.pdf");
+    }
+
+    @Test
+    void deleteAllOwnedByContinuesWhenTheStorageThrows() throws IOException {
+        when(mediaRepository.findByOwnerId(5)).thenReturn(
+                List.of(owned("private/a.pdf"), owned("private/b.pdf"), owned("private/c.pdf")));
+        doThrow(new IOException("disk")).when(storageService).delete("private/a.pdf");
+        doThrow(new IllegalStateException("boom")).when(storageService).delete("private/b.pdf");
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            mediaService.deleteAllOwnedBy(5);
+
+            assertDoesNotThrow(() -> TransactionSynchronizationManager.getSynchronizations()
+                    .forEach(TransactionSynchronization::afterCommit));
+
+            verify(storageService).delete("private/c.pdf");
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
     }
 }

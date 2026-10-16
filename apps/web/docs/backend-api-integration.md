@@ -370,3 +370,9 @@ shapes before coding against them.
 - Deletion revokes the account's sessions and action tokens and removes dependent
   ratings. Neither the web app nor the backoffice currently offers a user-account
   deletion journey or calls this endpoint.
+
+## HTTP status corrections (fix/api-remaining-status-codes)
+
+- Unknown `?sort=` property: 400 `ErrorResponse` (was 500). Unacceptable `Accept` header: 406 with a JSON `ErrorResponse` body.
+- `POST/PUT/PATCH /schools` with an unknown tag id: 400 `{"tags": "Unknown tag <id>"}` (was 500).
+- Account deletion removes the user's stored files only after the database commit, best-effort.

@@ -2,6 +2,7 @@ package com.bowe.meetstudent.unit.services;
 
 import com.bowe.meetstudent.entities.School;
 import com.bowe.meetstudent.repositories.SchoolRepository;
+import com.bowe.meetstudent.repositories.TagRepository;
 import com.bowe.meetstudent.services.MediaService;
 import com.bowe.meetstudent.services.SchoolService;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,6 +26,9 @@ class SchoolServiceTest {
 
     @Mock
     private MediaService mediaService;
+
+    @Mock
+    private TagRepository tagRepository;
 
     @InjectMocks
     private SchoolService schoolService;

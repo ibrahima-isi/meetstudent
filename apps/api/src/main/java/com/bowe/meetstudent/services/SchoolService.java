@@ -1,6 +1,8 @@
 package com.bowe.meetstudent.services;
 
 import com.bowe.meetstudent.entities.School;
+import com.bowe.meetstudent.exceptions.FieldValidationException;
+import com.bowe.meetstudent.repositories.TagRepository;
 import com.bowe.meetstudent.repositories.SchoolRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -17,9 +19,11 @@ public class SchoolService {
 
     private final SchoolRepository schoolRepository;
     private final MediaService mediaService;
+    private final TagRepository tagRepository;
 
 
     public School save(School school) {
+        requireExistingTags(school);
         return this.schoolRepository.save(school);
     }
 
@@ -82,6 +86,7 @@ public class SchoolService {
     @Transactional
     public School patch(Integer id, School updates) {
         return schoolRepository.findById(id).map(existing -> {
+            requireExistingTags(updates);
             // Check for media changes before updating
             if (updates.getLogoMediaId() != null
                     && !updates.getLogoMediaId().equals(existing.getLogoMediaId())) {
@@ -103,5 +108,20 @@ public class SchoolService {
             
             return schoolRepository.save(existing);
         }).orElseThrow(() -> new com.bowe.meetstudent.exceptions.ResourceNotFoundException("School not found"));
+    }
+
+    /** An unknown tag id in the body is a client error, not a foreign-key failure at flush time. */
+    private void requireExistingTags(School school) {
+        if (school.getTags() == null || school.getTags().isEmpty()) return;
+        var ids = new java.util.LinkedHashSet<Integer>();
+        for (var tag : school.getTags()) {
+            if (tag == null || tag.getId() == null) throw new FieldValidationException("tags", "Unknown tag");
+            ids.add(tag.getId());
+        }
+        var found = new java.util.HashSet<Integer>();
+        tagRepository.findAllById(ids).forEach(t -> found.add(t.getId()));
+        for (var id : ids) {
+            if (!found.contains(id)) throw new FieldValidationException("tags", "Unknown tag " + id);
+        }
     }
 }
