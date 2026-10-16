@@ -25,9 +25,30 @@ import { LocaleService } from '@services/locale.service';
           <ul role="list" class="mt-3 space-y-2 text-sm">
             <li>
               <a
-                class="text-muted-foreground hover:text-foreground"
+                class="inline-flex min-h-11 min-w-11 items-center rounded-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
                 [routerLink]="['/', lang(), 'schools']"
                 >{{ t('nav.schools') }}</a
+              >
+            </li>
+            <li>
+              <a
+                class="inline-flex min-h-11 min-w-11 items-center rounded-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                [routerLink]="['/', lang(), 'programs']"
+                >{{ t('pageTitle.programs') }}</a
+              >
+            </li>
+            <li>
+              <a
+                class="inline-flex min-h-11 min-w-11 items-center rounded-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                [routerLink]="['/', lang(), 'courses']"
+                >{{ t('pageTitle.courses') }}</a
+              >
+            </li>
+            <li>
+              <a
+                class="inline-flex min-h-11 min-w-11 items-center rounded-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                [routerLink]="['/', lang(), 'accreditations']"
+                >{{ t('pageTitle.accreditations') }}</a
               >
             </li>
           </ul>
