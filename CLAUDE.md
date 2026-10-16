@@ -21,11 +21,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Scope**
 - Do not touch code that already works without explicit approval. Do not modify any file that is not strictly required by the assigned task.
-- Ask permission before editing more than 3 files, and say which files and why.
+- Ask permission before editing more than 5 files, and say which files and why.
 
 **Implementation**
 - Use TDD: write the failing test first, watch it fail, then write the minimum code to pass it, then refactor.
 - Review the completed work before reporting it done (re-read the diff, run the relevant tests, state the actual results).
+- Use Subagents: Haikou for read only purpose and small simple coding tasks, sonnet for complex and planned coding tasks and standard review and opus for planning, brainstorming, heavy complexe taxes and code and security review
 
 **After promoting `dev` to `main`**
 - Bring the full stack up locally with Docker and run live tests against `main` before considering the promotion finished: `docker compose up --build`, then exercise the API and the front (see Commands below).
