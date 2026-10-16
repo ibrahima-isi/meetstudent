@@ -164,4 +164,4 @@ Les deux agents ont effectué une revue statique en lecture seule ; l'axe Spec a
 
 `docker compose -p ms111 -f /tmp/ms111-compose.yml down -v` effectué ; inventaires containers/volumes/networks filtrés par `com.docker.compose.project=ms111` vides. Ressources préexistantes préservées. Aucun SMTP réel, déploiement ni promotion main.
 
-Qualification et revues indépendantes terminées ; PR vers dev, trois CI sur head final, squash et clôture restent à effectuer par l'orchestrateur. Le suivi reste unchecked pour la livraison.
+Qualification et revues indépendantes terminées ; [PR #145](https://github.com/ibrahima-isi/meetstudent/pull/145) ouverte vers `dev`. Les trois CI doivent réussir sur le présent head documentaire final avant squash et clôture. Ces étapes restent unchecked pour la livraison ; le bilan définitif et le nettoyage seront conservés dans le suivi local après fusion.
