@@ -82,13 +82,25 @@ describe('ProgramService', () => {
   });
 
   it('searches by trimmed name with the path segment encoded', () => {
-    service.searchProgramsByName('  génie / civil  ', 1, 12).subscribe();
+    service.searchProgramsByName('  génie civil  ', 1, 12).subscribe();
     const req = httpMock.expectOne(r => r.url.includes('/programs/name/'));
-    expect(req.request.url.endsWith('/programs/name/g%C3%A9nie%20%2F%20civil')).toBeTrue();
+    expect(req.request.url.endsWith('/programs/name/g%C3%A9nie%20civil')).toBeTrue();
     expect(req.request.params.get('page')).toBe('1');
     expect(req.request.params.get('size')).toBe('12');
     req.flush(emptyPage);
   });
+
+  // The server refuses or mangles these in a path segment, so the request would only ever fail.
+  for (const term of ['génie / civil', 'a\\b', '100%', 'a;b', '.', '..']) {
+    it(`answers an empty page, without calling the API, for the unroutable term ${JSON.stringify(term)}`, () => {
+      let result: { content: unknown[]; last: boolean; totalElements: number } | undefined;
+      service.searchProgramsByName(term, 0, 12).subscribe(page => (result = page));
+      httpMock.expectNone(() => true);
+      expect(result?.content).toEqual([]);
+      expect(result?.last).toBeTrue();
+      expect(result?.totalElements).toBe(0);
+    });
+  }
 
   it('lists all programs when the search term is blank', () => {
     service.searchProgramsByName('   ', 0, 12).subscribe();

@@ -192,6 +192,16 @@ describe('ProgramsPageComponent', () => {
     expect(q('[data-testid="load-more"]')).toBeNull();
   });
 
+  it('keeps the search icon inside the input padding, clear of the typed text', async () => {
+    await open('/programs');
+    const icon = input().parentElement!.querySelector('svg')!.getBoundingClientRect();
+    const box = input().getBoundingClientRect();
+    const textStart = box.left + parseFloat(getComputedStyle(input()).paddingLeft);
+
+    expect(icon.left).toBeGreaterThanOrEqual(box.left);
+    expect(icon.right).toBeLessThanOrEqual(textStart);
+  });
+
   it('renders in French, the source language', async () => {
     await open('/programs', 'fr');
 
