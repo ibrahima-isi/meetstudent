@@ -45,6 +45,7 @@ export class ProfilePageComponent implements OnInit {
   private readonly router = inject(Router);
   protected readonly locale = inject(LocaleService);
   protected readonly wishlist = inject(WishlistService);
+  protected readonly canWishlist = this.wishlist.available;
 
   readonly ArrowLeft = ArrowLeft;
   readonly UserIcon = UserIcon;
@@ -118,7 +119,7 @@ export class ProfilePageComponent implements OnInit {
       this.resetForm();
     }
 
-    this.wishlist.load();
+    if (this.canWishlist()) this.wishlist.load();
   }
 
   /** The key for a count, by the plural rule of the language being read. */

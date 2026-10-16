@@ -1,6 +1,7 @@
 import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 import { timeout } from 'rxjs';
 import { School } from '@models/entities';
+import { ROLE_STUDENT } from '@models/roles';
 import { TokenService } from './token.service';
 import { UserService } from './user.service';
 
@@ -23,12 +24,13 @@ export class WishlistService {
    * a slow response can never refill (or roll back onto) someone else's list.
    */
   private generation = 0;
-  private owner: number | undefined = this.tokenService.user()?.id;
+  private owner: string | undefined = this.sessionOwner();
 
   private readonly state = signal<School[]>([]);
   private readonly pending = signal<ReadonlySet<number>>(new Set());
 
   readonly schools = this.state.asReadonly();
+  readonly available = computed(() => this.tokenService.user()?.role?.name === ROLE_STUDENT);
   readonly status = signal<'idle' | 'loading' | 'loaded' | 'error'>('idle');
   /** True after a failed add/remove (already rolled back) until dismissed. */
   readonly error = signal(false);
@@ -46,11 +48,16 @@ export class WishlistService {
 
   /** Resets the list the moment the session user differs from the one it belongs to. */
   private syncOwner(): void {
-    const id = this.tokenService.user()?.id;
-    if (id !== this.owner) {
-      this.owner = id;
+    const owner = this.sessionOwner();
+    if (owner !== this.owner) {
+      this.owner = owner;
       this.clear();
     }
+  }
+
+  private sessionOwner(): string | undefined {
+    const user = this.tokenService.user();
+    return user ? `${user.id}:${user.role?.name ?? ''}` : undefined;
   }
 
   has(schoolId: number | undefined): boolean {
@@ -77,6 +84,7 @@ export class WishlistService {
   /** Fetches the wishlist from the API; also the retry action of the error state. */
   load(): void {
     this.syncOwner();
+    if (!this.available()) return;
     const userId = this.tokenService.user()?.id;
     if (userId === undefined) {
       this.state.set([]);
@@ -91,6 +99,7 @@ export class WishlistService {
     this.status.set('loading');
     this.userService.getUser(userId).pipe(timeout(LOAD_TIMEOUT_MS)).subscribe({
       next: (user) => {
+        this.syncOwner();
         if (generation !== this.generation) {
           return;
         }
@@ -98,6 +107,7 @@ export class WishlistService {
         this.status.set('loaded');
       },
       error: () => {
+        this.syncOwner();
         if (generation === this.generation) {
           this.status.set('error');
         }
@@ -108,6 +118,7 @@ export class WishlistService {
   /** Adds or removes a school: shown at once, rolled back if the server refuses. */
   toggle(school: School): void {
     this.syncOwner();
+    if (!this.available()) return;
     const userId = this.tokenService.user()?.id;
     const schoolId = school.id;
     if (userId === undefined || schoolId === undefined || this.isPending(schoolId)) {
@@ -125,6 +136,7 @@ export class WishlistService {
       : this.userService.removeFromWishlist(userId, schoolId);
     request.subscribe({
       next: (user) => {
+        this.syncOwner();
         if (generation !== this.generation) {
           return;
         }
@@ -132,6 +144,7 @@ export class WishlistService {
         this.setPending(schoolId, false);
       },
       error: () => {
+        this.syncOwner();
         if (generation !== this.generation) {
           return;
         }

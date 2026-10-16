@@ -21,6 +21,7 @@ import { filter } from 'rxjs';
 import { AuthService } from '@services/auth.service';
 import { LocaleService } from '@services/locale.service';
 import { TokenService } from '@services/token.service';
+import { WishlistService } from '@services/wishlist.service';
 import { LanguageSwitcherComponent } from '../language-switcher/language-switcher.component';
 import { ThemeToggleComponent } from '../theme-toggle/theme-toggle.component';
 import { WishlistCartComponent } from '../wishlist-cart/wishlist-cart.component';
@@ -110,7 +111,9 @@ import { nextDockVisible, SCROLL_DELTA_PX } from './dock-visibility';
           </span>
           @if (signedIn()) {
             <a class="btn btn-primary wide-only" [routerLink]="['/', lang(), 'home']">{{ t('nav.mySpace') }}</a>
-            <app-wishlist-cart [compact]="true" (openChange)="onWishlistOpen($event)" />
+            @if (canWishlist()) {
+              <app-wishlist-cart [compact]="true" (openChange)="onWishlistOpen($event)" />
+            }
             <button
               type="button"
               class="avatar account-trigger"
@@ -185,6 +188,7 @@ export class DockNavbarComponent {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private readonly router = inject(Router);
   private readonly token = inject(TokenService);
+  private readonly wishlist = inject(WishlistService);
   private readonly locale = inject(LocaleService);
   /** Resolved on logout only: the anonymous bar (and its host specs) need no HTTP stack. The wishlist resets itself when the session user goes away. */
   private readonly injector = inject(Injector);
@@ -217,6 +221,7 @@ export class DockNavbarComponent {
     isPlatformBrowser(inject(PLATFORM_ID)) && !inject(DOCUMENT).querySelector('[ng-server-context]'),
   );
   protected readonly signedIn = computed(() => this.hydrated() && this.token.isAuthenticated());
+  protected readonly canWishlist = this.wishlist.available;
   protected readonly initials = computed(() => {
     const user = this.token.user();
     return `${user?.firstname?.[0] ?? ''}${user?.lastname?.[0] ?? ''}`.toUpperCase() || '?';

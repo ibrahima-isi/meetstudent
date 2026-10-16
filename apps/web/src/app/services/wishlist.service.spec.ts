@@ -1,22 +1,26 @@
 import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Subject, of, throwError } from 'rxjs';
 import { School, User } from '@models/entities';
 import { TokenService } from './token.service';
 import { UserService } from './user.service';
 import { WishlistService } from './wishlist.service';
+import { environment } from '../../environments/environment';
 
 describe('WishlistService', () => {
   const a: School = { id: 1, name: 'A', address: { location: '', city: '', country: '' } };
   const b: School = { id: 2, name: 'B', address: { location: '', city: '', country: '' } };
   let userService: jasmine.SpyObj<UserService>;
   let service: WishlistService;
-  let user: ReturnType<typeof signal<{ id: number } | null>>;
+  let user: ReturnType<typeof signal<{ id: number; role: { name: string } } | null>>;
 
   const userWith = (wishlist: School[]) => ({ id: 9, wishlist }) as User;
+  const session = (id: number, role = 'ROLE_STUDENT') => ({ id, role: { name: role } });
 
   beforeEach(() => {
-    user = signal<{ id: number } | null>({ id: 9 });
+    user = signal<{ id: number; role: { name: string } } | null>(session(9));
     userService = jasmine.createSpyObj('UserService', ['getUser', 'addToWishlist', 'removeFromWishlist']);
     userService.getUser.and.returnValue(of(userWith([a])));
     TestBed.configureTestingModule({
@@ -146,7 +150,7 @@ describe('WishlistService', () => {
   it('never shows the previous user\'s schools after a user switch', () => {
     service.load();
 
-    user.set({ id: 10 });
+    user.set(session(10));
     TestBed.tick();
 
     expect(service.schools()).toEqual([]);
@@ -171,7 +175,7 @@ describe('WishlistService', () => {
     userService.addToWishlist.and.returnValue(reply);
     service.toggle(b);
     service.clear();
-    user.set({ id: 10 });
+    user.set(session(10));
     userService.getUser.and.returnValue(of(userWith([a])));
     service.load();
 
@@ -196,7 +200,7 @@ describe('WishlistService', () => {
     expect(service.status()).toBe('error');
 
     service.load();
-    user.set({ id: 10 });
+    user.set(session(10));
     TestBed.tick();
     service.load();
 
@@ -207,7 +211,7 @@ describe('WishlistService', () => {
     const reply = new Subject<User>();
     userService.getUser.and.returnValue(reply);
 
-    user.set({ id: 10 });
+    user.set(session(10));
     service.load();
     reply.next(userWith([b]));
     TestBed.tick();
@@ -222,7 +226,7 @@ describe('WishlistService', () => {
     userService.getUser.and.returnValues(first, second);
     service.load();
 
-    user.set({ id: 10 });
+    user.set(session(10));
     service.load();
     first.next(userWith([a]));
     second.next(userWith([b]));
@@ -266,10 +270,72 @@ describe('WishlistService', () => {
     userService.getUser.and.returnValue(reply);
     service.load();
 
-    user.set({ id: 10 });
+    user.set(session(10));
     TestBed.tick();
     reply.next(userWith([a]));
 
     expect(service.schools()).toEqual([]);
+  });
+
+  it('never loads or changes a student wishlist for an expert session', () => {
+    user.set(session(9, 'ROLE_EXPERT'));
+    TestBed.tick();
+
+    service.load();
+    service.toggle(a);
+
+    expect(userService.getUser).not.toHaveBeenCalled();
+    expect(userService.addToWishlist).not.toHaveBeenCalled();
+    expect(userService.removeFromWishlist).not.toHaveBeenCalled();
+    expect(service.schools()).toEqual([]);
+  });
+
+  it('clears the wishlist when one account changes role and reloads after returning to student', () => {
+    service.load();
+    expect(service.schools()).toEqual([a]);
+
+    user.set(session(9, 'ROLE_EXPERT'));
+    TestBed.tick();
+    expect(service.schools()).toEqual([]);
+    service.load();
+    expect(userService.getUser).toHaveBeenCalledTimes(1);
+
+    user.set(session(9));
+    TestBed.tick();
+    userService.getUser.and.returnValue(of(userWith([b])));
+    service.load();
+    expect(userService.getUser).toHaveBeenCalledTimes(2);
+    expect(service.schools()).toEqual([b]);
+  });
+});
+
+describe('WishlistService HTTP boundary', () => {
+  const school: School = { id: 1, name: 'A', address: { location: '', city: '', country: '' } };
+
+  it('sends no user or wishlist request for an expert, then loads for a student', () => {
+    const user = signal<{ id: number; role: { name: string } } | null>({ id: 9, role: { name: 'ROLE_EXPERT' } });
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: TokenService, useValue: { user } },
+      ],
+    });
+    const service = TestBed.inject(WishlistService);
+    const http = TestBed.inject(HttpTestingController);
+
+    service.load();
+    service.toggle(school);
+    http.expectNone((request) => request.url.includes('/users/'));
+
+    user.set({ id: 9, role: { name: 'ROLE_STUDENT' } });
+    TestBed.tick();
+    service.load();
+    const request = http.expectOne(`${environment.apiUrl}/users/id/9`);
+    expect(request.request.method).toBe('GET');
+    request.flush({ id: 9, wishlist: [school] });
+    expect(service.schools().map((item) => item.id)).toEqual([1]);
+    http.verify();
   });
 });

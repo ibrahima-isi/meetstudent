@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideZonelessChangeDetection, signal } from '@angular/core';
+import { computed, provideZonelessChangeDetection, signal } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter, Router } from '@angular/router';
@@ -18,6 +18,7 @@ describe('ProfilePageComponent translations', () => {
   let user: ReturnType<typeof signal<Partial<User> | null>>;
   let saved: ReturnType<typeof signal<unknown[]>>;
   let toggle: jasmine.Spy;
+  let load: jasmine.Spy;
   let setUser: jasmine.Spy;
   let clear: jasmine.Spy;
 
@@ -44,6 +45,7 @@ describe('ProfilePageComponent translations', () => {
   beforeEach(() => {
     saved = signal<unknown[]>([]);
     toggle = jasmine.createSpy('toggle');
+    load = jasmine.createSpy('load');
     setUser = jasmine.createSpy('setUser');
     clear = jasmine.createSpy('clear').and.callFake(() => user.set(null));
     user = signal<Partial<User> | null>({ firstname: 'Awa', lastname: '', email: '', role: { name: 'ROLE_STUDENT' } });
@@ -57,7 +59,7 @@ describe('ProfilePageComponent translations', () => {
         provideRouter([]),
         provideTransloco(translocoOptions),
         { provide: TokenService, useValue: { user, setUser, clear } },
-        { provide: WishlistService, useValue: { schools: saved, load: () => {}, toggle, isPending: () => false } },
+        { provide: WishlistService, useValue: { available: computed(() => user()?.role?.name === 'ROLE_STUDENT'), schools: saved, load, toggle, isPending: () => false } },
       ],
     });
   });
@@ -116,6 +118,26 @@ describe('ProfilePageComponent translations', () => {
     expect(fixture.nativeElement.querySelector('app-user-documents')).toBeNull();
     expect(text()).toContain('Specialty');
     expect(text()).not.toContain('BAC type');
+  });
+
+  it('does not load or show a student wishlist to an expert', async () => {
+    user.set({ firstname: 'Awa', lastname: '', email: '', role: { name: 'ROLE_EXPERT' } });
+    saved.set([{ id: 3, name: 'Old student school' }]);
+    await render('en');
+
+    expect(load).not.toHaveBeenCalled();
+    expect(text()).not.toContain('My wishlist');
+    expect(fixture.nativeElement.querySelector('[data-testid="wishlist-remove"]')).toBeNull();
+  });
+
+  it('hides the wishlist when the current session changes from student to expert', async () => {
+    await render('en');
+    expect(text()).toContain('My wishlist');
+
+    user.set({ firstname: 'Awa', lastname: '', email: '', role: { name: 'ROLE_EXPERT' } });
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(text()).not.toContain('My wishlist');
   });
 
   it('lists the wishlisted schools from the API and removes one through the service', async () => {

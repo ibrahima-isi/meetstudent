@@ -50,6 +50,7 @@ export class SchoolDetailPageComponent {
   protected readonly skeletons = [0, 1];
   readonly isAuthenticated = computed(() => this.tokenService.isAuthenticated());
   private readonly roleName = computed(() => this.tokenService.user()?.role?.name);
+  readonly canWishlist = this.wishlist.available;
   /** Mirrors the API: students and experts rate schools. */
   readonly canRateSchool = computed(() => this.roleName() === ROLE_STUDENT || this.roleName() === ROLE_EXPERT);
   /** Mirrors the API: only experts rate programmes and courses. */
@@ -76,7 +77,7 @@ export class SchoolDetailPageComponent {
 
   constructor() {
     // The wishlist lives on the server: fetch it so the heart reflects it after a reload.
-    if (this.isAuthenticated()) {
+    if (this.canWishlist()) {
       this.wishlist.load();
     }
 
@@ -212,7 +213,7 @@ export class SchoolDetailPageComponent {
       this.showLoginPrompt.set(true);
       return;
     }
-    this.wishlist.toggle(school);
+    if (this.canWishlist()) this.wishlist.toggle(school);
   }
 
   handleLoginClick() {

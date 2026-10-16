@@ -36,6 +36,7 @@ export class HomePageComponent {
    * Concurrent loads are collapsed by the service.
    */
   protected readonly wishlist = inject(WishlistService);
+  protected readonly canWishlist = this.wishlist.available;
 
   readonly Search = Search;
   readonly MapPin = MapPin;
@@ -79,7 +80,7 @@ export class HomePageComponent {
   );
 
   constructor() {
-    if (this.tokenService.isAuthenticated()) {
+    if (this.canWishlist()) {
       this.wishlist.load();
     }
 

@@ -118,4 +118,10 @@ Contrats HTTP 400/404/409 des tags, accréditations, programmes/cours et rôles,
 
 - [x] [#108](https://github.com/ibrahima-isi/meetstudent/issues/108) : implémentation et validation terminées dans `feat/teacher-specialty-108` depuis le squash #107 `745ada7`.
 
-[Preuves](evidence/ticket-108.md) : tests HTTP et formulaire rouges puis verts pour spécialité absente/blanche, 100/101 caractères, affichage local/API et changement enseignant → étudiant. API 564 tests, web 948 tests/types/build SSR, backoffice 300 tests/types/build verts ; PostgreSQL V1–V23 et cinq HTTP verts. Revues Sol Standards/Spec sans écart. [CI API/web/backoffice verte](https://github.com/ibrahima-isi/meetstudent/actions/runs/38840438774) sur `cce4c21` ; le présent closeout documentaire doit passer les trois CI sur son head final avant squash de la [PR #139](https://github.com/ibrahima-isi/meetstudent/pull/139). #109 suit après livraison de #108.
+[Preuves](evidence/ticket-108.md) : tests HTTP et formulaire rouges puis verts pour spécialité absente/blanche, 100/101 caractères, affichage local/API et changement enseignant → étudiant. API 564 tests, web 948 tests/types/build SSR, backoffice 300 tests/types/build verts ; PostgreSQL V1–V23 et cinq HTTP verts. Revues Sol Standards/Spec sans écart. [PR #139](https://github.com/ibrahima-isi/meetstudent/pull/139) squashée dans dev à `502f489` après [CI finale API/web/backoffice verte](https://github.com/ibrahima-isi/meetstudent/actions/runs/38842602920) sur `6a5c1fc` ; issue #108 fermée, contenu du squash vérifié, worktree archivé. #109 suit.
+
+### #109 — favoris étudiants masqués aux enseignants (2026-10-16)
+
+- [x] [#109](https://github.com/ibrahima-isi/meetstudent/issues/109) : implémentation et validation terminées dans `fix/hide-teacher-wishlist-109` depuis le squash #108 `502f489`.
+
+[Preuves](evidence/ticket-109.md) : huit tests rouges puis verts sur service, frontière réseau, accueil, fiche établissement, profil et navigation. Web 957 tests/types/build SSR verts ; revues Sol Standards/Spec sans écart. [CI API/web/backoffice verte](https://github.com/ibrahima-isi/meetstudent/actions/runs/38890633643) sur `71515c8` ; le présent closeout documentaire doit passer les trois CI sur son head final avant squash de la [PR #140](https://github.com/ibrahima-isi/meetstudent/pull/140). Arrêt après #109, avant #110.
