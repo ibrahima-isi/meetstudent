@@ -155,6 +155,20 @@ class UserControllerIntegrationTests {
     }
 
     @Test
+    void testThatProfileQualificationLengthReturnsFieldError() throws Exception {
+        UserDTO userDTO = TestDataUtil.createUserDto();
+        userDTO.setRole(ensureRole("ROLE_STUDENT"));
+        UserEntity user = userService.saveUser(userMapper.toEntity(userDTO), passwordEncoder);
+
+        mockMvc.perform(MockMvcRequestBuilders.patch("/api/v1/users/" + user.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"qualification\":\"" + "x".repeat(101) + "\"}")
+                        .with(TestDataUtil.mockUser(user.getId(), "ROLE_STUDENT")))
+                .andExpect(MockMvcResultMatchers.status().isBadRequest())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.qualification").isNotEmpty());
+    }
+
+    @Test
     void testThatPublicRegistrationDefaultsToStudentWhenRoleIsAbsent() throws Exception {
         Role studentRole = ensureRole("ROLE_STUDENT");
         mockMvc.perform(
@@ -176,9 +190,48 @@ class UserControllerIntegrationTests {
         ensureRole("ROLE_EXPERT");
         mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/users")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"firstname\":\"Awa\",\"lastname\":\"Diop\",\"email\":\"awa107@example.com\",\"password\":\"password107\",\"confirmedPassword\":\"password107\",\"role\":\"ROLE_EXPERT\",\"lang\":\"en\"}"))
+                        .content("{\"firstname\":\"Awa\",\"lastname\":\"Diop\",\"email\":\"awa107@example.com\",\"password\":\"password107\",\"confirmedPassword\":\"password107\",\"role\":\"ROLE_EXPERT\",\"qualification\":\"Mathématiques\",\"lang\":\"en\"}"))
                 .andExpect(MockMvcResultMatchers.status().isCreated())
-                .andExpect(MockMvcResultMatchers.jsonPath("$.role.name").value("ROLE_EXPERT"));
+                .andExpect(MockMvcResultMatchers.jsonPath("$.role.name").value("ROLE_EXPERT"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.qualification").value("Mathématiques"));
+    }
+
+    @Test
+    void testTeacherRegistrationRequiresQualification() throws Exception {
+        ensureRole("ROLE_EXPERT");
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"firstname\":\"Awa\",\"lastname\":\"Diop\",\"email\":\"teacher108@example.com\",\"password\":\"password108\",\"confirmedPassword\":\"password108\",\"role\":\"ROLE_EXPERT\"}"))
+                .andExpect(MockMvcResultMatchers.status().isBadRequest())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.qualification").isNotEmpty());
+        for (String qualification : new String[] {"", "   "}) {
+            String body = "{\"firstname\":\"Awa\",\"lastname\":\"Diop\",\"email\":\"teacher108@example.com\",\"password\":\"password108\",\"confirmedPassword\":\"password108\",\"role\":\"ROLE_EXPERT\",\"qualification\":\"" + qualification + "\"}";
+            mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/users")
+                            .contentType(MediaType.APPLICATION_JSON).content(body))
+                    .andExpect(MockMvcResultMatchers.status().isBadRequest())
+                    .andExpect(MockMvcResultMatchers.jsonPath("$.qualification").isNotEmpty());
+        }
+        org.junit.jupiter.api.Assertions.assertTrue(userService.getUserByEmail("teacher108@example.com").isEmpty());
+    }
+
+    @Test
+    void testQualificationIsLimitedToOneHundredCharacters() throws Exception {
+        ensureRole("ROLE_EXPERT");
+        ensureRole("ROLE_STUDENT");
+        String prefix = "{\"firstname\":\"Awa\",\"lastname\":\"Diop\",\"email\":\"teacher108@example.com\",\"password\":\"password108\",\"confirmedPassword\":\"password108\",\"role\":\"ROLE_EXPERT\",\"qualification\":\"";
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/users")
+                        .contentType(MediaType.APPLICATION_JSON).content(prefix + "x".repeat(101) + "\"}"))
+                .andExpect(MockMvcResultMatchers.status().isBadRequest())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.qualification").isNotEmpty());
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/users")
+                        .contentType(MediaType.APPLICATION_JSON).content(prefix + "x".repeat(100) + "\"}"))
+                .andExpect(MockMvcResultMatchers.status().isCreated())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.qualification").value("x".repeat(100)));
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"firstname\":\"Awa\",\"lastname\":\"Diop\",\"email\":\"student108@example.com\",\"password\":\"password108\",\"confirmedPassword\":\"password108\",\"role\":\"ROLE_STUDENT\",\"qualification\":\"" + "x".repeat(101) + "\"}"))
+                .andExpect(MockMvcResultMatchers.status().isBadRequest())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.qualification").isNotEmpty());
     }
 
     @Test

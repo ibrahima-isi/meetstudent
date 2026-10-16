@@ -188,6 +188,8 @@
       },
       "specialty": "Spécialité",
       "specialtyPlaceholder": "Commencez à saisir votre spécialité…",
+      "specialtyRequired": "Indiquez votre spécialité.",
+      "specialtyTooLong": "La spécialité ne doit pas dépasser 100 caractères.",
       "town": "Ville",
       "townPlaceholder": "Dakar, Saint-Louis, Thiès…",
       "next": "Étape suivante",

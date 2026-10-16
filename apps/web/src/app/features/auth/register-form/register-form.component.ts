@@ -29,6 +29,7 @@ const API_FIELDS: Record<string, { step: 1 | 2; control: string }> = {
   password: { step: 2, control: 'password' },
   confirmedPassword: { step: 2, control: 'confirmPassword' },
   role: { step: 1, control: 'role' },
+  qualification: { step: 1, control: 'specialty' },
 };
 
 @Component({
@@ -95,6 +96,14 @@ export class RegisterFormComponent {
     return this.serverErrors()[field] ?? null;
   }
 
+  protected specialtyErrorKey(): string | null {
+    const specialty = this.step1Form.get('specialty');
+    if (!specialty?.touched) return null;
+    if (specialty.hasError('maxlength')) return 'auth.register.specialtyTooLong';
+    if (specialty.hasError('required') || specialty.hasError('pattern')) return 'auth.register.specialtyRequired';
+    return null;
+  }
+
   /**
    * Keeps the API's per-field messages in a signal rather than on the controls:
    * a control's errors are recomputed when its input is re-created (going back
@@ -140,13 +149,15 @@ export class RegisterFormComponent {
 
   setUserType(type: 'student' | 'teacher') {
     this.userType.set(type);
-    this.serverErrors.update(({ role: _dropped, ...rest }) => rest);
+    this.serverErrors.update(({ role: _role, qualification: _qualification, ...rest }) => rest);
     if (type === 'student') {
       this.step1Form.get('bacType')?.setValidators(Validators.required);
       this.step1Form.get('collegeLevel')?.setValidators(Validators.required);
       this.step1Form.get('specialty')?.clearValidators();
     } else {
-      this.step1Form.get('specialty')?.setValidators(Validators.required);
+      this.step1Form.get('specialty')?.setValidators([
+        Validators.required, Validators.pattern(/\S/), Validators.maxLength(100)
+      ]);
       this.step1Form.get('bacType')?.clearValidators();
       this.step1Form.get('collegeLevel')?.clearValidators();
     }
@@ -226,8 +237,8 @@ export class RegisterFormComponent {
 
     const email = this.step1Form.value.email;
     // Only the two public registration roles are sent; the API enforces the allowlist.
-    // The step1 fields bacType / collegeLevel / specialty / town have no backend
-    // counterpart and are dropped rather than silently posted and ignored.
+    // The teacher specialty maps to qualification; other step-one profile fields
+    // have no registration API counterpart.
     const userData: RegisterPayload = {
       firstname: this.step1Form.value.firstname,
       lastname: this.step1Form.value.lastname,
@@ -236,6 +247,7 @@ export class RegisterFormComponent {
       confirmedPassword: confirmPassword,
       role: this.userType() === 'teacher' ? 'ROLE_EXPERT'
         : this.userType() === 'student' ? 'ROLE_STUDENT' : undefined,
+      ...(this.userType() === 'teacher' ? { qualification: this.step1Form.value.specialty?.trim() } : {}),
       lang: this.locale.active()
     };
 

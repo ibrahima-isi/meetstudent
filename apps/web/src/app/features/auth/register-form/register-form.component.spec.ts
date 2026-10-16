@@ -175,6 +175,18 @@ describe('RegisterFormComponent registration payload', () => {
     req.flush({});
   });
 
+  it('sends the trimmed teacher specialty as qualification', () => {
+    fillValidForm();
+    component.setUserType('teacher');
+    component.step1Form.patchValue({ specialty: '  Mathématiques  ' });
+    component.handleSubmit();
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/users`);
+    expect(req.request.body.role).toBe('ROLE_EXPERT');
+    expect(req.request.body.qualification).toBe('Mathématiques');
+    req.flush({});
+  });
+
   it('sends ROLE_STUDENT when the visitor chooses student', () => {
     fillValidForm();
     component.setUserType('student');
@@ -182,6 +194,19 @@ describe('RegisterFormComponent registration payload', () => {
 
     const req = httpMock.expectOne(`${environment.apiUrl}/users`);
     expect(req.request.body.role).toBe('ROLE_STUDENT');
+    req.flush({});
+  });
+
+  it('does not send a stale teacher specialty after switching to student', () => {
+    fillValidForm();
+    component.setUserType('teacher');
+    component.step1Form.patchValue({ specialty: 'Mathématiques' });
+    component.setUserType('student');
+    component.handleSubmit();
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/users`);
+    expect(req.request.body.role).toBe('ROLE_STUDENT');
+    expect(req.request.body.qualification).toBeUndefined();
     req.flush({});
   });
 
@@ -323,6 +348,60 @@ describe('RegisterFormComponent translations', () => {
     fixture.componentInstance.setUserType('teacher');
     await settle();
     expect(fixture.nativeElement.querySelector('[data-testid="error-role"]')).toBeNull();
+  });
+
+  it('shows a missing teacher specialty beside the field in French', async () => {
+    await render('fr');
+    const component = fixture.componentInstance;
+    component.step1Form.patchValue({ firstname: 'Awa', lastname: 'Diop', email: 'awa@example.com', town: 'Dakar' });
+    component.setUserType('teacher');
+    component.handleNextStep();
+    await settle();
+
+    expect(component.step()).toBe(1);
+    expect((fixture.nativeElement.querySelector('[data-testid="error-specialty"]') as HTMLElement).textContent)
+      .toContain('spécialité');
+  });
+
+  it('limits teacher specialty to 100 characters and lets a student proceed without it', async () => {
+    await render('en');
+    const component = fixture.componentInstance;
+    component.step1Form.patchValue({ firstname: 'Awa', lastname: 'Diop', email: 'awa@example.com', town: 'Dakar' });
+    component.setUserType('teacher');
+    component.step1Form.patchValue({ specialty: 'x'.repeat(101) });
+    component.handleNextStep();
+    await settle();
+    expect(component.step()).toBe(1);
+    expect((fixture.nativeElement.querySelector('[data-testid="error-specialty"]') as HTMLElement).textContent)
+      .toContain('100');
+
+    component.setUserType('student');
+    component.step1Form.patchValue({ specialty: '', bacType: 'bac-general', collegeLevel: 'l1' });
+    component.handleNextStep();
+    await settle();
+    expect(component.step()).toBe(2);
+  });
+
+  it('shows the API qualification error under specialty and clears it on edit', async () => {
+    await render('en');
+    const component = fixture.componentInstance;
+    component.setUserType('teacher');
+    component.step1Form.patchValue({ firstname: 'Awa', lastname: 'Diop', email: 'awa@example.com', town: 'Dakar', specialty: 'Maths' });
+    component.step.set(2);
+    component.step2Form.setValue({ password: 'sup3rsecret', confirmPassword: 'sup3rsecret', terms: true });
+    component.handleSubmit();
+    httpMock.expectOne(`${environment.apiUrl}/users`)
+      .flush({ qualification: 'Specialty is invalid' }, { status: 400, statusText: 'Bad Request' });
+    await settle();
+
+    expect(component.step()).toBe(1);
+    const field = fixture.nativeElement.querySelector('#specialty') as HTMLInputElement;
+    expect(field.getAttribute('aria-describedby')).toBe('specialty-error');
+    expect((fixture.nativeElement.querySelector('[data-testid="error-specialty"]') as HTMLElement).textContent)
+      .toContain('Specialty is invalid');
+    component.step1Form.get('specialty')?.setValue('Physics');
+    await settle();
+    expect(fixture.nativeElement.querySelector('[data-testid="error-specialty"]')).toBeNull();
   });
 
   it('clears a field error as soon as the visitor edits that field', async () => {
