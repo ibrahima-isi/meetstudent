@@ -1,6 +1,10 @@
 import { provideZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { routes } from '../../../../app.routes';
 import { provideTransloco } from '@jsverse/transloco';
 import { firstValueFrom } from 'rxjs';
 import { translocoOptions } from '@i18n/transloco.config';
@@ -62,6 +66,43 @@ describe('SiteFooterComponent', () => {
     expect(hrefs()).toContain('/fr/schools');
     expect(hrefs()).toContain('/fr/login');
     expect(hrefs()).toContain('/fr/register');
+  });
+
+  it('offers all four translated product destinations in French', async () => {
+    await render('fr');
+    const links = Array.from(root().querySelectorAll<HTMLAnchorElement>('nav[aria-label="Produit"] a'));
+    expect(links.map((a) => [a.textContent?.trim(), a.getAttribute('href')])).toEqual([
+      ['Établissements', '/fr/schools'],
+      ['Formations', '/fr/programs'],
+      ['Cours', '/fr/courses'],
+      ['Accréditations', '/fr/accreditations'],
+    ]);
+  });
+
+  it('updates all product labels and destinations when the visitor switches to English', async () => {
+    await render('fr');
+    await firstValueFrom(TestBed.inject(LocaleService).use('en'));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const links = Array.from(root().querySelectorAll<HTMLAnchorElement>('nav[aria-label="Product"] a'));
+    expect(links.map((a) => [a.textContent?.trim(), a.getAttribute('href')])).toEqual([
+      ['Schools', '/en/schools'],
+      ['Programmes', '/en/programs'],
+      ['Courses', '/en/courses'],
+      ['Accreditations', '/en/accreditations'],
+    ]);
+  });
+
+  it('keeps every product link focusable with a touch target at least 44 pixels in each dimension', async () => {
+    await render('fr');
+    for (const link of root().querySelectorAll<HTMLAnchorElement>('nav[aria-label="Produit"] a')) {
+      link.focus();
+      expect(document.activeElement).withContext(link.outerHTML).toBe(link);
+      expect(link.tabIndex).toBe(0);
+      expect(link.getBoundingClientRect().height).withContext(link.outerHTML).toBeGreaterThanOrEqual(44);
+      expect(link.getBoundingClientRect().width).withContext(link.outerHTML).toBeGreaterThanOrEqual(44);
+    }
   });
 
   it('links in English after switching language', async () => {
@@ -140,4 +181,66 @@ describe('SiteFooterComponent', () => {
     expect(root().querySelector('footer')).not.toBeNull();
     expect(root().querySelectorAll('h1').length).toBe(0);
   });
+});
+
+
+describe('Footer product journeys through the public routes', () => {
+  let harness: RouterTestingHarness;
+  let http: HttpTestingController;
+  const root = () => harness.fixture.nativeElement as HTMLElement;
+  const settle = async () => {
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+  };
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(), provideRouter(routes),
+        provideHttpClient(), provideHttpClientTesting(), provideTransloco(translocoOptions),
+      ],
+    });
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => http.verify());
+
+  for (const lang of ['fr', 'en'] as const) {
+    it(`opens each public catalogue from the ${lang} footer and requests real catalogue data`, async () => {
+      harness = await RouterTestingHarness.create(`/${lang}/about`);
+      http.expectOne('/api/v1/site-settings').flush({
+        contactEmail: 'contact@example.test', aboutFr: 'À propos', aboutEn: 'About',
+      });
+      await settle();
+      expect(root().querySelectorAll('footer').length).toBe(1);
+
+      for (const resource of ['schools', 'programs', 'courses', 'accreditations']) {
+        const link = root().querySelector<HTMLAnchorElement>(`footer a[href="/${lang}/${resource}"]`);
+        expect(link).withContext(resource).not.toBeNull();
+        if (!link) continue;
+        link.click();
+        await settle();
+        expect(TestBed.inject(Router).url).toBe(`/${lang}/${resource}`);
+        expect(root().querySelector(`app-${resource}-page`)).withContext(resource).not.toBeNull();
+        const request = http.expectOne((r) => r.url === `/api/v1/${resource}`);
+        expect(request.request.method).toBe('GET');
+        request.flush({ content: [], last: true, totalElements: 0 });
+        await settle();
+        expect(root().querySelector('app-error-state')).toBeNull();
+        expect(root().querySelectorAll('footer').length).toBe(1);
+        expect(root().querySelector(`footer a.btn-secondary[href="/${lang}/login"]`)).not.toBeNull();
+        expect(root().querySelector(`footer a.btn-primary[href="/${lang}/register"]`)).not.toBeNull();
+      }
+
+      await harness.navigateByUrl(`/${lang}/contact`);
+      http.expectOne('/api/v1/site-settings').flush({
+        contactEmail: 'contact@example.test', aboutFr: 'À propos', aboutEn: 'About',
+      });
+      await settle();
+      expect(root().querySelectorAll('footer').length).toBe(1);
+      expect(root().querySelectorAll('footer nav:first-of-type a').length).toBe(4);
+    });
+  }
 });
