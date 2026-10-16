@@ -57,10 +57,24 @@ public class UserService {
         if (!DEFAULT_REGISTRATION_ROLE.equals(roleName) && !"ROLE_EXPERT".equals(roleName)) {
             throw new FieldValidationException("role", "Choisissez un rôle étudiant ou enseignant");
         }
+        String qualification = checkedQualification(userEntity.getQualification());
+        if ("ROLE_EXPERT".equals(roleName) && (qualification == null || qualification.isBlank())) {
+            throw new FieldValidationException("qualification", "Indiquez votre spécialité");
+        }
+        userEntity.setQualification(qualification);
         Role role = roleRepository.findByName(roleName)
                 .orElseThrow(() -> new ResourceNotFoundException("Registration role not found"));
         userEntity.setRole(role);
         return saveUser(userEntity, passwordEncoder);
+    }
+
+    private String checkedQualification(String value) {
+        if (value == null) return null;
+        String qualification = value.trim();
+        if (qualification.length() > 100) {
+            throw new FieldValidationException("qualification", "La spécialité ne doit pas dépasser 100 caractères");
+        }
+        return qualification;
     }
 
     public List<UserEntity> findAllToList() {
@@ -154,7 +168,7 @@ public class UserService {
             if (updates.getFirstname() != null) existing.setFirstname(updates.getFirstname());
             if (updates.getLastname() != null) existing.setLastname(updates.getLastname());
             if (updates.getBirthday() != null) existing.setBirthday(updates.getBirthday());
-            if (updates.getQualification() != null) existing.setQualification(updates.getQualification());
+            if (updates.getQualification() != null) existing.setQualification(checkedQualification(updates.getQualification()));
             if (allowRoleUpdate && updates.getRole() != null) existing.setRole(updates.getRole());
 
             if (updates.getPassword() != null && !updates.getPassword().isEmpty()) {
