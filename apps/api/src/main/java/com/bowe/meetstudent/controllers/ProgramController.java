@@ -16,6 +16,7 @@ import org.modelmapper.ModelMapper;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -175,7 +176,7 @@ public class ProgramController {
     @ApiResponse(responseCode = "200", description = "Search results retrieved")
     public Page<ProgramDTO> getProgramByName(
             @Parameter(description = "Name to search for") @PathVariable String name,
-            @ParameterObject Pageable pageable) {
+            @ParameterObject @PageableDefault(sort = {"name", "id"}) Pageable pageable) {
         return programService.findByName(name, pageable).map(program -> {
             ProgramDTO dto = programMapper.toDTO(program);
             dto.setAverageRate(programRateService.getAverageNoteByProgramId(program.getId()));
