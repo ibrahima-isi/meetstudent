@@ -12,6 +12,8 @@ import org.springframework.data.domain.Sort;
 
 @Repository
 public interface ProgramRateRepository extends JpaRepository<ProgramRate, Integer> {
+    java.util.Optional<ProgramRate> findByUserEntityIdAndProgramId(Integer userId, Integer programId);
+
     @org.springframework.data.jpa.repository.Modifying(flushAutomatically = true)
     @Query("delete from ProgramRate r where r.userEntity.id = :userId")
     int deleteAllByUserId(@Param("userId") Integer userId);
