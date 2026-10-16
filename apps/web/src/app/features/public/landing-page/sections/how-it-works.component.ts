@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { LocaleService } from '@services/locale.service';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { BadgeCheck, LucideAngularModule, Scale, Search } from 'lucide-angular';
@@ -8,7 +8,7 @@ import { RevealDirective } from '@shared/directives/reveal.directive';
 
 @Component({
   selector: 'app-how-it-works',
-  imports: [ReactiveFormsModule, TranslocoDirective, LucideAngularModule, RevealDirective],
+  imports: [ReactiveFormsModule, TranslocoDirective, LucideAngularModule, RevealDirective, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' },
   styles: [
@@ -85,7 +85,10 @@ import { RevealDirective } from '@shared/directives/reveal.directive';
           </div>
         </li>
         <li appReveal>
-          <div class="step-card rounded-2xl border border-border bg-card p-6">
+          <a
+            class="step-card block rounded-2xl border border-border bg-card p-6 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+            [routerLink]="['/', lang(), 'schools']"
+          >
             <div class="flex items-center justify-between">
               <span
                 class="chip flex h-12 w-12 items-center justify-center rounded-xl bg-brand-soft text-brand-soft-foreground"
@@ -102,7 +105,7 @@ import { RevealDirective } from '@shared/directives/reveal.directive';
               {{ t('lp.steps.compare.title') }}
             </h3>
             <p class="mt-2 text-muted-foreground">{{ t('lp.steps.compare.text') }}</p>
-          </div>
+          </a>
         </li>
         <li appReveal>
           <div class="step-card rounded-2xl border border-border bg-card p-6">
@@ -131,6 +134,7 @@ import { RevealDirective } from '@shared/directives/reveal.directive';
 export class HowItWorksComponent {
   private readonly router = inject(Router);
   private readonly locale = inject(LocaleService);
+  protected readonly lang = this.locale.active;
   protected readonly resource = new FormControl<'schools' | 'programs' | 'courses'>('schools', { nonNullable: true });
   protected readonly query = new FormControl('', { nonNullable: true });
 

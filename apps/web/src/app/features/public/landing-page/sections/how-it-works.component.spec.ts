@@ -47,6 +47,18 @@ describe('HowItWorksComponent', () => {
     expect(navigate).toHaveBeenCalledWith(['/', 'fr', 'schools'], { queryParams: { q: 'Dakar' } });
   });
 
+  it('links the Comparez step to the catalogue where the selection starts, in both languages', async () => {
+    for (const lang of ['fr', 'en'] as const) {
+      await render(lang);
+      const link = steps()[1].querySelector('a') as HTMLAnchorElement | null;
+      expect(link).withContext(lang).not.toBeNull();
+      expect(link!.getAttribute('href')).withContext(lang).toBe(`/${lang}/schools`);
+      expect(link!.querySelector('h3')?.textContent?.trim()).withContext(lang).toBe(lang === 'fr' ? 'Comparez' : 'Compare');
+      expect(link!.className).withContext(lang).toContain('focus-visible:');
+      fixture.destroy();
+    }
+  });
+
   it('is an anchor target; the global scroll-padding clears the navbar', async () => {
     await render('fr');
     const section = root().querySelector('section#how-it-works');
