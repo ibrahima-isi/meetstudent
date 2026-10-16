@@ -85,6 +85,15 @@ export const routes: Routes = [
               ),
           },
           {
+            path: 'courses',
+            pathMatch: 'full',
+            title: 'pageTitle.courses',
+            loadComponent: () =>
+              import('./features/public/courses-page/courses-page.component').then(
+                (m) => m.CoursesPageComponent,
+              ),
+          },
+          {
             path: 'about',
             title: 'pageTitle.about',
             loadComponent: () =>

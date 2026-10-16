@@ -4,12 +4,16 @@ import com.bowe.meetstudent.TestDataUtil;
 import com.bowe.meetstudent.dto.CourseDTO;
 import com.bowe.meetstudent.entities.Accreditation;
 import com.bowe.meetstudent.entities.Program;
+import com.bowe.meetstudent.entities.Role;
+import com.bowe.meetstudent.entities.UserEntity;
 import com.bowe.meetstudent.mappers.implementations.AccreditationMapper;
 import com.bowe.meetstudent.mappers.implementations.CourseMapper;
 import com.bowe.meetstudent.services.AccreditationService;
 import com.bowe.meetstudent.services.CourseService;
 import com.bowe.meetstudent.services.ProgramAccreditationService;
 import com.bowe.meetstudent.services.ProgramService;
+import com.bowe.meetstudent.services.RoleService;
+import com.bowe.meetstudent.services.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -45,6 +50,15 @@ class CourseControllerIntegrationTests {
 
     @Autowired
     private CourseMapper courseMapper;
+
+    @Autowired
+    private UserService userService;
+
+    @Autowired
+    private RoleService roleService;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @Autowired
     private AccreditationService accreditationService;
@@ -337,16 +351,19 @@ class CourseControllerIntegrationTests {
         c2.setCode("AC001");
         com.bowe.meetstudent.entities.Course course2 = courseService.save(courseMapper.toEntity(c2));
         
-        // Rate course1 with 5.0, course2 with 3.0
+        // Rate course1 with 5.0, course2 with 3.0 (only experts rate courses, and the user must exist)
+        var expertId = saveExpert();
         mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/course-rates")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"note\": 5.0, \"courseId\": " + course1.getId() + ", \"userId\": 1}")
-                .with(TestDataUtil.mockUser("ROLE_STUDENT")));
+                .content("{\"note\": 5.0, \"courseId\": " + course1.getId() + ", \"userId\": " + expertId + "}")
+                .with(TestDataUtil.mockUser(expertId, "ROLE_EXPERT")))
+                .andExpect(MockMvcResultMatchers.status().isCreated());
         
         mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/course-rates")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"note\": 3.0, \"courseId\": " + course2.getId() + ", \"userId\": 1}")
-                .with(TestDataUtil.mockUser("ROLE_STUDENT")));
+                .content("{\"note\": 3.0, \"courseId\": " + course2.getId() + ", \"userId\": " + expertId + "}")
+                .with(TestDataUtil.mockUser(expertId, "ROLE_EXPERT")))
+                .andExpect(MockMvcResultMatchers.status().isCreated());
 
         mockMvc.perform(
                 MockMvcRequestBuilders.get("/api/v1/courses?sortRate=most")
@@ -358,5 +375,144 @@ class CourseControllerIntegrationTests {
         ).andExpect(
                 MockMvcResultMatchers.jsonPath("$.content[1].id").value(course2.getId())
         );
+    }
+
+    private void saveCourse(String name, String code) {
+        CourseDTO dto = TestDataUtil.createCourseDto();
+        dto.setName(name);
+        dto.setCode(code);
+        courseService.save(courseMapper.toEntity(dto));
+    }
+
+    @Test
+    void anonymousCanListAndSearchCoursesAndWritesAreRefused() throws Exception {
+        saveCourse("Anon Course", "ANC01");
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/courses"))
+                .andExpect(MockMvcResultMatchers.status().isOk());
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/courses/name/Anon"))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].name").value("Anon Course"));
+
+        var body = "{\"name\":\"Nope\",\"code\":\"NOPE1\"}";
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/courses")
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(MockMvcResultMatchers.status().isUnauthorized());
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/courses")
+                        .contentType(MediaType.APPLICATION_JSON).content(body)
+                        .with(TestDataUtil.mockUser("ROLE_STUDENT")))
+                .andExpect(MockMvcResultMatchers.status().isForbidden());
+        mockMvc.perform(MockMvcRequestBuilders.delete("/api/v1/courses/1")
+                        .with(TestDataUtil.mockUser("ROLE_EXPERT")))
+                .andExpect(MockMvcResultMatchers.status().isForbidden());
+    }
+
+    @Test
+    void courseReadsExposeTheProgramIdAndNameAndNullWhenDetached() throws Exception {
+        Program program = new Program();
+        program.setName("Programme Alpha");
+        program.setCode("PALPH");
+        program = programService.save(program);
+
+        CourseDTO attached = TestDataUtil.createCourseDto();
+        attached.setName("Zeta Attached");
+        attached.setCode("ZATT1");
+        var attachedEntity = courseMapper.toEntity(attached);
+        attachedEntity.setProgram(program);
+        courseService.save(attachedEntity);
+        saveCourse("Zeta Detached", "ZDET1");
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/courses/name/Zeta"))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].name").value("Zeta Attached"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].programId").value(program.getId()))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].programName").value("Programme Alpha"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[1].name").value("Zeta Detached"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[1].programId").doesNotExist())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[1].programName").doesNotExist());
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/courses"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].programName").value("Programme Alpha"));
+    }
+
+    @Test
+    void nameSearchAndListWithoutSortPageByNameThenId() throws Exception {
+        for (var entry : new String[][] {{"Srch Zulu", "SZ1"}, {"Srch Alpha", "SA1"}, {"Srch Alpha", "SA2"}, {"Srch Mike", "SM1"}}) {
+            saveCourse(entry[0], entry[1]);
+        }
+
+        for (var path : new String[] {"/api/v1/courses/name/Srch", "/api/v1/courses"}) {
+            mockMvc.perform(MockMvcRequestBuilders.get(path))
+                    .andExpect(MockMvcResultMatchers.status().isOk())
+                    .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].code").value("SA1"))
+                    .andExpect(MockMvcResultMatchers.jsonPath("$.content[1].code").value("SA2"))
+                    .andExpect(MockMvcResultMatchers.jsonPath("$.content[2].code").value("SM1"))
+                    .andExpect(MockMvcResultMatchers.jsonPath("$.content[3].code").value("SZ1"));
+        }
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/courses/name/Srch?size=2&page=1"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].code").value("SM1"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[1].code").value("SZ1"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.totalElements").value(4));
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/courses/name/Srch?sort=name,desc"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].code").value("SZ1"));
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/courses?sort=name,desc"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].code").value("SZ1"));
+    }
+
+    private int saveExpert() {
+        var role = roleService.findRoleByName("ROLE_EXPERT")
+                .orElseGet(() -> roleService.createRole(Role.builder().name("ROLE_EXPERT").build()));
+        return userService.saveUser(UserEntity.builder().firstname("Rate").lastname("Expert")
+                .email("rate.expert@example.com").password("password").role(role).build(), passwordEncoder).getId();
+    }
+
+    private int saveRatedCourse(String name, String code, double note, int expertId) throws Exception {
+        CourseDTO dto = TestDataUtil.createCourseDto();
+        dto.setName(name);
+        dto.setCode(code);
+        var id = courseService.save(courseMapper.toEntity(dto)).getId();
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/course-rates")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"note\": " + note + ", \"courseId\": " + id + ", \"userId\": " + expertId + "}")
+                        .with(TestDataUtil.mockUser(expertId, "ROLE_EXPERT")))
+                .andExpect(MockMvcResultMatchers.status().isCreated());
+        return id;
+    }
+
+    // Approved rule: rate first, then name/id, so equal rates page stably too. Unrated courses
+    // are not asserted here: Hibernate drops NULLS LAST on H2, whose test URL sorts nulls high.
+    @Test
+    void sortRateOrdersByRateThenNameAndIdAndKeepsTheRateFirstOverAnExplicitSort() throws Exception {
+        var expertId = saveExpert();
+        var tieBravo = saveRatedCourse("Tie Bravo", "TB001", 4.0, expertId);
+        var tieAlpha = saveRatedCourse("Tie Alpha", "TA001", 4.0, expertId);
+        var best = saveRatedCourse("Rated Zulu", "RZ001", 5.0, expertId);
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/courses?sortRate=most"))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].id").value(best))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[1].id").value(tieAlpha))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[2].id").value(tieBravo));
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/courses?sortRate=less"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].id").value(tieAlpha))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[1].id").value(tieBravo))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[2].id").value(best));
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/courses?sortRate=most&sort=name,desc"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].id").value(best))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[1].id").value(tieBravo))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[2].id").value(tieAlpha));
+    }
+
+    @Test
+    void listAndSearchKeepTheDefaultPageSizeAndRejectAnUnknownSort() throws Exception {
+        for (var path : new String[] {"/api/v1/courses", "/api/v1/courses/name/Srch"}) {
+            mockMvc.perform(MockMvcRequestBuilders.get(path))
+                    .andExpect(MockMvcResultMatchers.status().isOk())
+                    .andExpect(MockMvcResultMatchers.jsonPath("$.size").value(20));
+            mockMvc.perform(MockMvcRequestBuilders.get(path + "?sort=doesNotExist,asc"))
+                    .andExpect(MockMvcResultMatchers.status().isBadRequest());
+        }
     }
 }

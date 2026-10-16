@@ -114,6 +114,12 @@ The contract is **asymmetric**: you *write* an id, you *read* an object.
 - `GET /api/v1/programs/name/{name}` sorts by `name,id` by default, so pages are stable. The client trims the term and `encodeURIComponent`s the path segment; an empty term lists all programs instead (`GET /programs`).
 - `ProgramService` no longer invents `level` (`'Licence'`), `rating` (0) or `reviewCount` (0): what the API did not send stays absent. `rating` is the API's `averageRate`.
 
+### CourseDTO: program and name search (ticket #119)
+
+- `CourseDTO` carries optional `programName` next to `programId` (both `null`/absent when the course has no program). The courses catalogue (`/:lang/courses`) shows the program name as plain text: there is no public program page to link to.
+- `GET /api/v1/courses` and `GET /api/v1/courses/name/{name}` sort by `name,id` by default (an explicit `?sort=` wins, an unknown property is 400). `?sortRate=most|less` sorts by the average rate first; that `name,id` (or explicit `sort`) order only breaks ties, so rate pages are stable too.
+- `CourseService.searchCoursesByName` trims the term, `encodeURIComponent`s the path segment and answers an empty page, without a request, for a term containing `/ \ % ;` or equal to `.`/`..`; a blank term lists all courses.
+
 ### MediaDTO shape
 
 ```ts
