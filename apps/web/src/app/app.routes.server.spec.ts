@@ -76,6 +76,15 @@ describe('server routes', () => {
     expect(paths.indexOf(':lang/programs/compare')).toBeLessThan(paths.indexOf('**'));
   });
 
+  it('server-renders the public courses comparison, listed before the catch-all', () => {
+    const paths = serverRoutes.map((r) => r.path);
+
+    expect(modeOf(':lang/courses/compare')).toBe(RenderMode.Server);
+    expect(guardedPaths(routes)).not.toContain(':lang/courses/compare');
+    expect(paths.indexOf(':lang/courses/compare')).toBeGreaterThanOrEqual(0);
+    expect(paths.indexOf(':lang/courses/compare')).toBeLessThan(paths.indexOf('**'));
+  });
+
   it('keeps the public pages server-rendered for SEO', () => {
     expect(modeOf('**')).toBe(RenderMode.Server);
   });

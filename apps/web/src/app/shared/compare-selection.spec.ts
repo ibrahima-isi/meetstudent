@@ -9,6 +9,10 @@ describe('parseIdList', () => {
     expect(parseIdList('1,x,-2,0,1.5,,2')).toEqual([1, 2]);
   });
 
+  it('ignores ids the API cannot read (above 2^31-1)', () => {
+    expect(parseIdList('1,2147483647,2147483648,99999999999999999999')).toEqual([1, 2147483647]);
+  });
+
   it('answers an empty list for nothing', () => {
     expect(parseIdList(null)).toEqual([]);
     expect(parseIdList(undefined)).toEqual([]);
@@ -40,6 +44,15 @@ describe('byRatingThenNameThenId', () => {
       { id: 4, name: 'Beta', rate: 3 },
       { id: 6, name: 'Alpha', rate: 3 },
     ])).toEqual(['Alpha6', 'Beta4', 'Beta5']);
+  });
+
+  it('ranks an item without a name (legacy rows) first among its ties, without throwing', () => {
+    const items = [
+      { id: 2, name: 'B', rate: null },
+      { id: 1, name: null as unknown as string, rate: null },
+    ];
+    expect(() => rank(items)).not.toThrow();
+    expect(rank(items)).toEqual(['null1', 'B2']);
   });
 
   it('treats a missing id as 0', () => {

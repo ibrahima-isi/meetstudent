@@ -52,14 +52,68 @@
         </p>
       </div>
 
+      <!-- Comparison bar. The live region stays in the DOM, empty, so the first pick is announced too. -->
+      <p data-testid="compare-status" role="status" class="sr-only">
+        @if (selectedIds().length > 0) {
+          {{ t(plural('courses.compareSelected', selectedIds().length), { count: selectedIds().length }) }}
+          @if (limitReached()) {
+            {{ t('courses.compareLimit') }}
+          }
+        }
+      </p>
+      @if (selectedIds().length > 0) {
+        <div
+          data-testid="compare-bar"
+          class="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-4 shadow-sm"
+        >
+          <p class="text-foreground font-medium" aria-hidden="true">
+            {{ t(plural('courses.compareSelected', selectedIds().length), { count: selectedIds().length }) }}
+          </p>
+          @if (limitReached()) {
+            <p data-testid="compare-limit" aria-hidden="true" class="text-sm text-red-700 dark:text-red-400">
+              {{ t('courses.compareLimit') }}
+            </p>
+          }
+          <div class="ml-auto flex items-center gap-3">
+            <button
+              type="button"
+              (click)="clearSelection()"
+              class="px-3 py-2 text-sm text-foreground underline cursor-pointer"
+            >
+              {{ t('courses.compareClear') }}
+            </button>
+            <button
+              type="button"
+              data-testid="compare-action"
+              [disabled]="!canCompare()"
+              (click)="compare()"
+              class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {{ t('courses.compareAction') }}
+            </button>
+          </div>
+        </div>
+      }
+
       <ul class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         @for (course of courses(); track course.id) {
           <li data-testid="course-card" class="bg-card rounded-xl shadow-sm border border-border overflow-hidden flex flex-col">
-            <app-image-with-fallback
-              [src]="photoOf(course)"
-              [alt]="course.name"
-              class="block w-full h-40 object-cover"
-            ></app-image-with-fallback>
+            <div class="relative">
+              <app-image-with-fallback
+                [src]="photoOf(course)"
+                [alt]="course.name"
+                class="block w-full h-40 object-cover"
+              ></app-image-with-fallback>
+              <label class="absolute top-3 left-3 flex items-center justify-center w-9 h-9 bg-card rounded-full shadow-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  class="w-5 h-5 accent-indigo-600 cursor-pointer"
+                  [checked]="isSelected(course)"
+                  [attr.aria-label]="t('courses.compareSelect', { name: course.name })"
+                  (click)="toggleSelection(course, $event)"
+                />
+              </label>
+            </div>
             <div class="p-5 flex-1 flex flex-col gap-3">
               <h2 class="text-foreground text-xl font-bold line-clamp-2">{{ course.name }}</h2>
 
