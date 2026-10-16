@@ -21,6 +21,9 @@ public class CourseMapper implements Mapper<Course, CourseDTO> {
         CourseDTO dto = modelMapper.map(course, CourseDTO.class);
         dto.setPhotoMediaId(course.getPhotoMediaId());
         dto.setPhoto(mediaService.findById(course.getPhotoMediaId()).map(mediaMapper::toDTO).orElse(null));
+        var program = course.getProgram();
+        dto.setProgramId(program == null ? null : program.getId());
+        dto.setProgramName(program == null ? null : program.getName());
         return dto;
     }
 

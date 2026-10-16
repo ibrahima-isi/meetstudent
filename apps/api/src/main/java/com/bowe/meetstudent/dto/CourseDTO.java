@@ -14,5 +14,6 @@ public class CourseDTO extends BaseDTO {
     private Integer photoMediaId;
     private MediaDTO photo;
     private Integer programId;
+    private String programName;
     private Double averageRate;
 }

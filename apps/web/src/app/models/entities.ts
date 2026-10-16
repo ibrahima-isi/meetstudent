@@ -143,6 +143,10 @@ export interface Course extends BaseEntity {
   photoMediaId?: number;
   photo?: Media | null;
   programId?: number;
+  /** Name of the program the course belongs to; absent when the API has none. */
+  programName?: string | null;
+  /** Average of the ratings, as the API names it; absent until someone rates. */
+  averageRate?: number | null;
   program?: Program;
   courseRates?: CourseRate[];
   /** Absolute image URL resolved from `photo` by the service layer. */
