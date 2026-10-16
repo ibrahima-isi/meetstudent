@@ -410,6 +410,18 @@ describe('DockNavbarComponent', () => {
   });
 
   describe('focus', () => {
+    it('never cancels the default action of a key press', async () => {
+      await render();
+      const tab = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+      const letter = new KeyboardEvent('keydown', { key: 'a', bubbles: true, cancelable: true });
+
+      document.body.dispatchEvent(tab);
+      document.body.dispatchEvent(letter);
+
+      expect(tab.defaultPrevented).toBeFalse();
+      expect(letter.defaultPrevented).toBeFalse();
+    });
+
     it('stays visible while keyboard focus is inside the bar', async () => {
       await render();
       languageButton().dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
