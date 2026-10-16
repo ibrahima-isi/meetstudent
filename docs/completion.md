@@ -142,3 +142,11 @@ Contrats HTTP 400/404/409 des tags, accréditations, programmes/cours et rôles,
 - [x] #111 — comportement existant et qualification HTTP/PostgreSQL vérifiés ; suite API entière verte.
 - [x] #111 — revues Standards/Spec indépendantes terminées ; aucun correctif requis.
 - [ ] #111 — [PR #145](https://github.com/ibrahima-isi/meetstudent/pull/145) vers `dev` ouverte ; trois CI sur le présent head documentaire final, squash et clôture encore requis. Le bilan définitif sera ajouté au suivi local après fusion.
+
+### #112 — une note par utilisateur et cours (2026-10-16)
+
+- [x] [#112](https://github.com/ibrahima-isi/meetstudent/issues/112) : qualification et vérifications locales terminées dans `test/course-rating-uniqueness-112`, base immuable `66f2ca52817054c63de31f9195f26b5a3438d12a`. Manifeste de quatre fichiers puis `CourseRateDTO.java` autorisés ; qualification HTTP (renote, agrégat, rôles) et concurrence 201/409, migration PostgreSQL V23→V24 (survivants 700001/700005/700007/700008/700009, SQLSTATE 23505, Hibernate validate). API complète 615 tests verts (239 unitaires + 376 intégration), trois HTTP PostgreSQL verts, conteneur ms112-pg supprimé. Aucune migration modifiée ; qualification sans faux rouge. Trou `courseId` nul : rouge réel (201 au lieu de 400) puis fermé par `@NotNull` sur `CourseRateDTO`. [Preuves](evidence/ticket-112.md). Suivi hors périmètre : `ProgramRateDTO.programId` sans `@NotNull` (non sondé) ; l'école est déjà couverte. Revues indépendantes sur `3d4af30` : Standards deux violations confirmées (ligne #111 réécrite par erreur, lien PR factice) et Spec deux incohérences de preuve (13 au lieu de 14 tests, manifeste de quatre fichiers) ; corrigées, test `courseId` complété (statut du GET final) et rouge rejoué (201 au lieu de 400). [PR #146](https://github.com/ibrahima-isi/meetstudent/pull/146) vers `dev` ouverte.
+
+- [x] #112 — comportement existant et qualification HTTP/PostgreSQL vérifiés ; suite API entière verte.
+- [x] #112 — revues Standards/Spec indépendantes terminées ; constats confirmés corrigés, API complète relancée verte (615 tests).
+- [ ] #112 — PR vers `dev`, trois CI, squash et clôture encore requis ; suivi programme à décider.
