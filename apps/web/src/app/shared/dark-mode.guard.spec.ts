@@ -9,6 +9,7 @@ import { translocoOptions } from '@i18n/transloco.config';
 import { LocaleService } from '@services/locale.service';
 import { MediaService } from '@services/media.service';
 import { ProgramService } from '@services/program.service';
+import { CourseService } from '@services/course.service';
 import { SchoolService } from '@services/school.service';
 import { TokenService } from '@services/token.service';
 import { WishlistService } from '@services/wishlist.service';
@@ -28,6 +29,7 @@ import { LandingPageComponent } from '../features/public/landing-page/landing-pa
 import { LandingHeroComponent } from '../features/public/landing-page/sections/landing-hero.component';
 import { SchoolsPageComponent } from '../features/public/schools-page/schools-page.component';
 import { SchoolsComparePageComponent } from '../features/public/schools-compare-page/schools-compare-page.component';
+import { CoursesComparePageComponent } from '../features/public/courses-compare-page/courses-compare-page.component';
 import { ProgramsComparePageComponent } from '../features/public/programs-compare-page/programs-compare-page.component';
 import { ProgramsPageComponent } from '../features/public/programs-page/programs-page.component';
 import { AccreditationsPageComponent } from '../features/public/accreditations-page/accreditations-page.component';
@@ -387,6 +389,8 @@ describe('dark mode: no light-only palette classes', () => {
     spyOn(TestBed.inject(SchoolService), 'getSchool').and.callFake(answer as never));
   const compareProgramsWith = (answer: (id: number) => unknown) => withUrl('/?ids=1,2', () =>
     spyOn(TestBed.inject(ProgramService), 'getProgram').and.callFake(answer as never));
+  const compareCoursesWith = (answer: (id: number) => unknown) => withUrl('/?ids=1,2', () =>
+    spyOn(TestBed.inject(CourseService), 'getCourse').and.callFake(answer as never));
   const comparisonCases: [string, Type<unknown>, (c: any) => void, string][] = [
     [
       'schools page with a full comparison selection and the limit message',
@@ -438,6 +442,31 @@ describe('dark mode: no light-only palette classes', () => {
       '[role="alert"] a',
     ],
     ['programs compare page with too few programs', ProgramsComparePageComponent, withUrl('/?ids=1'), 'a[href="/en/programs"]'],
+    [
+      'courses page with a full comparison selection and the limit message',
+      CoursesPageComponent,
+      withUrl('/?compare=1,2,3', (c) => {
+        const content = [{ id: 1, name: 'Algorithms' }, { id: 4, name: 'Web' }];
+        spyOn(TestBed.inject(CourseService), 'listCourses').and.returnValue(of({ content, last: true, totalElements: 2 }) as never);
+        c.limitReached.set(true);
+      }),
+      '[data-testid="compare-limit"]',
+    ],
+    [
+      'courses compare page loaded',
+      CoursesComparePageComponent,
+      compareCoursesWith((id) => of({ id, name: `C${id}`, code: 'C', programName: 'P', averageRate: id === 2 ? null : 4 })),
+      'table',
+    ],
+    ['courses compare page loading', CoursesComparePageComponent, compareCoursesWith(() => NEVER), '[aria-busy="true"]'],
+    ['courses compare page error', CoursesComparePageComponent, compareCoursesWith(() => throwError(() => new Error('x'))), 'app-error-state'],
+    [
+      'courses compare page with an unknown course',
+      CoursesComparePageComponent,
+      compareCoursesWith((id) => (id === 2 ? throwError(() => new HttpErrorResponse({ status: 404 })) : of({ id, name: 'C' }))),
+      '[role="alert"] a',
+    ],
+    ['courses compare page with too few courses', CoursesComparePageComponent, withUrl('/?ids=1'), 'a[href="/en/courses"]'],
   ];
 
   for (const [name, type, setup, shown] of comparisonCases) {
