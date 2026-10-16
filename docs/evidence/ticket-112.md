@@ -62,7 +62,7 @@ Les identités MockMvc testent l'autorisation du rating ; ces tests ne prétende
 
 ## Nettoyage
 
-Conteneur `ms112-pg` supprimé ; aucun conteneur ni volume `ms112` restant. Aucun autre conteneur touché. Aucun SMTP, déploiement ni promotion main. PR vers `dev` : en attente.
+Conteneur `ms112-pg` supprimé ; aucun conteneur ni volume `ms112` restant. Aucun autre conteneur touché. Aucun SMTP, déploiement ni promotion main. [PR #146](https://github.com/ibrahima-isi/meetstudent/pull/146) vers `dev` ouverte.
 
 ## Revues indépendantes (sur `3d4af30`)
 
