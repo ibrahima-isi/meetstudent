@@ -134,20 +134,27 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleDataIntegrity(DataIntegrityViolationException ex, WebRequest request) {
         String sqlState = null;
+        String constraint = null;
         for (Throwable cause = ex; cause != null; cause = cause.getCause()) {
-            if (cause instanceof java.sql.SQLException sql && sql.getSQLState() != null) {
+            if (constraint == null && cause instanceof org.hibernate.exception.ConstraintViolationException cv) {
+                constraint = cv.getConstraintName();
+            }
+            if (sqlState == null && cause instanceof java.sql.SQLException sql && sql.getSQLState() != null) {
                 sqlState = sql.getSQLState();
-                break;
             }
             if (cause.getCause() == cause) break;
         }
+        String uri = request.getDescription(false);
         if ("23505".equals(sqlState)) {
+            log.error("Unique constraint violation (SQLSTATE 23505, constraint {}) on {}", constraint, uri, ex);
             return build(HttpStatus.CONFLICT, "A resource with the same unique value already exists", request);
         }
         if ("23503".equals(sqlState)) {
+            log.error("Foreign key violation (SQLSTATE 23503, constraint {}) on {}", constraint, uri, ex);
             return build(HttpStatus.CONFLICT, "This resource is still in use", request);
         }
         if ("23502".equals(sqlState) || "22001".equals(sqlState)) {
+            log.warn("Missing or too long value (SQLSTATE {}, constraint {}) on {}", sqlState, constraint, uri);
             return build(HttpStatus.BAD_REQUEST, "A submitted value is missing or too long", request);
         }
         return handleGlobalException(ex, request);

@@ -138,4 +138,56 @@ class GlobalExceptionHandlerTest {
                 new HttpMessageNotReadableException("bad", (HttpInputMessage) null), request());
         assertShape(response, HttpStatus.BAD_REQUEST);
     }
+
+    private org.springframework.dao.DataIntegrityViolationException integrity(String sqlState, String constraint) {
+        var sql = new java.sql.SQLException("violates " + constraint, sqlState);
+        var hibernate = new org.hibernate.exception.ConstraintViolationException(
+                "could not execute statement", sql, "insert into x", constraint);
+        return new org.springframework.dao.DataIntegrityViolationException("could not execute statement", hibernate);
+    }
+
+    @Test
+    void uniqueViolationIsLoggedAtErrorWithTheConstraintNameButNotReturned() {
+        var appender = captureLogs();
+        try {
+            var response = handler.handleDataIntegrity(integrity("23505", "uk_schools_code"), request());
+
+            assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+            assertTrue(!response.getBody().getMessage().contains("uk_schools_code"));
+            assertEquals(1, appender.list.size());
+            assertEquals(Level.ERROR, appender.list.get(0).getLevel());
+            assertTrue(appender.list.get(0).getFormattedMessage().contains("uk_schools_code"));
+            assertTrue(appender.list.get(0).getFormattedMessage().contains("23505"));
+        } finally {
+            detach(appender);
+        }
+    }
+
+    @Test
+    void foreignKeyViolationIsLoggedAtError() {
+        var appender = captureLogs();
+        try {
+            var response = handler.handleDataIntegrity(integrity("23503", "fk_program_school"), request());
+
+            assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+            assertEquals(Level.ERROR, appender.list.get(0).getLevel());
+            assertTrue(appender.list.get(0).getFormattedMessage().contains("fk_program_school"));
+        } finally {
+            detach(appender);
+        }
+    }
+
+    @Test
+    void missingOrTooLongValueIsLoggedAtWarnAndAnswers400() {
+        var appender = captureLogs();
+        try {
+            var response = handler.handleDataIntegrity(integrity("22001", "name"), request());
+
+            assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+            assertEquals(1, appender.list.size());
+            assertEquals(Level.WARN, appender.list.get(0).getLevel());
+        } finally {
+            detach(appender);
+        }
+    }
 }
