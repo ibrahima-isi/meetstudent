@@ -121,17 +121,25 @@
       </p>
     </div>
 
-    <!-- Comparison bar -->
+    <!-- Comparison bar. The live region stays in the DOM, empty, so the first pick is announced too. -->
+    <p data-testid="compare-status" role="status" class="sr-only">
+      @if (selectedIds().length > 0) {
+        {{ t(plural('schools.compareSelected', selectedIds().length), { count: selectedIds().length }) }}
+        @if (limitReached()) {
+          {{ t('schools.compareLimit') }}
+        }
+      }
+    </p>
     @if (selectedIds().length > 0) {
       <div
         data-testid="compare-bar"
         class="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-4 shadow-sm"
       >
-        <p class="text-foreground font-medium" aria-live="polite">
+        <p class="text-foreground font-medium" aria-hidden="true">
           {{ t(plural('schools.compareSelected', selectedIds().length), { count: selectedIds().length }) }}
         </p>
         @if (limitReached()) {
-          <p data-testid="compare-limit" role="status" class="text-sm text-red-700 dark:text-red-400">
+          <p data-testid="compare-limit" aria-hidden="true" class="text-sm text-red-700 dark:text-red-400">
             {{ t('schools.compareLimit') }}
           </p>
         }
@@ -206,9 +214,13 @@
             <h3 class="text-foreground mb-2 line-clamp-2 text-xl font-bold">{{ school.name }}</h3>
             
             <div class="flex items-center gap-1 mb-3 text-sm">
-              <div class="flex items-center gap-1">
-                <lucide-icon [img]="Star" class="w-4 h-4 fill-yellow-400 text-yellow-400"></lucide-icon>
-                <span class="text-foreground font-medium">{{ roundRating(school.rating) }}</span>
+              <div data-testid="card-rating" class="flex items-center gap-1">
+                @if (school.rating != null) {
+                  <lucide-icon [img]="Star" class="w-4 h-4 fill-yellow-400 text-yellow-400"></lucide-icon>
+                  <span class="text-foreground font-medium">{{ roundRating(school.rating) }}</span>
+                } @else {
+                  <span class="text-muted-foreground">{{ t('schools.notRated') }}</span>
+                }
               </div>
               @if (school.reviewCount) {
                 <span class="text-muted-foreground">{{ t(plural('schools.reviews', school.reviewCount), { count: school.reviewCount }) }}</span>

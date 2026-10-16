@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
-import { provideHttpClient } from '@angular/common/http';
+import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
@@ -95,7 +95,40 @@ describe('SchoolsComparePageComponent', () => {
     await open('/compare?ids=1,2');
 
     const zeta = Array.from(el().querySelectorAll('tbody tr')).map((tr) => tr.children[2]?.textContent?.trim());
-    expect(zeta).toEqual(['Not provided', 'Not rated', '0 programmes', 'Not provided']);
+    // No `programs` from the API is unknown, not a false 0.
+    expect(zeta).toEqual(['Not provided', 'Not rated', 'Not provided', 'Not provided']);
+  });
+
+  it('lets a keyboard reach the horizontally scrolling table on a phone', async () => {
+    await open('/compare?ids=1,3');
+
+    const region = q('table')?.parentElement;
+    expect(region?.getAttribute('tabindex')).toBe('0');
+    expect(region?.getAttribute('role')).toBe('region');
+    expect(region?.getAttribute('aria-label')).toBe('Compare schools');
+  });
+
+  it('counts an empty programme list as 0 programmes', async () => {
+    data[2] = of({ id: 2, name: 'Zeta', programs: [] });
+    await open('/compare?ids=1,2');
+
+    expect(text()).toContain('0 programmes');
+  });
+
+  it('links back to the catalogue with the same selection, to change it', async () => {
+    await open('/compare?ids=3,1');
+
+    expect(q('a[href="/en/schools?compare=3,1"]')).not.toBeNull();
+  });
+
+  it('says a school no longer exists on a 404, without a pointless retry, and offers the rest of the selection', async () => {
+    data[2] = throwError(() => new HttpErrorResponse({ status: 404 }));
+    await open('/compare?ids=1,2,3');
+
+    expect(text()).toContain('One of these schools no longer exists');
+    expect(q('app-error-state')).toBeNull();
+    expect(q('table')).toBeNull();
+    expect(q('a[href="/en/schools?compare=1,3"]')).not.toBeNull();
   });
 
   for (const ids of ['1', '1,2,3,4', 'a,b', '', '1,1']) {

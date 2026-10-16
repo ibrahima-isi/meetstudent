@@ -248,13 +248,16 @@
     },
     "compareLimit": "You can compare up to 3 schools",
     "compareAction": "Compare",
-    "compareClear": "Clear selection"
+    "compareClear": "Clear selection",
+    "notRated": "Not rated"
   },
   "schoolsCompare": {
     "title": "Compare schools",
     "invalid": "Choose between 2 and 3 schools to compare them.",
     "backToCatalogue": "Back to the schools",
+    "editSelection": "Change the selection",
     "loadError": "The comparison could not be loaded.",
+    "notFound": "One of these schools no longer exists. Go back to the catalogue to complete the selection.",
     "notProvided": "Not provided",
     "notRated": "Not rated",
     "rowName": "School",

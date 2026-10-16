@@ -248,13 +248,16 @@
     },
     "compareLimit": "Vous pouvez comparer jusqu'à 3 établissements",
     "compareAction": "Comparer",
-    "compareClear": "Vider la sélection"
+    "compareClear": "Vider la sélection",
+    "notRated": "Non noté"
   },
   "schoolsCompare": {
     "title": "Comparer des établissements",
     "invalid": "Choisissez entre 2 et 3 établissements pour les comparer.",
     "backToCatalogue": "Retour aux établissements",
+    "editSelection": "Modifier la sélection",
     "loadError": "Impossible de charger la comparaison.",
+    "notFound": "Un de ces établissements n'existe plus. Revenez au catalogue pour compléter la sélection.",
     "notProvided": "Non renseigné",
     "notRated": "Non noté",
     "rowName": "Établissement",

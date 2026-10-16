@@ -2,7 +2,8 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslocoDirective } from '@jsverse/transloco';
-import { Subject, catchError, forkJoin, map, merge, of, switchMap, tap } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Observable, Subject, catchError, forkJoin, map, merge, of, switchMap, tap, throwError } from 'rxjs';
 import { pluralKey } from '@i18n/plural';
 import { School } from '@models/entities';
 import { LocaleService } from '@services/locale.service';
@@ -12,6 +13,12 @@ import { roundRating } from '@shared/format-rating';
 
 const MIN_SCHOOLS = 2;
 const MAX_SCHOOLS = 3;
+
+type LoadResult =
+  | { kind: 'invalid' }
+  | { kind: 'error' }
+  | { kind: 'loaded'; schools: School[] }
+  | { kind: 'notFound'; remaining: number[] };
 
 /**
  * Public side-by-side comparison of 2 to 3 schools, picked on the catalogue and
@@ -46,8 +53,10 @@ export class SchoolsComparePageComponent {
     () => this.ids().length >= MIN_SCHOOLS && this.ids().length <= MAX_SCHOOLS,
   );
 
-  protected readonly status = signal<'loading' | 'loaded' | 'error'>('loading');
+  protected readonly status = signal<'loading' | 'loaded' | 'error' | 'notFound'>('loading');
   private readonly loaded = signal<School[]>([]);
+  /** After a 404, the ids that still exist, in URL order. */
+  protected readonly remaining = signal<number[]>([]);
 
   /** Best rated first, unrated last; ties by name, then by id. */
   protected readonly schools = computed(() =>
@@ -68,27 +77,38 @@ export class SchoolsComparePageComponent {
     merge(toObservable(this.ids), this.retry$.pipe(map(() => this.ids())))
       .pipe(
         tap(() => this.status.set('loading')),
-        switchMap((ids) => {
-          if (ids.length < MIN_SCHOOLS || ids.length > MAX_SCHOOLS) return of(null);
-          return forkJoin(ids.map((id) => this.schoolService.getSchool(id))).pipe(
-            map((schools) => ({ schools })),
-            catchError(() => of(undefined)),
+        switchMap((ids): Observable<LoadResult> => {
+          if (ids.length < MIN_SCHOOLS || ids.length > MAX_SCHOOLS) return of({ kind: 'invalid' });
+          // A 404 is an answer (that school is gone), not an outage: retrying cannot fix it.
+          const reads = ids.map((id) =>
+            this.schoolService.getSchool(id).pipe(
+              catchError((error: unknown) =>
+                error instanceof HttpErrorResponse && error.status === 404 ? of(null) : throwError(() => error),
+              ),
+            ),
+          );
+          return forkJoin(reads).pipe(
+            map((found): LoadResult => {
+              const schools = found.filter((school): school is School => school !== null);
+              return schools.length === ids.length
+                ? { kind: 'loaded', schools }
+                : { kind: 'notFound', remaining: ids.filter((_, index) => found[index] !== null) };
+            }),
+            catchError(() => of<LoadResult>({ kind: 'error' })),
           );
         }),
         takeUntilDestroyed(),
       )
       .subscribe((result) => {
-        if (result === null) {
-          this.loaded.set([]);
-          this.status.set('loaded');
-        } else if (result === undefined) {
-          this.loaded.set([]);
-          this.status.set('error');
-        } else {
-          this.loaded.set(result.schools);
-          this.status.set('loaded');
-        }
+        this.loaded.set(result.kind === 'loaded' ? result.schools : []);
+        this.remaining.set(result.kind === 'notFound' ? result.remaining : []);
+        this.status.set(result.kind === 'error' || result.kind === 'notFound' ? result.kind : 'loaded');
       });
+  }
+
+  /** The catalogue with the given ids preselected, so the visitor can change the selection. */
+  protected catalogueParams(ids: number[]): { compare: string } | null {
+    return ids.length > 0 ? { compare: ids.join(',') } : null;
   }
 
   protected load(): void {
@@ -103,6 +123,11 @@ export class SchoolsComparePageComponent {
 
   protected rated(school: School): boolean {
     return this.rateOf(school) !== null;
+  }
+
+  /** Null when the API sent no programme list: unknown, not 0. */
+  protected programCount(school: School): number | null {
+    return Array.isArray(school.programs) ? school.programs.length : null;
   }
 
   protected place(school: School): string {

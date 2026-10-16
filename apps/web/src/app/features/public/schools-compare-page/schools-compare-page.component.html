@@ -20,9 +20,32 @@
       </div>
     } @else if (status() === 'error') {
       <app-error-state [message]="t('schoolsCompare.loadError')" (retry)="load()" />
+    } @else if (status() === 'notFound') {
+      <div role="alert" class="rounded-xl border border-border bg-card p-8 text-center">
+        <p class="text-foreground mb-4">{{ t('schoolsCompare.notFound') }}</p>
+        <a
+          [routerLink]="['/', lang(), 'schools']"
+          [queryParams]="catalogueParams(remaining())"
+          class="inline-block px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+        >
+          {{ t('schoolsCompare.backToCatalogue') }}
+        </a>
+      </div>
     } @else {
-      <!-- The scroll stays inside this wrapper, never on the page. -->
-      <div class="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
+      <a
+        [routerLink]="['/', lang(), 'schools']"
+        [queryParams]="catalogueParams(ids())"
+        class="mb-4 inline-block text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
+      >
+        {{ t('schoolsCompare.editSelection') }}
+      </a>
+      <!-- The scroll stays inside this wrapper, never on the page; focusable so a keyboard can scroll it. -->
+      <div
+        tabindex="0"
+        role="region"
+        [attr.aria-label]="t('schoolsCompare.title')"
+        class="overflow-x-auto rounded-xl border border-border bg-card shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
         <table class="w-full min-w-[32rem] text-left text-sm">
           <caption class="sr-only">{{ t('schoolsCompare.title') }}</caption>
           <thead>
@@ -53,8 +76,9 @@
             <tr class="border-b border-border">
               <th scope="row" class="p-4 text-muted-foreground font-medium">{{ t('schoolsCompare.rowPrograms') }}</th>
               @for (school of schools(); track school.id) {
+                @let count = programCount(school);
                 <td class="p-4 text-foreground">
-                  {{ t(plural('schoolsCompare.programCount', school.programs?.length ?? 0), { count: school.programs?.length ?? 0 }) }}
+                  {{ count === null ? t('schoolsCompare.notProvided') : t(plural('schoolsCompare.programCount', count), { count }) }}
                 </td>
               }
             </tr>

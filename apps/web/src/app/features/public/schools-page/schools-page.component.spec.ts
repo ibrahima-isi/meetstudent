@@ -155,6 +155,18 @@ describe('SchoolsPageComponent translations', () => {
     expect(text()).not.toContain('reviews)');
   });
 
+  it('says Not rated instead of a false 0 when the school has no rating', async () => {
+    await render('en');
+    fixture.componentInstance.schools.set([
+      { id: 1, name: 'Unrated', address: { location: 'Loc', city: 'Dakar', country: 'Senegal' } },
+    ]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const rating = (fixture.nativeElement as HTMLElement).querySelector('[data-testid="card-rating"]');
+    expect(rating?.textContent?.trim()).toBe('Not rated');
+  });
+
   it('shows the review count when the API sends one', async () => {
     await render('en');
     fixture.componentInstance.schools.set([
@@ -736,6 +748,22 @@ describe('SchoolsPageComponent comparison selection', () => {
     await open('/schools');
 
     expect(bar()).toBeNull();
+  });
+
+  it('announces the count and the limit in a live region that exists before the first pick', async () => {
+    await open('/schools');
+    const live = q('[data-testid="compare-status"]');
+    expect(live?.getAttribute('role')).toBe('status');
+    expect(live?.textContent?.trim()).toBe('');
+
+    await check('Alpha');
+    expect(q('[data-testid="compare-status"]')).toBe(live);
+    expect(live?.textContent).toContain('1 school selected');
+
+    await check('Beta');
+    await check('Gamma');
+    await check('Delta');
+    expect(live?.textContent).toContain('You can compare up to 3 schools');
   });
 
   it('keeps Compare disabled with one school and enables it at two, mirroring the selection in the URL next to ?q=', async () => {
