@@ -108,4 +108,70 @@ describe('ProgramService', () => {
     expect(req.request.params.get('size')).toBe('12');
     req.flush(emptyPage);
   });
+
+  describe('getProgram (read contract used by the comparison)', () => {
+    it('reads GET /programs/{id} and maps averageRate to rating', () => {
+      let result: Program | undefined;
+      service.getProgram(7).subscribe(p => (result = p));
+      const req = httpMock.expectOne(`${environment.apiUrl}/programs/7`);
+      expect(req.request.method).toBe('GET');
+      req.flush({ id: 7, name: 'P', averageRate: 4.2 });
+      expect(result?.rating).toBe(4.2);
+    });
+
+    for (const body of [{ averageRate: null }, {}]) {
+      it(`leaves rating undefined, never 0, when averageRate is ${JSON.stringify(body)}`, () => {
+        let result: Program | undefined;
+        service.getProgram(7).subscribe(p => (result = p));
+        httpMock.expectOne(`${environment.apiUrl}/programs/7`).flush({ id: 7, name: 'P', ...body });
+        expect(result?.rating).toBeUndefined();
+      });
+    }
+
+    it('passes the school and the duration through', () => {
+      let result: Program | undefined;
+      service.getProgram(7).subscribe(p => (result = p));
+      httpMock.expectOne(`${environment.apiUrl}/programs/7`)
+        .flush({ id: 7, name: 'P', schoolId: 2, schoolName: 'ISI', schoolCode: 'ISI', duration: 3 });
+      expect(result?.schoolId).toBe(2);
+      expect(result?.schoolName).toBe('ISI');
+      expect(result?.schoolCode).toBe('ISI');
+      expect(result?.duration).toBe(3);
+    });
+
+    it('does not invent a duration when the API sends null or none', () => {
+      const results: Program[] = [];
+      service.getProgram(7).subscribe(p => results.push(p));
+      httpMock.expectOne(`${environment.apiUrl}/programs/7`).flush({ id: 7, name: 'P', duration: null });
+      service.getProgram(8).subscribe(p => results.push(p));
+      httpMock.expectOne(`${environment.apiUrl}/programs/8`).flush({ id: 8, name: 'Q' });
+      expect(results[0].duration ?? undefined).toBeUndefined();
+      expect(results[1].duration).toBeUndefined();
+    });
+
+    it('resolves the photo into photoImageUrl through MediaService.resolveUrl', () => {
+      let result: Program | undefined;
+      service.getProgram(7).subscribe(p => (result = p));
+      httpMock.expectOne(`${environment.apiUrl}/programs/7`)
+        .flush({ id: 7, name: 'P', photo: { id: 1, publicUrl: '/uploads/public/program-photo/a.png' } });
+      expect(result?.photoImageUrl).toBe(`${environment.mediaBaseUrl}/uploads/public/program-photo/a.png`);
+    });
+
+    it('surfaces a 404 with an empty body as an error to the subscriber', () => {
+      let status: number | undefined;
+      let emitted = false;
+      service.getProgram(999).subscribe({ next: () => (emitted = true), error: e => (status = e.status) });
+      httpMock.expectOne(`${environment.apiUrl}/programs/999`)
+        .flush(null, { status: 404, statusText: 'Not Found' });
+      expect(emitted).toBeFalse();
+      expect(status).toBe(404);
+    });
+
+    it('returns accreditations as [] because the API sends none', () => {
+      let result: Program | undefined;
+      service.getProgram(7).subscribe(p => (result = p));
+      httpMock.expectOne(`${environment.apiUrl}/programs/7`).flush({ id: 7, name: 'P' });
+      expect(result?.accreditations).toEqual([]);
+    });
+  });
 });

@@ -51,6 +51,16 @@ export const routes: Routes = [
               ),
           },
           {
+            // Public; no `programs/:id` exists, and this stays ahead of any future one.
+            path: 'programs/compare',
+            pathMatch: 'full',
+            title: 'pageTitle.comparePrograms',
+            loadComponent: () =>
+              import('./features/public/programs-compare-page/programs-compare-page.component').then(
+                (m) => m.ProgramsComparePageComponent,
+              ),
+          },
+          {
             path: 'schools/:id',
             title: 'pageTitle.school',
             canActivate: [authGuard],

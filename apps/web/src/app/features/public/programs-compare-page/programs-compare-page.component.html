@@ -1,0 +1,118 @@
+<div class="min-h-screen bg-muted/50" *transloco="let t">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-12">
+    <h1 class="mb-6 text-3xl font-bold text-foreground">{{ t('programsCompare.title') }}</h1>
+
+    @if (!validSelection()) {
+      <div class="rounded-xl border border-border bg-card p-8 text-center">
+        <p class="text-foreground mb-4">{{ t('programsCompare.invalid') }}</p>
+        <a
+          [routerLink]="['/', lang(), 'programs']"
+          class="inline-block px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+        >
+          {{ t('programsCompare.backToCatalogue') }}
+        </a>
+      </div>
+    } @else if (status() === 'loading') {
+      <div role="status" aria-busy="true" class="rounded-xl border border-border bg-card p-8 animate-pulse">
+        <span class="sr-only">{{ t('common.loading') }}</span>
+        <div class="h-5 bg-muted rounded w-1/2 mb-4" aria-hidden="true"></div>
+        <div class="h-5 bg-muted rounded w-3/4" aria-hidden="true"></div>
+      </div>
+    } @else if (status() === 'error') {
+      <app-error-state [message]="t('programsCompare.loadError')" (retry)="load()" />
+    } @else if (status() === 'notFound') {
+      <div role="alert" class="rounded-xl border border-border bg-card p-8 text-center">
+        <p class="text-foreground mb-4">{{ t('programsCompare.notFound') }}</p>
+        <a
+          [routerLink]="['/', lang(), 'programs']"
+          [queryParams]="catalogueParams(remaining())"
+          class="inline-block px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+        >
+          {{ t('programsCompare.backToCatalogue') }}
+        </a>
+      </div>
+    } @else {
+      <a
+        [routerLink]="['/', lang(), 'programs']"
+        [queryParams]="catalogueParams(ids())"
+        class="mb-4 inline-block text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
+      >
+        {{ t('programsCompare.editSelection') }}
+      </a>
+      <!-- The scroll stays inside this wrapper, never on the page; focusable so a keyboard can scroll it. -->
+      <div
+        tabindex="0"
+        role="region"
+        [attr.aria-label]="t('programsCompare.title')"
+        class="overflow-x-auto rounded-xl border border-border bg-card shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <table class="w-full min-w-[32rem] text-left text-sm">
+          <caption class="sr-only">{{ t('programsCompare.title') }}</caption>
+          <thead>
+            <tr class="border-b border-border">
+              <th scope="col" class="p-4 text-muted-foreground font-medium">{{ t('programsCompare.rowName') }}</th>
+              @for (program of programs(); track program.id) {
+                <th scope="col" class="p-4 text-base font-bold text-foreground">
+                  {{ program.name }}
+                  @if (program.code) {
+                    <span class="block text-sm font-medium text-muted-foreground">{{ program.code }}</span>
+                  }
+                </th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="border-b border-border">
+              <th scope="row" class="p-4 text-muted-foreground font-medium">{{ t('programsCompare.rowSchool') }}</th>
+              @for (program of programs(); track program.id) {
+                <td class="p-4 text-foreground">
+                  @if (program.schoolName) {
+                    @if (program.schoolId != null) {
+                      <a
+                        [routerLink]="['/', lang(), 'schools', program.schoolId]"
+                        class="text-indigo-600 dark:text-indigo-400 hover:underline"
+                      >{{ program.schoolName }}</a>
+                    } @else {
+                      {{ program.schoolName }}
+                    }
+                    @if (program.schoolCode) {
+                      <span class="text-muted-foreground"> ({{ program.schoolCode }})</span>
+                    }
+                  } @else {
+                    {{ t('programsCompare.notProvided') }}
+                  }
+                </td>
+              }
+            </tr>
+            <tr class="border-b border-border">
+              <th scope="row" class="p-4 text-muted-foreground font-medium">{{ t('programsCompare.rowDuration') }}</th>
+              @for (program of programs(); track program.id) {
+                @let years = duration(program);
+                <td class="p-4 text-foreground">
+                  {{ years === null ? t('programsCompare.notProvided') : t(plural('programs.years', years), { count: years }) }}
+                </td>
+              }
+            </tr>
+            <tr class="border-b border-border">
+              <th scope="row" class="p-4 text-muted-foreground font-medium">{{ t('programsCompare.rowRate') }}</th>
+              @for (program of programs(); track program.id) {
+                <td class="p-4 text-foreground">
+                  {{ rated(program) ? roundRating(program.rating) : t('programsCompare.notRated') }}
+                </td>
+              }
+            </tr>
+            <tr>
+              <th scope="row" class="p-4 text-muted-foreground font-medium">{{ t('programsCompare.rowCourses') }}</th>
+              @for (program of programs(); track program.id) {
+                @let count = courseCount(program);
+                <td class="p-4 text-foreground">
+                  {{ count === null ? t('programsCompare.notProvided') : t(plural('programsCompare.courseCount', count), { count }) }}
+                </td>
+              }
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+</div>
