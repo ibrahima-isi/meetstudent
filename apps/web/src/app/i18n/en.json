@@ -188,6 +188,8 @@
       },
       "specialty": "Specialty",
       "specialtyPlaceholder": "Start typing your specialty...",
+      "specialtyRequired": "Enter your specialty.",
+      "specialtyTooLong": "Specialty must be 100 characters or fewer.",
       "town": "Town / City",
       "townPlaceholder": "Dakar, Saint-Louis, Thiès...",
       "next": "Next Step",
