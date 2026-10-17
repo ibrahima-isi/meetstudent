@@ -22,35 +22,35 @@ class UploadFailed {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <form [formGroup]="form" (ngSubmit)="submit()" novalidate class="max-w-2xl space-y-6">
-      <h2 class="text-xl font-semibold text-slate-900">{{ course() ? 'Modifier le cours' : 'Nouveau cours' }}</h2>
+      <h2 class="text-xl font-semibold text-foreground">{{ course() ? 'Modifier le cours' : 'Nouveau cours' }}</h2>
 
       <app-alert [message]="error()" />
 
       <div class="grid gap-4 md:grid-cols-6">
         <div class="space-y-1 md:col-span-4">
-          <label for="name" class="text-sm font-medium text-slate-700">Nom *</label>
+          <label for="name" class="text-sm font-medium text-foreground">Nom *</label>
           <input
             id="name"
             type="text"
             formControlName="name"
             [attr.aria-invalid]="errorOf('name') ? 'true' : null"
-            class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 aria-invalid:border-red-500"
+            class="field-input "
           />
           @if (errorOf('name'); as message) {
-            <p class="text-xs text-red-700" data-error="name">{{ message }}</p>
+            <p class="text-xs text-destructive" data-error="name">{{ message }}</p>
           }
         </div>
         <div class="space-y-1 md:col-span-2">
-          <label for="code" class="text-sm font-medium text-slate-700">Code (5 caractères max., unique)</label>
+          <label for="code" class="text-sm font-medium text-foreground">Code (5 caractères max., unique)</label>
           <input
             id="code"
             type="text"
             formControlName="code"
             [attr.aria-invalid]="errorOf('code') ? 'true' : null"
-            class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 aria-invalid:border-red-500"
+            class="field-input "
           />
           @if (errorOf('code'); as message) {
-            <p class="text-xs text-red-700" data-error="code">{{ message }}</p>
+            <p class="text-xs text-destructive" data-error="code">{{ message }}</p>
           }
         </div>
       </div>
@@ -70,7 +70,7 @@ class UploadFailed {
         <button
           type="submit"
           [disabled]="saving()"
-          class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
+          class="btn btn-primary"
         >
           {{ saving() ? 'Enregistrement…' : 'Enregistrer' }}
         </button>
@@ -78,7 +78,7 @@ class UploadFailed {
           type="button"
           data-cancel
           (click)="cancelled.emit()"
-          class="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-100"
+          class="btn btn-secondary"
         >
           Annuler
         </button>

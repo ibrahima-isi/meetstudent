@@ -8,22 +8,22 @@ import { validateImage } from '@services/media.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="space-y-2">
-      <label [for]="fieldId()" class="text-sm font-medium text-slate-700">{{ label() }}</label>
+      <label [for]="fieldId()" class="text-sm font-medium text-foreground">{{ label() }}</label>
       @if (shown(); as src) {
-        <img [src]="src" data-preview alt="" class="h-28 w-full rounded-md border border-slate-200 bg-slate-100 object-contain" />
+        <img [src]="src" data-preview alt="" class="h-28 w-full rounded-md border border-border bg-muted object-contain" />
       } @else if (existing()) {
-        <p class="text-xs text-slate-600">Une image est déjà enregistrée. Choisissez un fichier pour la remplacer.</p>
+        <p class="text-xs text-muted-foreground">Une image est déjà enregistrée. Choisissez un fichier pour la remplacer.</p>
       }
       <input
         [id]="fieldId()"
         type="file"
         accept="image/jpeg,image/png,image/webp"
         (change)="onFile($event)"
-        class="block w-full text-sm text-slate-600 file:mr-3 file:rounded-md file:border file:border-slate-300 file:bg-white file:px-3 file:py-1.5 file:text-sm file:font-medium hover:file:bg-slate-100"
+        class="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border file:border-border-strong file:bg-card file:px-3 file:py-1.5 file:text-sm file:font-medium hover:file:bg-accent"
       />
-      <p class="text-xs text-slate-500">JPEG, PNG ou WebP, 10 Mo maximum.</p>
+      <p class="text-xs text-muted-foreground">JPEG, PNG ou WebP, 10 Mo maximum.</p>
       @if (error()) {
-        <p class="text-xs text-red-700" data-error>{{ error() }}</p>
+        <p class="text-xs text-destructive" data-error>{{ error() }}</p>
       }
     </div>
   `,

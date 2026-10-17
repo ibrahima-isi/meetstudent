@@ -23,28 +23,28 @@ type AccreditationLink = CourseAccreditation | ProgramAccreditation;
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <fieldset class="space-y-3">
-      <legend class="text-sm font-medium text-slate-700">Accréditations{{ kind() === 'course' ? ' du cours' : '' }}</legend>
+      <legend class="text-sm font-medium text-foreground">Accréditations{{ kind() === 'course' ? ' du cours' : '' }}</legend>
       <app-alert [message]="error()" />
       @if (notice()) {
-        <div role="status" data-notice class="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+        <div role="status" data-notice class="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
           {{ notice() }}
         </div>
       }
 
       @if (links().length) {
-        <ul class="divide-y divide-slate-100 rounded-md border border-slate-200 bg-white text-sm">
+        <ul class="divide-y divide-border rounded-md border border-border bg-card text-sm">
           @for (link of links(); track link.accreditationId) {
             <li data-link-row class="flex items-center justify-between gap-3 px-3 py-2">
               <span>
-                <span class="font-medium text-slate-900">{{ nameOf(link) }}</span>
-                <span class="ml-2 text-slate-500">{{ link.startsAt }} – {{ link.endsAt }}</span>
+                <span class="font-medium text-foreground">{{ nameOf(link) }}</span>
+                <span class="ml-2 text-muted-foreground">{{ link.startsAt }} – {{ link.endsAt }}</span>
               </span>
               <button
                 type="button"
                 data-unlink
                 [disabled]="busy()"
                 (click)="unlink(link)"
-                class="rounded-md border border-red-300 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-60"
+                class="btn btn-secondary border-destructive text-destructive hover:bg-destructive/10 h-8 px-3 text-xs"
               >
                 Retirer
               </button>
@@ -52,16 +52,16 @@ type AccreditationLink = CourseAccreditation | ProgramAccreditation;
           }
         </ul>
       } @else if (!loading()) {
-        <p class="text-sm text-slate-500">Aucune accréditation associée.</p>
+        <p class="text-sm text-muted-foreground">Aucune accréditation associée.</p>
       }
 
       <div [formGroup]="form" class="flex flex-wrap items-end gap-3" (keydown.enter)="$event.preventDefault(); link()">
         <div class="space-y-1">
-          <label [attr.for]="fieldId('accreditation')" class="block text-sm text-slate-700">Accréditation</label>
+          <label [attr.for]="fieldId('accreditation')" class="block text-sm text-foreground">Accréditation</label>
           <select
             [id]="fieldId('accreditation')"
             formControlName="accreditationId"
-            class="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            class="field-input "
           >
             <option value="">Choisir…</option>
             @for (a of available(); track a.id) {
@@ -70,25 +70,25 @@ type AccreditationLink = CourseAccreditation | ProgramAccreditation;
           </select>
         </div>
         <div class="space-y-1">
-          <label [attr.for]="fieldId('startsAt')" class="block text-sm text-slate-700">Début (année)</label>
+          <label [attr.for]="fieldId('startsAt')" class="block text-sm text-foreground">Début (année)</label>
           <input
             [id]="fieldId('startsAt')"
             type="text"
             inputmode="numeric"
             placeholder="2020"
             formControlName="startsAt"
-            class="w-24 rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            class="field-input w-24 "
           />
         </div>
         <div class="space-y-1">
-          <label [attr.for]="fieldId('endsAt')" class="block text-sm text-slate-700">Fin (année)</label>
+          <label [attr.for]="fieldId('endsAt')" class="block text-sm text-foreground">Fin (année)</label>
           <input
             [id]="fieldId('endsAt')"
             type="text"
             inputmode="numeric"
             placeholder="2025"
             formControlName="endsAt"
-            class="w-24 rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            class="field-input w-24 "
           />
         </div>
         <button
@@ -96,13 +96,13 @@ type AccreditationLink = CourseAccreditation | ProgramAccreditation;
           data-link
           [disabled]="busy()"
           (click)="link()"
-          class="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-100 disabled:opacity-60"
+          class="btn btn-secondary disabled:opacity-60"
         >
           Associer
         </button>
       </div>
       @if (linkError()) {
-        <p class="text-xs text-red-700" data-link-error>{{ linkError() }}</p>
+        <p class="text-xs text-destructive" data-link-error>{{ linkError() }}</p>
       }
     </fieldset>
   `,

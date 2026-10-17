@@ -69,6 +69,11 @@
               {
                 "glob": "**/*",
                 "input": "public"
+              },
+              {
+                "glob": "**/*.ts",
+                "input": "src/app",
+                "output": "/app-sources"
               }
             ],
             "styles": [

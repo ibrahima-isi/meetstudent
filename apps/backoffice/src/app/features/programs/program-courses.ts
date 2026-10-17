@@ -17,16 +17,16 @@ import { CourseForm } from './course-form';
     } @else {
       <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <button type="button" data-back (click)="back.emit()" class="text-sm text-indigo-700 hover:underline">
+          <button type="button" data-back (click)="back.emit()" class="text-sm text-brand hover:underline">
             &larr; Filières
           </button>
-          <h2 class="text-2xl font-semibold text-slate-900">Cours de « {{ program().name }} »</h2>
+          <h2 class="text-2xl font-semibold text-foreground">Cours de « {{ program().name }} »</h2>
         </div>
         <button
           type="button"
           data-new
           (click)="editing.set({ course: null })"
-          class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+          class="btn btn-primary"
         >
           Nouveau cours
         </button>
@@ -35,15 +35,15 @@ import { CourseForm } from './course-form';
       <div class="space-y-3">
         <app-alert [message]="error()" />
         @if (notice()) {
-          <div role="status" data-notice class="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+          <div role="status" data-notice class="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
             {{ notice() }}
           </div>
         }
 
         @if (courses().length) {
-          <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+          <div class="overflow-x-auto rounded-lg border border-border bg-card">
             <table class="w-full text-left text-sm">
-              <thead class="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+              <thead class="border-b border-border bg-muted text-xs uppercase text-muted-foreground">
                 <tr>
                   <th scope="col" class="px-4 py-2">Nom</th>
                   <th scope="col" class="px-4 py-2">Code</th>
@@ -51,23 +51,23 @@ import { CourseForm } from './course-form';
                   <th scope="col" class="px-4 py-2 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-slate-100">
+              <tbody class="divide-y divide-border">
                 @for (course of courses(); track course.id) {
                   <tr data-course>
-                    <td class="px-4 py-2 font-medium text-slate-900">{{ course.name }}</td>
-                    <td class="px-4 py-2 text-slate-600">{{ course.code }}</td>
-                    <td class="px-4 py-2 text-slate-600">{{ course.photoMediaId ? 'Oui' : '—' }}</td>
+                    <td class="px-4 py-2 font-medium text-foreground">{{ course.name }}</td>
+                    <td class="px-4 py-2 text-muted-foreground">{{ course.code }}</td>
+                    <td class="px-4 py-2 text-muted-foreground">{{ course.photoMediaId ? 'Oui' : '—' }}</td>
                     <td class="whitespace-nowrap px-4 py-2 text-right">
                       @if (pendingDeleteId() === course.id) {
                         <div class="flex flex-col items-end gap-1">
-                          <span class="text-xs text-slate-700">Supprimer ce cours ?</span>
+                          <span class="text-xs text-foreground">Supprimer ce cours ?</span>
                           <span class="flex gap-1">
                             <button
                               type="button"
                               data-confirm-delete
                               [disabled]="deleting()"
                               (click)="confirmDelete(course)"
-                              class="rounded-md bg-red-600 px-3 py-1 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-60"
+                              class="btn bg-destructive text-destructive-foreground hover:opacity-90 h-8 px-3 text-xs"
                             >
                               Confirmer
                             </button>
@@ -75,7 +75,7 @@ import { CourseForm } from './course-form';
                               type="button"
                               data-cancel-delete
                               (click)="pendingDeleteId.set(null)"
-                              class="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium hover:bg-slate-100"
+                              class="btn btn-secondary h-8 px-3 text-xs"
                             >
                               Annuler
                             </button>
@@ -86,7 +86,7 @@ import { CourseForm } from './course-form';
                           type="button"
                           data-edit
                           (click)="editing.set({ course })"
-                          class="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium hover:bg-slate-100"
+                          class="btn btn-secondary h-8 px-3 text-xs"
                         >
                           Modifier
                         </button>
@@ -94,7 +94,7 @@ import { CourseForm } from './course-form';
                           type="button"
                           data-delete
                           (click)="pendingDeleteId.set(course.id)"
-                          class="ml-1 rounded-md border border-red-300 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50"
+                          class="ml-1 btn btn-secondary border-destructive text-destructive hover:bg-destructive/10 h-8 px-3 text-xs"
                         >
                           Supprimer
                         </button>
@@ -106,7 +106,7 @@ import { CourseForm } from './course-form';
             </table>
           </div>
         } @else {
-          <p class="rounded-lg border border-dashed border-slate-300 bg-white px-4 py-8 text-center text-sm text-slate-500">
+          <p class="rounded-lg border border-dashed border-border-strong bg-card px-4 py-8 text-center text-sm text-muted-foreground">
             Aucun cours pour cette filière.
           </p>
         }

@@ -18,12 +18,12 @@ const PAGE_SIZE = 10;
       <app-school-form [school]="target.school" (saved)="onSaved()" (cancelled)="editing.set(null)" />
     } @else {
       <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h1 class="text-2xl font-semibold text-slate-900">Écoles</h1>
+        <h1 class="text-2xl font-semibold text-foreground">Écoles</h1>
         <button
           type="button"
           data-new
           (click)="editing.set({ school: null })"
-          class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+          class="btn btn-primary"
         >
           Nouvelle école
         </button>
@@ -36,9 +36,9 @@ const PAGE_SIZE = 10;
           type="search"
           [formControl]="search"
           placeholder="Rechercher par nom"
-          class="w-full max-w-xs rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          class="field-input max-w-xs "
         />
-        <button type="submit" class="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-100">
+        <button type="submit" class="btn btn-secondary">
           Rechercher
         </button>
         @if (query()) {
@@ -46,7 +46,7 @@ const PAGE_SIZE = 10;
             type="button"
             data-clear-search
             (click)="clearSearch()"
-            class="rounded-md px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
+            class="btn btn-ghost"
           >
             Effacer
           </button>
@@ -60,25 +60,25 @@ const PAGE_SIZE = 10;
             type="button"
             data-retry
             (click)="load(page())"
-            class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium hover:bg-slate-100"
+            class="btn btn-secondary h-9 px-3"
           >
             Réessayer
           </button>
         }
         @if (notice()) {
-          <div role="status" data-notice class="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+          <div role="status" data-notice class="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
             {{ notice() }}
           </div>
         }
 
         @if (loading()) {
-          <p class="text-sm text-slate-500">Chargement…</p>
+          <p class="text-sm text-muted-foreground">Chargement…</p>
         }
 
         @if (schools().length) {
-          <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+          <div class="overflow-x-auto rounded-lg border border-border bg-card">
             <table class="w-full text-left text-sm">
-              <thead class="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+              <thead class="border-b border-border bg-muted text-xs uppercase text-muted-foreground">
                 <tr>
                   <th scope="col" class="px-4 py-2"><span class="sr-only">Logo</span></th>
                   <th scope="col" class="px-4 py-2">Nom</th>
@@ -88,37 +88,37 @@ const PAGE_SIZE = 10;
                   <th scope="col" class="px-4 py-2 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-slate-100">
+              <tbody class="divide-y divide-border">
                 @for (school of schools(); track school.id) {
                   <tr data-school>
                     <td class="px-4 py-2">
                       @if (logoUrl(school); as src) {
-                        <img [src]="src" alt="" class="size-10 rounded bg-slate-100 object-contain" />
+                        <img [src]="src" alt="" class="size-10 rounded bg-muted object-contain" />
                       } @else {
-                        <div class="size-10 rounded bg-slate-100"></div>
+                        <div class="size-10 rounded bg-muted"></div>
                       }
                     </td>
-                    <td class="px-4 py-2 font-medium text-slate-900">{{ school.name }}</td>
-                    <td class="px-4 py-2 text-slate-600">{{ school.code }}</td>
-                    <td class="px-4 py-2 text-slate-600">{{ place(school) }}</td>
+                    <td class="px-4 py-2 font-medium text-foreground">{{ school.name }}</td>
+                    <td class="px-4 py-2 text-muted-foreground">{{ school.code }}</td>
+                    <td class="px-4 py-2 text-muted-foreground">{{ place(school) }}</td>
                     <td class="px-4 py-2">
                       <div class="flex flex-wrap gap-1">
                         @for (tag of school.tags ?? []; track tag.id) {
-                          <span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700">{{ tag.name }}</span>
+                          <span class="rounded-full bg-muted px-2 py-0.5 text-xs text-foreground">{{ tag.name }}</span>
                         }
                       </div>
                     </td>
                     <td class="whitespace-nowrap px-4 py-2 text-right">
                       @if (pendingDeleteId() === school.id) {
                         <div class="flex flex-col items-end gap-1">
-                          <span class="text-xs text-slate-700">Supprimer cette école ?</span>
+                          <span class="text-xs text-foreground">Supprimer cette école ?</span>
                           <span class="flex gap-1">
                             <button
                               type="button"
                               data-confirm-delete
                               [disabled]="deleting()"
                               (click)="confirmDelete(school)"
-                              class="rounded-md bg-red-600 px-3 py-1 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-60"
+                              class="btn bg-destructive text-destructive-foreground hover:opacity-90 h-8 px-3 text-xs"
                             >
                               Confirmer
                             </button>
@@ -126,7 +126,7 @@ const PAGE_SIZE = 10;
                               type="button"
                               data-cancel-delete
                               (click)="pendingDeleteId.set(null)"
-                              class="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium hover:bg-slate-100"
+                              class="btn btn-secondary h-8 px-3 text-xs"
                             >
                               Annuler
                             </button>
@@ -137,7 +137,7 @@ const PAGE_SIZE = 10;
                           type="button"
                           data-edit
                           (click)="editing.set({ school })"
-                          class="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium hover:bg-slate-100"
+                          class="btn btn-secondary h-8 px-3 text-xs"
                         >
                           Modifier
                         </button>
@@ -145,7 +145,7 @@ const PAGE_SIZE = 10;
                           type="button"
                           data-delete
                           (click)="askDelete(school)"
-                          class="ml-1 rounded-md border border-red-300 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50"
+                          class="ml-1 btn btn-secondary border-destructive text-destructive hover:bg-destructive/10 h-8 px-3 text-xs"
                         >
                           Supprimer
                         </button>
@@ -157,12 +157,12 @@ const PAGE_SIZE = 10;
             </table>
           </div>
         } @else if (!loading() && !loadFailed()) {
-          <p class="rounded-lg border border-dashed border-slate-300 bg-white px-4 py-8 text-center text-sm text-slate-500">
+          <p class="rounded-lg border border-dashed border-border-strong bg-card px-4 py-8 text-center text-sm text-muted-foreground">
             {{ query() ? 'Aucun résultat pour « ' + query() + ' ».' : 'Aucune école pour le moment.' }}
           </p>
         }
 
-        <nav class="flex items-center justify-between text-sm text-slate-600" aria-label="Pagination">
+        <nav class="flex items-center justify-between text-sm text-muted-foreground" aria-label="Pagination">
           <span>Page {{ page() + 1 }} / {{ totalPages() || 1 }} · {{ total() }} école(s)</span>
           <span class="flex gap-2">
             <button
@@ -170,7 +170,7 @@ const PAGE_SIZE = 10;
               data-prev
               [disabled]="loading() || page() <= 0"
               (click)="goTo(page() - 1)"
-              class="rounded-md border border-slate-300 px-3 py-1.5 font-medium hover:bg-slate-100 disabled:opacity-50"
+              class="btn btn-secondary h-9 px-3 disabled:opacity-50"
             >
               Précédent
             </button>
@@ -179,7 +179,7 @@ const PAGE_SIZE = 10;
               data-next
               [disabled]="loading() || page() + 1 >= totalPages()"
               (click)="goTo(page() + 1)"
-              class="rounded-md border border-slate-300 px-3 py-1.5 font-medium hover:bg-slate-100 disabled:opacity-50"
+              class="btn btn-secondary h-9 px-3 disabled:opacity-50"
             >
               Suivant
             </button>
