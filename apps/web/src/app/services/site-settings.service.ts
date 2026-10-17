@@ -8,6 +8,14 @@ export interface SiteSettings {
   contactEmail: string;
   aboutFr: string;
   aboutEn: string;
+  /** Social links: full https URLs, null when the admin has not set them. */
+  whatsappUrl?: string | null;
+  telegramUrl?: string | null;
+  discordUrl?: string | null;
+  facebookUrl?: string | null;
+  twitterUrl?: string | null;
+  instagramUrl?: string | null;
+  tiktokUrl?: string | null;
 }
 
 @Injectable({ providedIn: 'root' })

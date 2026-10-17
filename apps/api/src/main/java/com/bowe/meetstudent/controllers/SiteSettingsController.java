@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/site-settings")
-@Tag(name = "14. Site settings", description = "Contact address and About text shown on the public site, edited from the back office")
+@Tag(name = "14. Site settings", description = "Contact address, About text and social links shown on the public site, edited from the back office")
 public class SiteSettingsController {
 
     private final SiteSettingsService siteSettingsService;
@@ -34,14 +34,16 @@ public class SiteSettingsController {
 
     @PatchMapping
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Change the site settings", description = "Admin only. Absent fields are left unchanged.")
+    @Operation(summary = "Change the site settings", description = "Admin only. Absent fields are left unchanged. A blank social link (whatsappUrl, telegramUrl, discordUrl, facebookUrl, twitterUrl, instagramUrl, tiktokUrl) erases it.")
     @ApiResponse(responseCode = "200", description = "Settings updated")
-    @ApiResponse(responseCode = "400", description = "Invalid email, or blank or overlong text")
+    @ApiResponse(responseCode = "400", description = "Invalid email, blank or overlong text, or a social link that is not a full https URL (a blank link erases it)")
     public ResponseEntity<SiteSettingsDTO> update(@Valid @RequestBody UpdateSiteSettingsRequest request) {
         return ResponseEntity.ok(toDTO(siteSettingsService.update(request)));
     }
 
     private static SiteSettingsDTO toDTO(SiteSettings settings) {
-        return new SiteSettingsDTO(settings.getContactEmail(), settings.getAboutFr(), settings.getAboutEn());
+        return new SiteSettingsDTO(settings.getContactEmail(), settings.getAboutFr(), settings.getAboutEn(),
+                settings.getWhatsappUrl(), settings.getTelegramUrl(), settings.getDiscordUrl(), settings.getFacebookUrl(),
+                settings.getTwitterUrl(), settings.getInstagramUrl(), settings.getTiktokUrl());
     }
 }
