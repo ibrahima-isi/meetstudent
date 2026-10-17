@@ -1,0 +1,108 @@
+<div class="min-h-screen bg-muted/50" *transloco="let t">
+  <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-12">
+    <h1 class="mb-2 text-3xl font-bold text-foreground">{{ t('rankings.programsTitle') }}</h1>
+    <p class="mb-4 text-muted-foreground">{{ t('rankings.programsIntro') }}</p>
+
+    <nav data-testid="ranking-switch" [attr.aria-label]="t('rankings.switchLabel')" class="mb-6 flex flex-wrap gap-2">
+      <a
+        [routerLink]="['/', lang(), 'rankings', 'schools']"
+        class="rounded-full px-4 py-1.5 text-sm font-medium border border-border bg-card text-foreground hover:bg-accent transition-colors"
+      >{{ t('rankings.switchSchools') }}</a>
+      <a
+        [routerLink]="['/', lang(), 'rankings', 'programs']" aria-current="page"
+        class="rounded-full px-4 py-1.5 text-sm font-medium bg-indigo-600 text-white"
+      >{{ t('rankings.switchPrograms') }}</a>
+    </nav>
+
+    @if (status() === 'loading') {
+      <div role="status" aria-busy="true" class="rounded-xl border border-border bg-card p-8 animate-pulse">
+        <span class="sr-only">{{ t('common.loading') }}</span>
+        @for (n of skeletons; track n) {
+          <div class="h-5 bg-muted rounded w-3/4 mb-4 last:mb-0" aria-hidden="true"></div>
+        }
+      </div>
+    } @else if (status() === 'error') {
+      <app-error-state [message]="t('rankings.programsLoadError')" (retry)="load()" />
+    } @else if (programs().length === 0) {
+      <div data-testid="rank-empty" class="rounded-xl border border-border bg-card p-8 text-center text-foreground">
+        {{ t('rankings.programsEmpty') }}
+      </div>
+    } @else {
+      @if (totalElements(); as total) {
+        <p class="mb-4 text-sm text-muted-foreground" data-testid="rank-count">
+          {{ t(plural('rankings.programsCount', total), { count: total }) }}
+        </p>
+      }
+      <ol class="rounded-xl border border-border bg-card shadow-sm divide-y divide-border">
+        @for (program of programs(); track program.id; let i = $index) {
+          <li data-testid="rank-row" class="flex items-center gap-4 p-4">
+            <span data-testid="rank" aria-hidden="true" class="w-10 shrink-0 text-center text-lg font-bold text-indigo-600 dark:text-indigo-400">{{ i + 1 }}</span>
+            <span class="sr-only">{{ t('rankings.rank', { rank: i + 1 }) }}</span>
+            <div class="flex-1 min-w-0">
+              <span data-testid="rank-name" tabindex="-1" class="block truncate font-semibold text-foreground">{{ program.name }}</span>
+              <p class="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-sm text-muted-foreground">
+                <span>{{ t('programs.school') }}:
+                  @if (program.schoolName) {
+                    <span class="text-foreground">{{ program.schoolName }}</span>
+                  } @else {
+                    <span class="italic">{{ t('programs.notProvided') }}</span>
+                  }
+                </span>
+                <span>{{ t('programs.duration') }}:
+                  @if (hasDuration(program)) {
+                    <span class="text-foreground">{{ t(plural('programs.years', program.duration), { count: program.duration }) }}</span>
+                  } @else {
+                    <span class="italic">{{ t('programs.notProvided') }}</span>
+                  }
+                </span>
+                @if (program.code) {
+                  <span>{{ t('programs.code') }}: <span class="text-foreground">{{ program.code }}</span></span>
+                }
+              </p>
+            </div>
+            <span class="flex shrink-0 items-center gap-1 text-sm">
+              @if (rated(program)) {
+                <lucide-icon [img]="Star" class="w-4 h-4 fill-yellow-400 text-yellow-400" aria-hidden="true"></lucide-icon>
+                <span class="sr-only">{{ t('rankings.average') }}</span>
+                <span class="text-foreground font-medium">{{ roundRating(program.rating) }}</span>
+              } @else {
+                <span class="text-muted-foreground">{{ t('rankings.notRated') }}</span>
+              }
+            </span>
+          </li>
+        }
+      </ol>
+
+      @if (moreFailed()) {
+        <div data-testid="rank-more-error" role="alert" class="mt-4 flex items-center justify-center gap-3 text-sm text-foreground">
+          <span>{{ t('rankings.programsLoadMoreError') }}</span>
+          <button type="button" data-testid="rank-retry" (click)="retryMore()" class="font-medium underline cursor-pointer">{{ t('common.retry') }}</button>
+        </div>
+      }
+      <!-- Always rendered: a live region inserted with its message is often not announced. -->
+      <p data-testid="rank-busy" role="status" class="text-center text-sm text-muted-foreground" [class.mt-4]="busy()">
+        @if (busy()) {
+          {{ t('common.loading') }}
+        }
+      </p>
+      @if (hasMore()) {
+        <div class="mt-6 flex flex-wrap justify-center gap-3">
+          <button
+            type="button"
+            data-testid="rank-more"
+            [disabled]="busy()"
+            (click)="loadMore()"
+            class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+          >{{ t('rankings.loadMore') }}</button>
+          <button
+            type="button"
+            data-testid="rank-all"
+            [disabled]="busy()"
+            (click)="loadAll()"
+            class="px-6 py-2 border border-border bg-card text-foreground rounded-lg hover:bg-accent transition-colors font-medium cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+          >{{ t('rankings.loadAll') }}</button>
+        </div>
+      }
+    }
+  </div>
+</div>

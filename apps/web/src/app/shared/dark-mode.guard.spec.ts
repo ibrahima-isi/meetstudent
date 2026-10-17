@@ -29,6 +29,7 @@ import { LandingPageComponent } from '../features/public/landing-page/landing-pa
 import { LandingHeroComponent } from '../features/public/landing-page/sections/landing-hero.component';
 import { SchoolsPageComponent } from '../features/public/schools-page/schools-page.component';
 import { SchoolsRankingPageComponent } from '../features/public/schools-ranking-page/schools-ranking-page.component';
+import { ProgramsRankingPageComponent } from '../features/public/programs-ranking-page/programs-ranking-page.component';
 import { SchoolsComparePageComponent } from '../features/public/schools-compare-page/schools-compare-page.component';
 import { CoursesComparePageComponent } from '../features/public/courses-compare-page/courses-compare-page.component';
 import { ProgramsComparePageComponent } from '../features/public/programs-compare-page/programs-compare-page.component';
@@ -395,6 +396,9 @@ describe('dark mode: no light-only palette classes', () => {
   const rankingWith = (answer: (page: number) => unknown) => () => {
     spyOn(TestBed.inject(SchoolService), 'getSchools').and.callFake(answer as never);
   };
+  const programRankingWith = (answer: (page: number) => unknown) => () => {
+    spyOn(TestBed.inject(ProgramService), 'getPrograms').and.callFake(answer as never);
+  };
   const comparisonCases: [string, Type<unknown>, (c: any) => void, string][] = [
     [
       'schools page with a full comparison selection and the limit message',
@@ -479,6 +483,23 @@ describe('dark mode: no light-only palette classes', () => {
     ['ranking page loading', SchoolsRankingPageComponent, rankingWith(() => NEVER), '[aria-busy="true"]'],
     ['ranking page empty', SchoolsRankingPageComponent, rankingWith(() => of({ content: [], last: true, totalElements: 0 })), '[data-testid="rank-empty"]'],
     ['ranking page error', SchoolsRankingPageComponent, rankingWith(() => throwError(() => new Error('x'))), 'app-error-state'],
+    ['ranking page switch', SchoolsRankingPageComponent, rankingWith(() => of({ content: [], last: true, totalElements: 0 })), '[data-testid="ranking-switch"] a[aria-current="page"]'],
+    [
+      'programmes ranking page loaded with more pages to come',
+      ProgramsRankingPageComponent,
+      programRankingWith(() =>
+        of({
+          content: [{ id: 1, name: 'A', rating: 4, schoolName: 'S', duration: 2, code: 'X' }, { id: 2, name: 'B' }],
+          last: false,
+          totalElements: 12,
+        }),
+      ),
+      '[data-testid="rank-more"]',
+    ],
+    ['programmes ranking page loading', ProgramsRankingPageComponent, programRankingWith(() => NEVER), '[aria-busy="true"]'],
+    ['programmes ranking page empty', ProgramsRankingPageComponent, programRankingWith(() => of({ content: [], last: true, totalElements: 0 })), '[data-testid="rank-empty"]'],
+    ['programmes ranking page error', ProgramsRankingPageComponent, programRankingWith(() => throwError(() => new Error('x'))), 'app-error-state'],
+    ['programmes ranking page switch', ProgramsRankingPageComponent, programRankingWith(() => of({ content: [], last: true, totalElements: 0 })), '[data-testid="ranking-switch"] a[aria-current="page"]'],
     ['courses compare page with too few courses', CoursesComparePageComponent, withUrl('/?ids=1'), 'a[href="/en/courses"]'],
   ];
 
@@ -495,6 +516,24 @@ describe('dark mode: no light-only palette classes', () => {
       page === 0 ? of({ content: [{ id: 1, name: 'A', rating: 4 }], last: false, totalElements: 12 }) : throwError(() => new Error('x')),
     )();
     const fixture = TestBed.createComponent(SchoolsRankingPageComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('[data-testid="rank-more"]')!.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelector('[data-testid="rank-more-error"]')).not.toBeNull();
+    expect(lightOnlyClasses(root)).toEqual([]);
+  });
+
+  it('programmes ranking page with a failed continuation has none', async () => {
+    programRankingWith((page) =>
+      page === 0 ? of({ content: [{ id: 1, name: 'A', rating: 4 }], last: false, totalElements: 12 }) : throwError(() => new Error('x')),
+    )();
+    const fixture = TestBed.createComponent(ProgramsRankingPageComponent);
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
