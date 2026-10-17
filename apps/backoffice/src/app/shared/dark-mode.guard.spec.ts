@@ -3,7 +3,6 @@
  * only works on one background (`bg-white`, `text-slate-900`, `border-slate-300`...)
  * must be replaced by a semantic token (`bg-card`, `text-foreground`,
  * `border-border`...) or paired with a `dark:` class of the same kind and variant.
- * The shell is out of scope (it already uses tokens and is owned by another change).
  * Templates are inline in the .ts files, so the sources are scanned as text; each
  * quoted string is one class group.
  */
@@ -28,6 +27,7 @@ const FILES = [
   'features/schools/school-form.ts',
   'features/schools/schools-page.ts',
   'features/settings/settings-page.ts',
+  'features/shell/shell.ts',
   'features/tags/accreditation-form.ts',
   'features/tags/accreditations-section.ts',
   'features/tags/tags-page.ts',
