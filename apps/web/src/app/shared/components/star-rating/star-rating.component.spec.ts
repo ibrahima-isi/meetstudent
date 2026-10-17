@@ -115,6 +115,42 @@ describe('StarRatingComponent', () => {
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('5.3/5');
   });
 
+  describe('accessibility', () => {
+    const stars = () =>
+      Array.from((fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('[role="group"] button'));
+
+    beforeEach(async () => {
+      const transloco = TestBed.inject(TranslocoService);
+      await firstValueFrom(transloco.load('en'));
+      transloco.setActiveLang('en');
+      fixture.detectChanges();
+    });
+
+    it('names the group and each star with its value', () => {
+      const group = (fixture.nativeElement as HTMLElement).querySelector('[role="group"]');
+      expect(group?.getAttribute('aria-label')).toBe('Your rating');
+      expect(stars().map((b) => b.getAttribute('aria-label')))
+        .toEqual(['1 out of 5', '2 out of 5', '3 out of 5', '4 out of 5', '5 out of 5']);
+    });
+
+    it('announces the chosen star as pressed', () => {
+      component.handleRate(3);
+      fixture.detectChanges();
+      expect(stars().map((b) => b.getAttribute('aria-pressed')))
+        .toEqual(['false', 'false', 'true', 'false', 'false']);
+    });
+
+    it('shows a keyboard focus outline in light and dark instead of removing it', () => {
+      expect(stars().length).toBe(5);
+      for (const b of stars()) {
+        expect(b.classList).not.toContain('outline-none');
+        expect(b.classList).toContain('focus-visible:outline-2');
+        expect(b.classList).toContain('focus-visible:outline-indigo-600');
+        expect(b.classList).toContain('dark:focus-visible:outline-indigo-400');
+      }
+    });
+  });
+
   describe('submission', () => {
     const q = (sel: string) => (fixture.nativeElement as HTMLElement).querySelector(sel);
 

@@ -17,7 +17,7 @@ import { roundRating } from '@shared/format-rating';
       until the bundle loads, and this widget sits inside other pages.
     -->
     <div class="flex flex-col gap-3">
-      <div class="flex items-center gap-1">
+      <div class="flex items-center gap-1" role="group" [attr.aria-label]="'rating.groupLabel' | transloco">
         @for (value of [1, 2, 3, 4, 5]; track value) {
           <button
             type="button"
@@ -25,7 +25,9 @@ import { roundRating } from '@shared/format-rating';
             (mouseenter)="handleMouseEnter(value)"
             (mouseleave)="handleMouseLeave()"
             [disabled]="locked()"
-            class="transition-transform outline-none"
+            [attr.aria-label]="'rating.star' | transloco: { value: value }"
+            [attr.aria-pressed]="value === rating()"
+            class="rounded transition-transform focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 dark:focus-visible:outline-indigo-400"
             [class]="locked() ? 'cursor-default' : 'cursor-pointer hover:scale-110 focus:scale-110'"
           >
             <lucide-icon
