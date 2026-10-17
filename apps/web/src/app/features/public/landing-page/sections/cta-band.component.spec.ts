@@ -34,6 +34,24 @@ describe('CtaBandComponent', () => {
     });
   });
 
+  describe('before hydration, when the pre-paint script found a session', () => {
+    beforeEach(() => document.documentElement.classList.add('has-session'));
+    afterEach(() => document.documentElement.classList.remove('has-session'));
+
+    it('keeps the whole band hidden until the component takes over, so no flash and no layout shift', async () => {
+      await render('fr');
+      const host = root();
+      host.classList.remove('hydrated');
+      expect(getComputedStyle(host).display).toBe('none');
+    });
+
+    it('shows the band again once hydrated and the session turns out invalid', async () => {
+      await render('fr');
+      expect(root().classList).toContain('hydrated');
+      expect(getComputedStyle(root()).display).not.toBe('none');
+    });
+  });
+
   it('has one h2 with the title and no h1', async () => {
     await render('fr');
     expect(root().querySelectorAll('h1').length).toBe(0);

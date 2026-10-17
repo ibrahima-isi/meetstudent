@@ -19,6 +19,12 @@ import { MeshBackgroundComponent } from '@shared/components/mesh-background/mesh
   imports: [TranslocoDirective, RouterLink, MeshBackgroundComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '[class]': 'hostClass()' },
+  styles: [
+    `
+      /* Pre-hydration only: the server always renders the band, the index.html script flags a stored session. */
+      :host-context(.has-session):not(.hydrated) { display: none; }
+    `,
+  ],
   template: `
     @if (!signedIn()) {
       <section
@@ -52,15 +58,16 @@ export class CtaBandComponent {
    * would break hydration, so `hydrated` flips after it (same rule as the
    * dock navbar, including the pure client bootstrap exception).
    */
-  private readonly hydrated = signal(
+  protected readonly hydrated = signal(
     isPlatformBrowser(inject(PLATFORM_ID)) &&
       !inject(DOCUMENT).querySelector('[ng-server-context]'),
   );
   protected readonly signedIn = computed(() => this.hydrated() && this.token.isAuthenticated());
   /** No spacing at all for a signed-in user, so the hidden band leaves no gap. */
-  protected readonly hostClass = computed(() =>
-    this.signedIn() ? '' : 'block px-4 py-20 sm:px-6 lg:px-8',
-  );
+  protected readonly hostClass = computed(() => {
+    const spacing = this.signedIn() ? '' : 'block px-4 py-20 sm:px-6 lg:px-8';
+    return this.hydrated() ? `${spacing} hydrated`.trim() : spacing;
+  });
 
   constructor() {
     afterNextRender(() => this.hydrated.set(true));
