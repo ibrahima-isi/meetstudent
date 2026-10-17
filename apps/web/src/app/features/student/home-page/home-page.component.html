@@ -162,6 +162,7 @@
               <app-star-rating 
                 [itemId]="school.id || 0"
                 itemType="school"
+                [readonly]="true"
                 [initialRating]="school.rating ?? 0"
               ></app-star-rating>
             </div>

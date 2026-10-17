@@ -257,7 +257,7 @@ Spec : [.scratch/live-test-gaps/spec.md](../.scratch/live-test-gaps/spec.md). É
 
 Spec : [.scratch/post-129-followups/spec.md](../.scratch/post-129-followups/spec.md). Suivis relevés par les revues et le live test de `main` (#129), un ticket par suivi.
 
-- [ ] [post-129-followups/01](../.scratch/post-129-followups/issues/01-home-rating-average-label.md) : étoiles de l'accueil : libellé de moyenne. État : ready-for-agent, non commencé.
+- [x] [post-129-followups/01](../.scratch/post-129-followups/issues/01-home-rating-average-label.md) : étoiles de l'accueil : libellé de moyenne. État : ready-for-agent, non commencé. **Implémenté** sur `claude/modest-davinci-qakca9` : 5 specs ajoutées (4 rouges d'abord sur l'annonce, les boutons, le remplissage et le libellé « Pas encore noté »), puis suite web 1318/1318 et `ng build` OK. Défaut voisin corrigé en lecture seule : les cartes de l'accueil n'affichaient jamais d'étoiles remplies (`initialRating` lu au constructeur seulement). Non vérifié : rendu navigateur réel de l'accueil.
 - [ ] [post-129-followups/02](../.scratch/post-129-followups/issues/02-login-invalid-credentials-message.md) : connexion : message d'identifiants invalides. État : ready-for-agent, non commencé.
 - [ ] [post-129-followups/03](../.scratch/post-129-followups/issues/03-contact-form.md) : vrai formulaire de contact. État : needs-info, non commencé.
 - [ ] [post-129-followups/04](../.scratch/post-129-followups/issues/04-extract-signed-in-hydration.md) : extraire la logique hydrated/signedIn partagée. État : needs-triage, non commencé.
