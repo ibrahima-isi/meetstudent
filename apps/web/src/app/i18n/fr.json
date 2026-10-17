@@ -84,7 +84,39 @@
     "intro": "Une question, une suggestion, un établissement à signaler ? Écrivez-nous, nous vous répondrons.",
     "emailLabel": "Par e-mail",
     "applySubject": "Candidature : {{school}}",
-    "error": "L'adresse de contact n'a pas pu être chargée."
+    "error": "L'adresse de contact n'a pas pu être chargée.",
+    "eyebrow": "On vous répond vite",
+    "social": {
+      "title": "Retrouvez-nous aussi sur",
+      "label": "Réseaux sociaux",
+      "newTab": "(s'ouvre dans un nouvel onglet)"
+    },
+    "form": {
+      "title": "Envoyez-nous un message",
+      "subtitle": "Dites-nous en quelques mots ce dont vous avez besoin.",
+      "email": "Votre adresse e-mail",
+      "emailPlaceholder": "vous@exemple.com",
+      "subject": "Sujet",
+      "subjectPlaceholder": "De quoi s'agit-il ?",
+      "message": "Message",
+      "messagePlaceholder": "Écrivez votre message ici…",
+      "counter": "{{count}} / {{max}} caractères",
+      "submit": "Envoyer le message",
+      "sending": "Envoi en cours…",
+      "honeypot": "Laissez ce champ vide"
+    },
+    "errors": {
+      "required": "Ce champ est obligatoire.",
+      "emailInvalid": "Veuillez saisir une adresse e-mail valide.",
+      "tooLong": "Ce champ est trop long (maximum {{max}} caractères).",
+      "invalid": "Ce champ contient une valeur non acceptée.",
+      "rateLimited": "Trop de messages envoyés. Veuillez réessayer un peu plus tard.",
+      "failed": "Votre message n'a pas pu être envoyé. Vérifiez votre connexion et réessayez : votre texte est conservé."
+    },
+    "success": {
+      "title": "Message envoyé",
+      "text": "Merci ! Nous avons bien reçu votre message et nous vous répondrons par e-mail."
+    }
   },
   "emailBanner": {
     "title": "Confirmez votre adresse e-mail",
