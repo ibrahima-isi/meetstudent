@@ -71,6 +71,7 @@ import { nextDockVisible, SCROLL_DELTA_PX } from './dock-visibility';
       .logo { display: inline-grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 0.5rem; background: var(--brand); color: var(--brand-foreground); font-size: 0.9rem; }
       .links { display: none; margin-left: 1rem; gap: 0.25rem; }
       .links a, .panel a.item { padding: 0.45rem 0.8rem; border-radius: 9999px; font-size: 0.9rem; color: var(--muted-foreground); text-decoration: none; transition: background-color 0.15s, color 0.15s; }
+      .links a { padding: 0.45rem 0.55rem; }
       .links a:hover, .panel a.item:hover { background: var(--accent); color: var(--foreground); }
       .actions { display: flex; align-items: center; gap: 0.25rem; margin-left: auto; }
       .wide-only { display: none; }
