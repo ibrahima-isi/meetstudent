@@ -84,7 +84,38 @@
     "intro": "A question, a suggestion, a school to report? Write to us and we will get back to you.",
     "emailLabel": "By email",
     "applySubject": "Application: {{school}}",
-    "error": "The contact address could not be loaded."
+    "error": "The contact address could not be loaded.",
+    "eyebrow": "We reply quickly",
+    "social": {
+      "title": "Find us on",
+      "newTab": "(opens in a new tab)"
+    },
+    "form": {
+      "title": "Send us a message",
+      "subtitle": "Tell us in a few words what you need.",
+      "email": "Your email address",
+      "emailPlaceholder": "you@example.com",
+      "subject": "Subject",
+      "subjectPlaceholder": "What is it about?",
+      "message": "Message",
+      "messagePlaceholder": "Write your message here…",
+      "counter": "{{count}} / {{max}} characters",
+      "submit": "Send message",
+      "sending": "Sending…",
+      "honeypot": "Leave this field empty"
+    },
+    "errors": {
+      "required": "This field is required.",
+      "emailInvalid": "Please enter a valid email address.",
+      "tooLong": "This field is too long (maximum {{max}} characters).",
+      "invalid": "This field contains a value that is not accepted.",
+      "rateLimited": "Too many messages sent. Please try again a little later.",
+      "failed": "Your message could not be sent. Check your connection and try again: your text is kept."
+    },
+    "success": {
+      "title": "Message sent",
+      "text": "Thank you! We received your message and will reply by email."
+    }
   },
   "emailBanner": {
     "title": "Confirm your email address",
