@@ -17,6 +17,7 @@ const FILES = [
   'shared/components/alert/alert.ts',
   'shared/components/image-field/image-field.ts',
   'features/auth/login-page/login-page.ts',
+  'features/messages/messages-page.ts',
   'features/moderation/moderation-page.ts',
   'features/not-found/not-found-page.ts',
   'features/programs/accreditation-links.ts',

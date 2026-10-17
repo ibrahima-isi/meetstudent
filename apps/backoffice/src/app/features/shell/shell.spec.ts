@@ -58,6 +58,12 @@ describe('Shell (responsive menu)', () => {
     expect(el().querySelector('[data-backdrop]')).toBeNull();
   });
 
+  it('lists a Messages entry in the sidebar', () => {
+    const link = Array.from(sidebar().querySelectorAll('a')).find((a) => a.textContent?.trim() === 'Messages');
+    expect(link).toBeDefined();
+    expect(link!.getAttribute('href')).toBe('/messages');
+  });
+
   it('closes on Escape and gives focus back to the toggle', () => {
     toggle().click();
     fixture.detectChanges();
