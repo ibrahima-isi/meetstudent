@@ -960,6 +960,58 @@ describe('DockNavbarComponent', () => {
       frame.remove();
     });
 
+    describe('on a wide bar', () => {
+      let frame: HTMLElement;
+      const mountWide = async (px: number) => {
+        await render();
+        frame = document.createElement('div');
+        frame.style.cssText = `position:relative;transform:translateZ(0);height:240px;width:${px}px;`;
+        document.body.appendChild(frame);
+        frame.appendChild(fixture.nativeElement);
+      };
+      afterEach(() => {
+        document.body.appendChild(fixture.nativeElement);
+        frame?.remove();
+      });
+
+      it('keeps the roomy padding of its links where the bar tightens its own links', async () => {
+        await mountWide(1280);
+        open();
+        const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
+        const item = panel()!.querySelector('a') as HTMLElement;
+        expect(parseFloat(getComputedStyle(item).paddingLeft)).toBeCloseTo(0.9 * rem, 1);
+        expect(parseFloat(getComputedStyle(item).paddingRight)).toBeCloseTo(0.9 * rem, 1);
+      });
+
+      it('closes when keyboard focus leaves it, not while it moves between the button and its links', async () => {
+        await mountWide(1280);
+        open();
+        const first = panel()!.querySelector('a') as HTMLElement;
+        first.focus();
+        trigger().focus();
+        fixture.detectChanges();
+        expect(panel()).not.toBeNull();
+
+        first.focus();
+        (link('/fr#reviews') as HTMLElement).focus();
+        fixture.detectChanges();
+        expect(panel()).toBeNull();
+      });
+    });
+
+    it('closes when one of its links is followed, even to the page already shown', async () => {
+      await render();
+      await TestBed.inject(Router).navigateByUrl('/fr#how-it-works');
+      fixture.detectChanges();
+      open();
+
+      (panel()!.querySelector('a[href="/fr#how-it-works"]') as HTMLElement).click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(panel()).toBeNull();
+    });
+
     describe('one overlay at a time', () => {
       const avatar = () => root().querySelector('button.avatar') as HTMLButtonElement;
       const cartButton = () => root().querySelector('app-wishlist-cart button') as HTMLButtonElement;

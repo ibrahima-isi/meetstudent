@@ -78,8 +78,9 @@ import { nextDockVisible, SCROLL_DELTA_PX } from './dock-visibility';
       .discover-trigger:hover, .discover-trigger[aria-expanded='true'] { background: var(--accent); color: var(--foreground); }
       .discover-trigger:focus-visible, .discover-panel a:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
       .discover-panel { position: absolute; top: calc(100% + 0.9rem); left: 0; z-index: 1; min-width: 13rem; max-width: calc(100vw - 2rem); display: flex; flex-direction: column; gap: 0.15rem; padding: 0.5rem; border-radius: 1rem; background: var(--card); border: 1px solid var(--border-strong); box-shadow: 0 16px 48px -16px rgb(0 0 0 / 0.35); }
-      .discover-panel a { display: block; padding: 0.55rem 0.9rem; border-radius: 0.75rem; font-size: 0.95rem; color: var(--foreground); text-decoration: none; white-space: nowrap; }
-      .discover-panel a:hover { background: var(--accent); }
+      /* Scoped under .links so it outranks the bar's own ".links a" rules, container queries included. */
+      .links .discover-panel a { display: block; padding: 0.55rem 0.9rem; border-radius: 0.75rem; font-size: 0.95rem; color: var(--foreground); text-decoration: none; white-space: nowrap; }
+      .links .discover-panel a:hover { background: var(--accent); }
       .forum-soon { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.8rem; font-size: 0.9rem; color: var(--muted-foreground); opacity: 0.7; cursor: not-allowed; user-select: none; }
       .panel .forum-soon { font-size: 1rem; padding: 0.75rem 1rem; }
       @container (max-width: 89.99rem) { .links { gap: 0.1rem; } .discover-trigger { padding-inline: 0.35rem; } .links a, .links .forum-soon { padding-inline: 0.35rem; } .links .soon-badge { display: none; } }
@@ -112,7 +113,7 @@ import { nextDockVisible, SCROLL_DELTA_PX } from './dock-visibility';
         <div class="links">
           <a [routerLink]="['/', lang(), 'schools']">{{ t('nav.schools') }}</a>
           <a [routerLink]="['/', lang(), 'rankings', 'schools']">{{ t('nav.rankings') }}</a>
-          <div class="discover">
+          <div class="discover" (focusout)="onDiscoverFocusOut($event)">
             <button
               type="button"
               class="discover-trigger"
@@ -124,7 +125,7 @@ import { nextDockVisible, SCROLL_DELTA_PX } from './dock-visibility';
               <lucide-icon [img]="ChevronDown" class="h-4 w-4" aria-hidden="true" />
             </button>
             @if (discoverOpen()) {
-              <div class="discover-panel" id="discover-menu">
+              <div class="discover-panel" id="discover-menu" (click)="discoverOpen.set(false)">
                 <a [routerLink]="['/', lang()]" fragment="how-it-works">{{ t('nav.howItWorks') }}</a>
                 <a [routerLink]="['/', lang(), 'programs']">{{ t('nav.discoverPrograms') }}</a>
                 <a [routerLink]="['/', lang(), 'courses']">{{ t('nav.discoverCourses') }}</a>
@@ -352,6 +353,14 @@ export class DockNavbarComponent {
     }
   }
 
+  /** Keyboard focus leaving the button and its links closes the panel; mouse presses are handled by `onPointerDown`. */
+  protected onDiscoverFocusOut(event: FocusEvent): void {
+    const group = event.currentTarget as HTMLElement;
+    if (!this.mouseDriven && !group.contains(event.relatedTarget as Node | null)) {
+      this.discoverOpen.set(false);
+    }
+  }
+
   protected toggleMenu(): void {
     this.menuOpen.update((open) => !open);
     this.accountOpen.set(false);
@@ -399,8 +408,6 @@ export class DockNavbarComponent {
     }
     if (open) {
       this.discoverOpen.set(false);
-    }
-    if (open) {
       this.visible.set(true);
     }
   }
