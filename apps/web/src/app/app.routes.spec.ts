@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter, withComponentInputBinding, Router } from '@angular/router';
+import { Title } from '@angular/platform-browser';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { provideTransloco, TranslocoService } from '@jsverse/transloco';
 import { firstValueFrom, of } from 'rxjs';
@@ -91,6 +92,17 @@ describe('routes', () => {
     expect(TestBed.inject(Router).url).toBe('/fr#reviews');
     expect((harness.fixture.nativeElement as HTMLElement).querySelector('app-landing-page')).toBeTruthy();
     expect(harness.routeNativeElement?.textContent).not.toContain('404');
+  });
+
+  it('opens the public schools ranking in the shell, without a login', async () => {
+    await harness.navigateByUrl('/fr/rankings/schools');
+
+    const host = harness.fixture.nativeElement as HTMLElement;
+    expect(TestBed.inject(Router).url).toBe('/fr/rankings/schools');
+    expect(host.querySelector('app-schools-ranking-page')).toBeTruthy();
+    expect(navbar()).toBeTruthy();
+    expect(harness.routeNativeElement?.textContent).not.toContain('404');
+    expect(TestBed.inject(Title).getTitle()).toBe('pageTitle.rankings');
   });
 
   it('renders an unknown path under a valid locale as the 404', async () => {
