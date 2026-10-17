@@ -91,7 +91,6 @@ describe('DockNavbarComponent', () => {
   it('offers the public sections', async () => {
     await render();
     expect(link('/fr/schools')).toBeTruthy();
-    expect(link('/fr#how-it-works')).toBeTruthy();
     expect(link('/fr#reviews')).toBeTruthy();
     expect(link('/fr/about')?.textContent?.trim()).toBe('À propos');
     expect(link('/fr/contact')?.textContent?.trim()).toBe('Contact');
@@ -207,7 +206,7 @@ describe('DockNavbarComponent', () => {
       widen(px);
       const bar = dock().getBoundingClientRect();
       const found: string[] = [];
-      for (const child of Array.from(dock().querySelectorAll('.brand, .links a, .actions > *'))) {
+      for (const child of Array.from(dock().querySelectorAll('.brand, .links a, .links .discover-trigger, .actions > *'))) {
         const box = child.getBoundingClientRect();
         if (box.width === 0) continue;
         if (box.right > bar.right + 0.5 || box.left < bar.left - 0.5) found.push(`${px}px: ${child.className} leaves the bar`);
@@ -263,7 +262,7 @@ describe('DockNavbarComponent', () => {
     const panel = root().querySelector('#dock-menu') as HTMLElement;
 
     const hrefs = Array.from(panel.querySelectorAll('a')).map((a) => a.getAttribute('href'));
-    expect(hrefs).toEqual(['/fr/schools', '/fr/rankings/schools', '/fr#how-it-works', '/fr#reviews', '/fr/about', '/fr/contact', '/fr/login', '/fr/register']);
+    expect(hrefs).toEqual(['/fr/schools', '/fr/rankings/schools', '/fr#how-it-works', '/fr/programs', '/fr/courses', '/fr/accreditations', '/fr#reviews', '/fr/about', '/fr/contact', '/fr/login', '/fr/register']);
     expect(panel.querySelector('app-language-switcher')).toBeTruthy();
     expect(panel.querySelector('app-theme-toggle')).toBeTruthy();
     expect(panel.textContent).toContain('Pas encore de compte ?');
@@ -842,6 +841,209 @@ describe('DockNavbarComponent', () => {
 
         expect(isHidden()).toBeTrue();
       });
+    });
+  });
+
+  describe('Discover menu', () => {
+    const trigger = () => root().querySelector('.links button.discover-trigger') as HTMLButtonElement;
+    const panel = () => root().querySelector('#discover-menu') as HTMLElement | null;
+    const open = () => {
+      trigger().click();
+      fixture.detectChanges();
+    };
+    const hrefs = () => Array.from(panel()!.querySelectorAll('a')).map((a) => a.getAttribute('href'));
+    const labels = () => Array.from(panel()!.querySelectorAll('a')).map((a) => a.textContent?.trim());
+
+    it('replaces the "How it works" link with a closed "Découvrir" disclosure button', async () => {
+      await render();
+      expect(trigger().tagName).toBe('BUTTON');
+      expect(trigger().getAttribute('type')).toBe('button');
+      expect(trigger().textContent?.trim()).toBe('Découvrir');
+      expect(trigger().getAttribute('aria-expanded')).toBe('false');
+      expect(trigger().getAttribute('aria-controls')).toBeNull();
+      expect(panel()).toBeNull();
+      expect(root().querySelector('.links a[href="/fr#how-it-works"]')).toBeNull();
+    });
+
+    it('opens a panel with the four destinations, localised, exposing the state', async () => {
+      await render();
+      open();
+      expect(trigger().getAttribute('aria-expanded')).toBe('true');
+      expect(trigger().getAttribute('aria-controls')).toBe('discover-menu');
+      expect(panel()!.getAttribute('role')).toBeNull();
+      expect(panel()!.querySelector('[role="menu"], [role="menuitem"]')).toBeNull();
+      expect(hrefs()).toEqual(['/fr#how-it-works', '/fr/programs', '/fr/courses', '/fr/accreditations']);
+      expect(labels()).toEqual(['Comment ça marche', 'Formations', 'Cours', 'Accréditations']);
+    });
+
+    it('is translated in English', async () => {
+      const transloco = TestBed.inject(TranslocoService);
+      await firstValueFrom(transloco.load('en'));
+      transloco.setActiveLang('en');
+      await render();
+      expect(trigger().textContent?.trim()).toBe('Discover');
+      open();
+      expect(labels()).toEqual(['How it works', 'Programmes', 'Courses', 'Accreditations']);
+    });
+
+    it('toggles closed with a second press', async () => {
+      await render();
+      open();
+      open();
+      expect(panel()).toBeNull();
+      expect(trigger().getAttribute('aria-expanded')).toBe('false');
+    });
+
+    it('closes on Escape and gives focus back to the button when focus was inside', async () => {
+      await render();
+      const frame = document.createElement('div');
+      frame.style.cssText = 'position:relative;transform:translateZ(0);height:240px;width:1280px;';
+      document.body.appendChild(frame);
+      frame.appendChild(fixture.nativeElement);
+      open();
+      (panel()!.querySelector('a') as HTMLElement).focus();
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      fixture.detectChanges();
+
+      expect(panel()).toBeNull();
+      expect(document.activeElement).toBe(trigger());
+      document.body.appendChild(fixture.nativeElement);
+      frame.remove();
+    });
+
+    it('closes on a press outside the bar but not inside it', async () => {
+      await render();
+      open();
+      panel()!.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      fixture.detectChanges();
+      expect(panel()).not.toBeNull();
+
+      document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      fixture.detectChanges();
+      expect(panel()).toBeNull();
+    });
+
+    it('closes when the visitor navigates', async () => {
+      await render();
+      open();
+      await TestBed.inject(Router).navigateByUrl('/fr/programs');
+      fixture.detectChanges();
+      expect(panel()).toBeNull();
+    });
+
+    it('keeps the bar visible while open, then lets it hide once closed', async () => {
+      await render();
+      open();
+      hide();
+      expect(isHidden()).toBeFalse();
+
+      await TestBed.inject(Router).navigateByUrl('/fr/programs');
+      fixture.detectChanges();
+      hide();
+      expect(isHidden()).toBeTrue();
+    });
+
+    it('keeps the panel inside the screen on a wide bar', async () => {
+      await render();
+      const frame = document.createElement('div');
+      frame.style.cssText = 'position:relative;transform:translateZ(0);height:240px;width:1280px;';
+      document.body.appendChild(frame);
+      frame.appendChild(fixture.nativeElement);
+      open();
+      const box = panel()!.getBoundingClientRect();
+      const bounds = frame.getBoundingClientRect();
+      expect(box.width).toBeGreaterThan(0);
+      expect(box.left).toBeGreaterThanOrEqual(bounds.left);
+      expect(box.right).toBeLessThanOrEqual(bounds.right);
+      document.body.appendChild(fixture.nativeElement);
+      frame.remove();
+    });
+
+    describe('one overlay at a time', () => {
+      const avatar = () => root().querySelector('button.avatar') as HTMLButtonElement;
+      const cartButton = () => root().querySelector('app-wishlist-cart button') as HTMLButtonElement;
+      const menuButton = () => root().querySelector('button.menu-btn') as HTMLButtonElement;
+      const accountMenu = () => root().querySelector('#account-menu');
+
+      it('opening it closes the account menu, and the other way round', async () => {
+        authenticated.set(true);
+        await render();
+        avatar().click();
+        fixture.detectChanges();
+        open();
+        expect(accountMenu()).toBeNull();
+        expect(panel()).toBeTruthy();
+
+        avatar().click();
+        fixture.detectChanges();
+        expect(panel()).toBeNull();
+        expect(accountMenu()).toBeTruthy();
+      });
+
+      it('opening it closes the language list, and the other way round', async () => {
+        await render();
+        languageButton().click();
+        fixture.detectChanges();
+        open();
+        expect(root().querySelector('#language-menu')).toBeNull();
+        expect(panel()).toBeTruthy();
+
+        languageButton().click();
+        fixture.detectChanges();
+        expect(panel()).toBeNull();
+        expect(root().querySelector('#language-menu')).toBeTruthy();
+      });
+
+      it('opening it closes the wishlist popover, and the other way round', async () => {
+        authenticated.set(true);
+        await render();
+        cartButton().click();
+        fixture.detectChanges();
+        open();
+        expect(root().querySelector('#wishlist-panel')).toBeNull();
+        expect(panel()).toBeTruthy();
+
+        cartButton().click();
+        fixture.detectChanges();
+        expect(panel()).toBeNull();
+        expect(root().querySelector('#wishlist-panel')).toBeTruthy();
+      });
+
+      it('opening it closes the mobile menu, and the other way round', async () => {
+        await render();
+        menuButton().click();
+        fixture.detectChanges();
+        open();
+        expect(root().querySelector('#dock-menu')).toBeNull();
+        expect(panel()).toBeTruthy();
+
+        menuButton().click();
+        fixture.detectChanges();
+        expect(panel()).toBeNull();
+        expect(root().querySelector('#dock-menu')).toBeTruthy();
+      });
+    });
+
+    it('lists "Découvrir" then the three destinations, flat, in the mobile panel', async () => {
+      await render();
+      (root().querySelector('button.menu-btn') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      const items = Array.from(root().querySelectorAll('#dock-menu a')).slice(2, 6);
+      expect(items.map((a) => a.getAttribute('href'))).toEqual(['/fr#how-it-works', '/fr/programs', '/fr/courses', '/fr/accreditations']);
+      expect(items.map((a) => a.textContent?.trim())).toEqual(['Découvrir', 'Formations', 'Cours', 'Accréditations']);
+      expect(root().querySelector('#dock-menu .discover-trigger')).toBeNull();
+    });
+
+    it('labels the mobile entries in English', async () => {
+      const transloco = TestBed.inject(TranslocoService);
+      await firstValueFrom(transloco.load('en'));
+      transloco.setActiveLang('en');
+      await render();
+      (root().querySelector('button.menu-btn') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      const items = Array.from(root().querySelectorAll('#dock-menu a')).slice(2, 6);
+      expect(items.map((a) => a.textContent?.trim())).toEqual(['Discover', 'Programmes', 'Courses', 'Accreditations']);
     });
   });
 

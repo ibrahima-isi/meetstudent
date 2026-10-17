@@ -73,9 +73,16 @@ import { nextDockVisible, SCROLL_DELTA_PX } from './dock-visibility';
       .links a, .panel a.item { padding: 0.45rem 0.8rem; border-radius: 9999px; font-size: 0.9rem; color: var(--muted-foreground); text-decoration: none; transition: background-color 0.15s, color 0.15s; }
       .links a { padding: 0.45rem 0.55rem; }
       .links a:hover, .panel a.item:hover { background: var(--accent); color: var(--foreground); }
+      .discover { position: relative; display: inline-flex; }
+      .discover-trigger { display: inline-flex; align-items: center; gap: 0.25rem; border: 0; background: transparent; cursor: pointer; padding: 0.45rem 0.55rem; border-radius: 9999px; font: inherit; font-size: 0.9rem; color: var(--muted-foreground); transition: background-color 0.15s, color 0.15s; }
+      .discover-trigger:hover, .discover-trigger[aria-expanded='true'] { background: var(--accent); color: var(--foreground); }
+      .discover-trigger:focus-visible, .discover-panel a:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+      .discover-panel { position: absolute; top: calc(100% + 0.9rem); left: 0; z-index: 1; min-width: 13rem; max-width: calc(100vw - 2rem); display: flex; flex-direction: column; gap: 0.15rem; padding: 0.5rem; border-radius: 1rem; background: var(--card); border: 1px solid var(--border-strong); box-shadow: 0 16px 48px -16px rgb(0 0 0 / 0.35); }
+      .discover-panel a { display: block; padding: 0.55rem 0.9rem; border-radius: 0.75rem; font-size: 0.95rem; color: var(--foreground); text-decoration: none; white-space: nowrap; }
+      .discover-panel a:hover { background: var(--accent); }
       .forum-soon { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.8rem; font-size: 0.9rem; color: var(--muted-foreground); opacity: 0.7; cursor: not-allowed; user-select: none; }
       .panel .forum-soon { font-size: 1rem; padding: 0.75rem 1rem; }
-      @container (max-width: 89.99rem) { .links { gap: 0.1rem; } .links a, .links .forum-soon { padding-inline: 0.35rem; } .links .soon-badge { display: none; } }
+      @container (max-width: 89.99rem) { .links { gap: 0.1rem; } .discover-trigger { padding-inline: 0.35rem; } .links a, .links .forum-soon { padding-inline: 0.35rem; } .links .soon-badge { display: none; } }
       .soon-badge { padding: 0.05rem 0.45rem; border-radius: 9999px; background: var(--brand-soft); color: var(--brand-soft-foreground); font-size: 0.7rem; font-weight: 600; }
       .actions { display: flex; align-items: center; gap: 0.25rem; margin-left: auto; }
       .wide-only { display: none; }
@@ -105,7 +112,26 @@ import { nextDockVisible, SCROLL_DELTA_PX } from './dock-visibility';
         <div class="links">
           <a [routerLink]="['/', lang(), 'schools']">{{ t('nav.schools') }}</a>
           <a [routerLink]="['/', lang(), 'rankings', 'schools']">{{ t('nav.rankings') }}</a>
-          <a [routerLink]="['/', lang()]" fragment="how-it-works">{{ t('nav.howItWorks') }}</a>
+          <div class="discover">
+            <button
+              type="button"
+              class="discover-trigger"
+              [attr.aria-expanded]="discoverOpen()"
+              [attr.aria-controls]="discoverOpen() ? 'discover-menu' : null"
+              (click)="toggleDiscover()"
+            >
+              {{ t('nav.discover') }}
+              <lucide-icon [img]="ChevronDown" class="h-4 w-4" aria-hidden="true" />
+            </button>
+            @if (discoverOpen()) {
+              <div class="discover-panel" id="discover-menu">
+                <a [routerLink]="['/', lang()]" fragment="how-it-works">{{ t('nav.howItWorks') }}</a>
+                <a [routerLink]="['/', lang(), 'programs']">{{ t('nav.discoverPrograms') }}</a>
+                <a [routerLink]="['/', lang(), 'courses']">{{ t('nav.discoverCourses') }}</a>
+                <a [routerLink]="['/', lang(), 'accreditations']">{{ t('nav.discoverAccreditations') }}</a>
+              </div>
+            }
+          </div>
           <a [routerLink]="['/', lang()]" fragment="reviews">{{ t('nav.reviews') }}</a>
           <a [routerLink]="['/', lang(), 'about']">{{ t('nav.about') }}</a>
           <a [routerLink]="['/', lang(), 'contact']">{{ t('nav.contact') }}</a>
@@ -172,7 +198,10 @@ import { nextDockVisible, SCROLL_DELTA_PX } from './dock-visibility';
         <nav class="panel" id="dock-menu" [attr.aria-label]="t('nav.primary')">
           <a class="item" [routerLink]="['/', lang(), 'schools']">{{ t('nav.schools') }}</a>
           <a class="item" [routerLink]="['/', lang(), 'rankings', 'schools']">{{ t('nav.rankings') }}</a>
-          <a class="item" [routerLink]="['/', lang()]" fragment="how-it-works">{{ t('nav.howItWorks') }}</a>
+          <a class="item" [routerLink]="['/', lang()]" fragment="how-it-works">{{ t('nav.discover') }}</a>
+          <a class="item" [routerLink]="['/', lang(), 'programs']">{{ t('nav.discoverPrograms') }}</a>
+          <a class="item" [routerLink]="['/', lang(), 'courses']">{{ t('nav.discoverCourses') }}</a>
+          <a class="item" [routerLink]="['/', lang(), 'accreditations']">{{ t('nav.discoverAccreditations') }}</a>
           <a class="item" [routerLink]="['/', lang()]" fragment="reviews">{{ t('nav.reviews') }}</a>
           <a class="item" [routerLink]="['/', lang(), 'about']">{{ t('nav.about') }}</a>
           <a class="item" [routerLink]="['/', lang(), 'contact']">{{ t('nav.contact') }}</a>
@@ -210,6 +239,7 @@ export class DockNavbarComponent {
   protected readonly lang = this.locale.active;
   protected readonly menuOpen = signal(false);
   protected readonly accountOpen = signal(false);
+  protected readonly discoverOpen = signal(false);
   protected readonly wishlistOpen = signal(false);
   protected readonly languageOpen = signal(false);
   protected readonly focusWithin = signal(false);
@@ -255,6 +285,7 @@ export class DockNavbarComponent {
       .subscribe(() => {
         this.menuOpen.set(false);
         this.accountOpen.set(false);
+        this.discoverOpen.set(false);
         this.wishlistOpen.set(false);
         this.closeLanguages();
       });
@@ -315,14 +346,16 @@ export class DockNavbarComponent {
 
   protected onPointerDown(event: Event): void {
     this.mouseDriven = true;
-    if (this.accountOpen() && !this.host.contains(event.target as Node | null)) {
+    if (!this.host.contains(event.target as Node | null)) {
       this.accountOpen.set(false);
+      this.discoverOpen.set(false);
     }
   }
 
   protected toggleMenu(): void {
     this.menuOpen.update((open) => !open);
     this.accountOpen.set(false);
+    this.discoverOpen.set(false);
     this.cart()?.close();
     this.closeLanguages();
     this.visible.set(true);
@@ -331,6 +364,16 @@ export class DockNavbarComponent {
   protected toggleAccount(): void {
     this.accountOpen.update((open) => !open);
     this.menuOpen.set(false);
+    this.discoverOpen.set(false);
+    this.cart()?.close();
+    this.closeLanguages();
+    this.visible.set(true);
+  }
+
+  protected toggleDiscover(): void {
+    this.discoverOpen.update((open) => !open);
+    this.menuOpen.set(false);
+    this.accountOpen.set(false);
     this.cart()?.close();
     this.closeLanguages();
     this.visible.set(true);
@@ -341,6 +384,7 @@ export class DockNavbarComponent {
     if (open) {
       this.accountOpen.set(false);
       this.menuOpen.set(false);
+      this.discoverOpen.set(false);
       this.closeLanguages();
       this.visible.set(true);
     }
@@ -354,6 +398,9 @@ export class DockNavbarComponent {
       this.cart()?.close();
     }
     if (open) {
+      this.discoverOpen.set(false);
+    }
+    if (open) {
       this.visible.set(true);
     }
   }
@@ -365,6 +412,7 @@ export class DockNavbarComponent {
   protected logout(): void {
     this.injector.get(AuthService).logout();
     this.accountOpen.set(false);
+    this.discoverOpen.set(false);
     this.menuOpen.set(false);
     void this.router.navigate(['/', this.lang()]);
   }
@@ -375,9 +423,12 @@ export class DockNavbarComponent {
       this.host.querySelector<HTMLElement>('.menu-btn')?.focus();
     } else if (this.host.querySelector('#account-menu')?.contains(active)) {
       this.host.querySelector<HTMLElement>('.dock .account-trigger')?.focus();
+    } else if (this.host.querySelector('#discover-menu')?.contains(active)) {
+      this.host.querySelector<HTMLElement>('.discover-trigger')?.focus();
     }
     this.menuOpen.set(false);
     this.accountOpen.set(false);
+    this.discoverOpen.set(false);
   }
 
   private update(scrollY: number): void {
@@ -387,7 +438,7 @@ export class DockNavbarComponent {
         previousScrollY: this.anchorY,
         pointerY: this.pointerY,
         focusWithin: this.focusWithin(),
-        menuOpen: this.menuOpen() || this.accountOpen() || this.wishlistOpen() || this.languageOpen(),
+        menuOpen: this.menuOpen() || this.accountOpen() || this.discoverOpen() || this.wishlistOpen() || this.languageOpen(),
         visible: this.visible(),
       }),
     );
