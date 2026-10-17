@@ -1,10 +1,11 @@
-import { Component, provideZonelessChangeDetection, signal } from '@angular/core';
+import { Component, provideZonelessChangeDetection, signal, WritableSignal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { provideTransloco, TranslocoService } from '@jsverse/transloco';
 import { firstValueFrom } from 'rxjs';
 import { translocoOptions } from '@i18n/transloco.config';
 import { LocaleService } from '@services/locale.service';
+import { TokenService } from '@services/token.service';
 import { LandingHeroComponent } from './landing-hero.component';
 
 @Component({ template: '' })
@@ -14,6 +15,7 @@ describe('LandingHeroComponent', () => {
   let fixture: ComponentFixture<LandingHeroComponent>;
   let navigate: jasmine.Spy;
   let reducedMotion: boolean;
+  let authenticated: WritableSignal<boolean>;
 
   const root = () => fixture.nativeElement as HTMLElement;
   const input = () => root().querySelector('input[type="search"]') as HTMLInputElement;
@@ -34,6 +36,7 @@ describe('LandingHeroComponent', () => {
 
   beforeEach(async () => {
     reducedMotion = false;
+    authenticated = signal(false);
     const nativeMatchMedia = window.matchMedia.bind(window);
     spyOn(window, 'matchMedia').and.callFake((query: string) =>
       query.includes('prefers-reduced-motion') ? ({ matches: reducedMotion } as MediaQueryList) : nativeMatchMedia(query),
@@ -45,6 +48,7 @@ describe('LandingHeroComponent', () => {
         provideRouter([]),
         provideTransloco(translocoOptions),
         { provide: LocaleService, useValue: { active: signal('fr') } },
+        { provide: TokenService, useValue: { isAuthenticated: authenticated } },
       ],
     });
     await firstValueFrom(TestBed.inject(TranslocoService).load('fr'));
@@ -151,6 +155,50 @@ describe('LandingHeroComponent', () => {
     expect(register).toBeTruthy();
     expect(register.textContent).toContain('Créer un compte gratuit');
     expect(register.classList).toContain('btn-secondary');
+  });
+
+  describe('sign-up call to action', () => {
+    const register = () => root().querySelector('a[href="/fr/register"]');
+    const rebuild = async () => {
+      fixture = TestBed.createComponent(LandingHeroComponent);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+    };
+
+    it('is hidden for a signed-in user, the explore action stays', async () => {
+      authenticated.set(true);
+      await rebuild();
+      expect(register()).toBeNull();
+      expect(root().querySelector('a[href="/fr/schools"]')).not.toBeNull();
+    });
+
+    it('follows login and logout without a reload', () => {
+      expect(register()).not.toBeNull();
+      authenticated.set(true);
+      fixture.detectChanges();
+      expect(register()).toBeNull();
+      authenticated.set(false);
+      fixture.detectChanges();
+      expect(register()).not.toBeNull();
+    });
+
+    describe('on a server-rendered document', () => {
+      beforeEach(() => document.body.setAttribute('ng-server-context', 'ssr'));
+      afterEach(() => document.body.removeAttribute('ng-server-context'));
+
+      it('renders first, so hydration matches the server markup', () => {
+        authenticated.set(true);
+        fixture = TestBed.createComponent(LandingHeroComponent);
+        expect((fixture.componentInstance as unknown as { signedIn(): boolean }).signedIn()).toBeFalse();
+      });
+
+      it('hides once the first render is done', async () => {
+        authenticated.set(true);
+        await rebuild();
+        expect(register()).toBeNull();
+      });
+    });
   });
 
   it('labels the search field for screen readers', () => {
