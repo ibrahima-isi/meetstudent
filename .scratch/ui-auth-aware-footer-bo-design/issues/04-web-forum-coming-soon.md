@@ -4,8 +4,8 @@
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] L'entrée est visible dans la navbar, annoncée comme désactivée, non focusable, sans navigation.
-- [ ] Libellé traduit dans fr.json et en.json ; lisible en thème clair et sombre.
-- [ ] Spec de la navbar en échec d'abord, puis verte.
+- [x] L'entrée est visible dans la navbar, annoncée comme désactivée, non focusable, sans navigation.
+- [x] Libellé traduit dans fr.json et en.json ; lisible en thème clair et sombre.
+- [x] Spec de la navbar en échec d'abord, puis verte.
