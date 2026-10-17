@@ -129,6 +129,7 @@
       "success": "Login successful! Welcome back.",
       "registered": "Account created! Sign in to continue.",
       "failed": "Login failed. Please try again.",
+      "invalidCredentials": "Incorrect email or password.",
       "passwordChanged": "Password changed. All your sessions have been signed out. Sign in with your new password.",
       "reset": "Password reset! Sign in with your new password.",
       "registeredEmail": "Account created! We sent you a confirmation email; you can sign in now."
