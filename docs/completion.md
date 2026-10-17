@@ -242,3 +242,11 @@ Spec : [.scratch/ui-auth-aware-footer-bo-design/spec.md](../.scratch/ui-auth-awa
 
 
 Reprise #126 — CI après mise à jour de `dev` : deux tests du parcours footer dépendaient d’une session persistante. Reproduction réelle : 21 succès / 2 échecs avec `auth_token` préchargé ; avec une fixture explicitement anonyme, les mêmes 23 tests passent. La sonde temporaire a été retirée. Correction limitée au test, aucun comportement produit modifié. Les trois CI sont relancées sur le head final après intégration du dernier `dev`.
+
+## live-test-gaps
+
+Spec : [.scratch/live-test-gaps/spec.md](../.scratch/live-test-gaps/spec.md). Écarts relevés par le live test final de dev (section #129), un ticket par écart.
+
+- [ ] [live-test-gaps/01](../.scratch/live-test-gaps/issues/01-star-rating-accessibility.md) : étoiles de notation, nom accessible et focus visible. État : needs-triage, non commencé.
+- [ ] [live-test-gaps/02](../.scratch/live-test-gaps/issues/02-school-apply-button.md) : bouton « Postuler maintenant » de la fiche établissement sans effet. État : needs-info (décision produit requise), non commencé.
+- [ ] [live-test-gaps/03](../.scratch/live-test-gaps/issues/03-landing-top-cta-signed-in.md) : CTA « Créer un compte gratuit » du haut de l'accueil masqué une fois connecté. État : needs-triage, non commencé.
