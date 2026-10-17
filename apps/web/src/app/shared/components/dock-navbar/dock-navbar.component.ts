@@ -1,4 +1,4 @@
-import { DOCUMENT, isPlatformBrowser } from '@angular/common';
+import { DOCUMENT } from '@angular/common';
 import {
   afterNextRender,
   ChangeDetectionStrategy,
@@ -8,7 +8,6 @@ import {
   ElementRef,
   inject,
   Injector,
-  PLATFORM_ID,
   signal,
   viewChild,
   viewChildren,
@@ -21,6 +20,7 @@ import { filter } from 'rxjs';
 import { AuthService } from '@services/auth.service';
 import { LocaleService } from '@services/locale.service';
 import { TokenService } from '@services/token.service';
+import { injectHydratedSession } from '@shared/hydrated-session';
 import { WishlistService } from '@services/wishlist.service';
 import { LanguageSwitcherComponent } from '../language-switcher/language-switcher.component';
 import { ThemeToggleComponent } from '../theme-toggle/theme-toggle.component';
@@ -249,21 +249,8 @@ export class DockNavbarComponent {
   protected readonly focusWithin = signal(false);
   protected readonly visible = signal(true);
 
-  /**
-   * The session lives in localStorage, which the server cannot read, so the
-   * server always renders the anonymous bar. Reading the token before the first
-   * client render would produce different markup and break hydration; `hydrated`
-   * flips after it.
-   *
-   * Exception: a pure client bootstrap (RenderMode.Client routes) has no server
-   * markup to match. Angular stamps `ng-server-context` on server-rendered
-   * documents only, so in the browser without it the session can be read at once
-   * and the signed-in bar never flashes the anonymous one.
-   */
-  private readonly hydrated = signal(
-    isPlatformBrowser(inject(PLATFORM_ID)) && !inject(DOCUMENT).querySelector('[ng-server-context]'),
-  );
-  protected readonly signedIn = computed(() => this.hydrated() && this.token.isAuthenticated());
+  /** The server always renders the anonymous bar; see `injectHydratedSession`. */
+  protected readonly signedIn = injectHydratedSession().signedIn;
   protected readonly canWishlist = this.wishlist.available;
   protected readonly initials = computed(() => {
     const user = this.token.user();
@@ -279,7 +266,6 @@ export class DockNavbarComponent {
   constructor() {
     afterNextRender(() => {
       this.anchorY = this.scrollY();
-      this.hydrated.set(true);
     });
     this.router.events
       .pipe(
