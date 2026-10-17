@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { LucideAngularModule, Star } from 'lucide-angular';
@@ -26,7 +26,7 @@ const PAGE_SIZE = 10;
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './schools-ranking-page.component.html',
 })
-export class SchoolsRankingPageComponent {
+export class SchoolsRankingPageComponent implements OnInit {
   private readonly schoolService = inject(SchoolService);
   private readonly locale = inject(LocaleService);
 
@@ -52,12 +52,19 @@ export class SchoolsRankingPageComponent {
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.request?.unsubscribe());
+  }
+
+  ngOnInit(): void {
     this.load();
   }
 
   protected load(): void {
     this.request?.unsubscribe();
     this.status.set('loading');
+    this.schools.set([]);
+    this.nextPage = 0;
+    this.moreFailed.set(false);
+    this.busy.set(false);
     this.request = this.fetch(0).subscribe({
       next: (page) => this.receive(page),
       error: () => this.status.set('error'),
