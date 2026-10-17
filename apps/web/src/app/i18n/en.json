@@ -478,6 +478,8 @@
     "loadError": "Your wishlist could not be loaded."
   },
   "rating": {
+    "groupLabel": "Your rating",
+    "star": "{{value}} out of 5",
     "commentPlaceholder": "Add a comment (optional)...",
     "submit": "Post my review",
     "submitting": "Sending...",

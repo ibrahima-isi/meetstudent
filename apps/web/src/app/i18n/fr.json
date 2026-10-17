@@ -478,6 +478,8 @@
     "loadError": "Votre liste de souhaits n'a pas pu être chargée."
   },
   "rating": {
+    "groupLabel": "Votre note",
+    "star": "{{value}} sur 5",
     "commentPlaceholder": "Ajouter un commentaire (optionnel)...",
     "submit": "Publier mon avis",
     "submitting": "Envoi...",

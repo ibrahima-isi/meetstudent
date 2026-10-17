@@ -247,6 +247,6 @@ Reprise #126 — CI après mise à jour de `dev` : deux tests du parcours footer
 
 Spec : [.scratch/live-test-gaps/spec.md](../.scratch/live-test-gaps/spec.md). Écarts relevés par le live test final de dev (section #129), un ticket par écart.
 
-- [ ] [live-test-gaps/01](../.scratch/live-test-gaps/issues/01-star-rating-accessibility.md) : étoiles de notation, nom accessible et focus visible. État : needs-triage, non commencé.
+- [x] [live-test-gaps/01](../.scratch/live-test-gaps/issues/01-star-rating-accessibility.md) : étoiles de notation, nom accessible et focus visible. État : resolved sur la branche `fix/star-rating-accessible-name` (PR vers `dev` à ouvrir). Groupe `role="group"` nommé, chaque étoile avec `aria-label` « N sur 5 » (fr/en) et `aria-pressed`, `outline-none` remplacé par un contour `focus-visible` clair/sombre. Preuves : 3 nouveaux specs vus en échec d'abord (2 rouges sur nom/état, le 3e rendu non vacueux), puis suite web 1296/1296 verte et `ng build` OK.
 - [ ] [live-test-gaps/02](../.scratch/live-test-gaps/issues/02-school-apply-button.md) : bouton « Postuler maintenant » de la fiche établissement sans effet. État : needs-info (décision produit requise), non commencé.
 - [ ] [live-test-gaps/03](../.scratch/live-test-gaps/issues/03-landing-top-cta-signed-in.md) : CTA « Créer un compte gratuit » du haut de l'accueil masqué une fois connecté. État : needs-triage, non commencé.

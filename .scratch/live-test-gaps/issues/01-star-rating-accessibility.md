@@ -4,9 +4,11 @@
 
 **Blocked by:** None (can start immediately).
 
-**Status:** needs-triage
+**Status:** resolved
 
-- [ ] Chaque étoile est annoncée avec sa valeur ; le groupe a un nom (fr/en dans fr.json et en.json).
-- [ ] Plus de `outline-none` sans équivalent `focus-visible` visible dans les deux thèmes.
-- [ ] Navigation et validation au clavier vérifiées ; pas de régression des pages de notation (école, programme, cours).
-- [ ] Spec en échec d'abord (nom accessible, focus), puis verte ; suite web et build verts.
+- [x] Chaque étoile est annoncée avec sa valeur ; le groupe a un nom (fr/en dans fr.json et en.json).
+- [x] Plus de `outline-none` sans équivalent `focus-visible` visible dans les deux thèmes.
+- [x] Navigation et validation au clavier vérifiées ; pas de régression des pages de notation (école, programme, cours).
+- [x] Spec en échec d'abord (nom accessible, focus), puis verte ; suite web et build verts.
+
+**Limites connues (revue):** clavier couvert par la sémantique native de `<button>`, pas par un test navigateur; sur l'accueil (`home-page.component.html:162`) le composant affiche une moyenne et annonce « Votre note » (suivi à traiter: libellé distinct pour une moyenne, voire `radiogroup`).
