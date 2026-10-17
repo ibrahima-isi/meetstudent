@@ -183,6 +183,22 @@ describe('LandingHeroComponent', () => {
       expect(register()).not.toBeNull();
     });
 
+    describe('before hydration, when the pre-paint script found a session', () => {
+      const display = () => getComputedStyle(register()!).display;
+      beforeEach(() => document.documentElement.classList.add('has-session'));
+      afterEach(() => document.documentElement.classList.remove('has-session'));
+
+      it('stays hidden until the component takes over, so no flash and no layout shift', () => {
+        register()!.classList.remove('hydrated');
+        expect(display()).toBe('none');
+      });
+
+      it('is shown again once hydrated and the session turns out invalid', () => {
+        expect(register()!.classList).toContain('hydrated');
+        expect(display()).not.toBe('none');
+      });
+    });
+
     describe('on a server-rendered document', () => {
       beforeEach(() => document.body.setAttribute('ng-server-context', 'ssr'));
       afterEach(() => document.body.removeAttribute('ng-server-context'));
