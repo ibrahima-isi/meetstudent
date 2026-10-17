@@ -1,0 +1,165 @@
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  ElementRef,
+  Injector,
+  OnInit,
+  afterNextRender,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { TranslocoDirective } from '@jsverse/transloco';
+import { LucideAngularModule, Star } from 'lucide-angular';
+import { EMPTY, Subscription, expand } from 'rxjs';
+import { pluralKey } from '@i18n/plural';
+import { Page, Program } from '@models/entities';
+import { LocaleService } from '@services/locale.service';
+import { ProgramService } from '@services/program.service';
+import { ErrorStateComponent } from '@shared/components/error-state/error-state.component';
+import { roundRating } from '@shared/format-rating';
+
+/** The top ten, and the size of every following page. */
+const PAGE_SIZE = 10;
+
+/**
+ * Public ranking of the programs. The order is the server's (average rating
+ * descending, unrated last, then name, then id), so the page never sorts and
+ * never ranks a partial client array: "See more" and "See all" just ask the
+ * next server pages. A program the next page repeats, because the ranking moved
+ * between two requests, keeps its first rank.
+ */
+@Component({
+  selector: 'app-programs-ranking-page',
+  imports: [RouterLink, TranslocoDirective, LucideAngularModule, ErrorStateComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './programs-ranking-page.component.html',
+})
+export class ProgramsRankingPageComponent implements OnInit {
+  private readonly programService = inject(ProgramService);
+  private readonly locale = inject(LocaleService);
+  private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
+  private readonly injector = inject(Injector);
+
+  protected readonly Star = Star;
+  protected readonly roundRating = roundRating;
+  protected readonly skeletons = [0, 1, 2];
+
+  /** 'loading' until the first page; 'error' shows the retry surface, never placeholder data. */
+  protected readonly status = signal<'loading' | 'loaded' | 'error'>('loading');
+  protected readonly programs = signal<Program[]>([]);
+  protected readonly totalElements = signal<number | undefined>(undefined);
+  private readonly lastPage = signal(true);
+  /** The next server page to ask; only moves when a page has been received. */
+  private nextPage = 0;
+
+  /** A page after the first is being fetched (one by one for "See all"). */
+  protected readonly busy = signal(false);
+  protected readonly moreFailed = signal(false);
+  protected readonly hasMore = computed(() => !this.lastPage());
+  /** What a retry after a failed continuation repeats. */
+  private lastMode: 'more' | 'all' = 'more';
+  private request?: Subscription;
+
+  constructor() {
+    inject(DestroyRef).onDestroy(() => this.request?.unsubscribe());
+  }
+
+  ngOnInit(): void {
+    this.load();
+  }
+
+  protected load(): void {
+    this.request?.unsubscribe();
+    this.status.set('loading');
+    this.programs.set([]);
+    this.nextPage = 0;
+    this.moreFailed.set(false);
+    this.busy.set(false);
+    this.request = this.fetch(0).subscribe({
+      next: (page) => this.receive(page),
+      error: () => this.status.set('error'),
+      complete: () => this.status.update((s) => (s === 'loading' ? 'loaded' : s)),
+    });
+  }
+
+  protected loadMore(): void {
+    this.continue('more');
+  }
+
+  protected loadAll(): void {
+    this.continue('all');
+  }
+
+  protected retryMore(): void {
+    this.continue(this.lastMode);
+  }
+
+  protected rated(program: Program): boolean {
+    return typeof program.rating === 'number' && Number.isFinite(program.rating);
+  }
+
+  protected hasDuration(program: Program): program is Program & { duration: number } {
+    return typeof program.duration === 'number' && program.duration > 0;
+  }
+
+  protected lang(): string {
+    return this.locale.active();
+  }
+
+  protected plural(base: string, count: number): string {
+    return pluralKey(base, count, this.locale.active());
+  }
+
+  private continue(mode: 'more' | 'all'): void {
+    if (this.busy() || this.lastPage()) return;
+    this.lastMode = mode;
+    this.busy.set(true);
+    this.moreFailed.set(false);
+    const firstNew = this.programs().length;
+    const first = this.fetch(this.nextPage);
+    this.request?.unsubscribe();
+    this.request = (mode === 'all' ? first.pipe(expand((page) => (this.isLast(page) ? EMPTY : this.fetch(this.nextPage)))) : first).subscribe({
+      next: (page) => this.receive(page),
+      error: () => {
+        this.busy.set(false);
+        this.moreFailed.set(true);
+        this.focusAfterRender(() => this.host.nativeElement.querySelector<HTMLElement>('[data-testid="rank-retry"]'));
+      },
+      complete: () => {
+        this.busy.set(false);
+        this.focusAfterRender(() => {
+          const links = this.host.nativeElement.querySelectorAll<HTMLElement>('[data-testid="rank-name"]');
+          return links[firstNew] ?? links[links.length - 1];
+        });
+      },
+    });
+  }
+
+  /**
+   * The buttons are disabled while busy and may vanish with the last page, which
+   * drops the keyboard focus to the page top: hand it to what the visitor came for.
+   */
+  private focusAfterRender(target: () => HTMLElement | null | undefined): void {
+    afterNextRender(() => target()?.focus(), { injector: this.injector });
+  }
+
+  private fetch(page: number) {
+    return this.programService.getPrograms(page, PAGE_SIZE, 'most');
+  }
+
+  /** An empty page ends the walk too, so a server that forgets `last` cannot loop forever. */
+  private isLast(page: Page<Program>): boolean {
+    return page.last === true || page.content.length === 0;
+  }
+
+  private receive(page: Page<Program>): void {
+    const known = new Set(this.programs().map((program) => program.id));
+    this.programs.update((list) => [...list, ...page.content.filter((program) => !known.has(program.id))]);
+    this.totalElements.set(page.totalElements);
+    this.lastPage.set(this.isLast(page));
+    this.nextPage += 1;
+  }
+}

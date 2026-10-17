@@ -1,7 +1,18 @@
 <div class="min-h-screen bg-muted/50" *transloco="let t">
   <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-12">
     <h1 class="mb-2 text-3xl font-bold text-foreground">{{ t('rankings.title') }}</h1>
-    <p class="mb-6 text-muted-foreground">{{ t('rankings.intro') }}</p>
+    <p class="mb-4 text-muted-foreground">{{ t('rankings.intro') }}</p>
+
+    <nav data-testid="ranking-switch" [attr.aria-label]="t('rankings.switchLabel')" class="mb-6 flex flex-wrap gap-2">
+      <a
+        [routerLink]="['/', lang(), 'rankings', 'schools']" aria-current="page"
+        class="rounded-full px-4 py-1.5 text-sm font-medium bg-indigo-600 text-white"
+      >{{ t('rankings.switchSchools') }}</a>
+      <a
+        [routerLink]="['/', lang(), 'rankings', 'programs']"
+        class="rounded-full px-4 py-1.5 text-sm font-medium border border-border bg-card text-foreground hover:bg-accent transition-colors"
+      >{{ t('rankings.switchPrograms') }}</a>
+    </nav>
 
     @if (status() === 'loading') {
       <div role="status" aria-busy="true" class="rounded-xl border border-border bg-card p-8 animate-pulse">

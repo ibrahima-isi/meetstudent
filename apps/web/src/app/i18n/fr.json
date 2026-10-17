@@ -72,7 +72,8 @@
     "compare": "Comparer des établissements",
     "comparePrograms": "Comparer des formations",
     "compareCourses": "Comparer des cours",
-    "rankings": "Classement des établissements"
+    "rankings": "Classement des établissements",
+    "rankingsPrograms": "Classement des formations"
   },
   "about": {
     "title": "À propos de MeetStudent",
@@ -274,7 +275,20 @@
     "loadMoreError": "Impossible de charger la suite du classement.",
     "empty": "Aucun établissement n'est encore classé.",
     "loadMore": "Voir plus",
-    "loadAll": "Voir tout"
+    "loadAll": "Voir tout",
+    "notRated": "Non noté",
+    "switchLabel": "Choisir le classement",
+    "switchSchools": "Établissements",
+    "switchPrograms": "Formations",
+    "programsTitle": "Classement des formations",
+    "programsIntro": "Les formations les mieux notées, d'après la moyenne des avis.",
+    "programsCount": {
+      "one": "{{ count }} formation classée",
+      "other": "{{ count }} formations classées"
+    },
+    "programsLoadError": "Le classement n'a pas pu être chargé.",
+    "programsLoadMoreError": "Impossible de charger la suite du classement.",
+    "programsEmpty": "Aucune formation n'est encore classée."
   },
   "schoolsCompare": {
     "title": "Comparer des établissements",
