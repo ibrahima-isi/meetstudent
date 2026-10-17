@@ -102,6 +102,7 @@ export class Shell {
     { path: '/schools', label: 'Écoles' },
     { path: '/programs', label: 'Filières et cours' },
     { path: '/tags', label: 'Tags et accréditations' },
+    { path: '/messages', label: 'Messages' },
     { path: '/settings', label: 'Paramètres' },
   ];
   readonly displayName = computed(() => {

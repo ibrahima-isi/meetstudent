@@ -48,6 +48,7 @@ describe('routes', () => {
       '/schools': 'Écoles',
       '/programs': 'Filières et cours',
       '/tags': 'Tags et accréditations',
+      '/messages': 'Messages',
       '/settings': 'Paramètres du site',
     };
     const harness = await RouterTestingHarness.create();
