@@ -1,17 +1,8 @@
-import { DOCUMENT, isPlatformBrowser } from '@angular/common';
-import {
-  afterNextRender,
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  inject,
-  PLATFORM_ID,
-  signal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { LocaleService } from '@services/locale.service';
-import { TokenService } from '@services/token.service';
+import { injectHydratedSession } from '@shared/hydrated-session';
 import { MeshBackgroundComponent } from '@shared/components/mesh-background/mesh-background.component';
 
 @Component({
@@ -49,27 +40,15 @@ import { MeshBackgroundComponent } from '@shared/components/mesh-background/mesh
   `,
 })
 export class CtaBandComponent {
-  private readonly token = inject(TokenService);
   protected readonly lang = inject(LocaleService).active;
 
-  /**
-   * The session lives in localStorage, which the server cannot read: the server
-   * always renders the band. Reading the token before the first client render
-   * would break hydration, so `hydrated` flips after it (same rule as the
-   * dock navbar, including the pure client bootstrap exception).
-   */
-  protected readonly hydrated = signal(
-    isPlatformBrowser(inject(PLATFORM_ID)) &&
-      !inject(DOCUMENT).querySelector('[ng-server-context]'),
-  );
-  protected readonly signedIn = computed(() => this.hydrated() && this.token.isAuthenticated());
+  /** The server always renders the band; see `injectHydratedSession`. */
+  private readonly session = injectHydratedSession();
+  protected readonly hydrated = this.session.hydrated;
+  protected readonly signedIn = this.session.signedIn;
   /** No spacing at all for a signed-in user, so the hidden band leaves no gap. */
   protected readonly hostClass = computed(() => {
     const spacing = this.signedIn() ? '' : 'block px-4 py-20 sm:px-6 lg:px-8';
     return this.hydrated() ? `${spacing} hydrated`.trim() : spacing;
   });
-
-  constructor() {
-    afterNextRender(() => this.hydrated.set(true));
-  }
 }
