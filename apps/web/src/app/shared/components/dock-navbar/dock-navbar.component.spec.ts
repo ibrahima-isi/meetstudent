@@ -834,4 +834,46 @@ describe('DockNavbarComponent', () => {
       });
     });
   });
+
+  describe('Forum coming soon', () => {
+    const forum = (scope: string) => root().querySelector<HTMLElement>(`${scope} [data-testid="forum-soon"]`);
+    const openMenu = () => {
+      (root().querySelector('button.menu-btn') as HTMLButtonElement).click();
+      fixture.detectChanges();
+    };
+
+    for (const signedIn of [false, true]) {
+      it(`shows a disabled Forum entry in the bar when ${signedIn ? 'signed in' : 'anonymous'}`, async () => {
+        authenticated.set(signedIn);
+        await render();
+        const entry = forum('.links')!;
+        expect(entry).not.toBeNull();
+        expect(entry.textContent).toContain('Forum');
+        expect(entry.textContent).toContain('Bientôt');
+        expect(entry.getAttribute('aria-disabled')).toBe('true');
+        expect(entry.getAttribute('tabindex')).toBe('-1');
+        expect(entry.hasAttribute('href')).toBeFalse();
+        expect(entry.closest('a')).toBeNull();
+      });
+    }
+
+    it('shows the same disabled entry in the menu panel', async () => {
+      await render();
+      openMenu();
+      const entry = forum('#dock-menu')!;
+      expect(entry).not.toBeNull();
+      expect(entry.textContent).toContain('Bientôt');
+      expect(entry.getAttribute('aria-disabled')).toBe('true');
+      expect(entry.getAttribute('tabindex')).toBe('-1');
+    });
+
+    it('is translated in English and leads nowhere', async () => {
+      const transloco = TestBed.inject(TranslocoService);
+      await firstValueFrom(transloco.load('en'));
+      transloco.setActiveLang('en');
+      await render();
+      expect(forum('.links')!.textContent).toContain('Soon');
+      expect(root().querySelector('.links a[href*="forum"]')).toBeNull();
+    });
+  });
 });
