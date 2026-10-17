@@ -9,6 +9,7 @@ import { provideTransloco } from '@jsverse/transloco';
 import { firstValueFrom } from 'rxjs';
 import { translocoOptions } from '@i18n/transloco.config';
 import { LocaleService } from '@services/locale.service';
+import { TokenService } from '@services/token.service';
 import { SiteFooterComponent } from './site-footer.component';
 
 describe('SiteFooterComponent', () => {
@@ -39,12 +40,17 @@ describe('SiteFooterComponent', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [provideZonelessChangeDetection(), provideRouter([]), provideTransloco(translocoOptions)],
+      providers: [
+        provideZonelessChangeDetection(), provideRouter([]), provideHttpClient(),
+        provideHttpClientTesting(), provideTransloco(translocoOptions),
+      ],
     });
   });
 
   afterEach(() => {
     jasmine.clock().uninstall();
+    localStorage.clear();
+    document.querySelector('[data-test-server-marker]')?.remove();
   });
 
   it('is a footer landmark', async () => {
@@ -139,6 +145,75 @@ describe('SiteFooterComponent', () => {
         expect(a.getAttribute('href')).toBe(`/en/${path}`);
         expect(a.hasAttribute('role')).toBeFalse();
       }
+    });
+  });
+
+  describe('account column by session state', () => {
+    const account = () => root().querySelector<HTMLElement>('footer nav:last-of-type');
+    const signIn = () => {
+      const tokens = TestBed.inject(TokenService);
+      tokens.setTokens('access', 'refresh');
+    };
+
+    it('shows profile and log out, and no login or register, to a signed-in user', async () => {
+      signIn();
+      await render('fr');
+      expect(account()!.querySelector('a[href="/fr/login"]')).toBeNull();
+      expect(account()!.querySelector('a[href="/fr/register"]')).toBeNull();
+      expect(account()!.querySelector('a[href="/fr/profile"]')!.textContent).toContain('Profil');
+      expect(account()!.querySelector('button')!.textContent).toContain('Se déconnecter');
+    });
+
+    it('translates the signed-in links in English', async () => {
+      signIn();
+      await render('en');
+      expect(account()!.querySelector('a[href="/en/profile"]')!.textContent).toContain('Profile');
+      expect(account()!.querySelector('button')!.textContent).toContain('Log out');
+    });
+
+    it('ends the session and goes home when the user logs out', async () => {
+      signIn();
+      await render('fr');
+      const navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+      account()!.querySelector('button')!.click();
+      fixture.detectChanges();
+      expect(TestBed.inject(TokenService).isAuthenticated()).toBeFalse();
+      expect(navigate).toHaveBeenCalledWith(['/', 'fr']);
+      expect(account()!.querySelector('a[href="/fr/login"]')).not.toBeNull();
+    });
+
+    it('renders no account column before hydration, then the right one', async () => {
+      signIn();
+      const marker = document.createElement('div');
+      marker.setAttribute('ng-server-context', 'ssr');
+      marker.setAttribute('data-test-server-marker', '');
+      document.body.appendChild(marker);
+      await firstValueFrom(TestBed.inject(LocaleService).use('fr'));
+      fixture = TestBed.createComponent(SiteFooterComponent);
+      // afterNextRender runs inside the first change detection in a browser, so the
+      // server-side first render is observed through the state that drives the template.
+      const hydrated = (fixture.componentInstance as unknown as { hydrated: () => boolean }).hydrated;
+      expect(hydrated()).toBeFalse();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(hydrated()).toBeTrue();
+      expect(account()!.querySelector('a[href="/fr/profile"]')).not.toBeNull();
+      expect(account()!.querySelector('a[href="/fr/login"]')).toBeNull();
+    });
+
+    it('shows login and register to a visitor after hydration', async () => {
+      const marker = document.createElement('div');
+      marker.setAttribute('ng-server-context', 'ssr');
+      marker.setAttribute('data-test-server-marker', '');
+      document.body.appendChild(marker);
+      await firstValueFrom(TestBed.inject(LocaleService).use('fr'));
+      fixture = TestBed.createComponent(SiteFooterComponent);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(account()!.querySelector('a[href="/fr/login"]')).not.toBeNull();
+      expect(account()!.querySelector('a[href="/fr/register"]')).not.toBeNull();
     });
   });
 
