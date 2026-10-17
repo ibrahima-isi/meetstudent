@@ -16,20 +16,20 @@ Handoff: implementation and local verification are complete. Check PR #97 for de
 
 Track individual deliveries in [../completion.md](../completion.md). Preserve this workstream list until all its child tickets pass their own verification; implementing #100 alone does not complete point 1.
 
-- [ ] 1. Credential/session security (#100–104).
+- [x] 1. Credential/session security (#100–104). Intégré dans `dev` (PR #131–#135 fusionnées, issues fermées) ; requalifié en live le 2026-10-17 (#129).
 - [x] 2. Reliable API mutations and backoffice behavior (#105–106, deletion in #104).
-- [ ] 3. Student/teacher registration, wishlist and unique ratings (#107–112).
-- [ ] 4. Engineering-skills worktree cleanup (#113).
-- [ ] 5. Safe auto-login worktree cleanup (#114).
-- [ ] 6. Hide authenticated landing signup band (#115).
-- [ ] 7. Footer account buttons (#117).
+- [x] 3. Student/teacher registration, wishlist and unique ratings (#107–112). Intégré dans `dev` (PR #138–#140, #144–#146 fusionnées, issues fermées) ; requalifié en live le 2026-10-17 (#129).
+- [x] 4. Engineering-skills worktree cleanup (#113). Issue fermée le 2026-10-16 (worktree vérifié propre et archivé).
+- [x] 5. Safe auto-login worktree cleanup (#114). Issue fermée le 2026-10-16 (aucun worktree ni branche auto-login restant).
+- [x] 6. Hide authenticated landing signup band (#115). [PR #147](https://github.com/ibrahima-isi/meetstudent/pull/147) fusionnée ; bloc absent connecté, présent visiteur en live (#129).
+- [x] 7. Footer account buttons (#117). [PR #149](https://github.com/ibrahima-isi/meetstudent/pull/149) puis #163 (profil/déconnexion) fusionnées ; vérifié en live (#129).
 - [x] 8. Four footer product destinations (#118–120, #122).
 - [x] 9. School/programme/course comparison (#123–125).
 - [x] 10. Search entry across three resource types (#121).
-- [ ] 11. School/programme rankings (#126–127).
-- [ ] 12. Découvrir / Discover navigation (#128).
-- [ ] 13. Exactly one About footer (#116).
-- [ ] 14. Exactly one Contact footer (#116).
+- [x] 11. School/programme rankings (#126–127). [PR #164](https://github.com/ibrahima-isi/meetstudent/pull/164) et [PR #169](https://github.com/ibrahima-isi/meetstudent/pull/169) fusionnées dans `dev` ; vérifié en live (#129). Issues #126/#127 encore ouvertes sur GitHub.
+- [x] 12. Découvrir / Discover navigation (#128). [PR #170](https://github.com/ibrahima-isi/meetstudent/pull/170) fusionnée dans `dev` ; vérifié en live (#129). Issue #128 encore ouverte sur GitHub.
+- [x] 13. Exactly one About footer (#116). [PR #148](https://github.com/ibrahima-isi/meetstudent/pull/148) fusionnée ; un seul `<footer>` sur `/fr/about` et `/en/about` en live (#129).
+- [x] 14. Exactly one Contact footer (#116). [PR #148](https://github.com/ibrahima-isi/meetstudent/pull/148) fusionnée ; un seul `<footer>` sur `/fr/contact` et `/en/contact` en live (#129).
 
 ### #100 — password change and session revocation (2026-10-13)
 
@@ -141,7 +141,7 @@ Contrats HTTP 400/404/409 des tags, accréditations, programmes/cours et rôles,
 
 - [x] #111 — comportement existant et qualification HTTP/PostgreSQL vérifiés ; suite API entière verte.
 - [x] #111 — revues Standards/Spec indépendantes terminées ; aucun correctif requis.
-- [ ] #111 — [PR #145](https://github.com/ibrahima-isi/meetstudent/pull/145) vers `dev` ouverte ; trois CI sur le présent head documentaire final, squash et clôture encore requis. Le bilan définitif sera ajouté au suivi local après fusion.
+- [x] #111 — [PR #145](https://github.com/ibrahima-isi/meetstudent/pull/145) vers `dev` ouverte ; trois CI sur le présent head documentaire final, squash et clôture encore requis. Le bilan définitif sera ajouté au suivi local après fusion. Bilan (#129) : PR #145 fusionnée le 2026-10-16 (squash `66f2ca5`), issue fermée.
 
 ### #112 — une note par utilisateur et cours (2026-10-16)
 
@@ -149,7 +149,7 @@ Contrats HTTP 400/404/409 des tags, accréditations, programmes/cours et rôles,
 
 - [x] #112 — comportement existant et qualification HTTP/PostgreSQL vérifiés ; suite API entière verte.
 - [x] #112 — revues Standards/Spec indépendantes terminées ; constats confirmés corrigés, API complète relancée verte (615 tests).
-- [ ] #112 — PR vers `dev`, trois CI, squash et clôture encore requis ; suivi programme à décider.
+- [x] #112 — [PR #146](https://github.com/ibrahima-isi/meetstudent/pull/146) fusionnée le 2026-10-16 (squash `e048f6d`), issue fermée (bilan #129). Suivi `ProgramRateDTO.programId` sans `@NotNull` toujours à décider.
 
 
 ### #121 — entrée Cherchez vers les trois catalogues (2026-10-16)
@@ -182,13 +182,15 @@ Revue Standards/Spec/sécurité indépendante : trois défauts d'accessibilité 
 
 ### #127 — classement des programmes (2026-10-17)
 
-- [ ] [#127](https://github.com/ibrahima-isi/meetstudent/issues/127) : implémentation et validations locales terminées dans `feat/programs-ranking`, base `13bd14f` (#126 fusionné). Page publique `/{lang}/rankings/programs` (dans la shell, SSR explicite avant `**`, `pathMatch: 'full'`, titre `pageTitle.rankingsPrograms`) qui appelle `ProgramService.getPrograms(page, 10, 'most')` (aucun nouvel endpoint, aucun tri client, signal partagé `programs` du service non lu) : dix premiers avec rang, compteur réel `totalElements` (pluriel fr/en), « Voir plus » / « Voir tout », erreur de continuation avec réessai, états chargement / vide / moins de dix / erreur, « Non noté » jamais 0, aucun compteur d'avis (l'API n'en renvoie pas). Le nom du programme est du texte (aucune page programme publique : pas de lien mort, `tabindex="-1"` pour recevoir le focus après « Voir plus ») ; l'établissement (`schoolName`) est du texte simple ; durée et code seulement s'ils sont fournis, sinon « Non renseigné ». Bascule Établissements / Formations (fr) et Schools / Programmes (en) dans les deux pages de classement : deux liens `routerLink` avec `aria-current="page"` (pas de `role=tab`), `flex-wrap` pour passer à la ligne sans débordement à 375 px, mode sombre. Le lien Classement de la barre reste vers `rankings/schools`.
+- [x] [#127](https://github.com/ibrahima-isi/meetstudent/issues/127) : implémentation et validations locales terminées dans `feat/programs-ranking`, base `13bd14f` (#126 fusionné). Page publique `/{lang}/rankings/programs` (dans la shell, SSR explicite avant `**`, `pathMatch: 'full'`, titre `pageTitle.rankingsPrograms`) qui appelle `ProgramService.getPrograms(page, 10, 'most')` (aucun nouvel endpoint, aucun tri client, signal partagé `programs` du service non lu) : dix premiers avec rang, compteur réel `totalElements` (pluriel fr/en), « Voir plus » / « Voir tout », erreur de continuation avec réessai, états chargement / vide / moins de dix / erreur, « Non noté » jamais 0, aucun compteur d'avis (l'API n'en renvoie pas). Le nom du programme est du texte (aucune page programme publique : pas de lien mort, `tabindex="-1"` pour recevoir le focus après « Voir plus ») ; l'établissement (`schoolName`) est du texte simple ; durée et code seulement s'ils sont fournis, sinon « Non renseigné ». Bascule Établissements / Formations (fr) et Schools / Programmes (en) dans les deux pages de classement : deux liens `routerLink` avec `aria-current="page"` (pas de `role=tab`), `flex-wrap` pour passer à la ligne sans débordement à 375 px, mode sombre. Le lien Classement de la barre reste vers `rankings/schools`.
 
 Preuves : rouge réel pour les routes (`app.routes.server.spec` et `app.routes.spec` : 2 échecs d'assertion, route serveur et page absentes → 404 avec le titre `pageTitle.notFound`), pour la page (spec contre une coquille vide : 22 échecs sur 22, la plupart sur assertions « Expected '' to contain … », quelques `TypeError` sur un bouton absent) et pour la bascule côté établissements (3 échecs : liens absents, y compris en fr). La garde mode sombre passe d'emblée (caractérisation, 5 cas + continuation en échec pour les programmes, 2 pour les bascules). API : aucun changement de code ; le nouveau `ProgramRankingPostgresIntegrationTests` (8 programmes, pages de 3, notes via `POST /api/v1/program-rates` avec `ROLE_EXPERT`, moyennes 5 / 4,0 ×4 dont un programme noté 5 et 3 / 2 / deux sans note, égalités par nom puis id) est vert d'emblée sur H2 puis deux fois de suite sur PostgreSQL 18 réel (V1–V24, `ddl-auto=validate`, conteneur jetable `ms127-pg` arrêté et supprimé). Deux mutations temporaires, annulées (`git checkout`), prouvent qu'il détecte : retrait de `NULLS LAST` dans `ProgramRepository` → rouge (« nothing rated follows an unrated program ») ; tri par défaut `id` seul au lieu de `name,id` dans `ProgramController` → rouge (`[30, 26, 27, 28, 29, 31]` obtenu). Limite connue inchangée : H2 supprime `NULLS LAST`, donc « sans note à la fin » n'est assertée que sur PostgreSQL.
 
 Résultats réels : **1269** tests web verts (`npm test -- --no-watch --browsers=ChromeHeadless`, aucun échec), `npx ng build` vert ; API `./mvnw clean verify` : **632** tests (239 unitaires + 393 intégration), zéro échec/erreur/skip, BUILD SUCCESS. Non fait dans cette passe : smoke navigateur réel et revue indépendante ; le point 11 de #99 reste décoché jusqu'à fusion.
 
 Revue Standards/Spec/sécurité indépendante (2026-10-17) : Standards 0 violation (duplication avec la page établissements gardée, `13bd14f` fusionné et revu) ; Spec conforme ; sécurité sans constat (texte interpolé seulement, aucun nouvel endpoint, nom `<script>` affiché comme texte). Un défaut confirmé dans le navigateur puis corrigé en red → green (1 rouge réel) : le nom du programme qui reçoit le focus après « Voir plus » / « Voir tout » portait `outline-none`, donc aucun indicateur de focus (`:focus-visible` vrai, `outline-style: none`), contrairement au lien de la page établissements ; la classe est retirée et le focus est visible. Smoke navigateur réel (SSR local port 4621 + fausse API Node paginée port 4620 pour `schools` et `programs`) : SSR `ng-server-context="ssr"` à 10 lignes en fr et en, titres et compteurs pluriels (« 23 formations classées », « 23 programmes ranked »), égalités par nom puis id, trois « Not rated » en fin (en), « Voir plus » au clavier → 20 lignes et focus sur le 11e, échec de la page 3 pendant « See all » → 20 lignes conservées et focus sur Retry, réessai → 23 lignes ; navigation vers Établissements pendant « See all » → requête annulée, aucune page suivante ; erreur, vide et 4 résultats sans bouton ; bascule avec `aria-current="page"` correct sur les deux pages ; sans débordement à 1280, 1100 et 375 px (fr/en, clair/sombre), barre inchangée. Résultats réels après correctif : **1270** tests web verts, `npx ng build` vert ; API non touchée.
+
+Livraison (bilan #129) : [PR #169](https://github.com/ibrahima-isi/meetstudent/pull/169) fusionnée dans `dev` (`de42da5`) ; issue #127 encore ouverte sur GitHub.
 
 ### #128 — navigation « Découvrir » / « Discover » (2026-10-17)
 
@@ -197,6 +199,37 @@ Revue Standards/Spec/sécurité indépendante (2026-10-17) : Standards 0 violati
 Preuves : rouge réel avant le code, `npm test -- --include='**/dock-navbar.component.spec.ts'` : 16 échecs sur 86 (bouton absent, `tagName` d'un élément nul, liste des href du menu mobile à 8 au lieu de 11, libellés anglais absents, exclusion mutuelle). Vert après le code : 86/86. Puis suite complète : **1255** tests web verts (référence `origin/dev` : 1231+, aucune régression), `npx ng build` vert. Le test de non-débordement 320–1440 px (fr/en, anonyme/connecté) mesure désormais aussi le bouton ; il reste vert, la barre ne gagne qu'un bouton plus court que l'ancien lien, et le seuil de 73rem comme les marges ne sont pas modifiés. Un test vérifie que le panneau reste dans l'écran à 1280 px. Écart : le budget CSS du composant (avertissement, pas une erreur) passe de 4,04 kB à 5,09 kB. Non vérifié : rendu visuel en navigateur réel et CI Linux (polices plus larges) ; la touche Entrée/Espace repose sur le comportement natif du `<button>`. Le point 12 de #99 reste décoché jusqu'à la fusion.
 
 Revue Standards/Spec/sécurité indépendante sur `66fcd9c` : trois défauts confirmés dans le navigateur puis corrigés en red → green (3 rouges réels) — sous 1440 px, la règle de conteneur `.links a { padding-inline: 0.35rem }` écrasait le remplissage des liens du panneau (5,95 px au lieu de 15,3 px) : sélecteur `.links .discover-panel a` ; suivre « Comment ça marche » depuis `/{lang}#how-it-works` ne déclenche aucune navigation et laissait le panneau ouvert : un clic dans le panneau le ferme ; Tab au-delà du dernier lien laissait le panneau ouvert sous « Avis » : la perte du focus clavier hors du groupe bouton + panneau le ferme (Maj+Tab vers le bouton le garde ouvert). Doublon `if (open)` fusionné. Résultats réels : `dock-navbar` 89/89, suite web **1258** tests verts, `npx ng build` vert (budget CSS du composant : avertissement 5,10 kB, seuil d'erreur 8 kB). Smoke navigateur (SSR port 4620 + fausse API Node port 4621, fr/en, 1300/1100/375 px, clair/sombre, clavier réel) : Tab/Entrée/Espace/Échap avec retour du focus, clic extérieur, exclusion mutuelle compte/souhaits/langue, barre visible pendant l'ouverture, ancre depuis `/fr/schools` (section à 96 px, titre « Comment ça marche » inchangé), `/fr/programs`, menu mobile à plat. Marge de la barre à 72rem (1224 px) : 87 px au pire (fr, étudiant connecté avec souhaits), 147 px connecté sans souhaits, 157 px anonyme ; le bouton (104 px) est plus court que l'ancien lien, donc la marge augmente par rapport à `dev`, aucune marge supplémentaire ajoutée.
+
+Livraison (bilan #129) : [PR #170](https://github.com/ibrahima-isi/meetstudent/pull/170) fusionnée dans `dev` (`5428c0b`) ; issue #128 encore ouverte sur GitHub.
+
+### #129 — vérification de l'ensemble intégré (2026-10-17)
+
+- [ ] [#129](https://github.com/ibrahima-isi/meetstudent/issues/129) : vérification locale et live terminées sur `dev` = `5428c0b` (tous les tickets #100–#128 intégrés, CI `dev` verte sur `5428c0b`). **Promotion `dev` → `main` non faite** (accord explicite du propriétaire requis) ; `main` = `b0dbba8`, ancêtre de `dev` (fast-forward possible, 14 commits d'écart). #99 non modifié.
+
+Branche `chore/final-verification-129` (worktree `kind-liskov-067225`). Suites sur l'ensemble intégré : API `./mvnw clean verify` **632** tests (239 unitaires + 393 intégration), 0 échec/erreur/skip, BUILD SUCCESS ; web **1292** tests ChromeHeadless verts et `npx ng build` vert (avertissement de budget CSS `dock-navbar` 5,10 kB > 4 kB, déjà connu) ; backoffice `npm ci`, **333** tests verts et build vert. PostgreSQL **18.6** jetable : V1–V24 appliquées sur base vide avec `ddl-auto=validate`, redémarrage « up to date ».
+
+Live test natif (aucune fausse API) : PostgreSQL 18 jetable, jar API profil `dev` (mail dev dans le log, `ADMIN_EMAIL`/`ADMIN_PASSWORD` fournis), SSR web, backoffice statique, proxy Node mono-origine ; données du seed `senegal.json` (36 établissements, 133 formations, 2 accréditations, 0 cours) plus 4 cours créés par l'admin via l'API. Navigateur intégré, fr/en, 1280 px et 375 px, clair/sombre, visiteur et connecté.
+
+| Contrôle | Résultat |
+| --- | --- |
+| Sécurité | OK : anonyme `/users` 401, `/media/1` 401 ; étudiant `/users` et `/media` 403 ; école inconnue 404 ; `DELETE /auth` 405 ; `Accept: application/xml` 406 ; `?sort=` inconnu 400 ; mauvais login 401 ; inscription `ROLE_ADMIN` 400 ; email en double 400 ; seed `admin@meetstudent.com`/`password` 401 |
+| Inscription | OK : API étudiant (sans rôle) et enseignant 201, JWT `ROLE_STUDENT`/`ROLE_EXPERT` ; UI fr étudiante et UI en enseignant (spécialité) → session ouverte, redirection `/{lang}/home` |
+| Reset email | OK pour étudiant, enseignant, admin : 202, lien `/en/reset-password#token=` dans le log API, confirmation 204, lien réutilisé 400, ancien access token 401, ancien mot de passe 401, nouveau 200 ; parcours UI forgot/reset en anglais puis connexion |
+| Admin au redémarrage | OK : après redémarrage de l'API avec le même `ADMIN_PASSWORD`, le mot de passe réinitialisé reste valide (200) et `ADMIN_PASSWORD` refusé (401) ; seed idempotent |
+| Inactivité 7 jours | OK à horloge simulée : `last_activity` reculé en base (pas d'horloge injectable à chaud) ; session à 7 j + 1 min → access 401 et refresh 401 ; autre session du même compte 200 ; session à 6 j 23 h → refresh 200 sans prolonger `last_activity`. Seuils exacts couverts par les tests d'intégration de #103 |
+| Rôles et notes | OK : étudiant note un établissement 201 puis 200 (une seule ligne), programme/cours 403 ; enseignant établissement/programme/cours 201 puis 200 ; anonyme 401 ; note 6 400 ; moyennes à jour ; notes UI étudiant (établissement) et enseignant (formation) enregistrées en base |
+| Recherches | OK : API établissements par nom (12) et par ville (12), formations (20), cours ; UI cours via Cherchez (`?q=Analyse`, 1 résultat) et accréditations (`?q=CAMES`, 1 résultat) |
+| Comparaisons | OK : établissements, formations (en) et cours : 1→3 sélectionnés, 4e refusé avec message `role="status"`, tableau à 3 colonnes, « Non noté » / « Not rated » |
+| Classements | OK : établissements fr SSR 10 → Voir plus 20 (focus sur le 11e) → Voir tout 36 sans doublon, boutons retirés ; formations en 10 → 20 → 133 ; bascule `aria-current="page"` |
+| Navigation, footer, CTA | OK : « Découvrir » ouvre 4 liens (ancre, formations, cours, accréditations), Échap ferme ; Forum « Bientôt » désactivé ; menu mobile à plat ; footer visiteur (Se connecter/Créer un compte) et connecté (Profil/Se déconnecter) ; bloc « Prêt à trouver votre voie ? » masqué connecté |
+| À propos / Contact | OK : SSR fr/en, un seul `<footer>`, contenu des paramètres du site |
+| Wishlist | OK : étudiant ajoute (bouton pressé, panneau, ligne en base) ; enseignant 403 en API et aucun cœur en UI ; écriture sur un autre compte 403 |
+| Backoffice | OK : enseignant refusé (« Accès réservé aux administrateurs »), admin connecté avec le mot de passe réinitialisé, liste des filières avec 4 cours |
+| Mise en page | OK : aucun débordement horizontal sur 12 pages à 375 px (sombre) et 5 pages à 1280 px (clair et sombre) ; aucune erreur console relevée en fin de parcours |
+
+Écarts constatés (non corrigés, hors périmètre) : boutons d'étoiles de `star-rating` sans nom accessible et `outline-none` ; bouton « Postuler maintenant » de la fiche établissement sans action ; CTA « Créer un compte gratuit » du hero encore visible connecté ; issues #126, #127, #128 encore ouvertes malgré leurs PR fusionnées ; PR #171, #172 et #173 ouvertes vers `dev` et non incluses dans cette vérification. Non couvert : build des images Docker api/web (bloqué dans ce sandbox), TLS réel, SMTP réel, profil `prod`, vrais téléphones.
+
+Nettoyage : conteneur PostgreSQL, jar, SSR et proxy arrêtés ; secrets jetables supprimés ; stockage navigateur effacé ; viewport remis en desktop. Restent à faire : promotion de `main` (accord du propriétaire), live test sur `main`, retrait de ce worktree et de sa branche locale après fusion.
 
 ## ui-auth-aware-footer-bo-design
 
