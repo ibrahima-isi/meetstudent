@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately). Lire d'abord le plan de réécriture Vite du back office pour éviter un travail jeté.
 
-**Status:** resolved (PR A + PR B livrées ; fusion en attente)
+**Status:** resolved (PR A + PR B fusionnées dans `dev` : `f41c53b`, `0b17bc4`)
 
 - [x] Les écrans du back office utilisent les mêmes jetons sémantiques et styles de boutons que le web. PR B (`feat/backoffice-token-migration`) : les 17 gabarits migrés vers `bg-card`, `text-foreground`, `border-border`, `.btn*`, `.field-input` ; les couleurs de statut restantes (succès, avertissement) portent toutes une paire `dark:`. Le shell est migré par la PR A.
 - [x] Le thème clair/sombre est appliqué avant le premier affichage et peut être basculé.
