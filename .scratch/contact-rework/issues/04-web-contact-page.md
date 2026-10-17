@@ -4,10 +4,14 @@
 
 **Blocked by:** [contact-rework/01](01-api-contact-messages.md), [contact-rework/02](02-site-settings-social-links.md).
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Formulaire accessible (labels, erreurs reliées aux champs, `aria-live` pour le résultat), champ piège invisible et hors tabulation.
-- [ ] Succès : message de confirmation et formulaire vidé ; 400 : erreurs par champ ; 429 et réseau : message adapté, formulaire conservé.
-- [ ] 7 boutons : liens `https` valides, `rel="noopener noreferrer"`, nom accessible ; absents quand le lien est vide.
-- [ ] `?school=` préremplit le sujet (assaini) ; fr/en dans les deux fichiers i18n.
-- [ ] Tests en échec d'abord, puis suite web et build verts ; vérifié en navigateur réel (clair/sombre, 375 px et bureau).
+- [x] Formulaire accessible (labels, erreurs reliées aux champs, `aria-live` pour le résultat), champ piège invisible et hors tabulation.
+- [x] Succès : message de confirmation et formulaire vidé ; 400 : erreurs par champ ; 429 et réseau : message adapté, formulaire conservé.
+- [x] 7 boutons : liens `https` valides, `rel="noopener noreferrer"`, nom accessible ; absents quand le lien est vide.
+- [x] `?school=` préremplit le sujet (assaini) ; fr/en dans les deux fichiers i18n.
+- [x] Tests en échec d'abord, puis suite web et build verts ; vérifié en navigateur réel (clair/sombre, 375 px et bureau).
+
+## Comments
+
+2026-10-17 : la page envoie `language` (fr|en), comme l'API l'attend. Les erreurs 400 du serveur sont affichées avec une phrase générique traduite (« valeur non acceptée »), car la langue du message serveur est inconnue. Point à suivre séparément : `shared/dark-mode.guard.spec.ts` ne couvre pas la page Contact.

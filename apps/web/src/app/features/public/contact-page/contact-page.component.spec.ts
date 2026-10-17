@@ -129,6 +129,20 @@ describe('ContactPageComponent', () => {
       await settle();
     };
     const form = () => el().querySelector('form') as HTMLFormElement;
+
+    it('keeps the field icons clear of the typed text (lucide copies the classes onto the svg, so the offset must not be applied twice)', async () => {
+      flushSettings();
+      await settle();
+      for (const name of ['email', 'subject']) {
+        const input = field<HTMLInputElement>(name);
+        const svg = input.parentElement!.querySelector('svg')!.getBoundingClientRect();
+        const box = input.getBoundingClientRect();
+        const textStart = box.left + parseFloat(getComputedStyle(input).paddingLeft);
+        expect(svg.left - box.left).withContext(`${name}: icon starts near the left edge`).toBeLessThanOrEqual(20);
+        expect(textStart - svg.right).withContext(`${name}: gap between icon and text`).toBeGreaterThanOrEqual(8);
+      }
+    });
+
     const submit = async () => {
       form().dispatchEvent(new Event('submit'));
       await settle();

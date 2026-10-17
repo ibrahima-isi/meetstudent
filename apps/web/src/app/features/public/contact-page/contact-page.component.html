@@ -53,7 +53,7 @@
           <div>
             <label for="contact-email" class="mb-2 block font-medium text-foreground">{{ t('contact.form.email') }}</label>
             <div class="relative">
-              <lucide-icon [img]="Mail" class="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+              <span class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" aria-hidden="true"><lucide-icon [img]="Mail" class="block h-5 w-5" /></span>
               <input
                 id="contact-email"
                 name="email"
@@ -74,7 +74,7 @@
           <div>
             <label for="contact-subject" class="mb-2 block font-medium text-foreground">{{ t('contact.form.subject') }}</label>
             <div class="relative">
-              <lucide-icon [img]="PenLine" class="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+              <span class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" aria-hidden="true"><lucide-icon [img]="PenLine" class="block h-5 w-5" /></span>
               <input
                 id="contact-subject"
                 name="subject"
