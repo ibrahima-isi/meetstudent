@@ -4,9 +4,13 @@
 
 **Blocked by:** None.
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Une moyenne est annoncée « Moyenne : N sur 5 » (fr/en), jamais « Votre note ».
-- [ ] Aucune étoile n'est « enfoncée » en lecture seule ; plus de bouton inutile au clavier.
-- [ ] Notation utilisateur (école, programme, cours) inchangée.
-- [ ] Spec en échec d'abord, puis verte ; suite web et build verts.
+- [x] Une moyenne est annoncée « Moyenne : N sur 5 » (fr/en), jamais « Votre note ».
+- [x] Aucune étoile n'est « enfoncée » en lecture seule ; plus de bouton inutile au clavier.
+- [x] Notation utilisateur (école, programme, cours) inchangée.
+- [x] Spec en échec d'abord, puis verte ; suite web et build verts.
+
+## Comments
+
+2026-10-17 : mode lecture seule = `role="img"` « Moyenne : N sur 5 » / « Pas encore noté » (fr/en), sans boutons ni `aria-pressed`, moyenne arrondie à une décimale ; la carte de l'accueil passe `[readonly]="true"`. En écrivant la spec, un défaut voisin est apparu : `initialRating` n'était lu que dans le constructeur (donc 0), les étoiles des cartes de l'accueil n'étaient jamais remplies ; le mode lecture seule lit désormais l'entrée directement. La notation utilisateur (non readonly) garde son comportement (son `rating` initial reste lu au constructeur, hors périmètre).

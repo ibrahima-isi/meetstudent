@@ -17,6 +17,21 @@ import { roundRating } from '@shared/format-rating';
       until the bundle loads, and this widget sits inside other pages.
     -->
     <div class="flex flex-col gap-3">
+      @if (readonly()) {
+        <!-- An average is a picture, not a control: no buttons, nothing pressed. -->
+        <div class="flex items-center gap-1" role="img" [attr.aria-label]="averageLabel() | transloco: { value: average() }">
+          @for (value of [1, 2, 3, 4, 5]; track value) {
+            <lucide-icon
+              [img]="Star"
+              class="w-6 h-6"
+              [class]="value <= average() ? 'fill-yellow-400 text-yellow-400' : 'fill-gray-200 text-gray-200 dark:fill-gray-700 dark:text-gray-700'"
+            ></lucide-icon>
+          }
+          @if (average() > 0 && showValue()) {
+            <span class="ml-2 text-sm font-medium text-muted-foreground" aria-hidden="true">{{ average() }}/5</span>
+          }
+        </div>
+      } @else {
       <div class="flex items-center gap-1" role="group" [attr.aria-label]="'rating.groupLabel' | transloco">
         @for (value of [1, 2, 3, 4, 5]; track value) {
           <button
@@ -41,6 +56,7 @@ import { roundRating } from '@shared/format-rating';
           <span class="ml-2 text-sm font-medium text-muted-foreground">{{ shownRating() }}/5</span>
         }
       </div>
+      }
 
       @if (!readonly() && !submitted() && showCommentInput() && rating() > 0) {
         <div class="flex flex-col gap-2 animate-in fade-in slide-in-from-top-1">
@@ -94,6 +110,9 @@ export class StarRatingComponent {
   failed = signal(false);
   /** The average as read by people; `rating` itself stays exact for the stars. */
   protected shownRating = computed(() => roundRating(this.rating()));
+  /** The read-only mode shows the average given by the parent, rounded once for stars and speech. */
+  protected average = computed(() => roundRating(this.initialRating()));
+  protected averageLabel = computed(() => (this.average() > 0 ? 'rating.average' : 'rating.none'));
   protected locked = computed(() => this.readonly() || this.submitted());
 
   readonly Star = Star;

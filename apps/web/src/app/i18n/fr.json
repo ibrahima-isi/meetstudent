@@ -481,6 +481,8 @@
   "rating": {
     "groupLabel": "Votre note",
     "star": "{{value}} sur 5",
+    "average": "Moyenne : {{value}} sur 5",
+    "none": "Pas encore noté",
     "commentPlaceholder": "Ajouter un commentaire (optionnel)...",
     "submit": "Publier mon avis",
     "submitting": "Envoi...",

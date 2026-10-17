@@ -151,6 +151,51 @@ describe('StarRatingComponent', () => {
     });
   });
 
+  describe('read-only average', () => {
+    const root = () => fixture.nativeElement as HTMLElement;
+
+    beforeEach(async () => {
+      const transloco = TestBed.inject(TranslocoService);
+      await firstValueFrom(transloco.load('en'));
+      transloco.setActiveLang('en');
+      fixture = TestBed.createComponent(StarRatingComponent);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('itemId', 1);
+      fixture.componentRef.setInput('itemType', 'school');
+      fixture.componentRef.setInput('readonly', true);
+      fixture.componentRef.setInput('initialRating', 4);
+      fixture.detectChanges();
+    });
+
+    it('announces the average, never "Your rating"', () => {
+      const group = root().querySelector('[role="img"]');
+      expect(group?.getAttribute('aria-label')).toBe('Average: 4 out of 5');
+      expect(root().textContent).not.toContain('Your rating');
+      expect(root().querySelector('[role="group"]')).toBeNull();
+    });
+
+    it('has no star buttons and nothing pressed, so nothing to tab through', () => {
+      expect(root().querySelectorAll('button').length).toBe(0);
+      expect(root().querySelector('[aria-pressed]')).toBeNull();
+    });
+
+    it('fills as many stars as the average, rounded', () => {
+      expect(root().querySelectorAll('svg.fill-yellow-400').length).toBe(4);
+    });
+
+    it('says so when nothing has been rated yet', () => {
+      fixture.componentRef.setInput('initialRating', 0);
+      fixture.detectChanges();
+      expect(root().querySelector('[role="img"]')?.getAttribute('aria-label')).toBe('Not rated yet');
+    });
+
+    it('rounds the average announced to one decimal', () => {
+      fixture.componentRef.setInput('initialRating', 4.333333);
+      fixture.detectChanges();
+      expect(root().querySelector('[role="img"]')?.getAttribute('aria-label')).toBe('Average: 4.3 out of 5');
+    });
+  });
+
   describe('submission', () => {
     const q = (sel: string) => (fixture.nativeElement as HTMLElement).querySelector(sel);
 
