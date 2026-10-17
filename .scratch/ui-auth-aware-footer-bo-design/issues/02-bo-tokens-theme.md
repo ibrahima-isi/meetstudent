@@ -4,9 +4,9 @@
 
 **Blocked by:** None (can start immediately). Lire d'abord le plan de réécriture Vite du back office pour éviter un travail jeté.
 
-**Status:** ready-for-agent
+**Status:** in-progress (partiel : PR A livrée, PR B à faire)
 
-- [ ] Les écrans du back office utilisent les mêmes jetons sémantiques et styles de boutons que le web.
-- [ ] Le thème clair/sombre est appliqué avant le premier affichage et peut être basculé.
-- [ ] Aucune régression : non-admin toujours refusé, sidebar et modération intactes.
-- [ ] Specs du shell et du thème en échec d'abord, puis vertes.
+- [ ] Les écrans du back office utilisent les mêmes jetons sémantiques et styles de boutons que le web. **En attente (PR B)** : seuls le shell (sidebar, en-tête) et les jetons/`.btn` sont faits ; 17 gabarits utilisent encore des classes de palette brutes (slate/indigo/white…).
+- [x] Le thème clair/sombre est appliqué avant le premier affichage et peut être basculé.
+- [x] Aucune régression : non-admin toujours refusé, sidebar et modération intactes.
+- [x] Specs du shell et du thème en échec d'abord, puis vertes.
