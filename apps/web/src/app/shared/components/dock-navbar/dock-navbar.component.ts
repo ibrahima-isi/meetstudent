@@ -71,6 +71,7 @@ import { nextDockVisible, SCROLL_DELTA_PX } from './dock-visibility';
       .logo { display: inline-grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 0.5rem; background: var(--brand); color: var(--brand-foreground); font-size: 0.9rem; }
       .links { display: none; margin-left: 1rem; gap: 0.25rem; }
       .links a, .panel a.item { padding: 0.45rem 0.8rem; border-radius: 9999px; font-size: 0.9rem; color: var(--muted-foreground); text-decoration: none; transition: background-color 0.15s, color 0.15s; }
+      .links a { padding: 0.45rem 0.55rem; }
       .links a:hover, .panel a.item:hover { background: var(--accent); color: var(--foreground); }
       .actions { display: flex; align-items: center; gap: 0.25rem; margin-left: auto; }
       .wide-only { display: none; }
@@ -86,7 +87,7 @@ import { nextDockVisible, SCROLL_DELTA_PX } from './dock-visibility';
       .panel { pointer-events: auto; width: 100%; max-width: 72rem; max-height: calc(100dvh - 5.5rem); overflow-y: auto; margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.25rem; padding: 0.75rem; border-radius: 1.5rem; background: var(--card); border: 1px solid var(--border-strong); box-shadow: 0 16px 48px -16px rgb(0 0 0 / 0.35); }
       .brand:focus-visible, .links a:focus-visible, .panel a.item:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
       .panel a.item { font-size: 1rem; padding: 0.75rem 1rem; }
-      @container (min-width: 68rem) { .links { display: flex; } .wide-only { display: inline-flex; } .menu-btn, .panel { display: none; } }
+      @container (min-width: 73rem) { .links { display: flex; } .wide-only { display: inline-flex; } .menu-btn, .panel { display: none; } }
       @media (prefers-reduced-motion: reduce) { .dock { transition: none; } }
     `,
   ],
@@ -99,6 +100,7 @@ import { nextDockVisible, SCROLL_DELTA_PX } from './dock-visibility';
         </a>
         <div class="links">
           <a [routerLink]="['/', lang(), 'schools']">{{ t('nav.schools') }}</a>
+          <a [routerLink]="['/', lang(), 'rankings', 'schools']">{{ t('nav.rankings') }}</a>
           <a [routerLink]="['/', lang()]" fragment="how-it-works">{{ t('nav.howItWorks') }}</a>
           <a [routerLink]="['/', lang()]" fragment="reviews">{{ t('nav.reviews') }}</a>
           <a [routerLink]="['/', lang(), 'about']">{{ t('nav.about') }}</a>
@@ -164,6 +166,7 @@ import { nextDockVisible, SCROLL_DELTA_PX } from './dock-visibility';
       @if (menuOpen()) {
         <nav class="panel" id="dock-menu" [attr.aria-label]="t('nav.primary')">
           <a class="item" [routerLink]="['/', lang(), 'schools']">{{ t('nav.schools') }}</a>
+          <a class="item" [routerLink]="['/', lang(), 'rankings', 'schools']">{{ t('nav.rankings') }}</a>
           <a class="item" [routerLink]="['/', lang()]" fragment="how-it-works">{{ t('nav.howItWorks') }}</a>
           <a class="item" [routerLink]="['/', lang()]" fragment="reviews">{{ t('nav.reviews') }}</a>
           <a class="item" [routerLink]="['/', lang(), 'about']">{{ t('nav.about') }}</a>

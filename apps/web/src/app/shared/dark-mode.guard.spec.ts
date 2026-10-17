@@ -28,6 +28,7 @@ import { TestimonialsComponent } from '../features/public/landing-page/sections/
 import { LandingPageComponent } from '../features/public/landing-page/landing-page.component';
 import { LandingHeroComponent } from '../features/public/landing-page/sections/landing-hero.component';
 import { SchoolsPageComponent } from '../features/public/schools-page/schools-page.component';
+import { SchoolsRankingPageComponent } from '../features/public/schools-ranking-page/schools-ranking-page.component';
 import { SchoolsComparePageComponent } from '../features/public/schools-compare-page/schools-compare-page.component';
 import { CoursesComparePageComponent } from '../features/public/courses-compare-page/courses-compare-page.component';
 import { ProgramsComparePageComponent } from '../features/public/programs-compare-page/programs-compare-page.component';
@@ -391,6 +392,9 @@ describe('dark mode: no light-only palette classes', () => {
     spyOn(TestBed.inject(ProgramService), 'getProgram').and.callFake(answer as never));
   const compareCoursesWith = (answer: (id: number) => unknown) => withUrl('/?ids=1,2', () =>
     spyOn(TestBed.inject(CourseService), 'getCourse').and.callFake(answer as never));
+  const rankingWith = (answer: (page: number) => unknown) => () => {
+    spyOn(TestBed.inject(SchoolService), 'getSchools').and.callFake(answer as never);
+  };
   const comparisonCases: [string, Type<unknown>, (c: any) => void, string][] = [
     [
       'schools page with a full comparison selection and the limit message',
@@ -466,6 +470,15 @@ describe('dark mode: no light-only palette classes', () => {
       compareCoursesWith((id) => (id === 2 ? throwError(() => new HttpErrorResponse({ status: 404 })) : of({ id, name: 'C' }))),
       '[role="alert"] a',
     ],
+    [
+      'ranking page loaded with more pages to come',
+      SchoolsRankingPageComponent,
+      rankingWith(() => of({ content: [{ id: 1, name: 'A', rating: 4, reviewCount: 2 }, { id: 2, name: 'B' }], last: false, totalElements: 12 })),
+      '[data-testid="rank-more"]',
+    ],
+    ['ranking page loading', SchoolsRankingPageComponent, rankingWith(() => NEVER), '[aria-busy="true"]'],
+    ['ranking page empty', SchoolsRankingPageComponent, rankingWith(() => of({ content: [], last: true, totalElements: 0 })), '[data-testid="rank-empty"]'],
+    ['ranking page error', SchoolsRankingPageComponent, rankingWith(() => throwError(() => new Error('x'))), 'app-error-state'],
     ['courses compare page with too few courses', CoursesComparePageComponent, withUrl('/?ids=1'), 'a[href="/en/courses"]'],
   ];
 
@@ -476,6 +489,24 @@ describe('dark mode: no light-only palette classes', () => {
       expect(lightOnlyClasses(root)).toEqual([]);
     });
   }
+
+  it('ranking page with a failed continuation has none', async () => {
+    rankingWith((page) =>
+      page === 0 ? of({ content: [{ id: 1, name: 'A', rating: 4 }], last: false, totalElements: 12 }) : throwError(() => new Error('x')),
+    )();
+    const fixture = TestBed.createComponent(SchoolsRankingPageComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('[data-testid="rank-more"]')!.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelector('[data-testid="rank-more-error"]')).not.toBeNull();
+    expect(lightOnlyClasses(root)).toEqual([]);
+  });
 
   it('star rating has none', async () => {
     const root = await render(StarRatingComponent, (c, f) => {

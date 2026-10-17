@@ -71,6 +71,16 @@ export const routes: Routes = [
               ),
           },
           {
+            // Public; the first ranking is the schools one.
+            path: 'rankings/schools',
+            pathMatch: 'full',
+            title: 'pageTitle.rankings',
+            loadComponent: () =>
+              import('./features/public/schools-ranking-page/schools-ranking-page.component').then(
+                (m) => m.SchoolsRankingPageComponent,
+              ),
+          },
+          {
             path: 'schools/:id',
             title: 'pageTitle.school',
             canActivate: [authGuard],

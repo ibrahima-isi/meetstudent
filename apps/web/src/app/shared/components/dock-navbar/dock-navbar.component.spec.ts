@@ -263,10 +263,20 @@ describe('DockNavbarComponent', () => {
     const panel = root().querySelector('#dock-menu') as HTMLElement;
 
     const hrefs = Array.from(panel.querySelectorAll('a')).map((a) => a.getAttribute('href'));
-    expect(hrefs).toEqual(['/fr/schools', '/fr#how-it-works', '/fr#reviews', '/fr/about', '/fr/contact', '/fr/login', '/fr/register']);
+    expect(hrefs).toEqual(['/fr/schools', '/fr/rankings/schools', '/fr#how-it-works', '/fr#reviews', '/fr/about', '/fr/contact', '/fr/login', '/fr/register']);
     expect(panel.querySelector('app-language-switcher')).toBeTruthy();
     expect(panel.querySelector('app-theme-toggle')).toBeTruthy();
     expect(panel.textContent).toContain('Pas encore de compte ?');
+  });
+
+  it('links the schools ranking from the bar and from the menu, localised', async () => {
+    await render();
+    const barLink = root().querySelector('.links a[href="/fr/rankings/schools"]');
+    expect(barLink?.textContent?.trim()).toBe('Classement');
+
+    (root().querySelector('button.menu-btn') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(root().querySelector('#dock-menu a[href="/fr/rankings/schools"]')?.textContent?.trim()).toBe('Classement');
   });
 
   it('shows "My space" instead once the visitor is signed in', async () => {
