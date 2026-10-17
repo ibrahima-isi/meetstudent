@@ -114,7 +114,7 @@ describe('ProgramsRankingPageComponent', () => {
     expect(a.querySelector('a')).toBeNull();
   });
 
-  it('shows the rounded average, "Not rated" without one, and never a zero for an unrated school', async () => {
+  it('shows the rounded average, "Not rated" without one, and never a zero for an unrated program', async () => {
     await open(() =>
       of(page([{ id: 1, name: 'A', rating: 4.26 }, { id: 2, name: 'B' }, { id: 3, name: 'C', rating: 0 }], 0, true, 3)),
     );
@@ -292,6 +292,17 @@ describe('ProgramsRankingPageComponent', () => {
     await click('rank-more');
 
     expect(document.activeElement).toBe(rows()[10].querySelector('[data-testid="rank-name"]'));
+  });
+
+  it('keeps a visible focus indicator on the program name the focus moves to, like the school link', async () => {
+    await open((p) => of(page(programs(p * 10 + 1, p * 10 + 10), p, false, 40)));
+
+    button('rank-more')!.focus();
+    await click('rank-more');
+
+    const focused = document.activeElement as HTMLElement;
+    expect(focused.getAttribute('data-testid')).toBe('rank-name');
+    expect(focused.className).not.toMatch(/(^|\s)(focus(-visible)?:)?outline-(none|hidden)(\s|$)/);
   });
 
   it('moves the focus to the first program "See all" added once it is done', async () => {

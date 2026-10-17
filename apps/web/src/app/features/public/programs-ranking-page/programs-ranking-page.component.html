@@ -39,7 +39,7 @@
             <span data-testid="rank" aria-hidden="true" class="w-10 shrink-0 text-center text-lg font-bold text-indigo-600 dark:text-indigo-400">{{ i + 1 }}</span>
             <span class="sr-only">{{ t('rankings.rank', { rank: i + 1 }) }}</span>
             <div class="flex-1 min-w-0">
-              <span data-testid="rank-name" tabindex="-1" class="block truncate font-semibold text-foreground outline-none">{{ program.name }}</span>
+              <span data-testid="rank-name" tabindex="-1" class="block truncate font-semibold text-foreground">{{ program.name }}</span>
               <p class="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-sm text-muted-foreground">
                 <span>{{ t('programs.school') }}:
                   @if (program.schoolName) {
