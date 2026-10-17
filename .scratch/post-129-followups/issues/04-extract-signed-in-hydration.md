@@ -12,4 +12,4 @@
 
 ## Comments
 
-2026-10-17 : liste de fichiers validée par le propriétaire (dock-navbar, site-footer, cta-band, landing-hero, plus la fonction partagée et sa spec). `injectHydratedSession()` dans `@shared/hydrated-session` renvoie `{ hydrated, signedIn }` ; les 4 composants l'utilisent, leurs specs n'ont pas changé. Pas 5 copies mais 4 (le ticket disait 5 fichiers au total).
+2026-10-17 : liste de fichiers validée par le propriétaire (dock-navbar, site-footer, cta-band, landing-hero, plus la fonction partagée et sa spec). `injectHydratedSession()` dans `@shared/hydrated-session` renvoie `{ hydrated, signedIn }` ; les 4 composants l'utilisent, leurs specs n'ont pas changé.
