@@ -81,4 +81,36 @@ describe('Shell (responsive menu)', () => {
     fixture.detectChanges();
     expect(toggle().getAttribute('aria-expanded')).toBe('false');
   });
+
+  describe('theme toggle', () => {
+    const themeToggle = () => el().querySelector<HTMLButtonElement>('[data-theme-toggle]')!;
+    const root = document.documentElement;
+
+    afterEach(() => {
+      localStorage.removeItem('theme');
+      root.classList.remove('dark');
+    });
+
+    it('is a labelled button in the header', () => {
+      expect(themeToggle()).not.toBeNull();
+      expect(themeToggle().getAttribute('aria-label')).toBe('Basculer le thème');
+    });
+
+    it('flips the dark class on <html>, reflects it in aria-pressed and persists', () => {
+      const before = root.classList.contains('dark');
+      themeToggle().click();
+      fixture.detectChanges();
+      expect(root.classList.contains('dark')).toBe(!before);
+      expect(themeToggle().getAttribute('aria-pressed')).toBe(String(!before));
+      expect(localStorage.getItem('theme')).toBe(before ? 'light' : 'dark');
+      themeToggle().click();
+      fixture.detectChanges();
+      expect(root.classList.contains('dark')).toBe(before);
+    });
+  });
+
+  it('uses the shared design tokens instead of hard-coded palette classes', () => {
+    expect(el().innerHTML).not.toMatch(/(bg|text|border)-(slate|white|indigo)/);
+    expect(el().querySelector('[data-logout]')!.classList).toContain('btn');
+  });
 });
