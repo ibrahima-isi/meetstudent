@@ -204,7 +204,7 @@ Livraison (bilan #129) : [PR #170](https://github.com/ibrahima-isi/meetstudent/p
 
 ### #129 — vérification de l'ensemble intégré (2026-10-17)
 
-- [ ] [#129](https://github.com/ibrahima-isi/meetstudent/issues/129) : vérification locale et live terminées sur `dev` = `5428c0b` (tous les tickets #100–#128 intégrés, CI `dev` verte sur `5428c0b`). **Promotion `dev` → `main` non faite** (accord explicite du propriétaire requis) ; `main` = `b0dbba8`, ancêtre de `dev` (fast-forward possible, 14 commits d'écart). #99 non modifié.
+- [x] [#129](https://github.com/ibrahima-isi/meetstudent/issues/129) : vérification locale et live terminées sur `dev` = `5428c0b` (tous les tickets #100–#128 intégrés, CI `dev` verte sur `5428c0b`). **Promotion faite** par le propriétaire le 2026-10-17 : `main` = `dev` = `b1c8b97` (fast-forward). **Live test natif sur `main` fait, sans écart bloquant** (voir ci-dessous). Issue #129 encore à fermer ; #99 non modifié.
 
 Branche `chore/final-verification-129` (worktree `kind-liskov-067225`). Suites sur l'ensemble intégré : API `./mvnw clean verify` **632** tests (239 unitaires + 393 intégration), 0 échec/erreur/skip, BUILD SUCCESS ; web **1292** tests ChromeHeadless verts et `npx ng build` vert (avertissement de budget CSS `dock-navbar` 5,10 kB > 4 kB, déjà connu) ; backoffice `npm ci`, **333** tests verts et build vert. PostgreSQL **18.6** jetable : V1–V24 appliquées sur base vide avec `ddl-auto=validate`, redémarrage « up to date ».
 
@@ -230,6 +230,8 @@ Live test natif (aucune fausse API) : PostgreSQL 18 jetable, jar API profil `dev
 Écarts constatés (non corrigés, hors périmètre) : boutons d'étoiles de `star-rating` sans nom accessible et `outline-none` ; bouton « Postuler maintenant » de la fiche établissement sans action ; CTA « Créer un compte gratuit » du hero encore visible connecté ; issues #126, #127, #128 encore ouvertes malgré leurs PR fusionnées ; PR #171, #172 et #173 ouvertes vers `dev` et non incluses dans cette vérification. Non couvert : build des images Docker api/web (bloqué dans ce sandbox), TLS réel, SMTP réel, profil `prod`, vrais téléphones.
 
 Nettoyage : conteneur PostgreSQL, jar, SSR et proxy arrêtés ; secrets jetables supprimés ; stockage navigateur effacé ; viewport remis en desktop. Restent à faire : promotion de `main` (accord du propriétaire), live test sur `main`, retrait de ce worktree et de sa branche locale après fusion.
+
+Live test sur `main` = `b1c8b97` (2026-10-17) : PostgreSQL 18 jetable (Flyway V1–V24, 24 migrations OK), jar API profil dev, SSR, backoffice statique, proxy node, ports hors 4200/4300/8080/5432. API : `/schools` 200, mauvais mot de passe 401, `/schools/99999` 404, `/media/1` anonyme 401, `?sort=zzz` 400, `Accept: text/xml` 406. Web (navigateur intégré) : Forum « Bientôt » non cliquable (bureau et mobile 375 px), 5 bascules fr/en, clair/sombre, inscription, connexion, recherche d'école, étoiles accessibles (#176). Backoffice : non-admin refusé, admin OK, textareas « À propos » lisibles en clair et sombre. Écarts mineurs, sans ticket : message de connexion échouée générique ; boutons du menu mobile un peu serrés (constat visuel) ; pastille « Bientôt » visible seulement dans le menu déroulé à 1024 px. Tout démonté (processus, conteneur, worktree temporaire). Reste : fermer l'issue #129 sur GitHub.
 
 ## ui-auth-aware-footer-bo-design
 
