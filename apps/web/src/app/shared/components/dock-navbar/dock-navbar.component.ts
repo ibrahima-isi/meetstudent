@@ -73,6 +73,10 @@ import { nextDockVisible, SCROLL_DELTA_PX } from './dock-visibility';
       .links a, .panel a.item { padding: 0.45rem 0.8rem; border-radius: 9999px; font-size: 0.9rem; color: var(--muted-foreground); text-decoration: none; transition: background-color 0.15s, color 0.15s; }
       .links a { padding: 0.45rem 0.55rem; }
       .links a:hover, .panel a.item:hover { background: var(--accent); color: var(--foreground); }
+      .forum-soon { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.8rem; font-size: 0.9rem; color: var(--muted-foreground); opacity: 0.7; cursor: not-allowed; user-select: none; }
+      .panel .forum-soon { font-size: 1rem; padding: 0.75rem 1rem; }
+      @container (max-width: 89.99rem) { .links { gap: 0.1rem; } .links a, .links .forum-soon { padding-inline: 0.35rem; } .links .soon-badge { display: none; } }
+      .soon-badge { padding: 0.05rem 0.45rem; border-radius: 9999px; background: var(--brand-soft); color: var(--brand-soft-foreground); font-size: 0.7rem; font-weight: 600; }
       .actions { display: flex; align-items: center; gap: 0.25rem; margin-left: auto; }
       .wide-only { display: none; }
       @container (max-width: 39.99rem) { .collapse-xs { display: none; } }
@@ -105,6 +109,7 @@ import { nextDockVisible, SCROLL_DELTA_PX } from './dock-visibility';
           <a [routerLink]="['/', lang()]" fragment="reviews">{{ t('nav.reviews') }}</a>
           <a [routerLink]="['/', lang(), 'about']">{{ t('nav.about') }}</a>
           <a [routerLink]="['/', lang(), 'contact']">{{ t('nav.contact') }}</a>
+          <span class="forum-soon" data-testid="forum-soon" role="link" aria-disabled="true" tabindex="-1" [attr.aria-label]="t('nav.forum') + ' – ' + t('nav.comingSoon')">{{ t('nav.forum') }} <span class="soon-badge">{{ t('nav.comingSoon') }}</span></span>
         </div>
         <div class="actions">
           <span class="wide-only switchers">
@@ -171,6 +176,7 @@ import { nextDockVisible, SCROLL_DELTA_PX } from './dock-visibility';
           <a class="item" [routerLink]="['/', lang()]" fragment="reviews">{{ t('nav.reviews') }}</a>
           <a class="item" [routerLink]="['/', lang(), 'about']">{{ t('nav.about') }}</a>
           <a class="item" [routerLink]="['/', lang(), 'contact']">{{ t('nav.contact') }}</a>
+          <span class="forum-soon item" data-testid="forum-soon" role="link" aria-disabled="true" tabindex="-1" [attr.aria-label]="t('nav.forum') + ' – ' + t('nav.comingSoon')">{{ t('nav.forum') }} <span class="soon-badge">{{ t('nav.comingSoon') }}</span></span>
           <div class="settings"><app-language-switcher (openChange)="onLanguageOpen($event)" /><app-theme-toggle /></div>
           @if (signedIn()) {
             <a class="btn btn-primary btn-lg" [routerLink]="['/', lang(), 'home']">{{ t('nav.mySpace') }}</a>
