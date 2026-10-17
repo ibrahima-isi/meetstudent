@@ -21,6 +21,7 @@
     "primary": "Main navigation",
     "brandHome": "MeetStudent, back to home",
     "schools": "Schools",
+    "rankings": "Rankings",
     "howItWorks": "How it works",
     "reviews": "Reviews",
     "about": "About",
@@ -64,7 +65,8 @@
     "resetPassword": "New password",
     "compare": "Compare schools",
     "comparePrograms": "Compare programmes",
-    "compareCourses": "Compare courses"
+    "compareCourses": "Compare courses",
+    "rankings": "School rankings"
   },
   "about": {
     "title": "About MeetStudent",
@@ -252,6 +254,21 @@
     "compareAction": "Compare",
     "compareClear": "Clear selection",
     "notRated": "Not rated"
+  },
+  "rankings": {
+    "title": "School rankings",
+    "intro": "The best rated schools, based on the average of their reviews.",
+    "count": {
+      "one": "{{ count }} school ranked",
+      "other": "{{ count }} schools ranked"
+    },
+    "rank": "Rank {{ rank }}",
+    "average": "Average rating",
+    "loadError": "The ranking could not be loaded.",
+    "loadMoreError": "Could not load the rest of the ranking.",
+    "empty": "No school is ranked yet.",
+    "loadMore": "See more",
+    "loadAll": "See all"
   },
   "schoolsCompare": {
     "title": "Compare schools",

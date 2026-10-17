@@ -21,6 +21,7 @@
     "primary": "Navigation principale",
     "brandHome": "MeetStudent, retour à l'accueil",
     "schools": "Établissements",
+    "rankings": "Classement",
     "howItWorks": "Comment ça marche",
     "reviews": "Avis",
     "about": "À propos",
@@ -64,7 +65,8 @@
     "resetPassword": "Nouveau mot de passe",
     "compare": "Comparer des établissements",
     "comparePrograms": "Comparer des formations",
-    "compareCourses": "Comparer des cours"
+    "compareCourses": "Comparer des cours",
+    "rankings": "Classement des établissements"
   },
   "about": {
     "title": "À propos de MeetStudent",
@@ -252,6 +254,21 @@
     "compareAction": "Comparer",
     "compareClear": "Vider la sélection",
     "notRated": "Non noté"
+  },
+  "rankings": {
+    "title": "Classement des établissements",
+    "intro": "Les établissements les mieux notés, d'après la moyenne des avis.",
+    "count": {
+      "one": "{{ count }} établissement classé",
+      "other": "{{ count }} établissements classés"
+    },
+    "rank": "Rang {{ rank }}",
+    "average": "Note moyenne",
+    "loadError": "Le classement n'a pas pu être chargé.",
+    "loadMoreError": "Impossible de charger la suite du classement.",
+    "empty": "Aucun établissement n'est encore classé.",
+    "loadMore": "Voir plus",
+    "loadAll": "Voir tout"
   },
   "schoolsCompare": {
     "title": "Comparer des établissements",

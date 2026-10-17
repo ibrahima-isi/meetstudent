@@ -1,0 +1,78 @@
+<div class="min-h-screen bg-muted/50" *transloco="let t">
+  <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-12">
+    <h1 class="mb-2 text-3xl font-bold text-foreground">{{ t('rankings.title') }}</h1>
+    <p class="mb-6 text-muted-foreground">{{ t('rankings.intro') }}</p>
+
+    @if (status() === 'loading') {
+      <div role="status" aria-busy="true" class="rounded-xl border border-border bg-card p-8 animate-pulse">
+        <span class="sr-only">{{ t('common.loading') }}</span>
+        @for (n of skeletons; track n) {
+          <div class="h-5 bg-muted rounded w-3/4 mb-4 last:mb-0" aria-hidden="true"></div>
+        }
+      </div>
+    } @else if (status() === 'error') {
+      <app-error-state [message]="t('rankings.loadError')" (retry)="load()" />
+    } @else if (schools().length === 0) {
+      <div data-testid="rank-empty" class="rounded-xl border border-border bg-card p-8 text-center text-foreground">
+        {{ t('rankings.empty') }}
+      </div>
+    } @else {
+      @if (totalElements(); as total) {
+        <p class="mb-4 text-sm text-muted-foreground" data-testid="rank-count">
+          {{ t(plural('rankings.count', total), { count: total }) }}
+        </p>
+      }
+      <ol class="rounded-xl border border-border bg-card shadow-sm divide-y divide-border">
+        @for (school of schools(); track school.id; let i = $index) {
+          <li data-testid="rank-row" class="flex items-center gap-4 p-4">
+            <span
+              data-testid="rank"
+              class="w-10 shrink-0 text-center text-lg font-bold text-indigo-600 dark:text-indigo-400"
+              [attr.aria-label]="t('rankings.rank', { rank: i + 1 })"
+            >{{ i + 1 }}</span>
+            <a [routerLink]="['/', lang(), 'schools', school.id]" class="flex-1 min-w-0 truncate font-semibold text-foreground hover:underline">{{ school.name }}</a>
+            <span class="flex shrink-0 items-center gap-1 text-sm">
+              @if (rated(school)) {
+                <lucide-icon [img]="Star" class="w-4 h-4 fill-yellow-400 text-yellow-400" aria-hidden="true"></lucide-icon>
+                <span class="text-foreground font-medium" [attr.aria-label]="t('rankings.average')">{{ roundRating(school.rating) }}</span>
+              } @else {
+                <span class="text-muted-foreground">{{ t('schools.notRated') }}</span>
+              }
+              @if (school.reviewCount) {
+                <span class="text-muted-foreground">{{ t(plural('schools.reviews', school.reviewCount), { count: school.reviewCount }) }}</span>
+              }
+            </span>
+          </li>
+        }
+      </ol>
+
+      @if (moreFailed()) {
+        <div data-testid="rank-more-error" role="alert" class="mt-4 flex items-center justify-center gap-3 text-sm text-foreground">
+          <span>{{ t('rankings.loadMoreError') }}</span>
+          <button type="button" data-testid="rank-retry" (click)="retryMore()" class="font-medium underline cursor-pointer">{{ t('common.retry') }}</button>
+        </div>
+      }
+      @if (busy()) {
+        <p role="status" aria-busy="true" class="mt-4 text-center text-sm text-muted-foreground">{{ t('common.loading') }}</p>
+      }
+      @if (hasMore()) {
+        <div class="mt-6 flex flex-wrap justify-center gap-3">
+          <button
+            type="button"
+            data-testid="rank-more"
+            [disabled]="busy()"
+            (click)="loadMore()"
+            class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+          >{{ t('rankings.loadMore') }}</button>
+          <button
+            type="button"
+            data-testid="rank-all"
+            [disabled]="busy()"
+            (click)="loadAll()"
+            class="px-6 py-2 border border-border bg-card text-foreground rounded-lg hover:bg-accent transition-colors font-medium cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+          >{{ t('rankings.loadAll') }}</button>
+        </div>
+      }
+    }
+  </div>
+</div>
