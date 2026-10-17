@@ -19,6 +19,14 @@
       root.style.colorScheme = dark ? 'dark' : 'light';
     })();
   </script>
+  <!-- Marks <html> when a session exists, before first paint: the server cannot read localStorage, so sign-up actions it renders are hidden by CSS until Angular takes over. Keep in sync with TokenService: key "auth_token". -->
+  <script>
+    (function () {
+      try {
+        if (localStorage.getItem('auth_token')) document.documentElement.classList.add('has-session');
+      } catch (e) {}
+    })();
+  </script>
 </head>
 <body>
   <app-root></app-root>

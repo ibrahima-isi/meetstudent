@@ -43,6 +43,8 @@ function wellFormed(value: string): string {
       .c3 { width: 14rem; bottom: 1rem; left: 22%; transform: translateZ(30px); }
       .c2 { animation-delay: -2s; }
       .c3 { animation-delay: -4s; }
+      /* Pre-hydration only: the server always renders this action, the index.html script flags a stored session. */
+      :host-context(.has-session) .hero-register:not(.hydrated) { display: none; }
       @media (prefers-reduced-motion: reduce) { .stage { transform: none; transition: none; } }
     `,
   ],
@@ -76,7 +78,7 @@ function wellFormed(value: string): string {
               <lucide-icon [img]="ArrowRight" class="h-4 w-4" aria-hidden="true" />
             </a>
             @if (!signedIn()) {
-              <a class="btn btn-secondary btn-lg" [routerLink]="['/', lang(), 'register']">{{ t('lp.hero.ctaRegister') }}</a>
+              <a class="btn btn-secondary btn-lg hero-register" [class.hydrated]="hydrated()" [routerLink]="['/', lang(), 'register']">{{ t('lp.hero.ctaRegister') }}</a>
             }
           </div>
         </div>
@@ -116,7 +118,7 @@ export class LandingHeroComponent {
    * render would break hydration, so `hydrated` flips after it (same rule as the
    * dock navbar and the bottom band, including the pure client bootstrap exception).
    */
-  private readonly hydrated = signal(
+  protected readonly hydrated = signal(
     isPlatformBrowser(inject(PLATFORM_ID)) &&
       !inject(DOCUMENT).querySelector('[ng-server-context]'),
   );
