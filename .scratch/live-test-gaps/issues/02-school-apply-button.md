@@ -8,7 +8,7 @@
 
 - [x] Décision produit consignée dans ce ticket (Comments).
 - [x] Le bouton fait ce qui est décidé, ou disparaît ; jamais un bouton mort. Donnée absente : ne rien inventer.
-- [ ] Libellés fr/en, mode sombre, mobile ; états connecté/visiteur respectés.
+- [x] Libellés fr/en, mode sombre, mobile ; états connecté/visiteur respectés.
 - [x] Spec en échec d'abord, puis verte ; suite web et build verts.
 
 ## Comments
