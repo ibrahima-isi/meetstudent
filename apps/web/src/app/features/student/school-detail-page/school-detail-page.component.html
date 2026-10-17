@@ -219,13 +219,15 @@
               </div>
               
               <div class="flex gap-3">
-                <button
-                  class="flex-1 px-4 py-2 rounded-lg transition-colors font-bold cursor-pointer"
-                  [class]="isFull(programme) ? 'bg-muted cursor-not-allowed text-muted-foreground' : 'bg-indigo-600 hover:bg-indigo-700 text-white'"
-                  [disabled]="isFull(programme)"
+                <a
+                  data-testid="programme-apply"
+                  [routerLink]="contactLink()"
+                  [queryParams]="{ school: school()?.name }"
+                  class="flex-1 px-4 py-2 rounded-lg transition-colors font-bold text-center"
+                  [class]="isFull(programme) ? 'bg-muted hover:bg-accent text-foreground' : 'bg-indigo-600 hover:bg-indigo-700 text-white'"
                 >
                   {{ t(isFull(programme) ? 'schoolDetail.waitlist' : 'schoolDetail.apply') }}
-                </button>
+                </a>
                 <button 
                   (click)="openCoursesModal(programme)"
                   class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-foreground rounded-lg hover:bg-accent transition-colors cursor-pointer font-medium"

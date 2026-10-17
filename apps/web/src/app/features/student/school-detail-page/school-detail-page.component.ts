@@ -1,6 +1,6 @@
 import { Component, input, signal, computed, effect, inject, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { LucideAngularModule, ArrowLeft, MapPin, Heart, GraduationCap, Clock, Calendar, Users, Book, Star, X } from 'lucide-angular';
 import { ImageWithFallbackComponent } from '@shared/components/image-with-fallback/image-with-fallback.component';
 import { StarRatingComponent } from '@shared/components/star-rating/star-rating.component';
@@ -19,7 +19,7 @@ import { PageTitleService } from '@shared/page-title';
 
 @Component({
   selector: 'app-school-detail-page',
-  imports: [CommonModule, LucideAngularModule, ImageWithFallbackComponent, StarRatingComponent, TranslocoDirective, ErrorStateComponent],
+  imports: [CommonModule, LucideAngularModule, ImageWithFallbackComponent, StarRatingComponent, TranslocoDirective, ErrorStateComponent, RouterLink],
   templateUrl: './school-detail-page.component.html'
 })
 export class SchoolDetailPageComponent {
@@ -55,6 +55,9 @@ export class SchoolDetailPageComponent {
   readonly canRateSchool = computed(() => this.roleName() === ROLE_STUDENT || this.roleName() === ROLE_EXPERT);
   /** Mirrors the API: only experts rate programmes and courses. */
   readonly canRateProgramAndCourse = computed(() => this.roleName() === ROLE_EXPERT);
+
+  /** Applying goes through the contact page, in the language being read. */
+  protected readonly contactLink = computed(() => ['/', this.locale.active(), 'contact']);
 
   readonly ArrowLeft = ArrowLeft;
   readonly MapPin = MapPin;
