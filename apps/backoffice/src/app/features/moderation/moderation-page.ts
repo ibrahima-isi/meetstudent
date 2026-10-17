@@ -30,9 +30,9 @@ const CATEGORY_LABELS: Record<MediaCategory, string> = {
 };
 
 const STATUS_CLASSES: Record<VerificationStatus, string> = {
-  PENDING: 'bg-amber-100 text-amber-800',
-  VERIFIED: 'bg-green-100 text-green-800',
-  REJECTED: 'bg-red-100 text-red-800',
+  PENDING: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200',
+  VERIFIED: 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200',
+  REJECTED: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200',
 };
 
 @Component({
@@ -40,10 +40,10 @@ const STATUS_CLASSES: Record<VerificationStatus, string> = {
   imports: [Alert],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <h1 class="text-2xl font-semibold text-slate-900">Modération</h1>
-    <p class="mt-1 text-sm text-slate-500">Documents envoyés par les utilisateurs.</p>
+    <h1 class="text-2xl font-semibold text-foreground">Modération</h1>
+    <p class="mt-1 text-sm text-muted-foreground">Documents envoyés par les utilisateurs.</p>
 
-    <div role="tablist" aria-label="Statut" class="mt-4 flex gap-1 border-b border-slate-200">
+    <div role="tablist" aria-label="Statut" class="mt-4 flex gap-1 border-b border-border">
       @for (tab of tabs; track tab.status) {
         <button
           type="button"
@@ -54,8 +54,8 @@ const STATUS_CLASSES: Record<VerificationStatus, string> = {
           class="-mb-px border-b-2 px-4 py-2 text-sm font-medium"
           [class]="
             status() === tab.status
-              ? 'border-indigo-600 text-indigo-700'
-              : 'border-transparent text-slate-600 hover:text-slate-900'
+              ? 'border-brand text-brand'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
           "
         >
           {{ tab.label }}
@@ -67,33 +67,33 @@ const STATUS_CLASSES: Record<VerificationStatus, string> = {
       <app-alert [message]="actionError()" />
 
       @if (loading()) {
-        <p data-loading class="text-sm text-slate-500">Chargement…</p>
+        <p data-loading class="text-sm text-muted-foreground">Chargement…</p>
       } @else if (loadError()) {
         <app-alert [message]="loadError()" />
         <button
           type="button"
           data-retry
           (click)="load()"
-          class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium hover:bg-slate-100"
+          class="btn btn-secondary h-9 px-3"
         >
           Réessayer
         </button>
       } @else if (items().length === 0) {
-        <p data-empty class="rounded-md border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
+        <p data-empty class="rounded-md border border-dashed border-border-strong p-6 text-center text-sm text-muted-foreground">
           Aucun document {{ emptyLabel() }}.
         </p>
       } @else {
         <ul class="space-y-3">
           @for (item of items(); track item.id) {
-            <li data-row class="rounded-lg border border-slate-200 bg-white p-4">
+            <li data-row class="rounded-lg border border-border bg-card p-4">
               <div class="flex flex-wrap items-start justify-between gap-3">
                 <div class="min-w-0">
-                  <p class="truncate font-medium text-slate-900">{{ item.originalFilename || 'Sans nom' }}</p>
-                  <p class="mt-0.5 text-sm text-slate-600">
+                  <p class="truncate font-medium text-foreground">{{ item.originalFilename || 'Sans nom' }}</p>
+                  <p class="mt-0.5 text-sm text-muted-foreground">
                     {{ categoryLabel(item.category) }} · {{ typeLabel(item.contentType) }} · {{ sizeLabel(item.sizeBytes) }}
                   </p>
                   @if (item.rejectionReason) {
-                    <p class="mt-1 text-sm text-red-700">Motif : {{ item.rejectionReason }}</p>
+                    <p class="mt-1 text-sm text-destructive">Motif : {{ item.rejectionReason }}</p>
                   }
                 </div>
                 <div class="flex flex-wrap items-center gap-2">
@@ -107,7 +107,7 @@ const STATUS_CLASSES: Record<VerificationStatus, string> = {
                     data-view
                     [disabled]="viewingId() === item.id"
                     (click)="view(item)"
-                    class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium hover:bg-slate-100 disabled:opacity-50"
+                    class="btn btn-secondary h-9 px-3 disabled:opacity-50"
                   >
                     {{ viewingId() === item.id ? 'Ouverture…' : 'Voir' }}
                   </button>
@@ -116,7 +116,7 @@ const STATUS_CLASSES: Record<VerificationStatus, string> = {
                       type="button"
                       data-approve
                       (click)="ask(item.id, 'VERIFIED')"
-                      class="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700"
+                      class="btn h-9 px-3 bg-green-700 text-green-50 hover:bg-green-800 dark:bg-green-600 dark:text-white dark:hover:bg-green-500"
                     >
                       Approuver
                     </button>
@@ -124,7 +124,7 @@ const STATUS_CLASSES: Record<VerificationStatus, string> = {
                       type="button"
                       data-reject
                       (click)="ask(item.id, 'REJECTED')"
-                      class="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700"
+                      class="btn bg-destructive text-destructive-foreground hover:opacity-90 h-9 px-3"
                     >
                       Rejeter
                     </button>
@@ -134,12 +134,12 @@ const STATUS_CLASSES: Record<VerificationStatus, string> = {
 
               @if (confirming(); as c) {
                 @if (c.id === item.id) {
-                  <div class="mt-3 space-y-2 rounded-md bg-slate-50 p-3">
-                    <p class="text-sm font-medium text-slate-800">
+                  <div class="mt-3 space-y-2 rounded-md bg-muted p-3">
+                    <p class="text-sm font-medium text-foreground">
                       {{ c.decision === 'VERIFIED' ? 'Approuver ce document ?' : 'Rejeter ce document ?' }}
                     </p>
                     @if (c.decision === 'REJECTED') {
-                      <label class="block text-sm text-slate-700">
+                      <label class="block text-sm text-foreground">
                         Motif du rejet (visible par l'utilisateur)
                         <textarea
                           data-reason
@@ -147,11 +147,11 @@ const STATUS_CLASSES: Record<VerificationStatus, string> = {
                           maxlength="500"
                           [value]="reason()"
                           (input)="onReason($event)"
-                          class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                          class="field-input mt-1"
                         ></textarea>
                       </label>
                       @if (reasonError()) {
-                        <p data-reason-error class="text-sm text-red-700">Un motif est obligatoire pour rejeter.</p>
+                        <p data-reason-error class="text-sm text-destructive">Un motif est obligatoire pour rejeter.</p>
                       }
                     }
                     <div class="flex gap-2">
@@ -159,7 +159,7 @@ const STATUS_CLASSES: Record<VerificationStatus, string> = {
                         type="button"
                         data-confirm
                         (click)="confirm()"
-                        class="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700"
+                        class="btn btn-primary h-9 px-3"
                       >
                         Confirmer
                       </button>
@@ -167,7 +167,7 @@ const STATUS_CLASSES: Record<VerificationStatus, string> = {
                         type="button"
                         data-cancel
                         (click)="cancel()"
-                        class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium hover:bg-slate-100"
+                        class="btn btn-secondary h-9 px-3"
                       >
                         Annuler
                       </button>
@@ -180,13 +180,13 @@ const STATUS_CLASSES: Record<VerificationStatus, string> = {
         </ul>
 
         @if (totalPages() > 1) {
-          <nav aria-label="Pagination" class="flex items-center justify-between pt-2 text-sm text-slate-600">
+          <nav aria-label="Pagination" class="flex items-center justify-between pt-2 text-sm text-muted-foreground">
             <button
               type="button"
               data-prev
               [disabled]="page() === 0"
               (click)="goTo(page() - 1)"
-              class="rounded-md border border-slate-300 px-3 py-1.5 font-medium hover:bg-slate-100 disabled:opacity-50"
+              class="btn btn-secondary h-9 px-3 disabled:opacity-50"
             >
               Précédent
             </button>
@@ -196,7 +196,7 @@ const STATUS_CLASSES: Record<VerificationStatus, string> = {
               data-next
               [disabled]="page() + 1 >= totalPages()"
               (click)="goTo(page() + 1)"
-              class="rounded-md border border-slate-300 px-3 py-1.5 font-medium hover:bg-slate-100 disabled:opacity-50"
+              class="btn btn-secondary h-9 px-3 disabled:opacity-50"
             >
               Suivant
             </button>

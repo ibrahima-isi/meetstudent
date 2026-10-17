@@ -25,12 +25,12 @@ const SCHOOLS_SIZE = 200;
       <app-program-courses [program]="target" (back)="coursesProgramId.set(null)" (changed)="load(page())" />
     } @else {
       <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h1 class="text-2xl font-semibold text-slate-900">Filières et cours</h1>
+        <h1 class="text-2xl font-semibold text-foreground">Filières et cours</h1>
         <button
           type="button"
           data-new
           (click)="editing.set({ program: null })"
-          class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+          class="btn btn-primary"
         >
           Nouvelle filière
         </button>
@@ -43,9 +43,9 @@ const SCHOOLS_SIZE = 200;
           type="search"
           [formControl]="search"
           placeholder="Rechercher par nom"
-          class="w-full max-w-xs rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          class="field-input max-w-xs "
         />
-        <button type="submit" class="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-100">
+        <button type="submit" class="btn btn-secondary">
           Rechercher
         </button>
         @if (query()) {
@@ -53,7 +53,7 @@ const SCHOOLS_SIZE = 200;
             type="button"
             data-clear-search
             (click)="clearSearch()"
-            class="rounded-md px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
+            class="btn btn-ghost"
           >
             Effacer
           </button>
@@ -67,25 +67,25 @@ const SCHOOLS_SIZE = 200;
             type="button"
             data-retry
             (click)="load(page())"
-            class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium hover:bg-slate-100"
+            class="btn btn-secondary h-9 px-3"
           >
             Réessayer
           </button>
         }
         @if (notice()) {
-          <div role="status" data-notice class="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+          <div role="status" data-notice class="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
             {{ notice() }}
           </div>
         }
 
         @if (loading()) {
-          <p class="text-sm text-slate-500">Chargement…</p>
+          <p class="text-sm text-muted-foreground">Chargement…</p>
         }
 
         @if (programs().length) {
-          <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+          <div class="overflow-x-auto rounded-lg border border-border bg-card">
             <table class="w-full text-left text-sm">
-              <thead class="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+              <thead class="border-b border-border bg-muted text-xs uppercase text-muted-foreground">
                 <tr>
                   <th scope="col" class="px-4 py-2"><span class="sr-only">Photo</span></th>
                   <th scope="col" class="px-4 py-2">Nom</th>
@@ -96,26 +96,26 @@ const SCHOOLS_SIZE = 200;
                   <th scope="col" class="px-4 py-2 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-slate-100">
+              <tbody class="divide-y divide-border">
                 @for (program of programs(); track program.id) {
                   <tr data-program>
                     <td class="px-4 py-2">
                       @if (photoUrl(program); as src) {
-                        <img [src]="src" alt="" class="size-10 rounded bg-slate-100 object-cover" />
+                        <img [src]="src" alt="" class="size-10 rounded bg-muted object-cover" />
                       } @else {
-                        <div class="size-10 rounded bg-slate-100"></div>
+                        <div class="size-10 rounded bg-muted"></div>
                       }
                     </td>
-                    <td class="px-4 py-2 font-medium text-slate-900">{{ program.name }}</td>
-                    <td class="px-4 py-2 text-slate-600">{{ program.code }}</td>
-                    <td class="px-4 py-2 text-slate-600">{{ schoolName(program) }}</td>
-                    <td class="px-4 py-2 text-slate-600">{{ years(program) }}</td>
+                    <td class="px-4 py-2 font-medium text-foreground">{{ program.name }}</td>
+                    <td class="px-4 py-2 text-muted-foreground">{{ program.code }}</td>
+                    <td class="px-4 py-2 text-muted-foreground">{{ schoolName(program) }}</td>
+                    <td class="px-4 py-2 text-muted-foreground">{{ years(program) }}</td>
                     <td class="px-4 py-2">
                       <button
                         type="button"
                         data-courses
                         (click)="coursesProgramId.set(program.id)"
-                        class="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium hover:bg-slate-100"
+                        class="btn btn-secondary h-8 px-3 text-xs"
                       >
                         Cours ({{ courseCount(program) }})
                       </button>
@@ -123,14 +123,14 @@ const SCHOOLS_SIZE = 200;
                     <td class="whitespace-nowrap px-4 py-2 text-right">
                       @if (pendingDeleteId() === program.id) {
                         <div class="flex flex-col items-end gap-1">
-                          <span class="text-xs text-slate-700">{{ deletePrompt(program) }}</span>
+                          <span class="text-xs text-foreground">{{ deletePrompt(program) }}</span>
                           <span class="flex gap-1">
                             <button
                               type="button"
                               data-confirm-delete
                               [disabled]="deleting()"
                               (click)="confirmDelete(program)"
-                              class="rounded-md bg-red-600 px-3 py-1 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-60"
+                              class="btn bg-destructive text-destructive-foreground hover:opacity-90 h-8 px-3 text-xs"
                             >
                               Confirmer
                             </button>
@@ -138,7 +138,7 @@ const SCHOOLS_SIZE = 200;
                               type="button"
                               data-cancel-delete
                               (click)="pendingDeleteId.set(null)"
-                              class="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium hover:bg-slate-100"
+                              class="btn btn-secondary h-8 px-3 text-xs"
                             >
                               Annuler
                             </button>
@@ -149,7 +149,7 @@ const SCHOOLS_SIZE = 200;
                           type="button"
                           data-edit
                           (click)="editing.set({ program })"
-                          class="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium hover:bg-slate-100"
+                          class="btn btn-secondary h-8 px-3 text-xs"
                         >
                           Modifier
                         </button>
@@ -157,7 +157,7 @@ const SCHOOLS_SIZE = 200;
                           type="button"
                           data-delete
                           (click)="pendingDeleteId.set(program.id)"
-                          class="ml-1 rounded-md border border-red-300 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50"
+                          class="ml-1 btn btn-secondary border-destructive text-destructive hover:bg-destructive/10 h-8 px-3 text-xs"
                         >
                           Supprimer
                         </button>
@@ -169,12 +169,12 @@ const SCHOOLS_SIZE = 200;
             </table>
           </div>
         } @else if (!loading() && !loadFailed()) {
-          <p class="rounded-lg border border-dashed border-slate-300 bg-white px-4 py-8 text-center text-sm text-slate-500">
+          <p class="rounded-lg border border-dashed border-border-strong bg-card px-4 py-8 text-center text-sm text-muted-foreground">
             {{ query() ? 'Aucun résultat pour « ' + query() + ' ».' : 'Aucune filière pour le moment.' }}
           </p>
         }
 
-        <nav class="flex items-center justify-between text-sm text-slate-600" aria-label="Pagination">
+        <nav class="flex items-center justify-between text-sm text-muted-foreground" aria-label="Pagination">
           <span>Page {{ page() + 1 }} / {{ totalPages() || 1 }} · {{ total() }} filière(s)</span>
           <span class="flex gap-2">
             <button
@@ -182,7 +182,7 @@ const SCHOOLS_SIZE = 200;
               data-prev
               [disabled]="loading() || page() <= 0"
               (click)="goTo(page() - 1)"
-              class="rounded-md border border-slate-300 px-3 py-1.5 font-medium hover:bg-slate-100 disabled:opacity-50"
+              class="btn btn-secondary h-9 px-3 disabled:opacity-50"
             >
               Précédent
             </button>
@@ -191,7 +191,7 @@ const SCHOOLS_SIZE = 200;
               data-next
               [disabled]="loading() || page() + 1 >= totalPages()"
               (click)="goTo(page() + 1)"
-              class="rounded-md border border-slate-300 px-3 py-1.5 font-medium hover:bg-slate-100 disabled:opacity-50"
+              class="btn btn-secondary h-9 px-3 disabled:opacity-50"
             >
               Suivant
             </button>

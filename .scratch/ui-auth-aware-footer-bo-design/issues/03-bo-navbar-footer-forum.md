@@ -4,10 +4,10 @@
 
 **Blocked by:** 02 (jetons et thème alignés sur le web)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Navbar et footer visibles sur tous les écrans connectés du back office, utilisables en petite largeur.
-- [ ] L'admin peut se déconnecter et basculer le thème depuis la navbar.
-- [ ] L'entrée Forum est annoncée comme désactivée, non focusable, sans navigation.
-- [ ] La sidebar d'administration reste fonctionnelle.
-- [ ] Specs du shell en échec d'abord, puis vertes.
+- [x] Navbar et footer visibles sur tous les écrans connectés du back office, utilisables en petite largeur.
+- [x] L'admin peut se déconnecter et basculer le thème depuis la navbar.
+- [x] L'entrée Forum est annoncée comme désactivée, non focusable, sans navigation.
+- [x] La sidebar d'administration reste fonctionnelle.
+- [x] Specs du shell en échec d'abord, puis vertes.

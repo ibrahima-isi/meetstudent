@@ -29,57 +29,57 @@ type FieldName = 'name' | 'code' | 'duration' | 'schoolId';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <form [formGroup]="form" (ngSubmit)="submit()" novalidate class="max-w-3xl space-y-6">
-      <h2 class="text-xl font-semibold text-slate-900">{{ program() ? 'Modifier la filière' : 'Nouvelle filière' }}</h2>
+      <h2 class="text-xl font-semibold text-foreground">{{ program() ? 'Modifier la filière' : 'Nouvelle filière' }}</h2>
 
       <app-alert [message]="error()" />
 
       <div class="grid gap-4 md:grid-cols-6">
         <div class="space-y-1 md:col-span-4">
-          <label for="name" class="text-sm font-medium text-slate-700">Nom *</label>
+          <label for="name" class="text-sm font-medium text-foreground">Nom *</label>
           <input
             id="name"
             type="text"
             formControlName="name"
             [attr.aria-invalid]="errorOf('name') ? 'true' : null"
-            class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 aria-invalid:border-red-500"
+            class="field-input "
           />
           @if (errorOf('name'); as message) {
-            <p class="text-xs text-red-700" data-error="name">{{ message }}</p>
+            <p class="text-xs text-destructive" data-error="name">{{ message }}</p>
           }
         </div>
         <div class="space-y-1 md:col-span-2">
-          <label for="code" class="text-sm font-medium text-slate-700">Code (5 caractères max., unique)</label>
+          <label for="code" class="text-sm font-medium text-foreground">Code (5 caractères max., unique)</label>
           <input
             id="code"
             type="text"
             formControlName="code"
             [attr.aria-invalid]="errorOf('code') ? 'true' : null"
-            class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 aria-invalid:border-red-500"
+            class="field-input "
           />
           @if (errorOf('code'); as message) {
-            <p class="text-xs text-red-700" data-error="code">{{ message }}</p>
+            <p class="text-xs text-destructive" data-error="code">{{ message }}</p>
           }
         </div>
         <div class="space-y-1 md:col-span-2">
-          <label for="duration" class="text-sm font-medium text-slate-700">Durée (années)</label>
+          <label for="duration" class="text-sm font-medium text-foreground">Durée (années)</label>
           <input
             id="duration"
             type="text"
             inputmode="numeric"
             formControlName="duration"
             [attr.aria-invalid]="errorOf('duration') ? 'true' : null"
-            class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 aria-invalid:border-red-500"
+            class="field-input "
           />
           @if (errorOf('duration'); as message) {
-            <p class="text-xs text-red-700" data-error="duration">{{ message }}</p>
+            <p class="text-xs text-destructive" data-error="duration">{{ message }}</p>
           }
         </div>
         <div class="space-y-1 md:col-span-4">
-          <label for="schoolId" class="text-sm font-medium text-slate-700">École</label>
+          <label for="schoolId" class="text-sm font-medium text-foreground">École</label>
           <select
             id="schoolId"
             formControlName="schoolId"
-            class="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            class="field-input "
           >
             <option value="">Aucune</option>
             @for (school of knownSchools(); track school.id) {
@@ -87,7 +87,7 @@ type FieldName = 'name' | 'code' | 'duration' | 'schoolId';
             }
           </select>
           @if (errorOf('schoolId'); as message) {
-            <p class="text-xs text-red-700" data-error="schoolId">{{ message }}</p>
+            <p class="text-xs text-destructive" data-error="schoolId">{{ message }}</p>
           }
         </div>
       </div>
@@ -103,14 +103,14 @@ type FieldName = 'name' | 'code' | 'duration' | 'schoolId';
       @if (program(); as existing) {
         <app-program-accreditations [programId]="existing.id" />
       } @else {
-        <p class="text-sm text-slate-500">Enregistrez la filière pour lui associer des accréditations.</p>
+        <p class="text-sm text-muted-foreground">Enregistrez la filière pour lui associer des accréditations.</p>
       }
 
       <div class="flex gap-3">
         <button
           type="submit"
           [disabled]="saving()"
-          class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
+          class="btn btn-primary"
         >
           {{ saving() ? 'Enregistrement…' : 'Enregistrer' }}
         </button>
@@ -118,7 +118,7 @@ type FieldName = 'name' | 'code' | 'duration' | 'schoolId';
           type="button"
           data-cancel
           (click)="cancelled.emit()"
-          class="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-100"
+          class="btn btn-secondary"
         >
           Annuler
         </button>

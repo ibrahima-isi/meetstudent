@@ -22,7 +22,7 @@ const PAGE_SIZE = 10;
             type="button"
             data-new
             (click)="startCreate()"
-            class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+            class="btn btn-primary"
           >
             Nouvelle accréditation
           </button>
@@ -35,24 +35,24 @@ const PAGE_SIZE = 10;
           type="button"
           data-retry
           (click)="load(page())"
-          class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium hover:bg-slate-100"
+          class="btn btn-secondary h-9 px-3"
         >
           Réessayer
         </button>
       }
       @if (notice()) {
-        <div role="status" data-notice class="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+        <div role="status" data-notice class="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
           {{ notice() }}
         </div>
       }
       @if (loading()) {
-        <p class="text-sm text-slate-500">Chargement…</p>
+        <p class="text-sm text-muted-foreground">Chargement…</p>
       }
 
       @if (items().length) {
-        <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+        <div class="overflow-x-auto rounded-lg border border-border bg-card">
           <table class="w-full text-left text-sm">
-            <thead class="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+            <thead class="border-b border-border bg-muted text-xs uppercase text-muted-foreground">
               <tr>
                 <th scope="col" class="px-4 py-2">Nom</th>
                 <th scope="col" class="px-4 py-2">Code</th>
@@ -60,7 +60,7 @@ const PAGE_SIZE = 10;
                 <th scope="col" class="px-4 py-2 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100">
+            <tbody class="divide-y divide-border">
               @for (item of items(); track item.id) {
                 @if (editingId() === item.id) {
                   <tr data-editing>
@@ -70,13 +70,13 @@ const PAGE_SIZE = 10;
                   </tr>
                 } @else {
                   <tr data-accreditation>
-                    <td class="px-4 py-2 font-medium text-slate-900">{{ item.name }}</td>
-                    <td class="px-4 py-2 text-slate-600">{{ item.code }}</td>
-                    <td class="px-4 py-2 text-slate-600">{{ item.description }}</td>
+                    <td class="px-4 py-2 font-medium text-foreground">{{ item.name }}</td>
+                    <td class="px-4 py-2 text-muted-foreground">{{ item.code }}</td>
+                    <td class="px-4 py-2 text-muted-foreground">{{ item.description }}</td>
                     <td class="whitespace-nowrap px-4 py-2 text-right">
                       @if (pendingDeleteId() === item.id) {
                         <div class="flex flex-col items-end gap-1">
-                          <span class="max-w-xs whitespace-normal text-xs text-slate-700">
+                          <span class="max-w-xs whitespace-normal text-xs text-foreground">
                             Supprimer cette accréditation ? Si elle est associée à des programmes, la suppression sera refusée : retirez-la d'abord de ces programmes.
                           </span>
                           <span class="flex gap-1">
@@ -85,7 +85,7 @@ const PAGE_SIZE = 10;
                               data-confirm-delete
                               [disabled]="deleting()"
                               (click)="confirmDelete(item)"
-                              class="rounded-md bg-red-600 px-3 py-1 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-60"
+                              class="btn bg-destructive text-destructive-foreground hover:opacity-90 h-8 px-3 text-xs"
                             >
                               Confirmer
                             </button>
@@ -93,7 +93,7 @@ const PAGE_SIZE = 10;
                               type="button"
                               data-cancel-delete
                               (click)="pendingDeleteId.set(null)"
-                              class="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium hover:bg-slate-100"
+                              class="btn btn-secondary h-8 px-3 text-xs"
                             >
                               Annuler
                             </button>
@@ -104,7 +104,7 @@ const PAGE_SIZE = 10;
                           type="button"
                           data-edit
                           (click)="startEdit(item)"
-                          class="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium hover:bg-slate-100"
+                          class="btn btn-secondary h-8 px-3 text-xs"
                         >
                           Modifier
                         </button>
@@ -112,7 +112,7 @@ const PAGE_SIZE = 10;
                           type="button"
                           data-delete
                           (click)="pendingDeleteId.set(item.id)"
-                          class="ml-1 rounded-md border border-red-300 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50"
+                          class="ml-1 btn btn-secondary border-destructive text-destructive hover:bg-destructive/10 h-8 px-3 text-xs"
                         >
                           Supprimer
                         </button>
@@ -125,12 +125,12 @@ const PAGE_SIZE = 10;
           </table>
         </div>
       } @else if (!loading() && !loadFailed()) {
-        <p class="rounded-lg border border-dashed border-slate-300 bg-white px-4 py-8 text-center text-sm text-slate-500">
+        <p class="rounded-lg border border-dashed border-border-strong bg-card px-4 py-8 text-center text-sm text-muted-foreground">
           Aucune accréditation pour le moment.
         </p>
       }
 
-      <nav class="flex items-center justify-between text-sm text-slate-600" aria-label="Pagination">
+      <nav class="flex items-center justify-between text-sm text-muted-foreground" aria-label="Pagination">
         <span>Page {{ page() + 1 }} / {{ totalPages() || 1 }} · {{ total() }} accréditation(s)</span>
         <span class="flex gap-2">
           <button
@@ -138,7 +138,7 @@ const PAGE_SIZE = 10;
             data-prev
             [disabled]="loading() || page() <= 0"
             (click)="goTo(page() - 1)"
-            class="rounded-md border border-slate-300 px-3 py-1.5 font-medium hover:bg-slate-100 disabled:opacity-50"
+            class="btn btn-secondary h-9 px-3 disabled:opacity-50"
           >
             Précédent
           </button>
@@ -147,7 +147,7 @@ const PAGE_SIZE = 10;
             data-next
             [disabled]="loading() || page() + 1 >= totalPages()"
             (click)="goTo(page() + 1)"
-            class="rounded-md border border-slate-300 px-3 py-1.5 font-medium hover:bg-slate-100 disabled:opacity-50"
+            class="btn btn-secondary h-9 px-3 disabled:opacity-50"
           >
             Suivant
           </button>
