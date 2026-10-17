@@ -1,8 +1,19 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  ElementRef,
+  Injector,
+  OnInit,
+  afterNextRender,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { LucideAngularModule, Star } from 'lucide-angular';
-import { EMPTY, Subscription, expand, map } from 'rxjs';
+import { EMPTY, Subscription, expand } from 'rxjs';
 import { pluralKey } from '@i18n/plural';
 import { Page, School } from '@models/entities';
 import { LocaleService } from '@services/locale.service';
@@ -29,6 +40,8 @@ const PAGE_SIZE = 10;
 export class SchoolsRankingPageComponent implements OnInit {
   private readonly schoolService = inject(SchoolService);
   private readonly locale = inject(LocaleService);
+  private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
+  private readonly injector = inject(Injector);
 
   protected readonly Star = Star;
   protected readonly roundRating = roundRating;
@@ -101,6 +114,7 @@ export class SchoolsRankingPageComponent implements OnInit {
     this.lastMode = mode;
     this.busy.set(true);
     this.moreFailed.set(false);
+    const firstNew = this.schools().length;
     const first = this.fetch(this.nextPage);
     this.request?.unsubscribe();
     this.request = (mode === 'all' ? first.pipe(expand((page) => (this.isLast(page) ? EMPTY : this.fetch(this.nextPage)))) : first).subscribe({
@@ -108,13 +122,28 @@ export class SchoolsRankingPageComponent implements OnInit {
       error: () => {
         this.busy.set(false);
         this.moreFailed.set(true);
+        this.focusAfterRender(() => this.host.nativeElement.querySelector<HTMLElement>('[data-testid="rank-retry"]'));
       },
-      complete: () => this.busy.set(false),
+      complete: () => {
+        this.busy.set(false);
+        this.focusAfterRender(() => {
+          const links = this.host.nativeElement.querySelectorAll<HTMLElement>('[data-testid="rank-row"] a');
+          return links[firstNew] ?? links[links.length - 1];
+        });
+      },
     });
   }
 
+  /**
+   * The buttons are disabled while busy and may vanish with the last page, which
+   * drops the keyboard focus to the page top: hand it to what the visitor came for.
+   */
+  private focusAfterRender(target: () => HTMLElement | null | undefined): void {
+    afterNextRender(() => target()?.focus(), { injector: this.injector });
+  }
+
   private fetch(page: number) {
-    return this.schoolService.getSchools(page, PAGE_SIZE, 'most').pipe(map((result) => result as Page<School>));
+    return this.schoolService.getSchools(page, PAGE_SIZE, 'most');
   }
 
   /** An empty page ends the walk too, so a server that forgets `last` cannot loop forever. */

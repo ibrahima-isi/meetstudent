@@ -150,7 +150,7 @@ describe('SchoolsRankingPageComponent', () => {
     await click('rank-all');
 
     expect(rows().length).toBe(20);
-    expect(q('[aria-busy="true"]')).not.toBeNull();
+    expect(q('[data-testid="rank-busy"]')!.textContent).toContain('Loading');
     expect(button('rank-all')!.disabled).toBeTrue();
     expect(button('rank-more')!.disabled).toBeTrue();
 
@@ -160,7 +160,7 @@ describe('SchoolsRankingPageComponent', () => {
 
     expect(getSchools.calls.allArgs().map((a) => a[0])).toEqual([0, 1, 2]);
     expect(rows().length).toBe(25);
-    expect(q('[aria-busy="true"]')).toBeNull();
+    expect(q('[data-testid="rank-busy"]')!.textContent?.trim()).toBe('');
     expect(button('rank-all')).toBeNull();
   });
 
@@ -176,7 +176,7 @@ describe('SchoolsRankingPageComponent', () => {
 
     expect(rows().length).toBe(20);
     expect(q('[data-testid="rank-more-error"]')).not.toBeNull();
-    expect(q('[aria-busy="true"]')).toBeNull();
+    expect(q('[data-testid="rank-busy"]')!.textContent?.trim()).toBe('');
 
     fail = false;
     await click('rank-retry');
@@ -225,6 +225,63 @@ describe('SchoolsRankingPageComponent', () => {
 
     expect(q('app-error-state')).toBeNull();
     expect(rows().length).toBe(2);
+  });
+
+  it('names the rank and the average as hidden text, without hiding the value behind an aria-label', async () => {
+    await open(() => of(page([{ id: 1, name: 'A', rating: 4.26 }], 0, true, 1)));
+    const row = rows()[0];
+
+    expect(row.querySelector('[aria-label]')).toBeNull();
+    const hidden = Array.from(row.querySelectorAll('.sr-only')).map((s) => s.textContent?.trim());
+    expect(hidden).toContain('Rank 1');
+    expect(hidden).toContain('Average rating');
+    expect(row.textContent).toContain('4.3');
+  });
+
+  it('announces the continuation through a status region that is always there, never marked busy', async () => {
+    const pending = new Subject<unknown>();
+    await open((p) => (p === 0 ? of(page(schools(1, 10), 0, false, 14)) : pending));
+    const region = () => q('[data-testid="rank-busy"]');
+
+    expect(region()?.getAttribute('role')).toBe('status');
+    expect(region()?.textContent?.trim()).toBe('');
+
+    await click('rank-more');
+    expect(region()?.textContent).toContain('Loading');
+    expect(region()?.hasAttribute('aria-busy')).toBeFalse();
+
+    pending.next(page(schools(11, 14), 1, true, 14));
+    pending.complete();
+    await settle();
+    expect(region()?.textContent?.trim()).toBe('');
+  });
+
+  it('moves the focus to the first school "See more" added, so the keyboard does not fall back to the page top', async () => {
+    await open((p) => of(page(schools(p * 10 + 1, p * 10 + 10), p, false, 40)));
+
+    button('rank-more')!.focus();
+    await click('rank-more');
+
+    expect(document.activeElement).toBe(rows()[10].querySelector('a'));
+  });
+
+  it('moves the focus to the first school "See all" added once it is done', async () => {
+    await open((p) => of(page(schools(p * 10 + 1, p * 10 + 10), p, p === 2, 30)));
+
+    button('rank-all')!.focus();
+    await click('rank-all');
+
+    expect(rows().length).toBe(30);
+    expect(document.activeElement).toBe(rows()[10].querySelector('a'));
+  });
+
+  it('moves the focus to the retry button when a continuation fails', async () => {
+    await open((p) => (p === 0 ? of(page(schools(1, 10), 0, false, 14)) : throwError(() => new Error('x'))));
+
+    button('rank-more')!.focus();
+    await click('rank-more');
+
+    expect(document.activeElement).toBe(button('rank-retry'));
   });
 
   it('speaks French', async () => {

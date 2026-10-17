@@ -25,16 +25,14 @@
       <ol class="rounded-xl border border-border bg-card shadow-sm divide-y divide-border">
         @for (school of schools(); track school.id; let i = $index) {
           <li data-testid="rank-row" class="flex items-center gap-4 p-4">
-            <span
-              data-testid="rank"
-              class="w-10 shrink-0 text-center text-lg font-bold text-indigo-600 dark:text-indigo-400"
-              [attr.aria-label]="t('rankings.rank', { rank: i + 1 })"
-            >{{ i + 1 }}</span>
+            <span data-testid="rank" aria-hidden="true" class="w-10 shrink-0 text-center text-lg font-bold text-indigo-600 dark:text-indigo-400">{{ i + 1 }}</span>
+            <span class="sr-only">{{ t('rankings.rank', { rank: i + 1 }) }}</span>
             <a [routerLink]="['/', lang(), 'schools', school.id]" class="flex-1 min-w-0 truncate font-semibold text-foreground hover:underline">{{ school.name }}</a>
             <span class="flex shrink-0 items-center gap-1 text-sm">
               @if (rated(school)) {
                 <lucide-icon [img]="Star" class="w-4 h-4 fill-yellow-400 text-yellow-400" aria-hidden="true"></lucide-icon>
-                <span class="text-foreground font-medium" [attr.aria-label]="t('rankings.average')">{{ roundRating(school.rating) }}</span>
+                <span class="sr-only">{{ t('rankings.average') }}</span>
+                <span class="text-foreground font-medium">{{ roundRating(school.rating) }}</span>
               } @else {
                 <span class="text-muted-foreground">{{ t('schools.notRated') }}</span>
               }
@@ -52,9 +50,12 @@
           <button type="button" data-testid="rank-retry" (click)="retryMore()" class="font-medium underline cursor-pointer">{{ t('common.retry') }}</button>
         </div>
       }
-      @if (busy()) {
-        <p role="status" aria-busy="true" class="mt-4 text-center text-sm text-muted-foreground">{{ t('common.loading') }}</p>
-      }
+      <!-- Always rendered: a live region inserted with its message is often not announced. -->
+      <p data-testid="rank-busy" role="status" class="text-center text-sm text-muted-foreground" [class.mt-4]="busy()">
+        @if (busy()) {
+          {{ t('common.loading') }}
+        }
+      </p>
       @if (hasMore()) {
         <div class="mt-6 flex flex-wrap justify-center gap-3">
           <button
