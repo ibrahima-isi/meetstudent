@@ -218,6 +218,31 @@ class ContactControllerIntegrationTests {
     }
 
     @Test
+    void controlCharactersAreRefusedInTheSubjectAndTheMessageButTabsAndLineBreaksAreFine() throws Exception {
+        send("{\"email\":\"awa@example.com\",\"subject\":\"s\",\"message\":\"a\\u0000b\"}")
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").exists());
+        send("{\"email\":\"awa@example.com\",\"subject\":\"a\\u0000b\",\"message\":\"m\"}")
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.subject").exists());
+        send("{\"email\":\"awa@example.com\",\"subject\":\"a\\u001bb\",\"message\":\"a\\u007fb\"}")
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.subject").exists()).andExpect(jsonPath("$.message").exists());
+        assertThat(repository.count()).isZero();
+        assertThat(mailbox.all()).isEmpty();
+
+        send("{\"email\":\"awa@example.com\",\"subject\":\"a\\tb\\r\\nc\",\"message\":\"line1\\r\\n\\tline2\\nline3\"}")
+                .andExpect(status().isAccepted());
+        assertThat(repository.count()).isEqualTo(1);
+    }
+
+    @Test
+    void aSubjectOrMessageMadeOnlyOfUnicodeSpacesIsBlank() throws Exception {
+        send("{\"email\":\"awa@example.com\",\"subject\":\"\\u2003\\u2003\",\"message\":\"m\"}")
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.subject").value("Sujet vide"));
+        send("{\"email\":\"awa@example.com\",\"subject\":\"s\",\"message\":\"\\u2003 \\u3000\"}")
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value("Message vide"));
+        assertThat(repository.count()).isZero();
+    }
+
+    @Test
     void getIsNotAllowed() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v1/contact"))
                 .andExpect(status().is4xxClientError());

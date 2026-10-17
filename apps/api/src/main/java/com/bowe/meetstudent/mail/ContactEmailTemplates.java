@@ -7,13 +7,14 @@ import java.util.regex.Pattern;
 /**
  * Builds the internal email sent to the team for a contact message. The visitor's text only ever lands in the
  * body (HTML-escaped in the HTML part); the subject is flattened to one line (control characters, line breaks
- * included, become spaces) and the visitor's address is used as Reply-To only when it is a plain mailbox.
+ * included, become spaces) and the visitor's address is used as Reply-To only when it is a plain ASCII mailbox
+ * (a non-ASCII one would make SMTP servers without SMTPUTF8 refuse the whole mail; it stays in the body).
  */
 public final class ContactEmailTemplates {
 
     private static final String SUBJECT_PREFIX = "[Contact] ";
     private static final Pattern CONTROL = Pattern.compile("\\p{Cntrl}+");
-    private static final Pattern PLAIN_MAILBOX = Pattern.compile("[^\\s<>,;:\"()\\[\\]\\\\]+@[^\\s<>,;:\"()\\[\\]\\\\@]+");
+    private static final Pattern PLAIN_MAILBOX = Pattern.compile("[!-~&&[^<>,;:\"()\\[\\]\\\\]]+@[!-~&&[^<>,;:\"()\\[\\]\\\\@]]+");
 
     private ContactEmailTemplates() {
     }

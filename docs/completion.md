@@ -267,7 +267,7 @@ Spec : [.scratch/post-129-followups/spec.md](../.scratch/post-129-followups/spec
 ## contact-rework
 
 Spec : [.scratch/contact-rework/spec.md](../.scratch/contact-rework/spec.md). Refonte du module Contact (formulaire avec envoi de mail, messages en base, liens des réseaux sociaux). Remplace `post-129-followups/03`.
-- [ ] [contact-rework/01](../.scratch/contact-rework/issues/01-api-contact-messages.md) : API : messages de contact. État : ready-for-agent, non commencé.
+- [ ] [contact-rework/01](../.scratch/contact-rework/issues/01-api-contact-messages.md) : API : messages de contact. État : ready-for-agent, non commencé. Durcissement après revue de sécurité (en-tête `Forwarded` retiré par Traefik et par l'API, clé IP validée et groupée par /64, `Reply-To` ASCII seulement, caractères de contrôle et sujet d'espaces Unicode refusés, limite et honeypot hors transaction) : `./mvnw clean verify` passe de 666 à 682 tests (268 unitaires + 414 d'intégration), 0 échec.
 - [ ] [contact-rework/02](../.scratch/contact-rework/issues/02-site-settings-social-links.md) : Liens des réseaux sociaux dans les paramètres du site. État : ready-for-agent, non commencé.
 - [ ] [contact-rework/03](../.scratch/contact-rework/issues/03-bo-messages-list.md) : Back office : liste des messages reçus. État : ready-for-agent, non commencé.
 - [ ] [contact-rework/04](../.scratch/contact-rework/issues/04-web-contact-page.md) : Web : nouvelle page Contact. État : ready-for-agent, non commencé.

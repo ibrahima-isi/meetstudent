@@ -65,6 +65,20 @@ class ContactEmailListenerTest {
     }
 
     @Test
+    void aNonAsciiSenderIsNotUsedAsReplyToButStaysInTheBody() {
+        listener.onContactMessageReceived(event("été@example.com", "s", "m"));
+        var mail = mailbox.last();
+        assertThat(mail.replyTo()).isNull();
+        assertThat(mail.text()).contains("été@example.com");
+
+        listener.onContactMessageReceived(event("awa@exämple.com", "s", "m"));
+        assertThat(mailbox.last().replyTo()).isNull();
+
+        listener.onContactMessageReceived(event("awa@example.com", "s", "m"));
+        assertThat(mailbox.last().replyTo()).isEqualTo("awa@example.com");
+    }
+
+    @Test
     void htmlEscapesTheContent() {
         listener.onContactMessageReceived(event("awa@example.com", "<b>s</b>", "<script>alert(1)</script>"));
         assertThat(mailbox.last().html()).doesNotContain("<script>").doesNotContain("<b>s</b>").contains("&lt;script&gt;");

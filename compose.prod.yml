@@ -80,6 +80,10 @@ services:
       - traefik.http.middlewares.sec.headers.permissionsPolicy=camera=(), microphone=(), geolocation=()
       # frame-ancestors only: a full CSP is deliberately omitted, see docs/DEPLOY.md.
       - traefik.http.middlewares.sec.headers.contentSecurityPolicy=frame-ancestors 'none'
+      # Drops the RFC 7239 Forwarded request header (an empty value removes a header). Traefik sets
+      # X-Forwarded-* itself but would pass a client-sent Forwarded through, and Spring's forwarded-header
+      # filter would then take the client address from it. Attached to every router that reaches the api.
+      - traefik.http.middlewares.strip-forwarded.headers.customrequestheaders.Forwarded=
       # Brute-force guard for login/refresh/register: 10 req/min per client IP.
       - traefik.http.middlewares.rl-auth.ratelimit.average=10
       - traefik.http.middlewares.rl-auth.ratelimit.period=1m
@@ -181,28 +185,28 @@ services:
       - traefik.http.routers.api-auth.priority=30
       - traefik.http.routers.api-auth.entrypoints=websecure
       - traefik.http.routers.api-auth.tls=true
-      - traefik.http.routers.api-auth.middlewares=rl-auth@docker,sec@docker
+      - traefik.http.routers.api-auth.middlewares=strip-forwarded@docker,rl-auth@docker,sec@docker
       - traefik.http.routers.api-auth.service=api
       # Uploads: 10 MB body cap.
       - traefik.http.routers.api-upload.rule=Host(`${DOMAIN}`) && Method(`POST`) && PathPrefix(`/api/v1/media`)
       - traefik.http.routers.api-upload.priority=25
       - traefik.http.routers.api-upload.entrypoints=websecure
       - traefik.http.routers.api-upload.tls=true
-      - traefik.http.routers.api-upload.middlewares=upload-limit@docker,rl-api@docker,sec@docker
+      - traefik.http.routers.api-upload.middlewares=strip-forwarded@docker,upload-limit@docker,rl-api@docker,sec@docker
       - traefik.http.routers.api-upload.service=api
       # Everything else under /api.
       - traefik.http.routers.api.rule=Host(`${DOMAIN}`) && PathPrefix(`/api`)
       - traefik.http.routers.api.priority=20
       - traefik.http.routers.api.entrypoints=websecure
       - traefik.http.routers.api.tls=true
-      - traefik.http.routers.api.middlewares=rl-api@docker,sec@docker
+      - traefik.http.routers.api.middlewares=strip-forwarded@docker,rl-api@docker,sec@docker
       - traefik.http.routers.api.service=api
       # Public media served statically by the API.
       - traefik.http.routers.uploads.rule=Host(`${DOMAIN}`) && PathPrefix(`/uploads/public`)
       - traefik.http.routers.uploads.priority=20
       - traefik.http.routers.uploads.entrypoints=websecure
       - traefik.http.routers.uploads.tls=true
-      - traefik.http.routers.uploads.middlewares=sec@docker
+      - traefik.http.routers.uploads.middlewares=strip-forwarded@docker,sec@docker
       - traefik.http.routers.uploads.service=api
 
   web:

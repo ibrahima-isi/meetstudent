@@ -58,10 +58,28 @@ header value). It answers `202 {"status":"accepted"}`, or `400 {field: message}`
 - **Per-IP limit**: 5 messages per hour per client address (honeypot hits count), in memory, so per API instance and
   reset by a restart; the 6th answers `429` with `Retry-After`. Tunable with `app.contact.rate-limit.*`.
   Traefik's own per-IP limit still applies in front of it.
-- **Client address**: under `prod` (`app.contact.trust-forwarded-for: true`) the first `X-Forwarded-For` hop is used,
-  which is safe only because Traefik is the sole entry point and rewrites that header with the real peer address.
-  Anywhere else the socket address is used. If the API is ever exposed without such a proxy, set
-  `APP_CONTACT_TRUST_FORWARDED_FOR=false`, or a client could forge the header to dodge the limit.
+- **Client address (limiter key)**: always a short literal IP, or the fixed key `unknown`. Under `prod` the API runs with
+  `server.forward-headers-strategy: framework`: Spring's `ForwardedHeaderFilter` then hides `X-Forwarded-For` from the
+  application and writes its first hop into `getRemoteAddr()`, so the resolver (`ClientIpResolver`) ends up trusting the
+  **first `X-Forwarded-For` hop, read through `getRemoteAddr()`** (its own `X-Forwarded-For` read, enabled by
+  `app.contact.trust-forwarded-for: true`, only matters without the framework strategy). Both values pass the same
+  literal-IP check; anything else (a client-chosen string, a bracketed or over-long value) collapses to `unknown`, so
+  junk can neither pick a key nor fill the limiter's memory. `::ffff:a.b.c.d` counts as the IPv4 address and every other
+  IPv6 address is counted per /64 prefix. Anywhere else the socket address is used. This is safe only because Traefik is
+  the sole entry point and replaces `X-Forwarded-For` with the real peer address. If the API is ever exposed without such
+  a proxy, set `APP_CONTACT_TRUST_FORWARDED_FOR=false`, or a client could forge the header to dodge the limit.
+- **Why `Forwarded` is stripped**: the RFC 7239 `Forwarded` header takes precedence over `X-Forwarded-For` in Spring's
+  filter and its `for=` value lands unvalidated in `getRemoteAddr()`. Traefik v3 does not remove a client-sent
+  `Forwarded`, so `curl -H 'Forwarded: for=1.2.3.4'` would pick the limiter key at will. Two locks: the `strip-forwarded`
+  Traefik middleware (`customrequestheaders.Forwarded=` with an empty value) on every router that reaches the API in
+  `compose.prod.yml`, and `ForwardedHeaderConfig` in the API, which hides `Forwarded` from Spring's filter when the
+  framework strategy is on. Keep both if you touch either.
+- **Validation**: subject and message are stripped (Unicode spaces included) before the blank check and refuse control
+  characters other than tab and line breaks (`400 {field: message}`). `Reply-To` is set only for a plain ASCII mailbox: a
+  non-ASCII sender (`été@example.com`) stays in the body and no `Reply-To` is sent, since SMTP servers without SMTPUTF8
+  would refuse the whole mail.
+- The limit and the honeypot are decided before the database transaction opens: a 429 or a honeypot hit takes no
+  connection.
 - Logs carry the message id and the exception class only: never the sender address or the text.
 
 ## Password reset
