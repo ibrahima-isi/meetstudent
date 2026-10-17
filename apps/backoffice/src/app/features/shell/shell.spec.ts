@@ -3,7 +3,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { Router, provideRouter } from '@angular/router';
-import { API_URL } from '@services/api-config';
+import { API_URL, WEB_URL } from '@services/api-config';
+import { TokenService } from '@services/token.service';
 import { Shell } from './shell';
 
 @Component({ template: '' })
@@ -106,6 +107,53 @@ describe('Shell (responsive menu)', () => {
       themeToggle().click();
       fixture.detectChanges();
       expect(root.classList.contains('dark')).toBe(before);
+    });
+  });
+
+  describe('navbar', () => {
+    const navbar = () => el().querySelector<HTMLElement>('header')!;
+
+    it('shows the product name, theme toggle and logout inside the navbar', () => {
+      expect(navbar().textContent).toContain('MeetStudent');
+      expect(navbar().querySelector('[data-theme-toggle]')).not.toBeNull();
+      expect(navbar().querySelector('[data-logout]')).not.toBeNull();
+      expect(el().querySelectorAll('[data-theme-toggle]').length).toBe(1);
+    });
+
+    afterEach(() => localStorage.removeItem('auth_user'));
+
+    it('shows the signed-in admin identity', () => {
+      TestBed.inject(TokenService).setUser({ firstname: 'Awa', lastname: 'Diop' } as never);
+      fixture.detectChanges();
+      expect(navbar().textContent).toContain('Awa Diop');
+    });
+
+    it('logs out and goes back to the login screen', async () => {
+      const spy = spyOn(router, 'navigateByUrl').and.resolveTo(true);
+      el().querySelector<HTMLButtonElement>('[data-logout]')!.click();
+      expect(spy).toHaveBeenCalledWith('/login');
+    });
+
+    it('has a Forum entry announced as disabled, not focusable and without navigation', () => {
+      const forum = navbar().querySelector<HTMLElement>('[data-forum]')!;
+      expect(forum).not.toBeNull();
+      expect(forum.textContent).toContain('Forum');
+      expect(forum.textContent).toContain('Bientôt');
+      expect(forum.getAttribute('aria-disabled')).toBe('true');
+      expect(forum.tagName).not.toBe('A');
+      expect(forum.hasAttribute('href')).toBeFalse();
+      expect(forum.tabIndex).toBeLessThan(0);
+    });
+  });
+
+  describe('footer', () => {
+    const footer = () => el().querySelector<HTMLElement>('footer')!;
+
+    it('shows the version, a link to the public site and the copyright', () => {
+      expect(footer().textContent).toMatch(/v\d+\.\d+\.\d+/);
+      expect(footer().textContent).toContain('© MeetStudent');
+      const link = footer().querySelector<HTMLAnchorElement>('a[data-public-site]')!;
+      expect(link.getAttribute('href')).toBe(TestBed.inject(WEB_URL));
     });
   });
 
