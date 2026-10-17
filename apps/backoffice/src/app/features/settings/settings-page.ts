@@ -5,15 +5,44 @@ import { SiteSettingsService } from '@services/site-settings.service';
 import { Alert } from '@shared/components/alert/alert';
 import { fieldErrorsFrom, messageFrom } from '@shared/utils/http-errors';
 
-type FieldName = keyof SiteSettings;
+type LinkName = 'whatsappUrl' | 'telegramUrl' | 'discordUrl' | 'facebookUrl' | 'twitterUrl' | 'instagramUrl' | 'tiktokUrl';
+type FieldName = 'contactEmail' | 'aboutFr' | 'aboutEn' | LinkName;
 
-const LIMITS: Record<FieldName, number> = { contactEmail: 255, aboutFr: 5000, aboutEn: 5000 };
+const LINK_LIMIT = 255;
+const LIMITS: Record<FieldName, number> = {
+  contactEmail: 255,
+  aboutFr: 5000,
+  aboutEn: 5000,
+  whatsappUrl: LINK_LIMIT,
+  telegramUrl: LINK_LIMIT,
+  discordUrl: LINK_LIMIT,
+  facebookUrl: LINK_LIMIT,
+  twitterUrl: LINK_LIMIT,
+  instagramUrl: LINK_LIMIT,
+  tiktokUrl: LINK_LIMIT,
+};
 
 /** `Validators.required` lets whitespace through; no setting may be blank. */
 const notBlank = (control: AbstractControl<string>): ValidationErrors | null =>
   control.value.trim() ? null : { required: true };
 
-/** Contact address and About text of the public site. Only the fields that changed are sent. */
+/**
+ * A social link is optional (empty is allowed, it erases the link) but, once filled, must be a
+ * full `https://` URL with a host and no blank inside. Mirrors the API, which has the last word.
+ */
+const httpsUrl = (control: AbstractControl<string>): ValidationErrors | null => {
+  const value = control.value.trim();
+  if (!value) return null;
+  if (!value.startsWith('https://') || /[\s\p{Z}\p{Cc}\p{Cf}]/u.test(value)) return { httpsUrl: true };
+  try {
+    const parsed = new URL(value);
+    return parsed.hostname && !parsed.username && !parsed.password ? null : { httpsUrl: true };
+  } catch {
+    return { httpsUrl: true };
+  }
+};
+
+/** Contact address, About text and social links of the public site. Only the fields that changed are sent. */
 @Component({
   selector: 'app-settings-page',
   imports: [ReactiveFormsModule, Alert],
@@ -76,6 +105,30 @@ const notBlank = (control: AbstractControl<string>): ValidationErrors | null =>
           </div>
         }
 
+        <fieldset class="space-y-4">
+          <legend class="mb-1 text-sm font-semibold text-foreground">Réseaux sociaux</legend>
+          @for (l of links; track l.name) {
+            <div class="space-y-1">
+              <label [for]="'settings-' + l.name" class="text-sm font-medium text-foreground">{{ l.label }}</label>
+              <input
+                [id]="'settings-' + l.name"
+                type="url"
+                inputmode="url"
+                [formControlName]="l.name"
+                autocomplete="off"
+                placeholder="https://"
+                [attr.aria-invalid]="errorOf(l.name) ? 'true' : null"
+                [attr.aria-describedby]="'settings-' + l.name + '-hint'"
+                class="field-input "
+              />
+              <p [id]="'settings-' + l.name + '-hint'" class="text-xs text-muted-foreground">URL complète en https, vide pour retirer</p>
+              @if (errorOf(l.name); as message) {
+                <p class="text-xs text-destructive" [attr.data-error]="l.name">{{ message }}</p>
+              }
+            </div>
+          }
+        </fieldset>
+
         <div class="flex items-center gap-3">
           <button
             type="submit"
@@ -102,10 +155,27 @@ export class SettingsPage {
     { name: 'aboutEn', label: '« À propos » en anglais', lang: 'en' },
   ];
 
+  readonly links: { name: LinkName; label: string }[] = [
+    { name: 'whatsappUrl', label: 'WhatsApp' },
+    { name: 'telegramUrl', label: 'Telegram' },
+    { name: 'discordUrl', label: 'Discord' },
+    { name: 'facebookUrl', label: 'Facebook' },
+    { name: 'twitterUrl', label: 'X (Twitter)' },
+    { name: 'instagramUrl', label: 'Instagram' },
+    { name: 'tiktokUrl', label: 'TikTok' },
+  ];
+
   readonly form = this.fb.group({
     contactEmail: ['', [notBlank, Validators.email, Validators.maxLength(LIMITS.contactEmail)]],
     aboutFr: ['', [notBlank, Validators.maxLength(LIMITS.aboutFr)]],
     aboutEn: ['', [notBlank, Validators.maxLength(LIMITS.aboutEn)]],
+    whatsappUrl: ['', [httpsUrl, Validators.maxLength(LINK_LIMIT)]],
+    telegramUrl: ['', [httpsUrl, Validators.maxLength(LINK_LIMIT)]],
+    discordUrl: ['', [httpsUrl, Validators.maxLength(LINK_LIMIT)]],
+    facebookUrl: ['', [httpsUrl, Validators.maxLength(LINK_LIMIT)]],
+    twitterUrl: ['', [httpsUrl, Validators.maxLength(LINK_LIMIT)]],
+    instagramUrl: ['', [httpsUrl, Validators.maxLength(LINK_LIMIT)]],
+    tiktokUrl: ['', [httpsUrl, Validators.maxLength(LINK_LIMIT)]],
   });
 
   /** The values last read from or confirmed by the API; null until loaded. */
@@ -147,6 +217,7 @@ export class SettingsPage {
     if (control.errors['required']) return 'Ce champ est obligatoire.';
     if (control.errors['maxlength']) return `Maximum ${LIMITS[name]} caractères.`;
     if (control.errors['email']) return 'Saisissez une adresse e-mail valide.';
+    if (control.errors['httpsUrl']) return 'Saisissez une URL complète en https (https://…), sans espace.';
     return '';
   }
 
@@ -163,7 +234,8 @@ export class SettingsPage {
     const changes: Partial<SiteSettings> = {};
     for (const name of Object.keys(values) as FieldName[]) {
       const value = values[name].trim();
-      if (value !== current[name]) changes[name] = value;
+      // A link that was never set reads as null; an emptied one is sent as '' to erase it.
+      if (value !== (current[name] ?? '')) changes[name] = value;
     }
     if (!Object.keys(changes).length) {
       this.notice.set('Aucune modification à enregistrer.');
@@ -194,7 +266,18 @@ export class SettingsPage {
 
   private show(settings: SiteSettings) {
     this.current.set(settings);
-    this.form.setValue({ contactEmail: settings.contactEmail, aboutFr: settings.aboutFr, aboutEn: settings.aboutEn });
+    this.form.setValue({
+      contactEmail: settings.contactEmail,
+      aboutFr: settings.aboutFr,
+      aboutEn: settings.aboutEn,
+      whatsappUrl: settings.whatsappUrl ?? '',
+      telegramUrl: settings.telegramUrl ?? '',
+      discordUrl: settings.discordUrl ?? '',
+      facebookUrl: settings.facebookUrl ?? '',
+      twitterUrl: settings.twitterUrl ?? '',
+      instagramUrl: settings.instagramUrl ?? '',
+      tiktokUrl: settings.tiktokUrl ?? '',
+    });
     this.submitted.set(false);
   }
 }

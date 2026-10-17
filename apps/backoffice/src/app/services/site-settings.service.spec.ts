@@ -52,4 +52,28 @@ describe('SiteSettingsService', () => {
 
     expect(result).toEqual({ ...settings, aboutEn: 'Hi' });
   });
+
+  it('can send an empty string to erase a social link', () => {
+    TestBed.inject(SiteSettingsService)
+      .update({ whatsappUrl: '', tiktokUrl: 'https://tiktok.com/@x' })
+      .subscribe();
+
+    const req = backend.expectOne(`${api}/site-settings`);
+    expect(req.request.body).toEqual({ whatsappUrl: '', tiktokUrl: 'https://tiktok.com/@x' });
+    req.flush({ ...settings, whatsappUrl: null, tiktokUrl: 'https://tiktok.com/@x' });
+  });
+
+  it('exposes the seven optional social links on the model', () => {
+    const withLinks: SiteSettings = {
+      ...settings,
+      whatsappUrl: null,
+      telegramUrl: 'https://t.me/x',
+      discordUrl: null,
+      facebookUrl: null,
+      twitterUrl: null,
+      instagramUrl: null,
+      tiktokUrl: null,
+    };
+    expect(withLinks.telegramUrl).toBe('https://t.me/x');
+  });
 });
