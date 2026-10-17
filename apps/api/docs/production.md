@@ -17,6 +17,7 @@ the prod profile has no fallbacks for the required ones, so a missing value stop
 | `FILE_PRIVATE_DIR` | no | `storage/private` | Private documents (never served statically). Mount a persistent volume. |
 | `MAIL_ENABLED` | no | `false` | Send account emails through SMTP. When `false` nothing is sent and the API boots normally. |
 | `MAIL_FROM` | if mail on | none | Sender address. Boot fails if `MAIL_ENABLED=true` and it is blank. |
+| `CONTACT_RECIPIENT` | no | `contact@meetstudent.com` | Mailbox that receives the messages of the public contact form (`POST /api/v1/contact`). Distinct from the address shown on the site (`contactEmail` in the site settings). Needs `MAIL_ENABLED=true` to be mailed; messages are stored either way. |
 | `FRONTEND_BASE_URL` | if mail on | `http://localhost:4200` (none under `prod`) | Public origin of the web app, used for the links in emails: absolute, no path, query or fragment, and `https` under `prod`. Never taken from the request. |
 | `SPRING_MAIL_HOST` | if mail on | none | SMTP host. Boot fails naming this variable if `MAIL_ENABLED=true` and it is missing or empty. |
 | `SPRING_MAIL_PORT` | no | `25` | SMTP port (usually 587 with STARTTLS). |
@@ -44,6 +45,24 @@ a missing `SPRING_MAIL_HOST` or `MAIL_FROM`, or on a `FRONTEND_BASE_URL` that is
   claiming an email was sent while mail is off.
 - `app.mail.dev-log` (set in the `dev` and `docker` profiles) prints emails, links included, to the log.
   The `prod` profile refuses to start with it.
+
+## Contact form
+
+`POST /api/v1/contact` (public; `{"email","subject","message","language"?,"website"?}`) stores the message in
+`contact_messages` (`V25`) and, once the transaction has committed, mails it on the same bounded background pool
+to `CONTACT_RECIPIENT` (subject `[Contact] <subject>`, `Reply-To` = the sender, line breaks stripped from every
+header value). It answers `202 {"status":"accepted"}`, or `400 {field: message}` (email 254, subject 150, message
+5000 characters). With `MAIL_ENABLED=false` the message is still stored and the answer is still `202`.
+
+- **Honeypot**: a non-blank `website` answers the same `202` and stores and sends nothing.
+- **Per-IP limit**: 5 messages per hour per client address (honeypot hits count), in memory, so per API instance and
+  reset by a restart; the 6th answers `429` with `Retry-After`. Tunable with `app.contact.rate-limit.*`.
+  Traefik's own per-IP limit still applies in front of it.
+- **Client address**: under `prod` (`app.contact.trust-forwarded-for: true`) the first `X-Forwarded-For` hop is used,
+  which is safe only because Traefik is the sole entry point and rewrites that header with the real peer address.
+  Anywhere else the socket address is used. If the API is ever exposed without such a proxy, set
+  `APP_CONTACT_TRUST_FORWARDED_FOR=false`, or a client could forge the header to dodge the limit.
+- Logs carry the message id and the exception class only: never the sender address or the text.
 
 ## Password reset
 

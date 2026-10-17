@@ -14,6 +14,23 @@ import static org.assertj.core.api.Assertions.assertThat;
 class DevLogEmailSenderTest {
 
     @Test
+    void contactMessagesAreNeverWrittenToTheLog() {
+        var logger = (Logger) LoggerFactory.getLogger(DevLogEmailSender.class);
+        var logs = new ListAppender<ILoggingEvent>();
+        logs.start();
+        logger.addAppender(logs);
+        try {
+            new DevLogEmailSender().send(new EmailMessage(EmailType.CONTACT_MESSAGE, null, "inbox@example.com",
+                    "[Contact] private subject", "from visitor@example.org: private body", "<p/>", "visitor@example.org"));
+            var all = logs.list.stream().map(ILoggingEvent::getFormattedMessage).reduce("", String::concat);
+            assertThat(all).contains("CONTACT_MESSAGE")
+                    .doesNotContain("visitor@example.org").doesNotContain("private body").doesNotContain("private subject");
+        } finally {
+            logger.detachAppender(logs);
+        }
+    }
+
+    @Test
     void lineBreaksInTheBodyCannotForgeLogLines() {
         var logger = (Logger) LoggerFactory.getLogger(DevLogEmailSender.class);
         var logs = new ListAppender<ILoggingEvent>();

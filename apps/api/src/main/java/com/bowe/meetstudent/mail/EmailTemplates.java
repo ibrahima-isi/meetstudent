@@ -15,6 +15,10 @@ public final class EmailTemplates {
     private EmailTemplates() {
     }
 
+    private static IllegalArgumentException notAnAccountEmail() {
+        return new IllegalArgumentException("Not an account email: contact messages use ContactEmailTemplates");
+    }
+
     public static EmailMessage build(AccountEmailRequested event, String frontendBaseUrl, Duration ttl) {
         var lang = normalizeLang(event.lang());
         var english = "en".equals(lang);
@@ -29,6 +33,7 @@ public final class EmailTemplates {
             case EMAIL_VERIFICATION -> english ? "Confirm your MeetStudent email address" : "Confirmez votre adresse e-mail MeetStudent";
             case EMAIL_CHANGE -> english ? "Confirm your new MeetStudent email address" : "Confirmez votre nouvelle adresse e-mail MeetStudent";
             case PASSWORD_RESET -> english ? "Reset your MeetStudent password" : "Réinitialisez votre mot de passe MeetStudent";
+            case CONTACT_MESSAGE -> throw notAnAccountEmail();
         };
         var text = (english ? englishText(type) : frenchText(type)).formatted(greeting(name, english, false), validity, link);
         var html = (english ? englishHtml(type) : frenchHtml(type)).formatted(greeting(name, english, true), validity,
@@ -41,6 +46,7 @@ public final class EmailTemplates {
             case EMAIL_VERIFICATION -> FR_VERIFY_TEXT;
             case EMAIL_CHANGE -> FR_CHANGE_TEXT;
             case PASSWORD_RESET -> FR_RESET_TEXT;
+            case CONTACT_MESSAGE -> throw notAnAccountEmail();
         };
     }
 
@@ -49,6 +55,7 @@ public final class EmailTemplates {
             case EMAIL_VERIFICATION -> EN_VERIFY_TEXT;
             case EMAIL_CHANGE -> EN_CHANGE_TEXT;
             case PASSWORD_RESET -> EN_RESET_TEXT;
+            case CONTACT_MESSAGE -> throw notAnAccountEmail();
         };
     }
 
@@ -57,6 +64,7 @@ public final class EmailTemplates {
             case EMAIL_VERIFICATION -> FR_VERIFY_HTML;
             case EMAIL_CHANGE -> FR_CHANGE_HTML;
             case PASSWORD_RESET -> FR_RESET_HTML;
+            case CONTACT_MESSAGE -> throw notAnAccountEmail();
         };
     }
 
@@ -65,6 +73,7 @@ public final class EmailTemplates {
             case EMAIL_VERIFICATION -> EN_VERIFY_HTML;
             case EMAIL_CHANGE -> EN_CHANGE_HTML;
             case PASSWORD_RESET -> EN_RESET_HTML;
+            case CONTACT_MESSAGE -> throw notAnAccountEmail();
         };
     }
 

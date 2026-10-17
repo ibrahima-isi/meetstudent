@@ -22,6 +22,9 @@ app:
   frontend-base-url: ${FRONTEND_BASE_URL:}
   mail:
     dev-log: false
+  contact:
+    # Traefik is the only way in and rewrites X-Forwarded-For with the real peer address.
+    trust-forwarded-for: true
 
 springdoc:
   api-docs:

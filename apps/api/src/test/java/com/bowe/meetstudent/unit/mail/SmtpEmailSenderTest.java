@@ -134,6 +134,30 @@ class SmtpEmailSenderTest {
     }
 
     @Test
+    void setsReplyToWhenTheMessageHasOne() throws Exception {
+        sender.send(new EmailMessage(EmailType.CONTACT_MESSAGE, null, "inbox@example.com", "[Contact] s", "t", "<p>h</p>", "awa@example.org"));
+
+        var captor = ArgumentCaptor.forClass(MimeMessage.class);
+        verify(javaMailSender).send(captor.capture());
+        assertThat(((InternetAddress) captor.getValue().getReplyTo()[0]).getAddress()).isEqualTo("awa@example.org");
+    }
+
+    @Test
+    void anInvalidReplyToSendsNothingRatherThanASpoofedHeader() {
+        sender.send(new EmailMessage(EmailType.CONTACT_MESSAGE, null, "inbox@example.com", "s", "t", "<p>h</p>", "a@example.org, b@example.org"));
+        Mockito.verify(javaMailSender, Mockito.never()).send(any(MimeMessage.class));
+    }
+
+    @Test
+    void aMessageWithoutReplyToHasNone() throws Exception {
+        sender.send(message);
+        var captor = ArgumentCaptor.forClass(MimeMessage.class);
+        verify(javaMailSender).send(captor.capture());
+        // MimeMessage.getReplyTo() falls back to From when the header is absent.
+        assertThat(captor.getValue().getHeader("Reply-To")).isNull();
+    }
+
+    @Test
     void multipleOrGroupRecipientsAreRefusedAndNothingIsSent() {
         for (String to : new String[]{"a@example.com, b@example.com", "Team: a@example.com, b@example.com;", "a@@example.com", "a b@example.com"}) {
             sender.send(new EmailMessage(EmailType.PASSWORD_RESET, 5, to, "s", "t", "<p>h</p>"));
