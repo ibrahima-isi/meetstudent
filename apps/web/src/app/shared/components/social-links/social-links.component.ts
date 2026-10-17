@@ -73,8 +73,10 @@ const NETWORKS: readonly Network[] = [
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (items().length > 0) {
-      <ul *transloco="let t" class="flex flex-wrap gap-2.5" [attr.aria-label]="t('contact.social.label')">
-        @for (item of items(); track item.id) {
+      <div *transloco="let t" data-contact-social>
+        <p id="contact-social-title" class="mb-3 text-sm font-medium text-muted-foreground">{{ t('contact.social.title') }}</p>
+        <ul class="flex flex-wrap gap-2.5" aria-labelledby="contact-social-title">
+          @for (item of items(); track item.id) {
           <li>
             <a
               [href]="item.url"
@@ -89,9 +91,10 @@ const NETWORKS: readonly Network[] = [
               <span>{{ item.name }}</span>
               <span class="sr-only">{{ t('contact.social.newTab') }}</span>
             </a>
-          </li>
-        }
-      </ul>
+            </li>
+          }
+        </ul>
+      </div>
     }
   `,
 })

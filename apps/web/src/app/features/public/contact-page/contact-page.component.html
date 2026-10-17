@@ -1,0 +1,150 @@
+<section class="relative isolate overflow-hidden" *transloco="let t">
+  <app-mesh-background />
+  <div class="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-4 pb-20 pt-32 sm:px-6 lg:grid-cols-12 lg:gap-14 lg:px-8 lg:pb-28 lg:pt-40">
+    <div appReveal class="lg:col-span-5">
+      <p class="mb-4 inline-flex rounded-full bg-brand-soft px-3 py-1 text-sm font-medium text-brand-soft-foreground">{{ t('contact.eyebrow') }}</p>
+      <h1 class="text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">{{ t('contact.title') }}</h1>
+      <p class="mt-5 max-w-xl text-lg text-foreground/75">{{ t('contact.intro') }}</p>
+
+      @switch (status()) {
+        @case ('loading') {
+          <p class="mt-8 text-muted-foreground" role="status">{{ t('common.loading') }}</p>
+        }
+        @case ('error') {
+          <app-error-state [message]="t('contact.error')" (retry)="load()" />
+        }
+        @default {
+          <div class="mt-8 flex items-center gap-4 rounded-2xl border border-glass-border bg-glass p-5 backdrop-blur">
+            <span class="inline-grid h-11 w-11 shrink-0 place-items-center rounded-full bg-brand-soft text-brand-soft-foreground">
+              <lucide-icon [img]="Mail" class="h-5 w-5" aria-hidden="true" />
+            </span>
+            <div class="min-w-0">
+              <p class="text-sm text-muted-foreground">{{ t('contact.emailLabel') }}</p>
+              <a data-contact-email class="break-all text-lg font-medium text-brand hover:underline" [href]="mailto()">{{ email() }}</a>
+            </div>
+          </div>
+          <app-social-links class="mt-8 block" [links]="settings()" />
+        }
+      }
+    </div>
+
+    <div appReveal class="lg:col-span-7">
+      <div class="rounded-3xl border border-glass-border bg-glass p-6 shadow-[var(--shadow-glow)] backdrop-blur-xl sm:p-8">
+        <h2 class="text-2xl font-semibold tracking-tight text-foreground">{{ t('contact.form.title') }}</h2>
+        <p class="mt-1.5 text-muted-foreground">{{ t('contact.form.subtitle') }}</p>
+
+        @if (sent()) {
+          <div
+            #sentNotice
+            data-contact-sent
+            role="status"
+            tabindex="-1"
+            class="mt-6 flex items-start gap-3 rounded-xl border border-green-200 bg-green-50 p-4 outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-green-900 dark:bg-green-950/40"
+          >
+            <lucide-icon [img]="CheckCircle" class="mt-0.5 h-5 w-5 shrink-0 text-green-600 dark:text-green-400" aria-hidden="true" />
+            <div>
+              <p class="font-medium text-green-800 dark:text-green-200">{{ t('contact.success.title') }}</p>
+              <p class="mt-0.5 text-green-800 dark:text-green-200">{{ t('contact.success.text') }}</p>
+            </div>
+          </div>
+        }
+
+        <form [formGroup]="form" (ngSubmit)="submit()" class="relative mt-6 space-y-5" novalidate>
+          <div>
+            <label for="contact-email" class="mb-2 block font-medium text-foreground">{{ t('contact.form.email') }}</label>
+            <div class="relative">
+              <lucide-icon [img]="Mail" class="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+              <input
+                id="contact-email"
+                name="email"
+                type="email"
+                autocomplete="email"
+                formControlName="email"
+                class="field-input pl-11"
+                [placeholder]="t('contact.form.emailPlaceholder')"
+                [attr.aria-invalid]="errorFor('email') ? 'true' : null"
+                [attr.aria-describedby]="describedBy('email')"
+              />
+            </div>
+            @if (errorFor('email'); as err) {
+              <p id="contact-email-error" class="mt-1.5 text-sm text-red-600 dark:text-red-400">{{ t('contact.errors.' + err.key, { max: err.max }) }}</p>
+            }
+          </div>
+
+          <div>
+            <label for="contact-subject" class="mb-2 block font-medium text-foreground">{{ t('contact.form.subject') }}</label>
+            <div class="relative">
+              <lucide-icon [img]="PenLine" class="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+              <input
+                id="contact-subject"
+                name="subject"
+                type="text"
+                autocomplete="off"
+                formControlName="subject"
+                class="field-input pl-11"
+                [placeholder]="t('contact.form.subjectPlaceholder')"
+                [attr.aria-invalid]="errorFor('subject') ? 'true' : null"
+                [attr.aria-describedby]="describedBy('subject')"
+              />
+            </div>
+            @if (errorFor('subject'); as err) {
+              <p id="contact-subject-error" class="mt-1.5 text-sm text-red-600 dark:text-red-400">{{ t('contact.errors.' + err.key, { max: err.max }) }}</p>
+            }
+          </div>
+
+          <div>
+            <label for="contact-message" class="mb-2 block font-medium text-foreground">{{ t('contact.form.message') }}</label>
+            <textarea
+              id="contact-message"
+              name="message"
+              rows="6"
+              [attr.maxlength]="max.message"
+              formControlName="message"
+              class="field-input h-auto min-h-40 resize-y py-3 leading-relaxed"
+              [placeholder]="t('contact.form.messagePlaceholder')"
+              [attr.aria-invalid]="errorFor('message') ? 'true' : null"
+              [attr.aria-describedby]="describedBy('message')"
+            ></textarea>
+            <div class="mt-1.5 flex items-start justify-between gap-4">
+              <div>
+                @if (errorFor('message'); as err) {
+                  <p id="contact-message-error" class="text-sm text-red-600 dark:text-red-400">{{ t('contact.errors.' + err.key, { max: err.max }) }}</p>
+                }
+              </div>
+              <p id="contact-message-count" data-contact-count class="shrink-0 text-sm text-muted-foreground">
+                {{ t('contact.form.counter', { count: counter(), max: max.message }) }}
+              </p>
+            </div>
+          </div>
+
+          <!-- Honeypot: off-screen rather than display:none, so simple bots still fill it. -->
+          <div aria-hidden="true" style="position: absolute; left: -10000px; top: auto; width: 1px; height: 1px; overflow: hidden">
+            <label for="contact-website">{{ t('contact.form.honeypot') }}</label>
+            <input id="contact-website" name="website" type="text" formControlName="website" tabindex="-1" autocomplete="off" />
+          </div>
+
+          @if (alert(); as kind) {
+            <div
+              role="alert"
+              data-contact-alert
+              class="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-900 dark:bg-red-950/40"
+            >
+              <lucide-icon [img]="AlertCircle" class="mt-0.5 h-5 w-5 shrink-0 text-red-600 dark:text-red-400" aria-hidden="true" />
+              <p class="text-red-800 dark:text-red-200">{{ t('contact.errors.' + kind) }}</p>
+            </div>
+          }
+
+          <button type="submit" class="btn btn-primary btn-lg w-full" [disabled]="sending()" [attr.aria-busy]="sending() ? 'true' : null">
+            @if (sending()) {
+              <lucide-icon [img]="Loader2" class="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />
+              {{ t('contact.form.sending') }}
+            } @else {
+              <lucide-icon [img]="Send" class="h-4 w-4" aria-hidden="true" />
+              {{ t('contact.form.submit') }}
+            }
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
