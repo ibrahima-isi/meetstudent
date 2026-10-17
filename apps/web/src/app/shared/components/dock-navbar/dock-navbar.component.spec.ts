@@ -249,6 +249,24 @@ describe('DockNavbarComponent', () => {
       }
     });
 
+    it('keeps the menu action buttons at their full touch height when the list has to scroll', async () => {
+      for (const signedIn of [false, true]) {
+        await mount('fr', signedIn);
+        widen(375);
+        (root().querySelector('button.menu-btn') as HTMLButtonElement).click();
+        fixture.detectChanges();
+        const panel = root().querySelector('#dock-menu') as HTMLElement;
+        // The panel must overflow for the squeeze to matter: that is the phone case.
+        expect(panel.scrollHeight).withContext('panel overflows').toBeGreaterThan(panel.clientHeight);
+        const buttons = Array.from(panel.querySelectorAll<HTMLElement>('.btn'));
+        expect(buttons.length).withContext(`signedIn=${signedIn}`).toBeGreaterThan(0);
+        for (const b of buttons) {
+          expect(b.getBoundingClientRect().height).withContext(`${b.textContent?.trim()} signedIn=${signedIn}`).toBeGreaterThanOrEqual(44);
+        }
+        fixture.destroy();
+      }
+    });
+
     it('shows the whole menu and no menu button on a wide screen', async () => {
       await mount('fr', false);
       widen(1280);
