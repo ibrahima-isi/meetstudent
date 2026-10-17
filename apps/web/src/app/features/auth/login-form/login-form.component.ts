@@ -1,6 +1,7 @@
 import { Component, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { LucideAngularModule, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-angular';
 import { TranslocoDirective } from '@jsverse/transloco';
@@ -78,8 +79,9 @@ export class LoginFormComponent {
         setTimeout(() => this.afterLogin(), 1000);
       },
       // The API's message is for logs only; the user reads the front's own text.
-      error: () => {
-        this.error.set('auth.login.failed');
+      // A 401 is the same sentence whatever the cause, so it never says if the email exists.
+      error: (err: unknown) => {
+        this.error.set(err instanceof HttpErrorResponse && err.status === 401 ? 'auth.login.invalidCredentials' : 'auth.login.failed');
         this.isLoading.set(false);
       }
     });

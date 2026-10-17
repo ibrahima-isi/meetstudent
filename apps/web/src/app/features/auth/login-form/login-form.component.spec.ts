@@ -60,20 +60,45 @@ describe('LoginFormComponent translations', () => {
   });
 
   // Decision 5: ErrorResponse.message is for logs, never for the user.
-  it('shows its own failure text, never the API message', async () => {
-    await render('en');
-    const component = fixture.componentInstance;
-    component.loginForm.setValue({ email: 'awa@example.com', password: 'wrong' });
+  describe('when the sign-in is refused', () => {
+    const fail = async (lang: 'fr' | 'en', status: number, body: object = {}) => {
+      await render(lang);
+      const component = fixture.componentInstance;
+      component.loginForm.setValue({ email: 'awa@example.com', password: 'wrong' });
+      component.handleSubmit();
+      httpMock
+        .expectOne(`${environment.apiUrl}/auth`)
+        .flush(body, { status, statusText: 'Error' });
+      fixture.detectChanges();
+      await fixture.whenStable();
+    };
 
-    component.handleSubmit();
-    httpMock
-      .expectOne(`${environment.apiUrl}/auth`)
-      .flush({ message: 'Bad credentials from Spring' }, { status: 401, statusText: 'Unauthorized' });
-    fixture.detectChanges();
-    await fixture.whenStable();
+    it('says the credentials are wrong on a 401, in English, never the API message', async () => {
+      await fail('en', 401, { message: 'Bad credentials from Spring' });
+      expect(text()).toContain('Incorrect email or password.');
+      expect(text()).not.toContain('Bad credentials from Spring');
+    });
 
-    expect(text()).toContain('Login failed. Please try again.');
-    expect(text()).not.toContain('Bad credentials from Spring');
+    it('says the credentials are wrong on a 401, in French', async () => {
+      await fail('fr', 401);
+      expect(text()).toContain('E-mail ou mot de passe incorrect.');
+    });
+
+    it('does not reveal whether the email exists: the text is the same for any 401', async () => {
+      await fail('en', 401, { message: 'User not found' });
+      const unknownEmail = text();
+      expect(unknownEmail).toContain('Incorrect email or password.');
+      expect(unknownEmail).not.toContain('User not found');
+    });
+
+    for (const status of [0, 429, 500, 503]) {
+      it(`keeps the generic text for a ${status}`, async () => {
+        await fail('en', status, { message: 'internal detail' });
+        expect(text()).toContain('Login failed. Please try again.');
+        expect(text()).not.toContain('Incorrect email or password.');
+        expect(text()).not.toContain('internal detail');
+      });
+    }
   });
 
   it('offers no social login: there is no OAuth backend behind it', async () => {
@@ -316,7 +341,7 @@ describe('LoginFormComponent translations', () => {
       await fixture.whenStable();
 
       const banner = Array.from(el.querySelectorAll('[role="alert"]')).find((b) =>
-        b.textContent?.includes('Login failed'),
+        b.textContent?.includes('Incorrect email or password'),
       );
       expect(banner).toBeDefined();
     });

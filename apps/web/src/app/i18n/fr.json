@@ -129,6 +129,7 @@
       "success": "Connexion réussie ! Bon retour parmi nous.",
       "registered": "Compte créé ! Connectez-vous pour continuer.",
       "failed": "La connexion a échoué. Veuillez réessayer.",
+      "invalidCredentials": "E-mail ou mot de passe incorrect.",
       "passwordChanged": "Mot de passe modifié. Toutes vos sessions ont été déconnectées. Connectez-vous avec votre nouveau mot de passe.",
       "reset": "Mot de passe réinitialisé ! Connectez-vous avec votre nouveau mot de passe.",
       "registeredEmail": "Compte créé ! Nous vous avons envoyé un e-mail de confirmation ; vous pouvez vous connecter dès maintenant."
