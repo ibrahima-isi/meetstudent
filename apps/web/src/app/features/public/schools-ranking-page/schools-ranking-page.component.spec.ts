@@ -284,10 +284,30 @@ describe('SchoolsRankingPageComponent', () => {
     expect(document.activeElement).toBe(button('rank-retry'));
   });
 
+  it('offers the switch between the two rankings as links, the schools one being the current page', async () => {
+    await open(() => of(page(schools(1, 2), 0, true, 2)));
+    const links = Array.from(el().querySelectorAll('[data-testid="ranking-switch"] a'));
+
+    expect(links.map((l) => l.textContent?.trim())).toEqual(['Schools', 'Programmes']);
+    expect(links.map((l) => l.getAttribute('href'))).toEqual(['/en/rankings/schools', '/en/rankings/programs']);
+    expect(links.map((l) => l.getAttribute('aria-current'))).toEqual(['page', null]);
+    expect(q('[data-testid="ranking-switch"] [role="tab"]')).toBeNull();
+  });
+
+  it('keeps the switch visible while loading and when the ranking fails', async () => {
+    await open(() => NEVER);
+    expect(q('[data-testid="ranking-switch"]')).not.toBeNull();
+
+    TestBed.resetTestingModule();
+    await open(() => throwError(() => new Error('x')));
+    expect(q('[data-testid="ranking-switch"]')).not.toBeNull();
+  });
+
   it('speaks French', async () => {
     await open(() => of(page(schools(1, 10), 0, false, 12)), 'fr');
 
     expect(text()).toContain('Classement des établissements');
+    expect(Array.from(el().querySelectorAll('[data-testid="ranking-switch"] a')).map((l) => l.textContent?.trim())).toEqual(['Établissements', 'Formations']);
     expect(button('rank-more')!.textContent).toContain('Voir plus');
     expect(button('rank-all')!.textContent).toContain('Voir tout');
   });
