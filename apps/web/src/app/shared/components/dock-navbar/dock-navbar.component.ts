@@ -75,7 +75,7 @@ import { nextDockVisible, SCROLL_DELTA_PX } from './dock-visibility';
       .links a:hover, .panel a.item:hover { background: var(--accent); color: var(--foreground); }
       .forum-soon { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.8rem; font-size: 0.9rem; color: var(--muted-foreground); opacity: 0.7; cursor: not-allowed; user-select: none; }
       .panel .forum-soon { font-size: 1rem; padding: 0.75rem 1rem; }
-      @container (max-width: 79.99rem) { .links .soon-badge { display: none; } }
+      @container (max-width: 89.99rem) { .links .soon-badge { display: none; } }
       .soon-badge { padding: 0.05rem 0.45rem; border-radius: 9999px; background: var(--brand-soft); color: var(--brand-soft-foreground); font-size: 0.7rem; font-weight: 600; }
       .actions { display: flex; align-items: center; gap: 0.25rem; margin-left: auto; }
       .wide-only { display: none; }
