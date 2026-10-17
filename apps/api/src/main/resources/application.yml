@@ -64,6 +64,15 @@ app:
     # Local development only; the prod profile refuses to start with it.
     dev-log: false
     async: true
+  contact:
+    # Where contact-form messages are mailed; distinct from the address shown on the site.
+    recipient: ${CONTACT_RECIPIENT:contact@meetstudent.com}
+    # First X-Forwarded-For hop as client IP: only behind a proxy that rewrites it (prod profile).
+    trust-forwarded-for: false
+    rate-limit:
+      max-per-window: 5
+      window-minutes: 60
+      max-tracked-clients: 10000
   tokens:
     reset-ttl-minutes: 60
     verify-ttl-hours: 24

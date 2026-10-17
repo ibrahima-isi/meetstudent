@@ -29,6 +29,9 @@ public class SmtpEmailSender implements EmailSender {
             helper.setValidateAddresses(true);
             helper.setFrom(from);
             helper.setTo(strictRecipient(message.to()));
+            if (message.replyTo() != null) {
+                helper.setReplyTo(strictRecipient(message.replyTo()));
+            }
             helper.setSubject(message.subject());
             helper.setText(message.text(), message.html());
             mailSender.send(mime);

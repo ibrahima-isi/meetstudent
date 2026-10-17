@@ -4,11 +4,15 @@
 
 **Blocked by:** None.
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] 202 pour un message valide : une ligne en base et un mail capturé au bon destinataire, sujet et corps corrects.
-- [ ] Champ piège rempli : 202, aucune ligne, aucun mail.
-- [ ] Validation : 400 par champ (e-mail invalide, sujet ou message vide ou trop long).
-- [ ] Limite par IP : la requête en trop répond 429 avec `Retry-After`.
-- [ ] Mail désactivé (`MAIL_ENABLED=false`) : le message est quand même enregistré, la réponse reste 202.
-- [ ] Migration vérifiée sur PostgreSQL ; tests en échec d'abord, puis `./mvnw clean verify` vert.
+- [x] 202 pour un message valide : une ligne en base et un mail capturé au bon destinataire, sujet et corps corrects.
+- [x] Champ piège rempli : 202, aucune ligne, aucun mail.
+- [x] Validation : 400 par champ (e-mail invalide, sujet ou message vide ou trop long).
+- [x] Limite par IP : la requête en trop répond 429 avec `Retry-After`.
+- [x] Mail désactivé (`MAIL_ENABLED=false`) : le message est quand même enregistré, la réponse reste 202.
+- [x] Migration vérifiée sur PostgreSQL ; tests en échec d'abord, puis `./mvnw clean verify` vert.
+
+## Comments
+
+2026-10-17 : champ de langue nommé `language` (pas `lang`) : la page web (ticket 04) doit l'envoyer sous ce nom. Revue de sécurité Opus : limite par IP contournable en prod avec l'en-tête `Forwarded` ; corrigé (Traefik retire l'en-tête, l'API verrouille `ForwardedHeaderFilter`, la clé est toujours une IP littérale ou `unknown`). Risque ouvert : l'exécuteur de mails est partagé avec les mails de compte (un flot de messages de contact peut saturer la file ; le message reste en base).

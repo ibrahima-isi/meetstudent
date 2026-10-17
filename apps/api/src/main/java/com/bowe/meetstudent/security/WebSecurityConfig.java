@@ -108,6 +108,8 @@ public class WebSecurityConfig {
 
                                 // User Profile (Ownership handled in controller)
                                 .requestMatchers(HttpMethod.POST, "/api/v1/users").permitAll() // Registration
+                                // Public contact form (honeypot + per-IP limit in ContactService)
+                                .requestMatchers(HttpMethod.POST, "/api/v1/contact").permitAll()
                                 .anyRequest().authenticated()
                 );
         return http.build();
