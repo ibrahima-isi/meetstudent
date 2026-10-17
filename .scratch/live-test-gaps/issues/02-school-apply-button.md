@@ -8,10 +8,11 @@
 
 - [x] Décision produit consignée dans ce ticket (Comments).
 - [x] Le bouton fait ce qui est décidé, ou disparaît ; jamais un bouton mort. Donnée absente : ne rien inventer.
-- [x] Libellés fr/en, mode sombre, mobile ; états connecté/visiteur respectés.
+- [ ] Libellés fr/en, mode sombre, mobile ; états connecté/visiteur respectés.
 - [x] Spec en échec d'abord, puis verte ; suite web et build verts.
 
 ## Comments
 
 - 2026-10-17, décision du propriétaire : « Postuler maintenant » mène à la page contact `/:lang/contact` avec l'école pré-remplie. Constat : cette page n'a pas de formulaire, seulement le lien `mailto:` de l'adresse de contact ; le propriétaire a choisi (a) : le lien mailto reçoit un sujet pré-rempli avec le nom de l'école.
 - Implémenté : le bouton (et l'entrée « Liste d'attente » d'un programme complet) est un lien `routerLink` vers `/<lang>/contact?school=<nom>`, jamais désactivé. La page contact lit `school` et ajoute `?subject=` (fr « Candidature : … », en « Application: … ») ; sans paramètre, le mailto reste nu. La route contact n'a pas de guard : visiteurs et connectés y accèdent.
+- Revue : la case « mode sombre, mobile » est décochée, rendu clair/sombre et mobile non vérifiés dans un navigateur. Le nom de l'école du paramètre est assaini (chaîne seulement, caractères de contrôle retirés, rogné, 100 caractères max) avant encodage.

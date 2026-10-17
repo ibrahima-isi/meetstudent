@@ -70,6 +70,41 @@ describe('ContactPageComponent', () => {
       expect(decodeURIComponent(href)).toContain('Test School');
     });
 
+    const hrefFor = async (value: unknown) => {
+      fixture.componentRef.setInput('school', value);
+      flush();
+      await settle();
+      return (el().querySelector('a[data-contact-email]') as HTMLAnchorElement).getAttribute('href')!;
+    };
+    const subjectOf = (href: string) => decodeURIComponent(href.split('?subject=')[1]);
+
+    it('ignores a repeated ?school= (an array) instead of throwing', async () => {
+      expect(await hrefFor(['A', 'B'])).toBe('mailto:hello@example.sn');
+    });
+
+    it('encodes & and strips CR/LF so no header can be injected', async () => {
+      const href = await hrefFor('A&B\r\nBcc: x@y.z');
+      expect(href).not.toMatch(/[\r\n]/);
+      expect(href).not.toContain('%0D');
+      expect(href).not.toContain('%0A');
+      expect(href.split('?subject=')[1]).toContain('%26');
+      expect(href).not.toContain('&');
+    });
+
+    it('trims the name', async () => {
+      expect(subjectOf(await hrefFor('  Test School  '))).toMatch(/Test School$/);
+    });
+
+    it('ignores a blank name', async () => {
+      expect(await hrefFor('   ')).toBe('mailto:hello@example.sn');
+    });
+
+    it('cuts a very long name', async () => {
+      const subject = subjectOf(await hrefFor('x'.repeat(500)));
+      expect(subject.length).toBeLessThan(200);
+      expect(subject).not.toContain('x'.repeat(101));
+    });
+
     it('makes up nothing when no school is given', async () => {
       flush();
       await settle();

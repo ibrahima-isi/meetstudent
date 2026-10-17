@@ -1,8 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
-import { TranslocoDirective } from '@jsverse/transloco';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { LucideAngularModule, Mail } from 'lucide-angular';
 import { ErrorStateComponent } from '@shared/components/error-state/error-state.component';
 import { SiteSettingsService } from '@services/site-settings.service';
+
+const MAX_SCHOOL_LENGTH = 100;
 
 /** The contact address an admin set in the back office, as a mail link. */
 @Component({
@@ -28,7 +31,7 @@ import { SiteSettingsService } from '@services/site-settings.service';
             </span>
             <div class="min-w-0">
               <p class="text-sm text-muted-foreground">{{ t('contact.emailLabel') }}</p>
-              <a data-contact-email class="break-all text-lg font-medium text-brand hover:underline" [href]="mailHref(t('contact.applySubject', { school: school() }))">{{ email() }}</a>
+              <a data-contact-email class="break-all text-lg font-medium text-brand hover:underline" [href]="mailto()">{{ email() }}</a>
             </div>
           </div>
         }
@@ -42,15 +45,26 @@ export class ContactPageComponent {
   protected readonly Mail = Mail;
   protected readonly status = signal<'loading' | 'loaded' | 'error'>('loading');
   protected readonly email = signal('');
-  /** From `?school=` (the apply link of a school page); empty when absent. */
-  readonly school = input<string>();
-  private readonly subjectWanted = computed(() => !!this.school()?.trim());
+  private readonly transloco = inject(TranslocoService);
+  private readonly lang = toSignal(this.transloco.langChanges$);
 
-  /** A bare mail link, plus a subject only when a school was named. */
-  protected mailHref(subject: string): string {
+  /** From `?school=`; unknown because a repeated parameter arrives as an array. */
+  readonly school = input<unknown>();
+
+  /** The school name made safe for a subject line; empty when absent or not a string. */
+  private readonly schoolName = computed(() => {
+    const raw = this.school();
+    return typeof raw === 'string' ? raw.replace(/[\x00-\x1F\x7F]/g, ' ').trim().slice(0, MAX_SCHOOL_LENGTH).trim() : '';
+  });
+
+  /** A bare mail link, plus a subject only when a usable school was named. */
+  protected readonly mailto = computed(() => {
     const base = 'mailto:' + this.email();
-    return this.subjectWanted() ? `${base}?subject=${encodeURIComponent(subject)}` : base;
-  }
+    const school = this.schoolName();
+    if (!school) return base;
+    this.lang();
+    return `${base}?subject=${encodeURIComponent(this.transloco.translate('contact.applySubject', { school }))}`;
+  });
 
   constructor() {
     this.load();
