@@ -20,7 +20,7 @@
             </span>
             <div class="min-w-0">
               <p class="text-sm text-muted-foreground">{{ t('contact.emailLabel') }}</p>
-              <a data-contact-email class="break-all text-lg font-medium text-brand hover:underline" [href]="mailto()">{{ email() }}</a>
+              <a data-contact-email class="break-all text-base font-medium sm:text-lg text-brand hover:underline" [href]="mailto()">{{ email() }}</a>
             </div>
           </div>
           <app-social-links class="mt-8 block" [links]="settings()" />
@@ -60,7 +60,7 @@
                 type="email"
                 autocomplete="email"
                 formControlName="email"
-                class="field-input pl-11"
+                class="field-input pl-11!"
                 [placeholder]="t('contact.form.emailPlaceholder')"
                 [attr.aria-invalid]="errorFor('email') ? 'true' : null"
                 [attr.aria-describedby]="describedBy('email')"
@@ -81,7 +81,7 @@
                 type="text"
                 autocomplete="off"
                 formControlName="subject"
-                class="field-input pl-11"
+                class="field-input pl-11!"
                 [placeholder]="t('contact.form.subjectPlaceholder')"
                 [attr.aria-invalid]="errorFor('subject') ? 'true' : null"
                 [attr.aria-describedby]="describedBy('subject')"
