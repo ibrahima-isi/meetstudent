@@ -206,7 +206,7 @@ describe('DockNavbarComponent', () => {
       widen(px);
       const bar = dock().getBoundingClientRect();
       const found: string[] = [];
-      for (const child of Array.from(dock().querySelectorAll('.brand, .links a, .links .discover-trigger, .actions > *'))) {
+      for (const child of Array.from(dock().querySelectorAll('.brand, .links a, .links .discover-trigger, .links .forum-soon, .actions > *'))) {
         const box = child.getBoundingClientRect();
         if (box.width === 0) continue;
         if (box.right > bar.right + 0.5 || box.left < bar.left - 0.5) found.push(`${px}px: ${child.className} leaves the bar`);
@@ -218,14 +218,24 @@ describe('DockNavbarComponent', () => {
 
     for (const lang of ['fr', 'en'] as const) {
       for (const signedIn of [false, true]) {
-        it(`never lets anything leave the bar or wrap, from 320 to 1440px (${lang}, ${signedIn ? 'signed in' : 'anonymous'})`, async () => {
+        it(`never lets anything leave the bar or wrap, from 320 to 1600px (${lang}, ${signedIn ? 'signed in' : 'anonymous'})`, async () => {
           await mount(lang, signedIn);
           const found: string[] = [];
-          for (let px = 320; px <= 1440; px += 20) found.push(...problems(px));
+          for (let px = 320; px <= 1600; px += 20) found.push(...problems(px));
           expect(found).toEqual([]);
         });
       }
     }
+
+    it('always explains the greyed Forum entry with a visible coming-soon cue', async () => {
+      await mount('fr', true);
+      for (let px = 1200; px <= 1600; px += 20) {
+        widen(px);
+        const forum = root().querySelector('.links .forum-soon');
+        if (!shown(forum)) continue;
+        expect(shown(forum!.querySelector('.soon-badge'))).withContext(`${px}px`).toBeTrue();
+      }
+    });
 
     it('keeps only the brand and the menu button on a phone or a tablet', async () => {
       await mount('fr', false);
