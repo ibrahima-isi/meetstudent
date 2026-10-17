@@ -1,10 +1,21 @@
-import { ChangeDetectionStrategy, Component, ElementRef, inject, signal } from '@angular/core';
+import { DOCUMENT, isPlatformBrowser } from '@angular/common';
+import {
+  afterNextRender,
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  PLATFORM_ID,
+  signal,
+} from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { ArrowRight, GraduationCap, LucideAngularModule, MapPin, Search, Star } from 'lucide-angular';
 import { MeshBackgroundComponent } from '@shared/components/mesh-background/mesh-background.component';
 import { LocaleService } from '@services/locale.service';
+import { TokenService } from '@services/token.service';
 
 const MAX_TERM_LENGTH = 100;
 
@@ -64,7 +75,9 @@ function wellFormed(value: string): string {
               {{ t('lp.hero.ctaExplore') }}
               <lucide-icon [img]="ArrowRight" class="h-4 w-4" aria-hidden="true" />
             </a>
-            <a class="btn btn-secondary btn-lg" [routerLink]="['/', lang(), 'register']">{{ t('lp.hero.ctaRegister') }}</a>
+            @if (!signedIn()) {
+              <a class="btn btn-secondary btn-lg" [routerLink]="['/', lang(), 'register']">{{ t('lp.hero.ctaRegister') }}</a>
+            }
           </div>
         </div>
 
@@ -95,6 +108,20 @@ export class LandingHeroComponent {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   protected readonly lang = inject(LocaleService).active;
 
+  private readonly token = inject(TokenService);
+
+  /**
+   * The session lives in localStorage, which the server cannot read: the server
+   * always renders the sign-up action. Reading the token before the first client
+   * render would break hydration, so `hydrated` flips after it (same rule as the
+   * dock navbar and the bottom band, including the pure client bootstrap exception).
+   */
+  private readonly hydrated = signal(
+    isPlatformBrowser(inject(PLATFORM_ID)) &&
+      !inject(DOCUMENT).querySelector('[ng-server-context]'),
+  );
+  protected readonly signedIn = computed(() => this.hydrated() && this.token.isAuthenticated());
+
   protected readonly Search = Search;
   protected readonly ArrowRight = ArrowRight;
   protected readonly GraduationCap = GraduationCap;
@@ -104,6 +131,10 @@ export class LandingHeroComponent {
   protected readonly query = new FormControl('', { nonNullable: true });
   protected readonly px = signal(0);
   protected readonly py = signal(0);
+
+  constructor() {
+    afterNextRender(() => this.hydrated.set(true));
+  }
 
   protected onSubmit(event: Event): void {
     event.preventDefault();

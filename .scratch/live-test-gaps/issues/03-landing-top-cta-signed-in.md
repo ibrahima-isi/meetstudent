@@ -4,9 +4,9 @@
 
 **Blocked by:** None (can start immediately).
 
-**Status:** needs-triage
+**Status:** resolved
 
-- [ ] Visiteur : le CTA reste visible et mène à l'inscription ; connecté : il est absent (ou remplacé par une action utile décidée au ticket).
-- [ ] Pas de clignotement SSR/hydratation (comportement aligné sur le footer et le bloc du bas).
-- [ ] fr/en, clair/sombre, mobile ; pas de régression de la mise en page.
-- [ ] Spec en échec d'abord, puis verte ; suite web et build verts.
+- [x] Visiteur : le CTA reste visible et mène à l'inscription ; connecté : il est absent (ou remplacé par une action utile décidée au ticket).
+- [x] Pas de clignotement SSR/hydratation (comportement aligné sur le footer et le bloc du bas).
+- [ ] fr/en, clair/sombre, mobile ; pas de régression de la mise en page. (Non vérifié en navigateur réel : le bouton est retiré du `flex-wrap`, les textes fr/en existants sont inchangés.)
+- [x] Spec en échec d'abord, puis verte ; suite web et build verts.
