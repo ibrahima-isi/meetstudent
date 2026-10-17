@@ -37,7 +37,7 @@ public class SiteSettingsService {
         return repository.findById(SiteSettings.SINGLETON_ID).orElseGet(SiteSettingsService::defaults);
     }
 
-    /** Applies the fields present in the request; a null field keeps its current value. */
+    /** Applies the fields present in the request; a null field keeps its current value, a blank social link erases it. */
     @Transactional
     public SiteSettings update(UpdateSiteSettingsRequest request) {
         var settings = repository.findById(SiteSettings.SINGLETON_ID).orElseGet(SiteSettingsService::defaults);
@@ -50,8 +50,34 @@ public class SiteSettingsService {
         if (request.aboutEn() != null) {
             settings.setAboutEn(request.aboutEn());
         }
+        if (request.whatsappUrl() != null) {
+            settings.setWhatsappUrl(blankToNull(request.whatsappUrl()));
+        }
+        if (request.telegramUrl() != null) {
+            settings.setTelegramUrl(blankToNull(request.telegramUrl()));
+        }
+        if (request.discordUrl() != null) {
+            settings.setDiscordUrl(blankToNull(request.discordUrl()));
+        }
+        if (request.facebookUrl() != null) {
+            settings.setFacebookUrl(blankToNull(request.facebookUrl()));
+        }
+        if (request.twitterUrl() != null) {
+            settings.setTwitterUrl(blankToNull(request.twitterUrl()));
+        }
+        if (request.instagramUrl() != null) {
+            settings.setInstagramUrl(blankToNull(request.instagramUrl()));
+        }
+        if (request.tiktokUrl() != null) {
+            settings.setTiktokUrl(blankToNull(request.tiktokUrl()));
+        }
         settings.setModifiedAt(LocalDateTime.now(clock));
         return repository.save(settings);
+    }
+
+    /** Links arrive stripped: an empty one means "erase". */
+    private static String blankToNull(String link) {
+        return link.isBlank() ? null : link;
     }
 
     private static SiteSettings defaults() {

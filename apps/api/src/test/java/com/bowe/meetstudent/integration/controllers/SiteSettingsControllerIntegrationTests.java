@@ -94,4 +94,101 @@ class SiteSettingsControllerIntegrationTests {
                 .andExpect(jsonPath("$.contactEmail").value("Hello@Example.sn"))
                 .andExpect(jsonPath("$.aboutFr").value("<b>Bonjour</b>"));
     }
+
+    private static final String[] LINK_FIELDS = {
+            "whatsappUrl", "telegramUrl", "discordUrl", "facebookUrl", "twitterUrl", "instagramUrl", "tiktokUrl"};
+
+    @Test
+    void socialLinksAreNullUntilAnAdminSetsThem() throws Exception {
+        var result = mockMvc.perform(get(URL)).andExpect(status().isOk());
+        for (String field : LINK_FIELDS) {
+            result.andExpect(jsonPath("$." + field).value(org.hamcrest.Matchers.nullValue()));
+        }
+    }
+
+    @Test
+    void adminSetsTheSevenLinksAndEveryoneSeesThemWithTheTextUntouched() throws Exception {
+        patchAsAdmin("{\"whatsappUrl\":\"https://wa.me/221770000000\",\"telegramUrl\":\"https://t.me/meetstudent\","
+                + "\"discordUrl\":\"https://discord.gg/abc\",\"facebookUrl\":\"https://facebook.com/meetstudent\","
+                + "\"twitterUrl\":\"https://x.com/meetstudent\",\"instagramUrl\":\"https://instagram.com/meetstudent\","
+                + "\"tiktokUrl\":\"https://www.tiktok.com/@meetstudent\"}")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.whatsappUrl").value("https://wa.me/221770000000"));
+
+        mockMvc.perform(get(URL))
+                .andExpect(jsonPath("$.telegramUrl").value("https://t.me/meetstudent"))
+                .andExpect(jsonPath("$.discordUrl").value("https://discord.gg/abc"))
+                .andExpect(jsonPath("$.facebookUrl").value("https://facebook.com/meetstudent"))
+                .andExpect(jsonPath("$.twitterUrl").value("https://x.com/meetstudent"))
+                .andExpect(jsonPath("$.instagramUrl").value("https://instagram.com/meetstudent"))
+                .andExpect(jsonPath("$.tiktokUrl").value("https://www.tiktok.com/@meetstudent"))
+                .andExpect(jsonPath("$.contactEmail").value("contact@meetstudent.com"));
+    }
+
+    @Test
+    void nullKeepsALinkAndABlankStringErasesIt() throws Exception {
+        patchAsAdmin("{\"whatsappUrl\":\"https://wa.me/1\",\"telegramUrl\":\"https://t.me/a\"}").andExpect(status().isOk());
+
+        patchAsAdmin("{\"contactEmail\":\"x@example.sn\"}")
+                .andExpect(jsonPath("$.whatsappUrl").value("https://wa.me/1"));
+        patchAsAdmin("{\"whatsappUrl\":null}")
+                .andExpect(jsonPath("$.whatsappUrl").value("https://wa.me/1"));
+        patchAsAdmin("{\"whatsappUrl\":\"\"}")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.whatsappUrl").value(org.hamcrest.Matchers.nullValue()))
+                .andExpect(jsonPath("$.telegramUrl").value("https://t.me/a"));
+        patchAsAdmin("{\"telegramUrl\":\"   \"}")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.telegramUrl").value(org.hamcrest.Matchers.nullValue()));
+        mockMvc.perform(get(URL)).andExpect(jsonPath("$.whatsappUrl").value(org.hamcrest.Matchers.nullValue()));
+    }
+
+    @Test
+    void theBlankEraseRuleDoesNotLeakToTheOtherFields() throws Exception {
+        patchAsAdmin("{\"contactEmail\":\"\"}").andExpect(status().isBadRequest());
+        patchAsAdmin("{\"aboutFr\":\"\"}").andExpect(status().isBadRequest());
+        patchAsAdmin("{\"aboutEn\":\" \"}").andExpect(status().isBadRequest());
+        mockMvc.perform(get(URL))
+                .andExpect(jsonPath("$.contactEmail").value("contact@meetstudent.com"))
+                .andExpect(jsonPath("$.aboutFr").value(not(blankOrNullString())))
+                .andExpect(jsonPath("$.aboutEn").value(not(blankOrNullString())));
+    }
+
+    @Test
+    void rejectsLinksThatAreNotAbsoluteHttpsUrlsWithAFieldMessage() throws Exception {
+        String[] bad = {
+                "http://example.com/a", "javascript:alert(1)", "data:text/html,x", "ftp://example.com", "//example.com/a",
+                "/relative/path", "example.com", "https://", "https:///path", "HTTPS://example.com", "https://exa mple.com",
+                "https://example.com/a b", "https://example.com/\\u00a0", "https://example.com/\\u2003x",
+                "https://example.com/\\u0000", "https://user@example.com", "https://#frag", "https://:443/x"};
+        for (String field : LINK_FIELDS) {
+            for (String value : bad) {
+                patchAsAdmin("{\"" + field + "\":\"" + value + "\"}")
+                        .andExpect(status().isBadRequest())
+                        .andExpect(jsonPath("$." + field).exists());
+            }
+        }
+        mockMvc.perform(get(URL)).andExpect(jsonPath("$.whatsappUrl").value(org.hamcrest.Matchers.nullValue()));
+    }
+
+    @Test
+    void capsALinkAt255CharactersAndStripsTheSurroundingBlanks() throws Exception {
+        String url255 = "https://example.com/" + "a".repeat(255 - "https://example.com/".length());
+        patchAsAdmin("{\"facebookUrl\":\"" + url255 + "\"}").andExpect(status().isOk());
+        patchAsAdmin("{\"facebookUrl\":\"" + url255 + "a\"}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.facebookUrl").exists());
+        patchAsAdmin("{\"instagramUrl\":\"  https://instagram.com/x \\n\"}")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.instagramUrl").value("https://instagram.com/x"));
+    }
+
+    @Test
+    void anAdminCanSetTheLinksAloneWithoutResendingTheText() throws Exception {
+        patchAsAdmin("{\"aboutEn\":\"English only.\"}").andExpect(status().isOk());
+        patchAsAdmin("{\"tiktokUrl\":\"https://tiktok.com/@x\"}")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.aboutEn").value("English only."))
+                .andExpect(jsonPath("$.tiktokUrl").value("https://tiktok.com/@x"));
+    }
 }

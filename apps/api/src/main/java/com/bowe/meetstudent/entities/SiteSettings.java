@@ -36,6 +36,27 @@ public class SiteSettings {
     @Column(name = "about_en", nullable = false, length = 5000)
     private String aboutEn;
 
+    @Column(name = "whatsapp_url")
+    private String whatsappUrl;
+
+    @Column(name = "telegram_url")
+    private String telegramUrl;
+
+    @Column(name = "discord_url")
+    private String discordUrl;
+
+    @Column(name = "facebook_url")
+    private String facebookUrl;
+
+    @Column(name = "twitter_url")
+    private String twitterUrl;
+
+    @Column(name = "instagram_url")
+    private String instagramUrl;
+
+    @Column(name = "tiktok_url")
+    private String tiktokUrl;
+
     @Column(name = "modified_at")
     private LocalDateTime modifiedAt;
 }
