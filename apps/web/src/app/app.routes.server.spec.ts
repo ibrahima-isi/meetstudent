@@ -94,6 +94,15 @@ describe('server routes', () => {
     expect(paths.indexOf(':lang/rankings/schools')).toBeLessThan(paths.indexOf('**'));
   });
 
+  it('server-renders the public programmes ranking explicitly, listed before the catch-all', () => {
+    const paths = serverRoutes.map((r) => r.path);
+
+    expect(modeOf(':lang/rankings/programs')).toBe(RenderMode.Server);
+    expect(guardedPaths(routes)).not.toContain(':lang/rankings/programs');
+    expect(allRoutes(routes).find((r) => r.path === ':lang/rankings/programs')?.route.canActivate).toBeUndefined();
+    expect(paths.indexOf(':lang/rankings/programs')).toBeLessThan(paths.indexOf('**'));
+  });
+
   it('keeps the public pages server-rendered for SEO', () => {
     expect(modeOf('**')).toBe(RenderMode.Server);
   });

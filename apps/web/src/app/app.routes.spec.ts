@@ -105,6 +105,17 @@ describe('routes', () => {
     expect(TestBed.inject(Title).getTitle()).toBe('pageTitle.rankings');
   });
 
+  it('opens the public programmes ranking in the shell, without a login, with its own title', async () => {
+    await harness.navigateByUrl('/fr/rankings/programs');
+
+    const host = harness.fixture.nativeElement as HTMLElement;
+    expect(TestBed.inject(Router).url).toBe('/fr/rankings/programs');
+    expect(host.querySelector('app-programs-ranking-page')).toBeTruthy();
+    expect(navbar()).toBeTruthy();
+    expect(harness.routeNativeElement?.textContent).not.toContain('404');
+    expect(TestBed.inject(Title).getTitle()).toBe('pageTitle.rankingsPrograms');
+  });
+
   it('renders an unknown path under a valid locale as the 404', async () => {
     await harness.navigateByUrl('/fr/nope');
 
