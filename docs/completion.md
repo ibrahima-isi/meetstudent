@@ -174,7 +174,7 @@ Preuves : rouge réel sur assertions pour la sélection (8 échecs sur 22 tests 
 
 Spec : [.scratch/ui-auth-aware-footer-bo-design/spec.md](../.scratch/ui-auth-aware-footer-bo-design/spec.md).
 
-- [ ] [ui-auth-aware-footer-bo-design/01](../.scratch/ui-auth-aware-footer-bo-design/issues/01-footer-web-auth-aware.md) : footer web sensible à l'auth. État initial : ready-for-agent.
+- [x] [ui-auth-aware-footer-bo-design/01](../.scratch/ui-auth-aware-footer-bo-design/issues/01-footer-web-auth-aware.md) : footer web sensible à l'auth. Implémenté sur `feat/footer-account-auth-aware` : 5 specs ajoutées, rouges d'abord (4 échecs) puis `npm test` ChromeHeadless 1210/1210 verts et `ng build` OK. Le parcours Playwright n'a pas été exécuté. PR vers `dev` ouverte ; fusion suivie sur la PR.
 - [ ] [ui-auth-aware-footer-bo-design/02](../.scratch/ui-auth-aware-footer-bo-design/issues/02-bo-tokens-theme.md) : back office, jetons et thème alignés sur le web. État initial : ready-for-agent.
 - [ ] [ui-auth-aware-footer-bo-design/03](../.scratch/ui-auth-aware-footer-bo-design/issues/03-bo-navbar-footer-forum.md) : back office, navbar, footer et entrée Forum. Bloqué par 02. État initial : ready-for-agent.
 - [ ] [ui-auth-aware-footer-bo-design/04](../.scratch/ui-auth-aware-footer-bo-design/issues/04-web-forum-coming-soon.md) : web, entrée Forum « Bientôt ». État initial : ready-for-agent.

@@ -4,10 +4,11 @@
 
 **Blocked by:** None (can start immediately). Vérifier d'abord l'état du ticket GitHub #117, qui recoupe ce sujet.
 
-**Status:** ready-for-agent
+**Status:** resolved (implementation; Playwright pending)
 
-- [ ] Un connecté ne voit plus Log in / Sign up ; il voit Mon profil et Se déconnecter, traduits FR/EN.
-- [ ] « Se déconnecter » ferme la session ; « Mon profil » ouvre le profil.
-- [ ] Un visiteur voit toujours Log in / Sign up ; aucun clignotement pour un connecté sur une page rendue serveur.
-- [ ] Lisible en thème clair et sombre.
-- [ ] Specs de composant en échec d'abord, puis vertes ; parcours Playwright visiteur/connecté sur la pile locale.
+- [x] Un connecté ne voit plus Log in / Sign up ; il voit Mon profil et Se déconnecter, traduits FR/EN.
+- [x] « Se déconnecter » ferme la session ; « Mon profil » ouvre le profil.
+- [x] Un visiteur voit toujours Log in / Sign up ; aucun clignotement pour un connecté sur une page rendue serveur.
+- [x] Lisible en thème clair et sombre.
+- [x] Specs de composant en échec d'abord, puis vertes.
+- [ ] Parcours Playwright visiteur/connecté sur la pile locale (non exécuté, à faire avant la promotion).
