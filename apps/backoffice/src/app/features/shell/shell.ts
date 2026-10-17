@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '@services/auth.service';
+import { ThemeService } from '@services/theme.service';
 import { TokenService } from '@services/token.service';
 
 interface NavItem {
@@ -14,23 +15,23 @@ interface NavItem {
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '(keydown.escape)': 'closeMenu(true)' },
   template: `
-    <div class="flex min-h-screen bg-slate-50 text-slate-900">
+    <div class="flex min-h-screen bg-background text-foreground">
       @if (menuOpen()) {
-        <div data-backdrop (click)="closeMenu()" class="fixed inset-0 z-30 bg-slate-900/40 md:hidden" aria-hidden="true"></div>
+        <div data-backdrop (click)="closeMenu()" class="fixed inset-0 z-30 bg-foreground/40 md:hidden" aria-hidden="true"></div>
       }
       <aside
         id="main-sidebar"
         #sidebar
         [class.hidden]="!menuOpen()"
-        class="fixed inset-y-0 left-0 z-40 w-60 shrink-0 overflow-y-auto border-r border-slate-200 bg-white md:static md:z-auto md:block md:overflow-visible"
+        class="fixed inset-y-0 left-0 z-40 w-60 shrink-0 overflow-y-auto border-r border-border bg-card md:static md:z-auto md:block md:overflow-visible"
       >
-        <div class="px-5 py-4 text-lg font-semibold">MeetStudent <span class="text-xs font-normal text-slate-500">Admin</span></div>
+        <div class="px-5 py-4 text-lg font-semibold">MeetStudent <span class="text-xs font-normal text-muted-foreground">Admin</span></div>
         <nav aria-label="Navigation principale" class="flex flex-col gap-1 px-3">
           @for (item of nav; track item.path) {
             <a
               [routerLink]="item.path"
-              routerLinkActive="bg-indigo-50 text-indigo-700"
-              class="rounded-md px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+              routerLinkActive="bg-brand-soft text-brand-soft-foreground"
+              class="rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-accent"
             >
               {{ item.label }}
             </a>
@@ -38,7 +39,7 @@ interface NavItem {
         </nav>
       </aside>
       <div class="flex min-w-0 flex-1 flex-col">
-        <header class="flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-3 md:justify-end md:gap-4 md:px-6">
+        <header class="flex items-center gap-3 border-b border-border bg-card px-4 py-3 md:justify-end md:gap-4 md:px-6">
           <button
             #menuToggle
             type="button"
@@ -47,16 +48,26 @@ interface NavItem {
             [attr.aria-expanded]="menuOpen()"
             aria-label="Menu"
             (click)="toggleMenu()"
-            class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium hover:bg-slate-100 md:hidden"
+            class="btn btn-secondary md:hidden"
           >
             <span aria-hidden="true">&#9776;</span>
           </button>
-          <span class="ml-auto min-w-0 truncate text-sm text-slate-600 md:ml-0">{{ displayName() }}</span>
+          <span class="ml-auto min-w-0 truncate text-sm text-muted-foreground md:ml-0">{{ displayName() }}</span>
+          <button
+            type="button"
+            data-theme-toggle
+            aria-label="Basculer le thème"
+            [attr.aria-pressed]="theme.resolved() === 'dark'"
+            (click)="theme.toggle()"
+            class="btn btn-ghost shrink-0"
+          >
+            <span aria-hidden="true">{{ theme.resolved() === 'dark' ? '☀' : '☾' }}</span>
+          </button>
           <button
             type="button"
             data-logout
             (click)="logout()"
-            class="shrink-0 rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium hover:bg-slate-100"
+            class="btn btn-secondary shrink-0"
           >
             Se déconnecter
           </button>
@@ -67,6 +78,7 @@ interface NavItem {
   `,
 })
 export class Shell {
+  protected readonly theme = inject(ThemeService);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly user = inject(TokenService).user;
