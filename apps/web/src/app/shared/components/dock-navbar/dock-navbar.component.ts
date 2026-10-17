@@ -100,6 +100,8 @@ import { nextDockVisible, SCROLL_DELTA_PX } from './dock-visibility';
       .panel { pointer-events: auto; width: 100%; max-width: 72rem; max-height: calc(100dvh - 5.5rem); overflow-y: auto; margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.25rem; padding: 0.75rem; border-radius: 1.5rem; background: var(--card); border: 1px solid var(--border-strong); box-shadow: 0 16px 48px -16px rgb(0 0 0 / 0.35); }
       .brand:focus-visible, .links a:focus-visible, .panel a.item:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
       .panel a.item { font-size: 1rem; padding: 0.75rem 1rem; }
+      /* The panel scrolls on a phone: without this the flex column squeezes the action buttons to their text height. */
+      .panel .btn { flex-shrink: 0; }
       @container (min-width: 73rem) { .links { display: flex; } .wide-only { display: inline-flex; } .menu-btn, .panel { display: none; } }
       @media (prefers-reduced-motion: reduce) { .dock { transition: none; } }
     `,
