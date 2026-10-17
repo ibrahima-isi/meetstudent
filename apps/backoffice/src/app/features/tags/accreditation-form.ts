@@ -19,24 +19,24 @@ const notBlank = (control: AbstractControl<string>): ValidationErrors | null =>
   imports: [ReactiveFormsModule, Alert],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <form data-form [formGroup]="form" (ngSubmit)="submit()" novalidate class="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
-      <h2 class="text-base font-semibold text-slate-900">
+    <form data-form [formGroup]="form" (ngSubmit)="submit()" novalidate class="space-y-3 rounded-lg border border-border bg-card p-4">
+      <h2 class="text-base font-semibold text-foreground">
         {{ accreditation() ? "Modifier l'accréditation" : 'Nouvelle accréditation' }}
       </h2>
       <app-alert [message]="error()" />
       <div class="grid gap-3 md:grid-cols-6">
         @for (f of fields; track f.name) {
           <div [class]="'space-y-1 ' + f.span">
-            <label [for]="'acc-' + f.name" class="text-sm font-medium text-slate-700">{{ f.label }}</label>
+            <label [for]="'acc-' + f.name" class="text-sm font-medium text-foreground">{{ f.label }}</label>
             <input
               [id]="'acc-' + f.name"
               type="text"
               [formControlName]="f.name"
               [attr.aria-invalid]="errorOf(f.name) ? 'true' : null"
-              class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 aria-invalid:border-red-500"
+              class="field-input "
             />
             @if (errorOf(f.name); as message) {
-              <p class="text-xs text-red-700" [attr.data-error]="f.name">{{ message }}</p>
+              <p class="text-xs text-destructive" [attr.data-error]="f.name">{{ message }}</p>
             }
           </div>
         }
@@ -45,7 +45,7 @@ const notBlank = (control: AbstractControl<string>): ValidationErrors | null =>
         <button
           type="submit"
           [disabled]="saving()"
-          class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
+          class="btn btn-primary"
         >
           Enregistrer
         </button>
@@ -53,7 +53,7 @@ const notBlank = (control: AbstractControl<string>): ValidationErrors | null =>
           type="button"
           data-cancel-form
           (click)="cancelled.emit()"
-          class="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-100"
+          class="btn btn-secondary"
         >
           Annuler
         </button>

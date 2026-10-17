@@ -19,8 +19,8 @@ const notBlank = (control: AbstractControl<string>): ValidationErrors | null =>
   imports: [ReactiveFormsModule, Alert],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <h1 class="mb-1 text-2xl font-semibold text-slate-900">Paramètres du site</h1>
-    <p class="mb-4 text-sm text-slate-600">Ce que les visiteurs lisent sur les pages « À propos » et « Contact ».</p>
+    <h1 class="mb-1 text-2xl font-semibold text-foreground">Paramètres du site</h1>
+    <p class="mb-4 text-sm text-muted-foreground">Ce que les visiteurs lisent sur les pages « À propos » et « Contact ».</p>
 
     <app-alert class="mb-3" [message]="error()" />
     @if (loadFailed()) {
@@ -28,35 +28,35 @@ const notBlank = (control: AbstractControl<string>): ValidationErrors | null =>
         type="button"
         data-retry
         (click)="load()"
-        class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium hover:bg-slate-100"
+        class="btn btn-secondary h-9 px-3"
       >
         Réessayer
       </button>
     }
     @if (loading()) {
-      <p class="text-sm text-slate-500">Chargement…</p>
+      <p class="text-sm text-muted-foreground">Chargement…</p>
     }
 
     @if (current()) {
-      <form data-form [formGroup]="form" (ngSubmit)="submit()" novalidate class="max-w-3xl space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+      <form data-form [formGroup]="form" (ngSubmit)="submit()" novalidate class="max-w-3xl space-y-4 rounded-lg border border-border bg-card p-4">
         <div class="space-y-1">
-          <label for="settings-contactEmail" class="text-sm font-medium text-slate-700">Adresse e-mail de contact</label>
+          <label for="settings-contactEmail" class="text-sm font-medium text-foreground">Adresse e-mail de contact</label>
           <input
             id="settings-contactEmail"
             type="email"
             formControlName="contactEmail"
             autocomplete="off"
             [attr.aria-invalid]="errorOf('contactEmail') ? 'true' : null"
-            class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 aria-invalid:border-red-500"
+            class="field-input "
           />
           @if (errorOf('contactEmail'); as message) {
-            <p class="text-xs text-red-700" data-error="contactEmail">{{ message }}</p>
+            <p class="text-xs text-destructive" data-error="contactEmail">{{ message }}</p>
           }
         </div>
 
         @for (f of texts; track f.name) {
           <div class="space-y-1">
-            <label [for]="'settings-' + f.name" class="text-sm font-medium text-slate-700">{{ f.label }}</label>
+            <label [for]="'settings-' + f.name" class="text-sm font-medium text-foreground">{{ f.label }}</label>
             <textarea
               [id]="'settings-' + f.name"
               rows="9"
@@ -64,14 +64,14 @@ const notBlank = (control: AbstractControl<string>): ValidationErrors | null =>
               [attr.lang]="f.lang"
               [attr.aria-invalid]="errorOf(f.name) ? 'true' : null"
               [attr.aria-describedby]="'settings-' + f.name + '-hint'"
-              class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 aria-invalid:border-red-500"
+              class="field-input "
             ></textarea>
-            <p [id]="'settings-' + f.name + '-hint'" class="flex justify-between gap-3 text-xs text-slate-500">
+            <p [id]="'settings-' + f.name + '-hint'" class="flex justify-between gap-3 text-xs text-muted-foreground">
               <span>Texte simple. Une ligne vide sépare deux paragraphes.</span>
               <span [attr.data-count]="f.name">{{ form.controls[f.name].value.length }} / {{ limits[f.name] }}</span>
             </p>
             @if (errorOf(f.name); as message) {
-              <p class="text-xs text-red-700" [attr.data-error]="f.name">{{ message }}</p>
+              <p class="text-xs text-destructive" [attr.data-error]="f.name">{{ message }}</p>
             }
           </div>
         }
@@ -80,12 +80,12 @@ const notBlank = (control: AbstractControl<string>): ValidationErrors | null =>
           <button
             type="submit"
             [disabled]="saving()"
-            class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
+            class="btn btn-primary"
           >
             Enregistrer
           </button>
           @if (notice()) {
-            <p role="status" class="text-sm text-slate-700">{{ notice() }}</p>
+            <p role="status" class="text-sm text-foreground">{{ notice() }}</p>
           }
         </div>
       </form>

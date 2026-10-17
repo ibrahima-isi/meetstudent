@@ -10,7 +10,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
       <div
         role="alert"
         class="rounded-md border px-3 py-2 text-sm"
-        [class]="kind() === 'error' ? 'border-red-300 bg-red-50 text-red-800' : 'border-sky-300 bg-sky-50 text-sky-800'"
+        [class]="kind() === 'error' ? 'border-destructive/40 bg-destructive/10 text-destructive' : 'border-border bg-brand-soft text-brand-soft-foreground'"
       >
         {{ message() }}
       </div>

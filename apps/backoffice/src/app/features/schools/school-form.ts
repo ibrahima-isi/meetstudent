@@ -52,7 +52,7 @@ interface Field {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <form [formGroup]="form" (ngSubmit)="submit()" novalidate class="max-w-3xl space-y-6">
-      <h2 class="text-xl font-semibold text-slate-900">
+      <h2 class="text-xl font-semibold text-foreground">
         {{ school() ? "Modifier l'école" : 'Nouvelle école' }}
       </h2>
 
@@ -61,31 +61,31 @@ interface Field {
       <div class="grid gap-4 md:grid-cols-6">
         @for (f of fields; track f.name) {
           <div [class]="'space-y-1 ' + f.span">
-            <label [for]="f.name" class="text-sm font-medium text-slate-700">{{ f.label }}</label>
+            <label [for]="f.name" class="text-sm font-medium text-foreground">{{ f.label }}</label>
             <input
               [id]="f.name"
               type="text"
               [formControlName]="f.name"
               [attr.aria-invalid]="errorOf(f.name) ? 'true' : null"
-              class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 aria-invalid:border-red-500"
+              class="field-input "
             />
             @if (errorOf(f.name); as message) {
-              <p class="text-xs text-red-700" [attr.data-error]="f.name">{{ message }}</p>
+              <p class="text-xs text-destructive" [attr.data-error]="f.name">{{ message }}</p>
             }
           </div>
         }
       </div>
 
       <fieldset class="space-y-2">
-        <legend class="text-sm font-medium text-slate-700">Tags</legend>
+        <legend class="text-sm font-medium text-foreground">Tags</legend>
         @if (tagsLoading()) {
-          <p class="text-sm text-slate-500">Chargement des tags…</p>
+          <p class="text-sm text-muted-foreground">Chargement des tags…</p>
         } @else if (!knownTags().length) {
-          <p class="text-sm text-slate-500">Aucun tag disponible.</p>
+          <p class="text-sm text-muted-foreground">Aucun tag disponible.</p>
         }
         <div class="flex flex-wrap gap-2">
           @for (tag of knownTags(); track tag.id) {
-            <label class="flex cursor-pointer items-center gap-2 rounded-full border border-slate-300 bg-white px-3 py-1 text-sm has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50">
+            <label class="flex cursor-pointer items-center gap-2 rounded-full border border-border-strong bg-card px-3 py-1 text-sm has-[:checked]:border-brand has-[:checked]:bg-brand-soft">
               <input type="checkbox" data-tag [checked]="isSelected(tag)" (change)="toggleTag(tag)" />
               {{ tag.name }}
             </label>
@@ -96,7 +96,7 @@ interface Field {
       <div class="grid gap-6 md:grid-cols-2">
         @for (slot of slotNames; track slot) {
           <div class="space-y-2">
-            <label [for]="slot + '-file'" class="text-sm font-medium text-slate-700">
+            <label [for]="slot + '-file'" class="text-sm font-medium text-foreground">
               {{ slot === 'logo' ? 'Logo' : 'Image de couverture' }}
             </label>
             @if (preview(slot); as src) {
@@ -104,7 +104,7 @@ interface Field {
                 [src]="src"
                 [attr.data-preview]="slot"
                 alt=""
-                class="h-28 w-full rounded-md border border-slate-200 bg-slate-100 object-contain"
+                class="h-28 w-full rounded-md border border-border bg-muted object-contain"
               />
             }
             <input
@@ -112,11 +112,11 @@ interface Field {
               type="file"
               accept="image/jpeg,image/png,image/webp"
               (change)="onFile(slot, $event)"
-              class="block w-full text-sm text-slate-600 file:mr-3 file:rounded-md file:border file:border-slate-300 file:bg-white file:px-3 file:py-1.5 file:text-sm file:font-medium hover:file:bg-slate-100"
+              class="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border file:border-border-strong file:bg-card file:px-3 file:py-1.5 file:text-sm file:font-medium hover:file:bg-accent"
             />
-            <p class="text-xs text-slate-500">JPEG, PNG ou WebP, 10 Mo maximum.</p>
+            <p class="text-xs text-muted-foreground">JPEG, PNG ou WebP, 10 Mo maximum.</p>
             @if (slots[slot]().error; as message) {
-              <p class="text-xs text-red-700" [attr.data-error]="slot">{{ message }}</p>
+              <p class="text-xs text-destructive" [attr.data-error]="slot">{{ message }}</p>
             }
           </div>
         }
@@ -126,7 +126,7 @@ interface Field {
         <button
           type="submit"
           [disabled]="saving()"
-          class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
+          class="btn btn-primary"
         >
           {{ saving() ? 'Enregistrement…' : 'Enregistrer' }}
         </button>
@@ -134,7 +134,7 @@ interface Field {
           type="button"
           data-cancel
           (click)="cancelled.emit()"
-          class="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-100"
+          class="btn btn-secondary"
         >
           Annuler
         </button>

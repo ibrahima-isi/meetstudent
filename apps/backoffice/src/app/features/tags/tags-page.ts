@@ -9,9 +9,9 @@ type Tab = 'tags' | 'accreditations';
   imports: [TagsSection, AccreditationsSection],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <h1 class="mb-4 text-2xl font-semibold text-slate-900">Tags et accréditations</h1>
+    <h1 class="mb-4 text-2xl font-semibold text-foreground">Tags et accréditations</h1>
 
-    <div role="tablist" class="mb-4 flex gap-1 border-b border-slate-200">
+    <div role="tablist" class="mb-4 flex gap-1 border-b border-border">
       @for (t of tabs; track t.id) {
         <button
           type="button"
@@ -20,7 +20,7 @@ type Tab = 'tags' | 'accreditations';
           [attr.aria-selected]="tab() === t.id"
           (click)="tab.set(t.id)"
           class="-mb-px border-b-2 px-4 py-2 text-sm font-medium"
-          [class]="tab() === t.id ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-slate-600 hover:text-slate-900'"
+          [class]="tab() === t.id ? 'border-brand text-brand' : 'border-transparent text-muted-foreground hover:text-foreground'"
         >
           {{ t.label }}
         </button>

@@ -14,27 +14,27 @@ const NAME_MAX = 255;
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <form data-create (submit)="$event.preventDefault(); create()" novalidate class="mb-4 space-y-1">
-      <label for="tag-name" class="text-sm font-medium text-slate-700">Nouveau tag</label>
+      <label for="tag-name" class="text-sm font-medium text-foreground">Nouveau tag</label>
       <div class="flex flex-wrap gap-2">
         <input
           id="tag-name"
           type="text"
           [formControl]="name"
           [attr.aria-invalid]="nameError() ? 'true' : null"
-          class="w-full max-w-xs rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 aria-invalid:border-red-500"
+          class="field-input max-w-xs "
         />
         <button
           type="submit"
           [disabled]="saving()"
-          class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
+          class="btn btn-primary"
         >
           Ajouter
         </button>
       </div>
       @if (nameError()) {
-        <p class="text-xs text-red-700" data-error="name">{{ nameError() }}</p>
+        <p class="text-xs text-destructive" data-error="name">{{ nameError() }}</p>
       }
-      <p class="text-xs text-slate-500">Un tag ne peut pas être renommé : supprimez-le puis recréez-le.</p>
+      <p class="text-xs text-muted-foreground">Un tag ne peut pas être renommé : supprimez-le puis recréez-le.</p>
     </form>
 
     <div class="space-y-4">
@@ -44,37 +44,37 @@ const NAME_MAX = 255;
           type="button"
           data-retry
           (click)="load()"
-          class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium hover:bg-slate-100"
+          class="btn btn-secondary h-9 px-3"
         >
           Réessayer
         </button>
       }
       @if (notice()) {
-        <div role="status" data-notice class="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+        <div role="status" data-notice class="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
           {{ notice() }}
         </div>
       }
       @if (loading()) {
-        <p class="text-sm text-slate-500">Chargement…</p>
+        <p class="text-sm text-muted-foreground">Chargement…</p>
       }
 
       @if (tags().length) {
-        <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+        <div class="overflow-x-auto rounded-lg border border-border bg-card">
           <table class="w-full text-left text-sm">
-            <thead class="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+            <thead class="border-b border-border bg-muted text-xs uppercase text-muted-foreground">
               <tr>
                 <th scope="col" class="px-4 py-2">Nom</th>
                 <th scope="col" class="px-4 py-2 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100">
+            <tbody class="divide-y divide-border">
               @for (tag of tags(); track tag.id) {
                 <tr data-tag>
-                  <td class="px-4 py-2 font-medium text-slate-900">{{ tag.name }}</td>
+                  <td class="px-4 py-2 font-medium text-foreground">{{ tag.name }}</td>
                   <td class="px-4 py-2 text-right">
                     @if (pendingDeleteId() === tag.id) {
                       <div class="flex flex-col items-end gap-1">
-                        <span class="max-w-xs text-xs text-slate-700">
+                        <span class="max-w-xs text-xs text-foreground">
                           Supprimer ce tag ? S'il est utilisé par des écoles, la suppression sera refusée : retirez-le d'abord de ces écoles.
                         </span>
                         <span class="flex gap-1">
@@ -83,7 +83,7 @@ const NAME_MAX = 255;
                             data-confirm-delete
                             [disabled]="deleting()"
                             (click)="confirmDelete(tag)"
-                            class="rounded-md bg-red-600 px-3 py-1 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-60"
+                            class="btn bg-destructive text-destructive-foreground hover:opacity-90 h-8 px-3 text-xs"
                           >
                             Confirmer
                           </button>
@@ -91,7 +91,7 @@ const NAME_MAX = 255;
                             type="button"
                             data-cancel-delete
                             (click)="pendingDeleteId.set(null)"
-                            class="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium hover:bg-slate-100"
+                            class="btn btn-secondary h-8 px-3 text-xs"
                           >
                             Annuler
                           </button>
@@ -102,7 +102,7 @@ const NAME_MAX = 255;
                         type="button"
                         data-delete
                         (click)="pendingDeleteId.set(tag.id ?? null)"
-                        class="rounded-md border border-red-300 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50"
+                        class="btn btn-secondary border-destructive text-destructive hover:bg-destructive/10 h-8 px-3 text-xs"
                       >
                         Supprimer
                       </button>
@@ -114,7 +114,7 @@ const NAME_MAX = 255;
           </table>
         </div>
       } @else if (!loading() && !loadFailed()) {
-        <p class="rounded-lg border border-dashed border-slate-300 bg-white px-4 py-8 text-center text-sm text-slate-500">
+        <p class="rounded-lg border border-dashed border-border-strong bg-card px-4 py-8 text-center text-sm text-muted-foreground">
           Aucun tag pour le moment.
         </p>
       }
