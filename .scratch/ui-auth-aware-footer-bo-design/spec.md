@@ -1,6 +1,6 @@
 # Spec: footer sensible à l'auth, design du back office aligné sur le web, emplacement du Forum
 
-Status: ready-for-agent
+Status: resolved
 
 ## Problem Statement
 

@@ -8,4 +8,4 @@ Not to be confused with a user's own profile or preferences (language, theme), w
 
 ## Forum
 
-Le futur espace de discussion entre étudiants et experts. Son périmètre (qui peut écrire, qui modère) n'est pas encore défini ; en attendant, il apparaît dans la navigation comme une entrée désactivée « Bientôt », sur le site public et dans le back office.
+The future discussion space between students and experts. Its scope (who can post, who moderates) is not defined yet; until then it appears in the navigation of the public site and the back office as a disabled "coming soon" entry.
