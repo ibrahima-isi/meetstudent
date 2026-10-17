@@ -83,6 +83,7 @@
     "title": "Contact",
     "intro": "Une question, une suggestion, un établissement à signaler ? Écrivez-nous, nous vous répondrons.",
     "emailLabel": "Par e-mail",
+    "applySubject": "Candidature : {{school}}",
     "error": "L'adresse de contact n'a pas pu être chargée."
   },
   "emailBanner": {

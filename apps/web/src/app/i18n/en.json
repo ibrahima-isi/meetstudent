@@ -83,6 +83,7 @@
     "title": "Contact",
     "intro": "A question, a suggestion, a school to report? Write to us and we will get back to you.",
     "emailLabel": "By email",
+    "applySubject": "Application: {{school}}",
     "error": "The contact address could not be loaded."
   },
   "emailBanner": {

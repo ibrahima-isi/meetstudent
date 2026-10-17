@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { LucideAngularModule, Mail } from 'lucide-angular';
 import { ErrorStateComponent } from '@shared/components/error-state/error-state.component';
@@ -28,7 +28,7 @@ import { SiteSettingsService } from '@services/site-settings.service';
             </span>
             <div class="min-w-0">
               <p class="text-sm text-muted-foreground">{{ t('contact.emailLabel') }}</p>
-              <a data-contact-email class="break-all text-lg font-medium text-brand hover:underline" [href]="'mailto:' + email()">{{ email() }}</a>
+              <a data-contact-email class="break-all text-lg font-medium text-brand hover:underline" [href]="mailHref(t('contact.applySubject', { school: school() }))">{{ email() }}</a>
             </div>
           </div>
         }
@@ -42,6 +42,15 @@ export class ContactPageComponent {
   protected readonly Mail = Mail;
   protected readonly status = signal<'loading' | 'loaded' | 'error'>('loading');
   protected readonly email = signal('');
+  /** From `?school=` (the apply link of a school page); empty when absent. */
+  readonly school = input<string>();
+  private readonly subjectWanted = computed(() => !!this.school()?.trim());
+
+  /** A bare mail link, plus a subject only when a school was named. */
+  protected mailHref(subject: string): string {
+    const base = 'mailto:' + this.email();
+    return this.subjectWanted() ? `${base}?subject=${encodeURIComponent(subject)}` : base;
+  }
 
   constructor() {
     this.load();

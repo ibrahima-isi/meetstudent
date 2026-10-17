@@ -586,6 +586,26 @@ describe('SchoolDetailPageComponent', () => {
       expect(text()).toContain('Waiting list');
     });
 
+    describe('the apply link', () => {
+      const applyLink = () => harness.routeNativeElement!.querySelector('a[data-testid="programme-apply"]') as HTMLAnchorElement | null;
+
+      it('leads to the contact page of the current language, naming the school', async () => {
+        await renderWith(mockSchool, [{ id: 1, name: 'Prog', duration: 3 }]);
+
+        const href = applyLink()?.getAttribute('href') ?? '';
+        expect(href).toBe('/en/contact?school=Test%20School');
+        expect(harness.routeNativeElement!.querySelector('button[data-testid="programme-apply"]')).toBeNull();
+      });
+
+      it('is never dead: the waiting-list entry of a full programme is a live link too', async () => {
+        await renderWith(mockSchool, [{ id: 1, name: 'Prog', duration: 3, capacity: 10, enrolled: 10 }]);
+
+        expect(applyLink()?.textContent).toContain('Waiting list');
+        expect(applyLink()?.getAttribute('href')).toBe('/en/contact?school=Test%20School');
+        expect(applyLink()?.getAttribute('aria-disabled')).toBeNull();
+      });
+    });
+
     it('rounds the average to one decimal and shows no review count the API did not send', async () => {
       await renderWith({ ...mockSchool, rating: 5.333333333333333 }, []);
 

@@ -56,4 +56,25 @@ describe('ContactPageComponent', () => {
     await settle();
     expect(el().querySelector('a[data-contact-email]')).toBeTruthy();
   });
+
+  describe('with a school to apply to', () => {
+    const flush = () => backend.expectOne('/api/v1/site-settings').flush({ contactEmail: 'hello@example.sn', aboutFr: 'x', aboutEn: 'y' });
+
+    it('pre-fills the subject of the mail with the school name', async () => {
+      fixture.componentRef.setInput('school', 'Test School');
+      flush();
+      await settle();
+
+      const href = (el().querySelector('a[data-contact-email]') as HTMLAnchorElement).getAttribute('href')!;
+      expect(href.startsWith('mailto:hello@example.sn?subject=')).toBeTrue();
+      expect(decodeURIComponent(href)).toContain('Test School');
+    });
+
+    it('makes up nothing when no school is given', async () => {
+      flush();
+      await settle();
+
+      expect((el().querySelector('a[data-contact-email]') as HTMLAnchorElement).getAttribute('href')).toBe('mailto:hello@example.sn');
+    });
+  });
 });
