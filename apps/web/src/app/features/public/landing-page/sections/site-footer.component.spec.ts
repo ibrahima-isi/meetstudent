@@ -1,4 +1,4 @@
-import { provideZonelessChangeDetection } from '@angular/core';
+import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
@@ -275,6 +275,8 @@ describe('Footer product journeys through the public routes', () => {
       providers: [
         provideZonelessChangeDetection(), provideRouter(routes),
         provideHttpClient(), provideHttpClientTesting(), provideTransloco(translocoOptions),
+        // These journeys describe an anonymous visitor, independently of persisted sessions.
+        { provide: TokenService, useValue: { isAuthenticated: signal(false), user: signal(null) } },
       ],
     });
     http = TestBed.inject(HttpTestingController);
