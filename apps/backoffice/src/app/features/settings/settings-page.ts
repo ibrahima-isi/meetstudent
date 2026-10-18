@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { SiteSettings } from '@models/site-settings';
+import { MailTestResult, MailTestService, MailTestStatus } from '@services/mail-test.service';
 import { SiteSettingsService } from '@services/site-settings.service';
 import { Alert } from '@shared/components/alert/alert';
 import { fieldErrorsFrom, messageFrom } from '@shared/utils/http-errors';
@@ -40,6 +41,17 @@ const httpsUrl = (control: AbstractControl<string>): ValidationErrors | null => 
   } catch {
     return { httpsUrl: true };
   }
+};
+
+const MAIL_TEST_MESSAGES: Record<Exclude<MailTestStatus, 'COOLDOWN'>, string> = {
+  SENT: 'E-mail de test envoyé : vérifiez votre boîte de réception',
+  LOGGED: "Mode développement : l'e-mail a seulement été écrit dans les journaux de l'API, rien n'a été envoyé",
+  DISABLED: "L'envoi d'e-mails est désactivé (MAIL_ENABLED=false)",
+  AUTH_FAILED: 'Identifiants SMTP refusés : vérifiez SPRING_MAIL_USERNAME et SPRING_MAIL_PASSWORD',
+  CONNECTION_FAILED: 'Serveur SMTP injoignable : vérifiez SPRING_MAIL_HOST et SPRING_MAIL_PORT',
+  TLS_FAILED: 'Échec TLS/STARTTLS : vérifiez le port et les options STARTTLS/SSL',
+  REJECTED: 'Adresse refusée par le serveur SMTP : vérifiez MAIL_FROM (expéditeur validé chez le fournisseur) et votre adresse',
+  FAILED: "Échec de l'envoi (cause non précisée) : consultez les journaux de l'API",
 };
 
 /** Contact address, About text and social links of the public site. Only the fields that changed are sent. */
@@ -143,10 +155,43 @@ const httpsUrl = (control: AbstractControl<string>): ValidationErrors | null => 
         </div>
       </form>
     }
+
+    <section data-mail-test-section aria-labelledby="mail-test-title" class="mt-6 max-w-3xl space-y-3 rounded-lg border border-border bg-card p-4">
+      <h2 id="mail-test-title" class="text-base font-semibold text-foreground">Tester l'envoi d'e-mails</h2>
+      <p class="text-sm text-muted-foreground">
+        Envoie un e-mail de test à votre propre adresse (celle du compte connecté) pour vérifier la configuration SMTP du serveur.
+      </p>
+      <div class="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          data-mail-test
+          [disabled]="mailTesting()"
+          [attr.aria-busy]="mailTesting() ? 'true' : null"
+          (click)="sendMailTest()"
+          class="btn btn-secondary"
+        >
+          Envoyer un e-mail de test
+        </button>
+        @if (mailTesting()) {
+          <span class="text-sm text-muted-foreground">Envoi en cours…</span>
+        }
+      </div>
+      @if (mailTestResult(); as r) {
+        <p
+          data-mail-test-result
+          [attr.role]="r.ok ? 'status' : 'alert'"
+          class="rounded-md border px-3 py-2 text-sm"
+          [class]="r.ok ? 'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200' : 'border-red-300 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200'"
+        >
+          {{ r.text }}
+        </p>
+      }
+    </section>
   `,
 })
 export class SettingsPage {
   private readonly service = inject(SiteSettingsService);
+  private readonly mailTest = inject(MailTestService);
   private readonly fb = inject(FormBuilder).nonNullable;
 
   readonly limits = LIMITS;
@@ -185,6 +230,8 @@ export class SettingsPage {
   readonly saving = signal(false);
   readonly error = signal('');
   readonly notice = signal('');
+  readonly mailTesting = signal(false);
+  readonly mailTestResult = signal<{ ok: boolean; text: string } | null>(null);
   private readonly serverErrors = signal<Partial<Record<FieldName, string>>>({});
   private readonly submitted = signal(false);
 
@@ -207,6 +254,31 @@ export class SettingsPage {
         this.error.set(messageFrom(err, 'Impossible de charger les paramètres.'));
       },
     });
+  }
+
+  /** Sends a test mail to the signed-in admin; the outcome is shown as fixed French text, never server text. */
+  sendMailTest() {
+    if (this.mailTesting()) return;
+    this.mailTesting.set(true);
+    this.mailTestResult.set(null);
+    this.mailTest.send().subscribe({
+      next: (res) => {
+        this.mailTesting.set(false);
+        this.mailTestResult.set({ ok: res.status === 'SENT' || res.status === 'LOGGED', text: this.mailTestText(res) });
+      },
+      error: (err: unknown) => {
+        this.mailTesting.set(false);
+        const text = messageFrom(err, "Le test d'envoi a échoué.");
+        this.mailTestResult.set({ ok: false, text });
+      },
+    });
+  }
+
+  private mailTestText(res: MailTestResult): string {
+    if (res.status !== 'COOLDOWN') return MAIL_TEST_MESSAGES[res.status];
+    return res.retryAfter
+      ? `Patientez ${res.retryAfter} seconde${res.retryAfter > 1 ? 's' : ''} avant un nouvel essai`
+      : 'Patientez quelques secondes avant un nouvel essai';
   }
 
   errorOf(name: FieldName): string {
