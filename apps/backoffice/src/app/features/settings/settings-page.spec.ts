@@ -130,6 +130,111 @@ describe('SettingsPage', () => {
     expect(q('[data-count=aboutEn]')?.textContent).toContain('6 / 5000');
   });
 
+  describe('mail test', () => {
+    const mailUrl = `${api}/admin/mail/test`;
+    const button = () => q<HTMLButtonElement>('[data-mail-test]')!;
+    const result = () => q('[data-mail-test-result]');
+    const click = () => {
+      button().click();
+      settle();
+    };
+    const answer = (status: number, body: string | object | null, headers: Record<string, string> = {}) => {
+      backend.expectOne(mailUrl).flush(body, { status, statusText: 'x', headers });
+      settle();
+    };
+
+    beforeEach(() => load());
+
+    it('has a titled section, a button and says the mail goes to the admin\'s own address', () => {
+      expect(q('[data-mail-test-section]')!.textContent).toContain("Tester l'envoi d'e-mails");
+      expect(q('[data-mail-test-section]')!.textContent).toContain('votre propre adresse');
+      expect(button().textContent).toContain("Envoyer un e-mail de test");
+      expect(button().disabled).toBeFalse();
+      expect(result()).toBeNull();
+    });
+
+    it('is available even when the site settings failed to load', () => {
+      fixture = TestBed.createComponent(SettingsPage);
+      fixture.detectChanges();
+      backend.expectOne(url).flush(null, { status: 500, statusText: 'err' });
+      settle();
+      expect(q('[data-mail-test]')).not.toBeNull();
+    });
+
+    it('posts once, shows a loading state and disables the button while in flight', () => {
+      click();
+      expect(button().disabled).toBeTrue();
+      expect(el().querySelector('[data-mail-test-section]')!.textContent).toContain('Envoi en cours');
+      expect(button().getAttribute('aria-busy')).toBe('true');
+      button().click();
+      const req = backend.expectOne(mailUrl);
+      expect(req.request.method).toBe('POST');
+      req.flush({ status: 'SENT' });
+      settle();
+      expect(button().disabled).toBeFalse();
+      expect(button().getAttribute('aria-busy')).toBeNull();
+    });
+
+    const outcomes: [number, string | object, string, 'status' | 'alert'][] = [
+      [200, { status: 'SENT' }, "E-mail de test envoyé : vérifiez votre boîte de réception", 'status'],
+      [200, { status: 'LOGGED' }, "Mode développement : l'e-mail a seulement été écrit dans les journaux de l'API, rien n'a été envoyé", 'status'],
+      [503, { status: 'DISABLED' }, "L'envoi d'e-mails est désactivé (MAIL_ENABLED=false)", 'alert'],
+      [502, { status: 'AUTH_FAILED' }, 'Identifiants SMTP refusés : vérifiez SPRING_MAIL_USERNAME et SPRING_MAIL_PASSWORD', 'alert'],
+      [502, { status: 'CONNECTION_FAILED' }, 'Serveur SMTP injoignable : vérifiez SPRING_MAIL_HOST et SPRING_MAIL_PORT', 'alert'],
+      [502, { status: 'TLS_FAILED' }, 'Échec TLS/STARTTLS : vérifiez le port et les options STARTTLS/SSL', 'alert'],
+      [502, { status: 'REJECTED' }, 'Adresse refusée par le serveur SMTP : vérifiez MAIL_FROM (expéditeur validé chez le fournisseur) et votre adresse', 'alert'],
+      [502, { status: 'FAILED' }, "Échec de l'envoi (cause non précisée) : consultez les journaux de l'API", 'alert'],
+      [429, { message: 'Too many' }, 'Patientez quelques secondes avant un nouvel essai', 'alert'],
+    ];
+    for (const [status, body, text, role] of outcomes) {
+      it(`HTTP ${status} ${JSON.stringify(body)} reads "${text.slice(0, 30)}…" in a role=${role} region`, () => {
+        click();
+        answer(status, body);
+        expect(result()!.textContent).toContain(text);
+        expect(result()!.getAttribute('role')).toBe(role);
+      });
+    }
+
+    it('uses Retry-After in the 429 message when present', () => {
+      click();
+      answer(429, { message: 'x' }, { 'Retry-After': '8' });
+      expect(result()!.textContent).toContain('Patientez 8 secondes avant un nouvel essai');
+    });
+
+    it('says 1 seconde, singular, for Retry-After: 1', () => {
+      click();
+      answer(429, { message: 'x' }, { 'Retry-After': '1' });
+      expect(result()!.textContent).toContain('Patientez 1 seconde avant un nouvel essai');
+    });
+
+    it('never shows raw server text, and replaces the previous result on a new try', () => {
+      click();
+      answer(502, { status: 'FAILED', message: 'smtp.secret.host: password=hunter2 <b>x</b>' });
+      expect(el().textContent).not.toContain('hunter2');
+      expect(el().textContent).not.toContain('smtp.secret.host');
+      click();
+      answer(200, { status: 'SENT' });
+      expect(result()!.textContent).toContain('E-mail de test envoyé');
+      expect(result()!.textContent).not.toContain("Échec de l'envoi");
+    });
+
+    it('reports an unexpected failure (500, network) generically, without server text', () => {
+      click();
+      answer(500, { message: 'stacktrace here' });
+      expect(result()!.getAttribute('role')).toBe('alert');
+      expect(result()!.textContent).toContain("Le test d'envoi a échoué");
+      expect(el().textContent).not.toContain('stacktrace');
+      expect(button().disabled).toBeFalse();
+    });
+
+    it('does not touch the site settings form', () => {
+      type('#settings-aboutEn', 'Edited');
+      click();
+      answer(200, { status: 'SENT' });
+      expect(q<HTMLTextAreaElement>('#settings-aboutEn')!.value).toBe('Edited');
+    });
+  });
+
   describe('social links', () => {
     const links = [
       ['whatsappUrl', 'WhatsApp'],

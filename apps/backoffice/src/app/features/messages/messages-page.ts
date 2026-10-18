@@ -1,10 +1,14 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { ContactMessage } from '@models/message';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
+import { ContactMessage, MailStatus } from '@models/message';
 import { MessageService } from '@services/message.service';
 import { Alert } from '@shared/components/alert/alert';
 import { messageFrom } from '@shared/utils/http-errors';
 
 const PAGE_SIZE = 10;
+/** One bounded re-check of the list after a resend, once the send had time to finish. */
+const RECHECK_DELAY_MS = 2000;
+const MAIL_STATUSES: readonly MailStatus[] = ['UNKNOWN', 'PENDING', 'SENT', 'FAILED', 'SKIPPED'];
 const DATE_FORMAT = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long', timeStyle: 'short' });
 
 /**
@@ -43,6 +47,7 @@ const DATE_FORMAT = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long', timeSt
                 <th scope="col" class="px-4 py-2">Expéditeur</th>
                 <th scope="col" class="px-4 py-2">Message</th>
                 <th scope="col" class="px-4 py-2">Date</th>
+                <th scope="col" class="px-4 py-2">Mail</th>
                 <th scope="col" class="px-4 py-2 text-right">Actions</th>
               </tr>
             </thead>
@@ -56,6 +61,23 @@ const DATE_FORMAT = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long', timeSt
                   </td>
                   <td class="whitespace-nowrap px-4 py-2 text-muted-foreground">
                     <time [attr.datetime]="item.createdAt">{{ formatDate(item.createdAt) }}</time>
+                  </td>
+                  <td class="px-4 py-2">
+                    <div class="flex flex-col items-start gap-1">
+                      <span [attr.data-mail-status]="statusOf(item)" class="text-xs font-medium" [class]="badgeClass(item)">
+                        <span aria-hidden="true">{{ badgeIcon(item) }}</span> {{ mailLabel(item) }}
+                      </span>
+                      <button
+                        type="button"
+                        data-resend
+                        [attr.aria-label]="'Renvoyer le mail du message « ' + item.subject + ' »'"
+                        [disabled]="resendingId() !== null"
+                        (click)="resend(item)"
+                        class="btn btn-secondary h-8 px-3 text-xs"
+                      >
+                        Renvoyer le mail
+                      </button>
+                    </div>
                   </td>
                   <td class="whitespace-nowrap px-4 py-2 text-right">
                     @if (pendingDeleteId() === item.id) {
@@ -115,6 +137,8 @@ const DATE_FORMAT = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long', timeSt
 })
 export class MessagesPage {
   private readonly service = inject(MessageService);
+  private readonly destroyRef = inject(DestroyRef);
+  private recheckTimer: ReturnType<typeof setTimeout> | null = null;
 
   readonly items = signal<ContactMessage[]>([]);
   readonly page = signal(0);
@@ -126,11 +150,14 @@ export class MessagesPage {
   readonly notice = signal('');
   readonly pendingDeleteId = signal<number | null>(null);
   readonly deleting = signal(false);
+  /** The message whose mail is being re-sent; one at a time, which also blocks a double click. */
+  readonly resendingId = signal<number | null>(null);
 
   /** Guards against a slow response overwriting a newer one. */
   private requestSeq = 0;
 
   constructor() {
+    this.destroyRef.onDestroy(() => this.clearRecheck());
     this.load(0);
   }
 
@@ -161,6 +188,97 @@ export class MessagesPage {
   formatDate(iso: string): string {
     const date = new Date(iso);
     return Number.isNaN(date.getTime()) ? iso : DATE_FORMAT.format(date);
+  }
+
+  /** The status the page shows: anything the API sends outside the known set reads as UNKNOWN. */
+  statusOf(item: ContactMessage): MailStatus {
+    return MAIL_STATUSES.includes(item.mailStatus) ? item.mailStatus : 'UNKNOWN';
+  }
+
+  mailLabel(item: ContactMessage): string {
+    switch (this.statusOf(item)) {
+      case 'SENT':
+        return item.mailSentAt ? `Mail envoyé le ${this.formatDate(item.mailSentAt)}` : 'Mail envoyé';
+      case 'PENDING':
+        return 'Envoi en cours…';
+      case 'FAILED': {
+        const n = item.mailAttempts;
+        return n > 0 ? `Échec de l'envoi après ${n} tentative${n > 1 ? 's' : ''}` : "Échec de l'envoi";
+      }
+      case 'SKIPPED':
+        return 'Mail désactivé';
+      default:
+        return 'Statut inconnu';
+    }
+  }
+
+  badgeIcon(item: ContactMessage): string {
+    switch (this.statusOf(item)) {
+      case 'SENT':
+        return '✓';
+      case 'FAILED':
+        return '✕';
+      case 'PENDING':
+        return '…';
+      default:
+        return '–';
+    }
+  }
+
+  badgeClass(item: ContactMessage): string {
+    const base = 'inline-block rounded-md border px-2 py-0.5 ';
+    switch (this.statusOf(item)) {
+      case 'SENT':
+        return base + 'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200';
+      case 'FAILED':
+        return base + 'border-red-300 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200';
+      case 'PENDING':
+        return base + 'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200';
+      default:
+        return base + 'border-border bg-muted text-muted-foreground';
+    }
+  }
+
+  resend(item: ContactMessage) {
+    if (this.resendingId() !== null) return;
+    this.resendingId.set(item.id);
+    this.error.set('');
+    this.notice.set('');
+    this.service.resend(item.id).subscribe({
+      next: () => {
+        this.resendingId.set(null);
+        this.notice.set('Renvoi du mail demandé.');
+        this.load(this.page());
+        this.scheduleRecheck();
+      },
+      error: (err: unknown) => {
+        this.resendingId.set(null);
+        const status = err instanceof HttpErrorResponse ? err.status : -1;
+        if (status === 404) {
+          this.load(this.page());
+          this.error.set('Message introuvable');
+        } else if (status === 409) {
+          this.error.set('Un envoi est déjà en cours, réessayez dans quelques minutes');
+        } else if (status === 503) {
+          this.error.set('Le service e-mail est désactivé sur ce serveur');
+        } else {
+          this.error.set(messageFrom(err, 'Le renvoi du mail a échoué.'));
+        }
+      },
+    });
+  }
+
+  private scheduleRecheck() {
+    this.clearRecheck();
+    this.recheckTimer = setTimeout(() => {
+      this.recheckTimer = null;
+      this.load(this.page());
+    }, RECHECK_DELAY_MS);
+  }
+
+  private clearRecheck() {
+    if (this.recheckTimer !== null) clearTimeout(this.recheckTimer);
+    this.recheckTimer = null;
   }
 
   goTo(page: number) {

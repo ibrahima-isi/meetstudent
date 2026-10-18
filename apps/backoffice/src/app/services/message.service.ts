@@ -16,6 +16,11 @@ export class MessageService {
     return this.http.get<Page<ContactMessage>>(this.base, { params });
   }
 
+  /** Asks the API to send the notification mail again: 202, 404, 409 (already sending) or 503 (mail disabled). */
+  resend(id: number): Observable<{ status: string }> {
+    return this.http.post<{ status: string }>(`${this.base}/${id}/resend`, null);
+  }
+
   delete(id: number): Observable<void> {
     return this.http.delete<void>(`${this.base}/${id}`);
   }
