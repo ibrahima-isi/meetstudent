@@ -34,6 +34,8 @@ public class MailProperties {
         private boolean devLog = false;
         /** Send on a background executor. Tests turn this off to run synchronously. */
         private boolean async = true;
+        /** Minimum seconds between two SMTP self-tests of the same admin ({@code POST /admin/mail/test}); 0 disables it. */
+        private int testCooldownSeconds = 10;
     }
 
     @Getter
