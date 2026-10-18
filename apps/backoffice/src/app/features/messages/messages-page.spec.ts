@@ -16,6 +16,9 @@ const msg = (id: number, extra: Partial<ContactMessage> = {}): ContactMessage =>
   message: `Texte ${id}`,
   language: 'fr',
   createdAt: '2026-03-05T14:30:00Z',
+  mailStatus: 'UNKNOWN',
+  mailAttempts: 0,
+  mailSentAt: null,
   ...extra,
 });
 

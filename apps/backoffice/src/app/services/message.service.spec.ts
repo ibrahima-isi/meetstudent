@@ -48,4 +48,23 @@ describe('MessageService', () => {
     req.flush(null, { status: 204, statusText: 'No Content' });
     expect(done).toBeTrue();
   });
+
+  it('resends the mail with POST /admin/messages/{id}/resend and no body', () => {
+    let result: unknown;
+    service.resend(7).subscribe((r) => (result = r));
+    const req = backend.expectOne(`${api}/admin/messages/7/resend`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toBeNull();
+    req.flush({ status: 'accepted' }, { status: 202, statusText: 'Accepted' });
+    expect(result).toEqual({ status: 'accepted' });
+  });
+
+  it('passes the resend errors (404, 409, 503) through to the caller', () => {
+    const statuses: number[] = [];
+    for (const status of [404, 409, 503]) {
+      service.resend(7).subscribe({ error: (e: { status: number }) => statuses.push(e.status) });
+      backend.expectOne(`${api}/admin/messages/7/resend`).flush({ message: 'x' }, { status, statusText: 'err' });
+    }
+    expect(statuses).toEqual([404, 409, 503]);
+  });
 });
