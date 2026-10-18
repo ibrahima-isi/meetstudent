@@ -64,4 +64,8 @@ public class ContactMessage {
 
     @Column(name = "mail_sent_at")
     private Instant mailSentAt;
+
+    /** Start of the current PENDING state set by a resend (V28); null means "since created_at". */
+    @Column(name = "mail_pending_since")
+    private Instant mailPendingSince;
 }

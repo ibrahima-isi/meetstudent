@@ -50,7 +50,21 @@ public class ContactProperties {
         public static final int MAX_ATTEMPTS_LIMIT = 5;
         public static final Duration MAX_DELAY = Duration.ofSeconds(60);
 
+        private static final Duration DEFAULT_PENDING_TIMEOUT = Duration.ofMinutes(15);
+
         private final Retry retry = new Retry();
+
+        /**
+         * How long a message may stay PENDING before an admin can resend it anyway ({@code APP_CONTACT_MAIL_PENDING_TIMEOUT}).
+         * A PENDING row normally ends in seconds; one stuck for good (restart, dropped task) must not block a resend.
+         */
+        private Duration pendingTimeout = DEFAULT_PENDING_TIMEOUT;
+
+        /** Blank, zero or negative falls back to 15 minutes. */
+        public Duration effectivePendingTimeout() {
+            return pendingTimeout == null || pendingTimeout.isZero() || pendingTimeout.isNegative()
+                    ? DEFAULT_PENDING_TIMEOUT : pendingTimeout;
+        }
     }
 
     /** Retry of transient failures (connection, TLS, unknown) inside the background listener. */

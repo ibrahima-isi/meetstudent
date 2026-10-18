@@ -37,6 +37,7 @@ class AdminMessageResendIntegrationTests {
     @Autowired private MockMvc mockMvc;
     @Autowired private ContactMessageRepository repository;
     @Autowired private CapturingEmailSender mailbox;
+    @Autowired private org.springframework.transaction.PlatformTransactionManager transactionManager;
 
     @BeforeEach
     @AfterEach
@@ -100,6 +101,70 @@ class AdminMessageResendIntegrationTests {
         assertThat(row.getMailStatus()).isEqualTo(ContactMailStatus.FAILED);
         assertThat(row.getMailAttempts()).isEqualTo(1);
         assertThat(row.getMailSentAt()).isNull();
+    }
+
+    @Test
+    void aMessageWhoseMailIsAlreadyPendingIs409AndNothingIsQueued() throws Exception {
+        var saved = repository.save(ContactMessage.builder()
+                .senderEmail("awa@example.com").subject("Question").body("Bonjour").language("en")
+                .createdAt(Instant.now()).mailStatus(ContactMailStatus.PENDING).build());
+
+        mockMvc.perform(post(url(saved.getId())).with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.error").value("Conflict"));
+
+        assertThat(mailbox.all()).isEmpty();
+        assertThat(repository.findById(saved.getId()).orElseThrow().getMailStatus()).isEqualTo(ContactMailStatus.PENDING);
+    }
+
+    private ContactMessage pending(Instant createdAt, Instant pendingSince) {
+        return repository.save(ContactMessage.builder()
+                .senderEmail("awa@example.com").subject("Question").body("Bonjour").language("en")
+                .createdAt(createdAt).mailStatus(ContactMailStatus.PENDING).mailPendingSince(pendingSince).build());
+    }
+
+    @Test
+    void aPendingMessageOlderThanThePendingTimeoutCanBeResentSoAnAdminIsNeverStuck() throws Exception {
+        var saved = pending(Instant.now().minusSeconds(3600), null);
+
+        mockMvc.perform(post(url(saved.getId())).with(TestDataUtil.mockUser("ROLE_ADMIN"))).andExpect(status().isAccepted());
+
+        assertThat(mailbox.all()).hasSize(1);
+        assertThat(repository.findById(saved.getId()).orElseThrow().getMailStatus()).isEqualTo(ContactMailStatus.SENT);
+    }
+
+    @Test
+    void theTimeoutCountsFromTheLatestResendNotFromTheCreationOfTheMessage() throws Exception {
+        var saved = pending(Instant.now().minusSeconds(3600), Instant.now().minusSeconds(30));
+
+        mockMvc.perform(post(url(saved.getId())).with(TestDataUtil.mockUser("ROLE_ADMIN"))).andExpect(status().isConflict());
+
+        assertThat(mailbox.all()).isEmpty();
+    }
+
+    @Test
+    void ofManyConcurrentClaimsExactlyOneWins() throws Exception {
+        var saved = failedMessage();
+        var now = Instant.now();
+        var wins = new java.util.concurrent.atomic.AtomicInteger();
+        var tx = new org.springframework.transaction.support.TransactionTemplate(transactionManager);
+        var pool = java.util.concurrent.Executors.newFixedThreadPool(8);
+        var start = new java.util.concurrent.CountDownLatch(1);
+        var futures = new java.util.ArrayList<java.util.concurrent.Future<?>>();
+        for (int i = 0; i < 8; i++) {
+            futures.add(pool.submit(() -> {
+                start.await();
+                wins.addAndGet(tx.execute(st -> repository.claimResend(saved.getId(), now, now.minusSeconds(900))));
+                return null;
+            }));
+        }
+        start.countDown();
+        for (var f : futures) {
+            f.get();
+        }
+        pool.shutdown();
+        assertThat(wins.get()).isEqualTo(1);
     }
 
     @Test

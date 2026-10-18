@@ -51,9 +51,12 @@ public class AdminMessageController {
     @ResponseStatus(HttpStatus.ACCEPTED)
     @Operation(summary = "Mail a contact message to the team again",
             description = "Sets the delivery state back to PENDING and queues the mail (same background delivery, retries "
-                    + "and saved result as at submission). Poll the list to see SENT or FAILED.")
+                    + "and saved result as at submission). Poll the list to see SENT or FAILED. Refused with 409 while the "
+                    + "message is PENDING (checks: 404, then 503, then 409).")
     @ApiResponse(responseCode = "202", description = "Queued: {\"status\":\"accepted\"}")
     @ApiResponse(responseCode = "404", description = "Message not found")
+    @ApiResponse(responseCode = "409", description = "A delivery of this message is already queued or running (PENDING for less than "
+            + "app.contact.mail.pending-timeout, 15 min by default): standard error body")
     @ApiResponse(responseCode = "503", description = "Mail is disabled (MAIL_ENABLED=false)")
     public AcceptedResponse resend(@PathVariable int id) {
         service.resend(id);

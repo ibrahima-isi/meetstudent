@@ -75,6 +75,8 @@ app:
     # Contact mail delivery: retry of transient failures (connection, TLS, unknown) inside the background
     # listener. Permanent failures (bad credentials, refused address) are never retried.
     mail:
+      # A message PENDING for longer than this can be resent again (a double click is refused with 409 before).
+      pending-timeout: ${APP_CONTACT_MAIL_PENDING_TIMEOUT:15m}
       retry:
         max-attempts: ${APP_CONTACT_MAIL_RETRY_MAX_ATTEMPTS:3}
         initial-delay: ${APP_CONTACT_MAIL_RETRY_INITIAL_DELAY:2s}
