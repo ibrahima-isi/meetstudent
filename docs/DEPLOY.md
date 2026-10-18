@@ -131,7 +131,7 @@ variable you set explicitly wins, and an empty one counts as unset. `MAIL_PROVID
 when the variable is absent) applies nothing: only your `SPRING_MAIL_*` variables count. Nothing is checked or
 applied while `MAIL_ENABLED=false`. Credentials are never part of a preset.
 
-Brevo (the default provider), six variables in `.env`:
+Brevo (the recommended provider), six variables in `.env`:
 
 ```bash
 MAIL_ENABLED=true
@@ -207,7 +207,11 @@ without a login: never publish them. `FRONTEND_BASE_URL` may be plain http here:
 
    `200 {"status":"SENT"}` and a short French + English mail in the **admin's own** mailbox. Otherwise `502`
    with the outcome (table below), `503 {"status":"DISABLED"}` while `MAIL_ENABLED` is not `true`, `429` with
-   `Retry-After` if you call it twice within 10 s. The answer never contains an address, host or credential.
+   `Retry-After` if you call it twice within `APP_MAIL_TEST_COOLDOWN_SECONDS` (10 s by default). `200 {"status":"LOGGED"}`
+   means the dev-log sender is active (local `docker` profile with `MAIL_ENABLED=false`): the mail was only written to
+   the API log and **nothing was delivered**; it never happens in production, which refuses `dev-log`. The test is
+   synchronous and takes a few seconds at most (the SMTP timeouts apply). The answer never contains an address, host
+   or credential.
 3. **Registration**: create an account with a real mailbox: a verification mail arrives; the link starts with
    `FRONTEND_BASE_URL`.
 4. **Forgot password** (`/fr/forgot-password`): the reset mail arrives (the page answers the same whether or not
@@ -216,15 +220,18 @@ without a login: never publish them. `FRONTEND_BASE_URL` may be plain http here:
    `Reply-To` set to the visitor. In the back office list (or `GET /api/v1/admin/messages`) the message shows
    `mailStatus` `SENT`.
 6. **Admin resend**: `POST /api/v1/admin/messages/{id}/resend` answers `202`, the message goes back to `PENDING`
-   and a second copy arrives; `503` while mail is disabled, `404` for an unknown id.
+   and a second copy arrives; `404` for an unknown id, then `503` while mail is disabled, then `409` while a delivery
+   of that message is still queued or running (`PENDING`), so a double click or a loop cannot queue duplicates.
 
 Contact messages carry a delivery state: `PENDING` (queued or being sent), `SENT`, `FAILED` (every attempt failed,
 or a permanent failure), `SKIPPED` (mail disabled), `UNKNOWN` (stored before this tracking existed), plus
 `mailAttempts` and `mailSentAt`. A transient failure is retried up to 3 times (2 s, then 10 s) inside the
 background task; bad credentials and refused addresses are never retried. Messages are stored whatever happens: a
-`FAILED` or `PENDING` one can be resent from the back office once the configuration is fixed. A `PENDING` message
-that stays so (API restarted during delivery, or the contact mail queue was full and dropped it: the log says
-`Contact mail queue is full`) is also fixed with a resend.
+`FAILED` one can be resent from the back office once the configuration is fixed. A `PENDING` one is refused with `409`
+until it has been `PENDING` for `APP_CONTACT_MAIL_PENDING_TIMEOUT` (15 minutes by default): a message that stays so
+(API restarted during delivery, or the contact mail queue was full and dropped it: the log says
+`Contact mail queue is full`) then becomes resendable, so an admin is never stuck. `SKIPPED` also covers a mail that
+the dev-log sender only wrote to the log.
 
 ### Troubleshooting by outcome
 

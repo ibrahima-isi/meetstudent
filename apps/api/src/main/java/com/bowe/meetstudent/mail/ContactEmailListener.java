@@ -86,7 +86,12 @@ public class ContactEmailListener {
         }
     }
 
-    /** @return false when the thread was interrupted (shutdown): the remaining attempts are given up. */
+    /**
+     * @return false when the thread was interrupted: the remaining attempts are given up and the row is saved with
+     * what happened so far. The executor stops with an orderly {@code shutdown()}, which does not interrupt: it lets
+     * running and queued deliveries continue for up to {@code awaitTerminationSeconds} (10 s). Whatever is still
+     * running after that dies with the JVM and its row stays PENDING until it can be resent (pending timeout).
+     */
     private boolean pause(Duration delay) {
         try {
             sleeper.sleep(delay);

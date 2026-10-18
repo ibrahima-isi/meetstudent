@@ -30,7 +30,8 @@ the prod profile has no fallbacks for the required ones, so a missing value stop
 | `APP_CONTACT_MAIL_RETRY_MAX_ATTEMPTS` | no | `3` | Contact mail: total attempts on a transient failure, clamped to 1..5. |
 | `APP_CONTACT_MAIL_RETRY_INITIAL_DELAY` | no | `2s` | Contact mail: wait before the 2nd attempt (a Spring duration: `2s`, `500ms`). Never below 0, each wait is capped at 60 s. |
 | `APP_CONTACT_MAIL_RETRY_BACKOFF_MULTIPLIER` | no | `5` | Contact mail: each further wait is the previous one times this (2 s, then 10 s with the defaults). |
-| `app.mail.test-cooldown-seconds` | no | `10` | Minimum seconds between two `POST /api/v1/admin/mail/test` of the same admin (`0` = no limit). Only reachable as `APP_MAIL_TEST_COOLDOWN_SECONDS`. |
+| `APP_CONTACT_MAIL_PENDING_TIMEOUT` | no | `15m` | Contact mail: a message `PENDING` for longer than this (a Spring duration) can be resent again; before that `POST /api/v1/admin/messages/{id}/resend` answers 409. Blank, zero or negative = `15m`. |
+| `APP_MAIL_TEST_COOLDOWN_SECONDS` | no | `10` | Minimum seconds between two `POST /api/v1/admin/mail/test` of the same admin (`0` = no limit). Property `app.mail.test-cooldown-seconds`. Passed through `compose.yml` and `compose.prod.yml`. |
 
 `CONTACT_RECIPIENT`, `MAIL_PROVIDER`, `MAIL_SES_REGION`, the `SPRING_MAIL_*` variables and the retry variables are all
 passed to the API by `compose.prod.yml` (and, with mail off by default, by `compose.yml`). The step-by-step provider
@@ -56,7 +57,7 @@ a missing `SPRING_MAIL_HOST` or `MAIL_FROM`, or on a `FRONTEND_BASE_URL` that is
   `FRONTEND_BASE_URL`) and adds `MAIL_PROVIDER` / `MAIL_SES_REGION`, never echoing a value. Brevo: password is the
   **SMTP key**, sender must be validated. Gmail: 2-step verification + app password, low sending limits. SES: SMTP
   credentials (not IAM keys), verified identity and recipients (sandbox), same region everywhere.
-- **Delivery outcome**: `EmailSender.send` returns a `SendOutcome` (`SENT`, `DISABLED`, `AUTH_FAILED`,
+- **Delivery outcome**: `EmailSender.send` returns a `SendOutcome` (`SENT`, `DISABLED`, `LOGGED` (dev-log only: written to the log, not delivered), `AUTH_FAILED`,
   `CONNECTION_FAILED`, `TLS_FAILED`, `REJECTED`, `FAILED`) and still never throws. `SmtpEmailSender` classifies by
   exception type and SMTP code over the whole cause chain (never by reading a message into a log or an answer); the
   outcome and the log line (`Email not sent type=... outcome=... cause=<class>`) carry no address, host, credential
@@ -65,11 +66,13 @@ a missing `SPRING_MAIL_HOST` or `MAIL_FROM`, or on a `FRONTEND_BASE_URL` that is
 - **SMTP self-test**: `POST /api/v1/admin/mail/test` (ADMIN, no body) sends a short French + English mail
   synchronously, through the real sender, to the authenticated admin's **own** address only (read from the database,
   never from the request). `200 {"status":"SENT"}`; `502 {"status":"AUTH_FAILED|CONNECTION_FAILED|TLS_FAILED|REJECTED|FAILED"}`;
+  `200 {"status":"LOGGED"}` when only the dev-log sender is active (nothing is delivered);
   `503 {"status":"DISABLED"}` while mail is disabled (nothing is sent); `429` with `Retry-After` and the standard error
   body within `app.mail.test-cooldown-seconds` (10) of the previous test of the same admin (a failed test counts too,
   and the cooldown is per admin, in memory); `401` anonymous, `403` non-admin, `404` if the admin account no longer
-  exists. It can take up to the 5 s SMTP timeouts. In the `dev` profile with `MAIL_ENABLED=false` the dev-log sender
-  is active and answers `SENT` although the mail is only written to the local log.
+  exists. It takes a few seconds at most (the SMTP timeouts apply). In the `dev`/`docker` profile with `MAIL_ENABLED=false` the
+  dev-log sender is active and answers `LOGGED` (never `SENT`): the mail is only written to the local log, and a contact
+  message mailed that way ends `SKIPPED`.
 - `/actuator/health` does **not** probe SMTP (`management.health.mail.enabled: false`): an SMTP outage
   never marks the API down.
 - Logs carry the email type, the user id and the exception class only: never the link, the token, the
@@ -94,13 +97,18 @@ header value). It answers `202 {"status":"accepted"}`, or `400 {field: message}`
   retries **transient** outcomes (`CONNECTION_FAILED`, `TLS_FAILED`, `FAILED`) up to `app.contact.mail.retry.*`
   (3 attempts, 2 s then 10 s; the wait holds a pool thread, hence the bounds: at most 5 attempts, 60 s per wait),
   never `AUTH_FAILED`, `REJECTED` or `DISABLED`, then saves in its own `REQUIRES_NEW` transaction `SENT` (+ `mail_sent_at`),
-  `FAILED` or `SKIPPED` (mail disabled, 0 attempts) and the attempts of this run. A failure of the listener or of that
+  `FAILED` or `SKIPPED` (mail disabled or only logged by the dev-log sender, 0 attempts) and the attempts of this run. A failure of the listener or of that
   save never reaches the `202`. If the contact queue is full the mail is dropped with a warning and the row stays
   `PENDING`; so does a row whose delivery was cut by a restart. The honeypot stores and sends nothing.
 - **Back office**: `GET /api/v1/admin/messages` adds `mailStatus` (`UNKNOWN|PENDING|SENT|FAILED|SKIPPED`),
   `mailAttempts` and `mailSentAt` to each item. `POST /api/v1/admin/messages/{id}/resend` (ADMIN) sets the message back to
   `PENDING` (attempts 0, no sent time) and queues the same mail: `202 {"status":"accepted"}`, `404` unknown id,
-  `503` while mail is disabled, `401` anonymous, `403` non-admin. Poll the list to see the result.
+  `503` while mail is disabled, `409` while a delivery of this message is queued or running, `401` anonymous, `403` non-admin
+  (checks in this order: 404, 503, 409). Poll the list to see the result. The claim is one conditional `UPDATE`
+  (`claimResend`), so concurrent clicks cannot queue duplicates or fill the 50-slot queue; a row `PENDING` for longer
+  than `app.contact.mail.pending-timeout` (`APP_CONTACT_MAIL_PENDING_TIMEOUT`, 15 min) counts as lost and may be resent
+  (`V28` `mail_pending_since`, falling back to `created_at`). Known limit: a very late old attempt of such a lost row
+  can still overwrite the newer result.
 
 - **Honeypot**: a non-blank `website` answers the same `202` and stores and sends nothing.
 - **Per-IP limit**: 5 messages per hour per client address (honeypot hits count), in memory, so per API instance and

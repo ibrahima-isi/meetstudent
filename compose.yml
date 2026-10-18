@@ -81,6 +81,10 @@ services:
       APP_CONTACT_MAIL_RETRY_MAX_ATTEMPTS:
       APP_CONTACT_MAIL_RETRY_INITIAL_DELAY:
       APP_CONTACT_MAIL_RETRY_BACKOFF_MULTIPLIER:
+      # A contact message PENDING for longer than this can be resent again (default 15m); before that a resend is 409.
+      APP_CONTACT_MAIL_PENDING_TIMEOUT:
+      # Seconds between two SMTP self-tests of the same admin (POST /api/v1/admin/mail/test); 0 = no limit.
+      APP_MAIL_TEST_COOLDOWN_SECONDS: ${APP_MAIL_TEST_COOLDOWN_SECONDS:-10}
     ports:
       - "8080:8080"
     volumes:
@@ -106,7 +110,7 @@ services:
   # SMTP on mailpit:1025 inside the stack, web UI on http://localhost:8025. Both ports are bound to
   # 127.0.0.1 only, and Mailpit accepts any message without authentication: never expose it.
   mailpit:
-    image: axllent/mailpit
+    image: axllent/mailpit:v1.21
     profiles:
       - mail
     ports:
