@@ -1,6 +1,11 @@
 package com.bowe.meetstudent.services;
 
 import com.bowe.meetstudent.entities.ContactMessage;
+import com.bowe.meetstudent.entities.enums.ContactMailStatus;
+import com.bowe.meetstudent.exceptions.ServiceUnavailableException;
+import com.bowe.meetstudent.mail.ContactMessageReceived;
+import com.bowe.meetstudent.mail.EmailSender;
+import org.springframework.context.ApplicationEventPublisher;
 import com.bowe.meetstudent.exceptions.ResourceNotFoundException;
 import com.bowe.meetstudent.repositories.ContactMessageRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +24,8 @@ public class AdminMessageService {
     private static final Sort NEWEST_FIRST = Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"));
 
     private final ContactMessageRepository repository;
+    private final EmailSender emailSender;
+    private final ApplicationEventPublisher events;
 
     /** Fixed order (newest first, id desc as tie-break): any requested sort is ignored, the size is capped. */
     @Transactional(readOnly = true)
@@ -33,5 +40,26 @@ public class AdminMessageService {
             throw new ResourceNotFoundException("Message not found");
         }
         repository.deleteById(id);
+    }
+
+    /**
+     * Queues the team mail of a stored message again: the delivery state goes back to PENDING and the usual event is
+     * published, so the after-commit listener (own executor, retries, saved result) does the sending.
+     *
+     * @throws ResourceNotFoundException   unknown message (404)
+     * @throws ServiceUnavailableException mail is disabled (503)
+     */
+    @Transactional
+    public void resend(int id) {
+        var message = repository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Message not found"));
+        if (!emailSender.isEnabled()) {
+            throw new ServiceUnavailableException("Email delivery is not available");
+        }
+        message.setMailStatus(ContactMailStatus.PENDING);
+        message.setMailAttempts(0);
+        message.setMailSentAt(null);
+        repository.save(message);
+        events.publishEvent(new ContactMessageReceived(message.getId(), message.getSenderEmail(), message.getSubject(),
+                message.getBody(), message.getLanguage()));
     }
 }

@@ -139,4 +139,18 @@ class AdminMessagesIntegrationTests {
                 .andExpect(jsonPath("$.content[1].mailAttempts").value(0))
                 .andExpect(jsonPath("$.content[1].mailSentAt").doesNotExist());
     }
+
+    @Test
+    void resendAnswers503WhileMailIsDisabledAndChangesNothing() throws Exception {
+        var saved = save("s", Instant.parse("2026-03-01T10:00:00Z"));
+        saved.setMailStatus(com.bowe.meetstudent.entities.enums.ContactMailStatus.SKIPPED);
+        repository.save(saved);
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .post(URL + "/" + saved.getId() + "/resend").with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.status").value(503));
+        assertThat(repository.findById(saved.getId()).orElseThrow().getMailStatus())
+                .isEqualTo(com.bowe.meetstudent.entities.enums.ContactMailStatus.SKIPPED);
+    }
 }
