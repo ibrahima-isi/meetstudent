@@ -46,7 +46,7 @@ class AccountEmailListenerTest {
     void aFailingSenderOrTemplateNeverPropagates() {
         EmailSender boom = new EmailSender() {
             @Override
-            public void send(EmailMessage message) {
+            public com.bowe.meetstudent.mail.SendOutcome send(EmailMessage message) {
                 throw new IllegalStateException("smtp exploded");
             }
 
@@ -77,7 +77,7 @@ class AccountEmailListenerTest {
         try {
             EmailSender boom = new EmailSender() {
                 @Override
-                public void send(EmailMessage message) {
+                public com.bowe.meetstudent.mail.SendOutcome send(EmailMessage message) {
                     throw new IllegalStateException("password=hunter2 for victim@example.com");
                 }
 

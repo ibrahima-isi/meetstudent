@@ -28,12 +28,22 @@ public class MailProperties {
     public static class Mail {
         /** Send through SMTP. Off by default: no SMTP server is configured at launch. */
         private boolean enabled = false;
+        /**
+         * {@code MAIL_PROVIDER}: brevo, gmail or ses fill in the SMTP connection defaults (see
+         * {@link MailProviderPresets}); custom (default) leaves everything to the SPRING_MAIL_* variables.
+         * Checked only when mail is enabled.
+         */
+        private String provider = "custom";
+        /** {@code MAIL_SES_REGION}: AWS region of the SES SMTP endpoint, used only by the ses preset. */
+        private String sesRegion = MailProviderPresets.DEFAULT_SES_REGION;
         /** Sender address (From header). Required when enabled. */
         private String from;
         /** Write emails, links included, to the log instead of sending. Local development only. */
         private boolean devLog = false;
         /** Send on a background executor. Tests turn this off to run synchronously. */
         private boolean async = true;
+        /** Minimum seconds between two SMTP self-tests of the same admin ({@code POST /admin/mail/test}); 0 disables it. */
+        private int testCooldownSeconds = 10;
     }
 
     @Getter

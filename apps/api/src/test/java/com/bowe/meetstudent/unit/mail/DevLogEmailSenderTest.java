@@ -6,12 +6,23 @@ import ch.qos.logback.core.read.ListAppender;
 import com.bowe.meetstudent.mail.DevLogEmailSender;
 import com.bowe.meetstudent.mail.EmailMessage;
 import com.bowe.meetstudent.mail.EmailType;
+import com.bowe.meetstudent.mail.SendOutcome;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class DevLogEmailSenderTest {
+
+    @Test
+    void itNeverClaimsADeliveryButReportsThatTheMailWasOnlyLogged() {
+        var sender = new DevLogEmailSender();
+        assertThat(sender.send(new EmailMessage(EmailType.PASSWORD_RESET, 1, "a@example.com", "s", "t", "<p/>")))
+                .isEqualTo(SendOutcome.LOGGED);
+        assertThat(sender.send(new EmailMessage(EmailType.CONTACT_MESSAGE, null, "inbox@example.com", "s", "t", "<p/>", "v@example.org")))
+                .isEqualTo(SendOutcome.LOGGED);
+        assertThat(SendOutcome.LOGGED.isTransient()).isFalse();
+    }
 
     @Test
     void contactMessagesAreNeverWrittenToTheLog() {

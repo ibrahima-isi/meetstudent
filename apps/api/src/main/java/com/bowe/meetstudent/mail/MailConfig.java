@@ -38,9 +38,16 @@ public class MailConfig {
             throw new IllegalStateException("app.mail.dev-log writes links to the log and must not be enabled under the prod profile");
         }
         if (mail.isEnabled()) {
+            // The provider preset has already filled spring.mail.* by now (MailProviderEnvironmentPostProcessor);
+            // here only a value it could not use is reported, naming the variable and never echoing the value.
+            var provider = MailProvider.parse(mail.getProvider())
+                    .orElseThrow(() -> new IllegalStateException("MAIL_PROVIDER must be one of: " + MailProvider.ALLOWED));
+            if (provider == MailProvider.SES && !MailProviderPresets.isValidSesRegion(sesRegion(mail.getSesRegion()))) {
+                throw new IllegalStateException("MAIL_SES_REGION must be an AWS region such as eu-west-1");
+            }
             var host = environment.getProperty("spring.mail.host");
             if (host == null || host.isBlank()) {
-                throw new IllegalStateException("MAIL_ENABLED=true requires SPRING_MAIL_HOST");
+                throw new IllegalStateException("MAIL_ENABLED=true requires SPRING_MAIL_HOST (or MAIL_PROVIDER=brevo, gmail or ses)");
             }
             if (mail.getFrom() == null || mail.getFrom().isBlank()) {
                 throw new IllegalStateException("MAIL_ENABLED=true requires MAIL_FROM");
@@ -50,6 +57,7 @@ public class MailConfig {
             if (sender == null) {
                 throw new IllegalStateException("MAIL_ENABLED=true requires SPRING_MAIL_HOST (no JavaMailSender configured)");
             }
+            log.info("Email sending is enabled (provider preset: {})", provider.name().toLowerCase(Locale.ROOT));
             return new SmtpEmailSender(sender, mail.getFrom().strip());
         }
         if (mail.isDevLog()) {
@@ -59,6 +67,10 @@ public class MailConfig {
         }
         log.info("Email sending is disabled (set MAIL_ENABLED=true and SPRING_MAIL_HOST to enable it)");
         return new DisabledEmailSender();
+    }
+
+    private static String sesRegion(String configured) {
+        return configured == null || configured.isBlank() ? MailProviderPresets.DEFAULT_SES_REGION : configured.strip();
     }
 
     private static void validateFrontendBaseUrl(String value, boolean requireHttps) {
@@ -110,6 +122,35 @@ public class MailConfig {
                 log.warn("Mail executor is shutting down: an email was dropped");
             } else {
                 log.warn("Mail queue is full: an email was dropped");
+            }
+        });
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(10);
+        return executor;
+    }
+
+    /**
+     * Contact-form mails get their own small pool: a delivery can hold its thread for the whole retry backoff,
+     * and the form is public, so a flood must only ever fill this queue and never delay a verification or a
+     * reset mail (those use {@code mailExecutor}). A full queue drops the mail with a warning; the message row
+     * then stays PENDING and an admin can resend it.
+     */
+    @Bean(name = "contactMailExecutor")
+    public TaskExecutor contactMailExecutor(MailProperties properties) {
+        if (!properties.getMail().isAsync()) {
+            return new SyncTaskExecutor();
+        }
+        var executor = new ThreadPoolTaskExecutor();
+        executor.setThreadNamePrefix("contact-mail-");
+        // Fixed size: threads beyond the core are only created once the queue is full, so core == max.
+        executor.setCorePoolSize(2);
+        executor.setMaxPoolSize(2);
+        executor.setQueueCapacity(50);
+        executor.setRejectedExecutionHandler((task, pool) -> {
+            if (pool.isShutdown()) {
+                log.warn("Contact mail executor is shutting down: a contact mail was dropped (its message stays PENDING)");
+            } else {
+                log.warn("Contact mail queue is full: a contact mail was dropped (its message stays PENDING, resend it from the back office)");
             }
         });
         executor.setWaitForTasksToCompleteOnShutdown(true);

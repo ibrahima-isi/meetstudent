@@ -139,7 +139,14 @@ services:
       FILE_PRIVATE_DIR: /data/private
       # Account emails. Off unless MAIL_ENABLED=true; none of these is required, see docs/DEPLOY.md.
       MAIL_ENABLED: ${MAIL_ENABLED:-false}
+      # brevo | gmail | ses | custom (default). A preset only supplies DEFAULTS for the SMTP connection (host, port 587,
+      # auth, mandatory STARTTLS); any SPRING_MAIL_* variable below still wins. See docs/DEPLOY.md.
+      MAIL_PROVIDER: ${MAIL_PROVIDER:-custom}
+      # AWS region of the SES SMTP endpoint (MAIL_PROVIDER=ses only).
+      MAIL_SES_REGION: ${MAIL_SES_REGION:-eu-west-1}
       MAIL_FROM: ${MAIL_FROM:-}
+      # Mailbox that receives the contact-form messages (stored either way, mailed only with MAIL_ENABLED=true).
+      CONTACT_RECIPIENT: ${CONTACT_RECIPIENT:-contact@meetstudent.com}
       # Origin used for the links in emails (https is enforced in prod when mail is on).
       FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-https://${DOMAIN}}
       # Unset values are not passed to the container; set them in .env to enable SMTP.
@@ -149,8 +156,18 @@ services:
       SPRING_MAIL_PASSWORD:
       SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH:
       SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE:
+      # Implicit TLS (port 465): SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_ENABLE=true, STARTTLS left unset.
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_ENABLE:
       # Defaults to the STARTTLS_ENABLE value, so enabling STARTTLS also makes it mandatory (no silent downgrade).
       SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED:-${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE:-}}
+      # Retries of the contact mail on a transient SMTP failure (defaults: 3 attempts, 2 s then 10 s). Unset = default.
+      APP_CONTACT_MAIL_RETRY_MAX_ATTEMPTS:
+      APP_CONTACT_MAIL_RETRY_INITIAL_DELAY:
+      APP_CONTACT_MAIL_RETRY_BACKOFF_MULTIPLIER:
+      # A contact message PENDING for longer than this can be resent again (default 15m); before that a resend is 409.
+      APP_CONTACT_MAIL_PENDING_TIMEOUT:
+      # Seconds between two SMTP self-tests of the same admin (POST /api/v1/admin/mail/test); 0 = no limit.
+      APP_MAIL_TEST_COOLDOWN_SECONDS: ${APP_MAIL_TEST_COOLDOWN_SECONDS:-10}
       # Cap the heap relative to the container/VPS memory.
       JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=65
     volumes:

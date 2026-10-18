@@ -1,5 +1,6 @@
 package com.bowe.meetstudent.controllers;
 
+import com.bowe.meetstudent.dto.AcceptedResponse;
 import com.bowe.meetstudent.dto.AdminMessageDTO;
 import com.bowe.meetstudent.services.AdminMessageService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -13,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
@@ -32,7 +34,8 @@ public class AdminMessageController {
     @ApiResponse(responseCode = "200", description = "Page of messages")
     public Page<AdminMessageDTO> list(@ParameterObject Pageable pageable) {
         return service.list(pageable).map(m -> new AdminMessageDTO(m.getId(), m.getSenderEmail(), m.getSubject(),
-                m.getBody(), m.getLanguage(), m.getCreatedAt()));
+                m.getBody(), m.getLanguage(), m.getCreatedAt(), m.getMailStatus().name(), m.getMailAttempts(),
+                m.getMailSentAt()));
     }
 
     @DeleteMapping("/{id}")
@@ -42,5 +45,21 @@ public class AdminMessageController {
     @ApiResponse(responseCode = "404", description = "Message not found")
     public void delete(@PathVariable int id) {
         service.delete(id);
+    }
+
+    @PostMapping("/{id}/resend")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    @Operation(summary = "Mail a contact message to the team again",
+            description = "Sets the delivery state back to PENDING and queues the mail (same background delivery, retries "
+                    + "and saved result as at submission). Poll the list to see SENT or FAILED. Refused with 409 while the "
+                    + "message is PENDING (checks: 404, then 503, then 409).")
+    @ApiResponse(responseCode = "202", description = "Queued: {\"status\":\"accepted\"}")
+    @ApiResponse(responseCode = "404", description = "Message not found")
+    @ApiResponse(responseCode = "409", description = "A delivery of this message is already queued or running (PENDING for less than "
+            + "app.contact.mail.pending-timeout, 15 min by default): standard error body")
+    @ApiResponse(responseCode = "503", description = "Mail is disabled (MAIL_ENABLED=false)")
+    public AcceptedResponse resend(@PathVariable int id) {
+        service.resend(id);
+        return AcceptedResponse.accepted();
     }
 }

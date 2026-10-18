@@ -5,6 +5,8 @@ import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
+import java.time.Duration;
+
 /** Settings of the public contact form, bound from {@code app.contact.*}. */
 @Getter
 @Setter
@@ -24,6 +26,7 @@ public class ContactProperties {
     private boolean trustForwardedFor = false;
 
     private final RateLimit rateLimit = new RateLimit();
+    private final Mail mail = new Mail();
 
     public String effectiveRecipient() {
         return recipient == null || recipient.isBlank() ? DEFAULT_RECIPIENT : recipient.strip();
@@ -37,5 +40,70 @@ public class ContactProperties {
         private int windowMinutes = 60;
         /** Upper bound on the clients remembered at once; the least recently seen is dropped first. */
         private int maxTrackedClients = 10_000;
+    }
+
+    /** Delivery of the team mail ({@code app.contact.mail.*}). */
+    @Getter
+    @Setter
+    public static class Mail {
+        /** Hard bounds: a retry holds a pool thread, so neither the count nor the wait may be configured away. */
+        public static final int MAX_ATTEMPTS_LIMIT = 5;
+        public static final Duration MAX_DELAY = Duration.ofSeconds(60);
+
+        private static final Duration DEFAULT_PENDING_TIMEOUT = Duration.ofMinutes(15);
+
+        private final Retry retry = new Retry();
+
+        /**
+         * How long a message may stay PENDING before an admin can resend it anyway ({@code APP_CONTACT_MAIL_PENDING_TIMEOUT}).
+         * A PENDING row normally ends in seconds; one stuck for good (restart, dropped task) must not block a resend.
+         */
+        private Duration pendingTimeout = DEFAULT_PENDING_TIMEOUT;
+
+        /** Blank, zero or negative falls back to 15 minutes. */
+        public Duration effectivePendingTimeout() {
+            return pendingTimeout == null || pendingTimeout.isZero() || pendingTimeout.isNegative()
+                    ? DEFAULT_PENDING_TIMEOUT : pendingTimeout;
+        }
+    }
+
+    /** Retry of transient failures (connection, TLS, unknown) inside the background listener. */
+    @Getter
+    @Setter
+    public static class Retry {
+        private static final Duration DEFAULT_INITIAL_DELAY = Duration.ofSeconds(2);
+
+        /** Total attempts including the first one; clamped to 1..{@link Mail#MAX_ATTEMPTS_LIMIT}. */
+        private static final int DEFAULT_MAX_ATTEMPTS = 3;
+        private static final int DEFAULT_BACKOFF_MULTIPLIER = 5;
+
+        // Boxed on purpose: a present but blank environment variable (compose passes "VAR:" through) binds as null,
+        // and a primitive would fail the whole binding at startup instead of keeping the default.
+        private Integer maxAttempts = DEFAULT_MAX_ATTEMPTS;
+        /** Wait before the second attempt. */
+        private Duration initialDelay = DEFAULT_INITIAL_DELAY;
+        /** Each further wait is the previous one times this (2 s, then 10 s with the default 5). */
+        private Integer backoffMultiplier = DEFAULT_BACKOFF_MULTIPLIER;
+
+        public int effectiveMaxAttempts() {
+            var configured = maxAttempts == null ? DEFAULT_MAX_ATTEMPTS : maxAttempts;
+            return Math.max(1, Math.min(configured, Mail.MAX_ATTEMPTS_LIMIT));
+        }
+
+        /** Wait after the {@code attempt}-th failed attempt (1-based), never negative and capped at {@link Mail#MAX_DELAY}. */
+        public Duration delayAfter(int attempt) {
+            // Unset (blank variable) means the default, never "retry at once"; a negative value is treated as zero.
+            var configured = initialDelay == null ? DEFAULT_INITIAL_DELAY : initialDelay;
+            var base = configured.isNegative() ? Duration.ZERO : configured;
+            var multiplier = Math.max(1, backoffMultiplier == null ? DEFAULT_BACKOFF_MULTIPLIER : backoffMultiplier);
+            var delay = base;
+            for (int i = 1; i < attempt; i++) {
+                delay = delay.multipliedBy(multiplier);
+                if (delay.compareTo(Mail.MAX_DELAY) > 0) {
+                    return Mail.MAX_DELAY;
+                }
+            }
+            return delay.compareTo(Mail.MAX_DELAY) > 0 ? Mail.MAX_DELAY : delay;
+        }
     }
 }

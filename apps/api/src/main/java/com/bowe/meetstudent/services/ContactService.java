@@ -2,6 +2,7 @@ package com.bowe.meetstudent.services;
 
 import com.bowe.meetstudent.dto.ContactRequest;
 import com.bowe.meetstudent.entities.ContactMessage;
+import com.bowe.meetstudent.entities.enums.ContactMailStatus;
 import com.bowe.meetstudent.mail.ContactMessageReceived;
 import com.bowe.meetstudent.repositories.ContactMessageRepository;
 import org.springframework.context.ApplicationEventPublisher;
@@ -50,6 +51,7 @@ public class ContactService {
                 .body(request.getMessage().strip())
                 .language(request.getLanguage())
                 .createdAt(clock.instant())
+                .mailStatus(ContactMailStatus.PENDING)
                 .build());
         events.publishEvent(new ContactMessageReceived(saved.getId(), saved.getSenderEmail(), saved.getSubject(),
                 saved.getBody(), saved.getLanguage()));

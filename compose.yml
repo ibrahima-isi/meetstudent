@@ -57,6 +57,34 @@ services:
       # Media lives on named volumes so a rebuild does not wipe uploads.
       FILE_UPLOAD_DIR: /data/uploads
       FILE_PRIVATE_DIR: /data/private
+      # Email: OFF by default (nothing is sent, nothing to configure). To try it locally with the Mailpit
+      # catch-all inbox below, see the "Email" block of .env.example and `docker compose --profile mail up`.
+      MAIL_ENABLED: ${MAIL_ENABLED:-false}
+      # brevo | gmail | ses | custom (default): a preset only supplies defaults for the SMTP_* connection below.
+      MAIL_PROVIDER: ${MAIL_PROVIDER:-custom}
+      MAIL_SES_REGION: ${MAIL_SES_REGION:-eu-west-1}
+      MAIL_FROM: ${MAIL_FROM:-}
+      # Origin used in email links; https is only enforced under the prod profile (compose.prod.yml).
+      FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-http://localhost:${WEB_PORT:-4200}}
+      # Mailbox that receives the contact-form messages.
+      CONTACT_RECIPIENT: ${CONTACT_RECIPIENT:-contact@meetstudent.com}
+      # Unset values are not passed to the container.
+      SPRING_MAIL_HOST:
+      SPRING_MAIL_PORT:
+      SPRING_MAIL_USERNAME:
+      SPRING_MAIL_PASSWORD:
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH:
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE:
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED:
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_ENABLE:
+      # Contact mail retries on a transient failure (defaults: 3 attempts, 2 s then 10 s).
+      APP_CONTACT_MAIL_RETRY_MAX_ATTEMPTS:
+      APP_CONTACT_MAIL_RETRY_INITIAL_DELAY:
+      APP_CONTACT_MAIL_RETRY_BACKOFF_MULTIPLIER:
+      # A contact message PENDING for longer than this can be resent again (default 15m); before that a resend is 409.
+      APP_CONTACT_MAIL_PENDING_TIMEOUT:
+      # Seconds between two SMTP self-tests of the same admin (POST /api/v1/admin/mail/test); 0 = no limit.
+      APP_MAIL_TEST_COOLDOWN_SECONDS: ${APP_MAIL_TEST_COOLDOWN_SECONDS:-10}
     ports:
       - "8080:8080"
     volumes:
@@ -74,6 +102,20 @@ services:
       timeout: 5s
       retries: 12
       start_period: 40s
+    networks:
+      - meetstudent
+
+  # OPTIONAL catch-all inbox for testing emails locally, started only with the `mail` profile:
+  #   docker compose --profile mail up
+  # SMTP on mailpit:1025 inside the stack, web UI on http://localhost:8025. Both ports are bound to
+  # 127.0.0.1 only, and Mailpit accepts any message without authentication: never expose it.
+  mailpit:
+    image: axllent/mailpit:v1.21
+    profiles:
+      - mail
+    ports:
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:8025:8025"
     networks:
       - meetstudent
 

@@ -6,5 +6,7 @@ public enum EmailType {
     PASSWORD_RESET,
     EMAIL_CHANGE,
     /** Sent to the team, not to a user; built by {@link ContactEmailTemplates}, never by {@link EmailTemplates}. */
-    CONTACT_MESSAGE
+    CONTACT_MESSAGE,
+    /** The admin SMTP self-test, sent to the admin who asked for it; built by {@link MailTestEmailTemplates}. */
+    MAIL_TEST
 }
