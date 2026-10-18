@@ -257,4 +257,75 @@ class MailConfigTest {
             assertThat(ranOn.get()).isSameAs(caller);
         });
     }
+
+    // ---- MAIL_PROVIDER presets -----------------------------------------------------------------
+
+    @Test
+    void anUnknownProviderFailsAtBootNamingTheVariableAndTheAllowedValues() {
+        runner.withPropertyValues(ENABLED).withPropertyValues("app.mail.provider=sendgrid").run(ctx -> {
+            assertThat(ctx).hasFailed();
+            assertThat(ctx.getStartupFailure()).rootCause()
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("MAIL_PROVIDER")
+                    .hasMessageContaining("brevo, gmail, ses, custom")
+                    .hasMessageNotContaining("sendgrid");
+        });
+    }
+
+    @Test
+    void anUnknownProviderIsIgnoredWhileMailIsDisabled() {
+        runner.withPropertyValues("app.mail.provider=sendgrid", "app.mail.ses-region=not a region").run(ctx -> {
+            assertThat(ctx).hasNotFailed();
+            assertThat(ctx.getBean(EmailSender.class)).isInstanceOf(DisabledEmailSender.class);
+        });
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"brevo", "gmail", "ses", "BREVO", " Gmail ", "custom", ""})
+    void everyKnownProviderBootsWithTheSmtpSender(String provider) {
+        runner.withPropertyValues(ENABLED).withPropertyValues("app.mail.provider=" + provider).run(ctx -> {
+            assertThat(ctx).hasNotFailed();
+            assertThat(ctx.getBean(EmailSender.class)).isInstanceOf(SmtpEmailSender.class);
+        });
+    }
+
+    @Test
+    void anInvalidSesRegionFailsAtBootNamingTheVariable() {
+        runner.withPropertyValues(ENABLED).withPropertyValues("app.mail.provider=ses", "app.mail.ses-region=evil.com/x").run(ctx -> {
+            assertThat(ctx).hasFailed();
+            assertThat(ctx.getStartupFailure()).rootCause()
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("MAIL_SES_REGION")
+                    .hasMessageNotContaining("evil.com");
+        });
+    }
+
+    @Test
+    void theSesRegionIsNotCheckedForOtherProviders() {
+        runner.withPropertyValues(ENABLED).withPropertyValues("app.mail.provider=brevo", "app.mail.ses-region=whatever").run(ctx ->
+                assertThat(ctx).hasNotFailed());
+    }
+
+    @Test
+    void theOtherFailFastChecksStillApplyWithAPreset() {
+        // The preset supplies the host in the real app (environment post-processor); here it is given directly.
+        runner.withPropertyValues("app.mail.enabled=true", "app.mail.provider=brevo", "spring.mail.host=smtp-relay.brevo.com",
+                "app.frontend-base-url=https://app.example.com").run(ctx -> {
+            assertThat(ctx).hasFailed();
+            assertThat(ctx.getStartupFailure()).rootCause().hasMessageContaining("MAIL_FROM");
+        });
+        runner.withPropertyValues("app.mail.enabled=true", "app.mail.provider=gmail", "app.mail.from=no-reply@example.com",
+                "spring.mail.host=smtp.gmail.com", "app.frontend-base-url=https://app.example.com/path").run(ctx -> {
+            assertThat(ctx).hasFailed();
+            assertThat(ctx.getStartupFailure()).rootCause().hasMessageContaining("FRONTEND_BASE_URL");
+        });
+    }
+
+    @Test
+    void theMissingHostMessageMentionsTheProviderShortcut() {
+        runner.withPropertyValues("app.mail.enabled=true", "app.mail.from=no-reply@example.com",
+                "app.frontend-base-url=https://app.example.com").run(ctx ->
+                assertThat(ctx.getStartupFailure()).rootCause()
+                        .hasMessageContaining("SPRING_MAIL_HOST").hasMessageContaining("MAIL_PROVIDER"));
+    }
 }

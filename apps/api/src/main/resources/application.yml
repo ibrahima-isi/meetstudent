@@ -61,10 +61,24 @@ app:
   mail:
     enabled: ${MAIL_ENABLED:false}
     from: ${MAIL_FROM:}
+    # brevo | gmail | ses | custom. A preset only supplies DEFAULTS for the SMTP connection (host, port, auth,
+    # mandatory STARTTLS); any explicit SPRING_MAIL_* variable wins. See MailProviderEnvironmentPostProcessor.
+    provider: ${MAIL_PROVIDER:custom}
+    # AWS region of the SES SMTP endpoint (ses preset only).
+    ses-region: ${MAIL_SES_REGION:eu-west-1}
+    # Seconds between two SMTP self-tests (POST /api/v1/admin/mail/test) of the same admin; 0 = no limit.
+    test-cooldown-seconds: 10
     # Local development only; the prod profile refuses to start with it.
     dev-log: false
     async: true
   contact:
+    # Contact mail delivery: retry of transient failures (connection, TLS, unknown) inside the background
+    # listener. Permanent failures (bad credentials, refused address) are never retried.
+    mail:
+      retry:
+        max-attempts: ${APP_CONTACT_MAIL_RETRY_MAX_ATTEMPTS:3}
+        initial-delay: ${APP_CONTACT_MAIL_RETRY_INITIAL_DELAY:2s}
+        backoff-multiplier: ${APP_CONTACT_MAIL_RETRY_BACKOFF_MULTIPLIER:5}
     # Where contact-form messages are mailed; distinct from the address shown on the site.
     recipient: ${CONTACT_RECIPIENT:contact@meetstudent.com}
     # First X-Forwarded-For hop as client IP: only behind a proxy that rewrites it (prod profile).
