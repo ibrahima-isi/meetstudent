@@ -15,15 +15,26 @@ the prod profile has no fallbacks for the required ones, so a missing value stop
 | `JWT_ACCESS_TTL_MINUTES` | no | `60` | Access token lifetime in minutes (must be >= 1). The web client refreshes on 401. |
 | `FILE_UPLOAD_DIR` | no | `uploads` | Public media (served at `/uploads/public/**`). Mount a persistent volume. |
 | `FILE_PRIVATE_DIR` | no | `storage/private` | Private documents (never served statically). Mount a persistent volume. |
-| `MAIL_ENABLED` | no | `false` | Send account emails through SMTP. When `false` nothing is sent and the API boots normally. |
+| `MAIL_ENABLED` | no | `false` | Send account and contact emails through SMTP. When `false` nothing is sent, nothing mail-related is validated and the API boots normally. |
+| `MAIL_PROVIDER` | no | `custom` | `brevo`, `gmail`, `ses` or `custom` (case-insensitive; blank = `custom`). A preset fills in **defaults** for `SPRING_MAIL_HOST`, `_PORT` (587), `..._SMTP_AUTH` (`true`), `..._STARTTLS_ENABLE` and `..._STARTTLS_REQUIRED` (`true`): any explicit non-blank `SPRING_MAIL_*` value wins. Only applied when `MAIL_ENABLED=true`. An unknown value stops startup naming `MAIL_PROVIDER` and the allowed values. |
+| `MAIL_SES_REGION` | no | `eu-west-1` | AWS region of the SES SMTP endpoint, used by `MAIL_PROVIDER=ses` only (host `email-smtp.<region>.amazonaws.com`). Must look like `eu-west-1`, otherwise startup fails naming this variable. |
 | `MAIL_FROM` | if mail on | none | Sender address. Boot fails if `MAIL_ENABLED=true` and it is blank. |
 | `CONTACT_RECIPIENT` | no | `contact@meetstudent.com` | Mailbox that receives the messages of the public contact form (`POST /api/v1/contact`). Distinct from the address shown on the site (`contactEmail` in the site settings). Needs `MAIL_ENABLED=true` to be mailed; messages are stored either way. |
 | `FRONTEND_BASE_URL` | if mail on | `http://localhost:4200` (none under `prod`) | Public origin of the web app, used for the links in emails: absolute, no path, query or fragment, and `https` under `prod`. Never taken from the request. |
-| `SPRING_MAIL_HOST` | if mail on | none | SMTP host. Boot fails naming this variable if `MAIL_ENABLED=true` and it is missing or empty. |
+| `SPRING_MAIL_HOST` | if mail on, unless a preset gives it | none | SMTP host. Boot fails naming this variable if `MAIL_ENABLED=true` and it is still missing or empty after the preset. |
 | `SPRING_MAIL_PORT` | no | `25` | SMTP port (usually 587 with STARTTLS). |
 | `SPRING_MAIL_USERNAME`, `SPRING_MAIL_PASSWORD` | no | none | SMTP credentials. Secrets: keep them in `.env` only. |
 | `SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH`, `SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE` | no | none | Standard JavaMail switches (`true`/`false`). |
 | `SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED` | no | none (compose: the `STARTTLS_ENABLE` value) | Set `true` with STARTTLS: otherwise STARTTLS is opportunistic and an attacker can strip it, sending credentials in clear. |
+| `SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_ENABLE` | no | none | `true` for implicit TLS (port 465, `MAIL_PROVIDER=custom`); leave the STARTTLS variables unset then. Passed through `compose.yml` and `compose.prod.yml`. |
+| `APP_CONTACT_MAIL_RETRY_MAX_ATTEMPTS` | no | `3` | Contact mail: total attempts on a transient failure, clamped to 1..5. |
+| `APP_CONTACT_MAIL_RETRY_INITIAL_DELAY` | no | `2s` | Contact mail: wait before the 2nd attempt (a Spring duration: `2s`, `500ms`). Never below 0, each wait is capped at 60 s. |
+| `APP_CONTACT_MAIL_RETRY_BACKOFF_MULTIPLIER` | no | `5` | Contact mail: each further wait is the previous one times this (2 s, then 10 s with the defaults). |
+| `app.mail.test-cooldown-seconds` | no | `10` | Minimum seconds between two `POST /api/v1/admin/mail/test` of the same admin (`0` = no limit). Only reachable as `APP_MAIL_TEST_COOLDOWN_SECONDS`. |
+
+`CONTACT_RECIPIENT`, `MAIL_PROVIDER`, `MAIL_SES_REGION`, the `SPRING_MAIL_*` variables and the retry variables are all
+passed to the API by `compose.prod.yml` (and, with mail off by default, by `compose.yml`). The step-by-step provider
+setup, test checklist and troubleshooting table are in `docs/DEPLOY.md` (section 2b).
 
 ## Email
 
@@ -34,7 +45,31 @@ a missing `SPRING_MAIL_HOST` or `MAIL_FROM`, or on a `FRONTEND_BASE_URL` that is
 
 - Connection, read and write timeouts are 5 s, and emails go out on a small bounded background pool after
   the request's transaction commits, so a slow SMTP server cannot slow down or fail an HTTP response.
-  If the queue is full the email is dropped and a warning is logged.
+  If the queue is full the email is dropped and a warning is logged. The contact-form mail has its **own**
+  pool (`contactMailExecutor`: 2 threads, queue of 50), so a flood of contact messages can only fill that queue
+  and never delays a verification or reset mail.
+- **Providers**: `MAIL_PROVIDER=brevo|gmail|ses` supplies the SMTP connection defaults (host, 587, auth,
+  mandatory STARTTLS) through an `EnvironmentPostProcessor` (`MailProviderEnvironmentPostProcessor`) that runs after
+  the configuration files are loaded and only when `MAIL_ENABLED=true`; it adds a property source holding only the
+  `spring.mail.*` keys that are absent or blank, so an explicit `SPRING_MAIL_*` value always wins and credentials
+  are never preset. `custom` (default) changes nothing. `MailConfig` then keeps its fail-fast checks (host, from,
+  `FRONTEND_BASE_URL`) and adds `MAIL_PROVIDER` / `MAIL_SES_REGION`, never echoing a value. Brevo: password is the
+  **SMTP key**, sender must be validated. Gmail: 2-step verification + app password, low sending limits. SES: SMTP
+  credentials (not IAM keys), verified identity and recipients (sandbox), same region everywhere.
+- **Delivery outcome**: `EmailSender.send` returns a `SendOutcome` (`SENT`, `DISABLED`, `AUTH_FAILED`,
+  `CONNECTION_FAILED`, `TLS_FAILED`, `REJECTED`, `FAILED`) and still never throws. `SmtpEmailSender` classifies by
+  exception type and SMTP code over the whole cause chain (never by reading a message into a log or an answer); the
+  outcome and the log line (`Email not sent type=... outcome=... cause=<class>`) carry no address, host, credential
+  or token. Account mails are fire-and-forget as before (the outcome is only logged); contact mails persist it
+  (below) and `POST /api/v1/admin/mail/test` returns it.
+- **SMTP self-test**: `POST /api/v1/admin/mail/test` (ADMIN, no body) sends a short French + English mail
+  synchronously, through the real sender, to the authenticated admin's **own** address only (read from the database,
+  never from the request). `200 {"status":"SENT"}`; `502 {"status":"AUTH_FAILED|CONNECTION_FAILED|TLS_FAILED|REJECTED|FAILED"}`;
+  `503 {"status":"DISABLED"}` while mail is disabled (nothing is sent); `429` with `Retry-After` and the standard error
+  body within `app.mail.test-cooldown-seconds` (10) of the previous test of the same admin (a failed test counts too,
+  and the cooldown is per admin, in memory); `401` anonymous, `403` non-admin, `404` if the admin account no longer
+  exists. It can take up to the 5 s SMTP timeouts. In the `dev` profile with `MAIL_ENABLED=false` the dev-log sender
+  is active and answers `SENT` although the mail is only written to the local log.
 - `/actuator/health` does **not** probe SMTP (`management.health.mail.enabled: false`): an SMTP outage
   never marks the API down.
 - Logs carry the email type, the user id and the exception class only: never the link, the token, the
@@ -53,6 +88,19 @@ a missing `SPRING_MAIL_HOST` or `MAIL_FROM`, or on a `FRONTEND_BASE_URL` that is
 to `CONTACT_RECIPIENT` (subject `[Contact] <subject>`, `Reply-To` = the sender, line breaks stripped from every
 header value). It answers `202 {"status":"accepted"}`, or `400 {field: message}` (email 254, subject 150, message
 5000 characters). With `MAIL_ENABLED=false` the message is still stored and the answer is still `202`.
+
+- **Delivery state** (`V27`): the row is created `PENDING` (`mail_status varchar(16)`, `mail_attempts`, `mail_sent_at`;
+  rows from before `V27` are `UNKNOWN`). `ContactEmailListener` runs on the dedicated `contactMailExecutor`, sends,
+  retries **transient** outcomes (`CONNECTION_FAILED`, `TLS_FAILED`, `FAILED`) up to `app.contact.mail.retry.*`
+  (3 attempts, 2 s then 10 s; the wait holds a pool thread, hence the bounds: at most 5 attempts, 60 s per wait),
+  never `AUTH_FAILED`, `REJECTED` or `DISABLED`, then saves in its own `REQUIRES_NEW` transaction `SENT` (+ `mail_sent_at`),
+  `FAILED` or `SKIPPED` (mail disabled, 0 attempts) and the attempts of this run. A failure of the listener or of that
+  save never reaches the `202`. If the contact queue is full the mail is dropped with a warning and the row stays
+  `PENDING`; so does a row whose delivery was cut by a restart. The honeypot stores and sends nothing.
+- **Back office**: `GET /api/v1/admin/messages` adds `mailStatus` (`UNKNOWN|PENDING|SENT|FAILED|SKIPPED`),
+  `mailAttempts` and `mailSentAt` to each item. `POST /api/v1/admin/messages/{id}/resend` (ADMIN) sets the message back to
+  `PENDING` (attempts 0, no sent time) and queues the same mail: `202 {"status":"accepted"}`, `404` unknown id,
+  `503` while mail is disabled, `401` anonymous, `403` non-admin. Poll the list to see the result.
 
 - **Honeypot**: a non-blank `website` answers the same `202` and stores and sends nothing.
 - **Per-IP limit**: 5 messages per hour per client address (honeypot hits count), in memory, so per API instance and
@@ -80,7 +128,7 @@ header value). It answers `202 {"status":"accepted"}`, or `400 {field: message}`
   would refuse the whole mail.
 - The limit and the honeypot are decided before the database transaction opens: a 429 or a honeypot hit takes no
   connection.
-- Logs carry the message id and the exception class only: never the sender address or the text.
+- Logs carry the message id, the outcome, the attempt count and the exception class only: never the sender address or the text.
 
 ## Password reset
 
