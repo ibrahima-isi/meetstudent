@@ -22,7 +22,7 @@ public class SmtpEmailSender implements EmailSender {
     }
 
     @Override
-    public void send(EmailMessage message) {
+    public SendOutcome send(EmailMessage message) {
         try {
             var mime = mailSender.createMimeMessage();
             var helper = new MimeMessageHelper(mime, MimeMessageHelper.MULTIPART_MODE_MIXED_RELATED, "UTF-8");
@@ -36,8 +36,13 @@ public class SmtpEmailSender implements EmailSender {
             helper.setText(message.text(), message.html());
             mailSender.send(mime);
             log.info("Email sent type={} userId={}", message.type(), message.userId());
+            return SendOutcome.SENT;
         } catch (Exception ex) {
-            log.warn("Email not sent type={} userId={} cause={}", message.type(), message.userId(), ex.getClass().getSimpleName());
+            var outcome = SendOutcomeClassifier.classify(ex);
+            // Type, user id, outcome and exception class only: the message can carry credentials or addresses.
+            log.warn("Email not sent type={} userId={} outcome={} cause={}", message.type(), message.userId(), outcome,
+                    ex.getClass().getSimpleName());
+            return outcome;
         }
     }
 

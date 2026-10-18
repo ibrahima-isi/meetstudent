@@ -4,7 +4,22 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import com.bowe.meetstudent.mail.DevLogEmailSender;
+import com.bowe.meetstudent.mail.DisabledEmailSender;
 import com.bowe.meetstudent.mail.EmailMessage;
+import com.bowe.meetstudent.mail.SendOutcome;
+import jakarta.mail.Address;
+import jakarta.mail.AuthenticationFailedException;
+import jakarta.mail.MessagingException;
+import jakarta.mail.SendFailedException;
+import jakarta.mail.internet.AddressException;
+import org.eclipse.angus.mail.smtp.SMTPSendFailedException;
+import org.springframework.mail.MailAuthenticationException;
+import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLHandshakeException;
+import java.net.ConnectException;
+import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
 import com.bowe.meetstudent.mail.EmailType;
 import com.bowe.meetstudent.mail.SmtpEmailSender;
 import jakarta.mail.BodyPart;
@@ -163,5 +178,96 @@ class SmtpEmailSenderTest {
             sender.send(new EmailMessage(EmailType.PASSWORD_RESET, 5, to, "s", "t", "<p>h</p>"));
         }
         Mockito.verify(javaMailSender, Mockito.never()).send(any(MimeMessage.class));
+    }
+
+    // ---- delivery outcome ----------------------------------------------------------------
+
+    private SendOutcome failWith(Exception failure) {
+        Mockito.doThrow(failure instanceof RuntimeException r ? r : new MailSendException("wrapped", failure))
+                .when(javaMailSender).send(any(MimeMessage.class));
+        return sender.send(message);
+    }
+
+    @Test
+    void aSuccessfulSendReportsSent() {
+        assertThat(sender.send(message)).isEqualTo(SendOutcome.SENT);
+    }
+
+    @Test
+    void authenticationFailuresAreAuthFailed() {
+        assertThat(failWith(new MailAuthenticationException("535 bad credentials"))).isEqualTo(SendOutcome.AUTH_FAILED);
+        assertThat(failWith(new MailSendException("x", new AuthenticationFailedException("535")))).isEqualTo(SendOutcome.AUTH_FAILED);
+    }
+
+    @Test
+    void connectionProblemsAreConnectionFailedWhateverTheWrapping() {
+        assertThat(failWith(new MailSendException("down", new MessagingException("Could not connect", new ConnectException("refused")))))
+                .isEqualTo(SendOutcome.CONNECTION_FAILED);
+        assertThat(failWith(new MailSendException("slow", new MessagingException("x", new SocketTimeoutException("Read timed out")))))
+                .isEqualTo(SendOutcome.CONNECTION_FAILED);
+        assertThat(failWith(new MailSendException("dns", new MessagingException("x", new UnknownHostException("smtp.nowhere")))))
+                .isEqualTo(SendOutcome.CONNECTION_FAILED);
+        assertThat(failWith(new MailSendException("dns", new MessagingException("x", new java.net.NoRouteToHostException()))))
+                .isEqualTo(SendOutcome.CONNECTION_FAILED);
+    }
+
+    @Test
+    void tlsProblemsAreTlsFailed() {
+        assertThat(failWith(new MailSendException("tls", new MessagingException("Could not convert socket to TLS", new SSLHandshakeException("PKIX path")))))
+                .isEqualTo(SendOutcome.TLS_FAILED);
+        assertThat(failWith(new MailSendException("tls", new SSLException("Unsupported or unrecognized SSL message"))))
+                .isEqualTo(SendOutcome.TLS_FAILED);
+        assertThat(failWith(new MailSendException("tls", new MessagingException("STARTTLS is required but host does not support STARTTLS"))))
+                .isEqualTo(SendOutcome.TLS_FAILED);
+    }
+
+    @Test
+    void recipientRefusalsAreRejected() throws Exception {
+        assertThat(failWith(new MailSendException("refused", new SendFailedException("Invalid Addresses", null, new Address[0], new Address[0],
+                new Address[]{new InternetAddress("nobody@example.com")})))).isEqualTo(SendOutcome.REJECTED);
+        assertThat(failWith(new MailSendException("refused", new SMTPSendFailedException("RCPT TO", 550, "550 no such user", null, null, null, null))))
+                .isEqualTo(SendOutcome.REJECTED);
+        assertThat(failWith(new MailSendException("refused", new AddressException("bad")))).isEqualTo(SendOutcome.REJECTED);
+    }
+
+    @Test
+    void aFailureSpringKeepsOnlyInItsFailedMessagesMapIsStillClassified() {
+        var failure = new MailSendException(java.util.Map.of("m", new MessagingException("x", new ConnectException("refused"))));
+        assertThat(failWith(failure)).isEqualTo(SendOutcome.CONNECTION_FAILED);
+    }
+
+    @Test
+    void aTemporarySmtpRefusalAndUnknownErrorsAreFailedNotRejected() {
+        assertThat(failWith(new MailSendException("busy", new SMTPSendFailedException("RCPT TO", 451, "451 try later", null, null, null, null))))
+                .isEqualTo(SendOutcome.FAILED);
+        assertThat(failWith(new IllegalStateException("surprise"))).isEqualTo(SendOutcome.FAILED);
+        assertThat(failWith(new MailSendException("odd"))).isEqualTo(SendOutcome.FAILED);
+    }
+
+    @Test
+    void anAddressRefusedBeforeSendingIsRejectedAndNothingIsSent() {
+        var bad = new EmailMessage(EmailType.PASSWORD_RESET, 5, "a@@example.com", "s", "t", "<p>h</p>");
+        assertThat(sender.send(bad)).isEqualTo(SendOutcome.REJECTED);
+        Mockito.verify(javaMailSender, Mockito.never()).send(any(MimeMessage.class));
+    }
+
+    @Test
+    void theOutcomeIsLoggedButNothingSensitiveIs() {
+        failWith(new MailAuthenticationException("535 password=hunter2 " + ADDRESS + " " + SECRET_TOKEN));
+        var all = logs.list.stream().map(ILoggingEvent::getFormattedMessage).reduce("", String::concat);
+        assertThat(all).contains("AUTH_FAILED").doesNotContain("hunter2").doesNotContain(ADDRESS).doesNotContain(SECRET_TOKEN);
+    }
+
+    @Test
+    void disabledAndDevLogSendersReportTheirOutcome() {
+        assertThat(new DisabledEmailSender().send(message)).isEqualTo(SendOutcome.DISABLED);
+        assertThat(new DevLogEmailSender().send(message)).isEqualTo(SendOutcome.SENT);
+        assertThat(SendOutcome.AUTH_FAILED.isTransient()).isFalse();
+        assertThat(SendOutcome.REJECTED.isTransient()).isFalse();
+        assertThat(SendOutcome.DISABLED.isTransient()).isFalse();
+        assertThat(SendOutcome.SENT.isTransient()).isFalse();
+        assertThat(SendOutcome.CONNECTION_FAILED.isTransient()).isTrue();
+        assertThat(SendOutcome.TLS_FAILED.isTransient()).isTrue();
+        assertThat(SendOutcome.FAILED.isTransient()).isTrue();
     }
 }

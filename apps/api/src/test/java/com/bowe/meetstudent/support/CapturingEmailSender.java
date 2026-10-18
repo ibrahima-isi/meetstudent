@@ -2,6 +2,7 @@ package com.bowe.meetstudent.support;
 
 import com.bowe.meetstudent.mail.EmailMessage;
 import com.bowe.meetstudent.mail.EmailSender;
+import com.bowe.meetstudent.mail.SendOutcome;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -15,9 +16,17 @@ public class CapturingEmailSender implements EmailSender {
 
     private final List<EmailMessage> messages = new CopyOnWriteArrayList<>();
 
+    private volatile SendOutcome outcome = SendOutcome.SENT;
+
     @Override
-    public void send(EmailMessage message) {
+    public SendOutcome send(EmailMessage message) {
         messages.add(message);
+        return outcome;
+    }
+
+    /** Makes every following send report this outcome (the message is still recorded). */
+    public void respondWith(SendOutcome outcome) {
+        this.outcome = outcome;
     }
 
     @Override
@@ -35,6 +44,7 @@ public class CapturingEmailSender implements EmailSender {
 
     public void clear() {
         messages.clear();
+        outcome = SendOutcome.SENT;
     }
 
     /** Pulls the token out of the link in the plain-text body. */

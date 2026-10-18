@@ -10,15 +10,16 @@ import lombok.extern.slf4j.Slf4j;
 public class DevLogEmailSender implements EmailSender {
 
     @Override
-    public void send(EmailMessage message) {
+    public SendOutcome send(EmailMessage message) {
         if (message.type() == EmailType.CONTACT_MESSAGE) {
             // A visitor's address and words are personal data, not a dev link: even local logs stay clean.
             log.info("DEV EMAIL {} (content not logged)", message.type());
-            return;
+            return SendOutcome.SENT;
         }
         // Line breaks (e.g. from a first name) must not be able to forge extra log lines.
         log.info("DEV EMAIL {} for user {} to {} | {} | {}", message.type(), message.userId(), message.to(),
                 message.subject(), oneLine(message.text()));
+        return SendOutcome.SENT;
     }
 
     private static String oneLine(String value) {

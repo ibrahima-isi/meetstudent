@@ -7,8 +7,9 @@ import lombok.extern.slf4j.Slf4j;
 public class DisabledEmailSender implements EmailSender {
 
     @Override
-    public void send(EmailMessage message) {
+    public SendOutcome send(EmailMessage message) {
         log.info("Email sending is disabled (MAIL_ENABLED=false); skipped {} for user {}", message.type(), message.userId());
+        return SendOutcome.DISABLED;
     }
 
     @Override
