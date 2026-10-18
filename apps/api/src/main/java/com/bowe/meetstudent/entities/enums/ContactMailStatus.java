@@ -9,6 +9,6 @@ public enum ContactMailStatus {
     SENT,
     /** Every attempt failed or the failure is permanent (bad credentials, refused address). */
     FAILED,
-    /** Mail is disabled (MAIL_ENABLED=false): nothing was attempted. */
+    /** Mail is disabled (MAIL_ENABLED=false) or only written to the dev log: nothing was delivered. */
     SKIPPED
 }

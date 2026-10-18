@@ -31,6 +31,7 @@ public class AdminMailController {
             description = "No body. Sends synchronously through the real mail sender, to the authenticated admin's own address only. "
                     + "The answer is the outcome only, never an address, host or credential. Limited to one test per admin every 10 s.")
     @ApiResponse(responseCode = "200", description = "Delivered to the SMTP server: {\"status\":\"SENT\"}")
+    @ApiResponse(responseCode = "200", description = "Dev-log sender only, nothing delivered: {\"status\":\"LOGGED\"}")
     @ApiResponse(responseCode = "502", description = "Not delivered: {\"status\":\"AUTH_FAILED|CONNECTION_FAILED|TLS_FAILED|REJECTED|FAILED\"}")
     @ApiResponse(responseCode = "503", description = "Mail is disabled (MAIL_ENABLED=false): {\"status\":\"DISABLED\"}")
     @ApiResponse(responseCode = "429", description = "Cooldown, see Retry-After (seconds)",
@@ -38,7 +39,7 @@ public class AdminMailController {
     public ResponseEntity<MailTestResponse> test(@AuthenticationPrincipal UserPrincipal principal) {
         var outcome = service.sendTestTo(principal.getId());
         var status = switch (outcome) {
-            case SENT -> HttpStatus.OK;
+            case SENT, LOGGED -> HttpStatus.OK;
             case DISABLED -> HttpStatus.SERVICE_UNAVAILABLE;
             default -> HttpStatus.BAD_GATEWAY;
         };

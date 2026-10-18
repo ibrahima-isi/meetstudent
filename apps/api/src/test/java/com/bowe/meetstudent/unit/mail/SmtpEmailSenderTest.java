@@ -296,7 +296,7 @@ class SmtpEmailSenderTest {
     @Test
     void disabledAndDevLogSendersReportTheirOutcome() {
         assertThat(new DisabledEmailSender().send(message)).isEqualTo(SendOutcome.DISABLED);
-        assertThat(new DevLogEmailSender().send(message)).isEqualTo(SendOutcome.SENT);
+        assertThat(new DevLogEmailSender().send(message)).isEqualTo(SendOutcome.LOGGED);
         assertThat(SendOutcome.AUTH_FAILED.isTransient()).isFalse();
         assertThat(SendOutcome.REJECTED.isTransient()).isFalse();
         assertThat(SendOutcome.DISABLED.isTransient()).isFalse();

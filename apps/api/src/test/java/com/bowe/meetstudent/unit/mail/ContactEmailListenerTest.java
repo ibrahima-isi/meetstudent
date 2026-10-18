@@ -174,6 +174,19 @@ class ContactEmailListenerTest {
     }
 
     @Test
+    void aMailThatWasOnlyLoggedIsSkippedNeverSent() {
+        var seen = new ArrayList<EmailMessage>();
+        with(scripted(seen, SendOutcome.LOGGED)).onContactMessageReceived(event("awa@example.com", "s", "m"));
+
+        assertThat(seen).hasSize(1);
+        var entry = recorder.only();
+        assertThat(entry.status()).isEqualTo(ContactMailStatus.SKIPPED);
+        assertThat(entry.attempts()).isZero();
+        assertThat(entry.sentAt()).isNull();
+        assertThat(slept).isEmpty();
+    }
+
+    @Test
     void transientFailuresAreRetriedWithBackoffUntilItWorks() {
         var seen = new ArrayList<EmailMessage>();
         with(scripted(seen, SendOutcome.CONNECTION_FAILED, SendOutcome.TLS_FAILED, SendOutcome.SENT))

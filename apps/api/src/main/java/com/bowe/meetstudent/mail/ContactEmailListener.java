@@ -68,7 +68,7 @@ public class ContactEmailListener {
             log.warn("Contact email not built messageId={} cause={}", event.messageId(), ex.getClass().getSimpleName());
             outcome = SendOutcome.FAILED;
         }
-        if (outcome == SendOutcome.DISABLED) {
+        if (outcome == SendOutcome.DISABLED || outcome == SendOutcome.LOGGED) {
             attempts = 0;
         }
         log.info("Contact email delivery messageId={} outcome={} attempts={}", event.messageId(), outcome, attempts);
@@ -100,7 +100,7 @@ public class ContactEmailListener {
     private void record(ContactMessageReceived event, SendOutcome outcome, int attempts) {
         var status = switch (outcome) {
             case SENT -> ContactMailStatus.SENT;
-            case DISABLED -> ContactMailStatus.SKIPPED;
+            case DISABLED, LOGGED -> ContactMailStatus.SKIPPED;
             default -> ContactMailStatus.FAILED;
         };
         try {

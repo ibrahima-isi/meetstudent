@@ -4,7 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * Local development only: writes the whole message, link included, to the log so the flows can be
- * exercised without an SMTP server. {@link MailConfig} refuses to start with it under the prod profile.
+ * exercised without an SMTP server. Nothing is delivered, so it answers {@link SendOutcome#LOGGED}, never SENT. {@link MailConfig} refuses to start with it under the prod profile.
  */
 @Slf4j
 public class DevLogEmailSender implements EmailSender {
@@ -14,12 +14,12 @@ public class DevLogEmailSender implements EmailSender {
         if (message.type() == EmailType.CONTACT_MESSAGE) {
             // A visitor's address and words are personal data, not a dev link: even local logs stay clean.
             log.info("DEV EMAIL {} (content not logged)", message.type());
-            return SendOutcome.SENT;
+            return SendOutcome.LOGGED;
         }
         // Line breaks (e.g. from a first name) must not be able to forge extra log lines.
         log.info("DEV EMAIL {} for user {} to {} | {} | {}", message.type(), message.userId(), message.to(),
                 message.subject(), oneLine(message.text()));
-        return SendOutcome.SENT;
+        return SendOutcome.LOGGED;
     }
 
     private static String oneLine(String value) {

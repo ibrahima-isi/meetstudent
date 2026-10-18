@@ -8,6 +8,11 @@ public enum SendOutcome {
     SENT,
     /** Mail is switched off (MAIL_ENABLED=false): nothing was attempted. */
     DISABLED,
+    /**
+     * Local development only ({@code app.mail.dev-log}): the message was written to the log, not delivered. Never
+     * report it as a delivery; it is neither a success nor a failure and is not retried.
+     */
+    LOGGED,
     AUTH_FAILED,
     CONNECTION_FAILED,
     TLS_FAILED,

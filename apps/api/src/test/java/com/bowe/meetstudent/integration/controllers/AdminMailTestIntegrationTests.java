@@ -125,6 +125,14 @@ class AdminMailTestIntegrationTests {
     }
 
     @Test
+    void aMailOnlyWrittenToTheLogAnswers200LoggedNotSent() throws Exception {
+        mailbox.respondWith(SendOutcome.LOGGED);
+        mockMvc.perform(post(URL).with(TestDataUtil.mockUser(adminId, "ROLE_ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(content().json("{\"status\":\"LOGGED\"}", true));
+    }
+
+    @Test
     void everyFailureOutcomeAnswers502WithItsName() throws Exception {
         for (var outcome : new SendOutcome[]{SendOutcome.AUTH_FAILED, SendOutcome.CONNECTION_FAILED, SendOutcome.TLS_FAILED,
                 SendOutcome.REJECTED, SendOutcome.FAILED}) {
