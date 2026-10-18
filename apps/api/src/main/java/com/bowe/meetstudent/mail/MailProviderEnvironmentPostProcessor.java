@@ -1,6 +1,7 @@
 package com.bowe.meetstudent.mail;
 
 import org.springframework.boot.SpringApplication;
+import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.env.EnvironmentPostProcessor;
 import org.springframework.core.Ordered;
 import org.springframework.core.env.ConfigurableEnvironment;
@@ -20,6 +21,8 @@ import java.util.LinkedHashMap;
  *   <li>An unknown provider or an invalid SES region applies nothing; {@link MailConfig} then refuses to start and
  *       names the variable and the allowed values.</li>
  * </ul>
+ * Limit: keys are read by their canonical dotted name, so a bracketed key in a yml file (e.g. {@code "[spring.mail.host]"})
+ * is not seen and the preset would still fill the default.
  */
 public class MailProviderEnvironmentPostProcessor implements EnvironmentPostProcessor, Ordered {
 
@@ -27,7 +30,7 @@ public class MailProviderEnvironmentPostProcessor implements EnvironmentPostProc
 
     @Override
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
-        if (!Boolean.parseBoolean(blankToNull(environment.getProperty("app.mail.enabled")))) {
+        if (!isEnabled(environment)) {
             return;
         }
         var provider = MailProvider.parse(environment.getProperty("app.mail.provider"));
@@ -50,6 +53,16 @@ public class MailProviderEnvironmentPostProcessor implements EnvironmentPostProc
         if (!fill.isEmpty()) {
             // First, but it only holds keys that were absent or blank: it cannot hide an explicit value.
             environment.getPropertySources().addFirst(new MapPropertySource(PROPERTY_SOURCE, fill));
+        }
+    }
+
+    /** Same conversion as the {@code MailProperties} binding (true/yes/on/1), so MAIL_ENABLED=yes means the same everywhere. */
+    private static boolean isEnabled(ConfigurableEnvironment environment) {
+        try {
+            return Binder.get(environment).bind("app.mail.enabled", Boolean.class).orElse(false);
+        } catch (RuntimeException ex) {
+            // An unparsable value: MailProperties fails the binding with its own message; nothing to preset here.
+            return false;
         }
     }
 

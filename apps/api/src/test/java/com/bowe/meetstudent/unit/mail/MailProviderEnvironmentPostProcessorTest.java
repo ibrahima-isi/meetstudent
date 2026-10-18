@@ -36,6 +36,19 @@ class MailProviderEnvironmentPostProcessorTest {
         assertThat(env.getProperty("spring.mail.properties.mail.smtp.starttls.required")).isEqualTo("true");
     }
 
+    /** The binder behind MailConfig accepts these as true, so the preset logic must see the same thing. */
+    @Test
+    void enabledIsReadWithTheSameConversionAsTheBinder() {
+        for (var truthy : new String[]{"yes", "on", "1", "TRUE", " true "}) {
+            var env = environment(Map.of("app.mail.enabled", truthy, "app.mail.provider", "brevo"));
+            assertThat(env.getProperty("spring.mail.host")).as("MAIL_ENABLED=%s", truthy).isEqualTo("smtp-relay.brevo.com");
+        }
+        for (var falsy : new String[]{"no", "off", "0", "false", "", "maybe"}) {
+            var env = environment(Map.of("app.mail.enabled", falsy, "app.mail.provider", "brevo"));
+            assertThat(env.getProperty("spring.mail.host")).as("MAIL_ENABLED=%s", falsy).isNull();
+        }
+    }
+
     @Test
     void gmailFillsEveryConnectionSetting() {
         var env = environment(Map.of("app.mail.enabled", "true", "app.mail.provider", "gmail"));
