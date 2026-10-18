@@ -13,6 +13,7 @@ import jakarta.mail.AuthenticationFailedException;
 import jakarta.mail.MessagingException;
 import jakarta.mail.SendFailedException;
 import jakarta.mail.internet.AddressException;
+import org.eclipse.angus.mail.smtp.SMTPAddressFailedException;
 import org.eclipse.angus.mail.smtp.SMTPSendFailedException;
 import org.springframework.mail.MailAuthenticationException;
 import javax.net.ssl.SSLException;
@@ -238,10 +239,44 @@ class SmtpEmailSenderTest {
 
     @Test
     void aTemporarySmtpRefusalAndUnknownErrorsAreFailedNotRejected() {
-        assertThat(failWith(new MailSendException("busy", new SMTPSendFailedException("RCPT TO", 451, "451 try later", null, null, null, null))))
-                .isEqualTo(SendOutcome.FAILED);
         assertThat(failWith(new IllegalStateException("surprise"))).isEqualTo(SendOutcome.FAILED);
         assertThat(failWith(new MailSendException("odd"))).isEqualTo(SendOutcome.FAILED);
+    }
+
+    /** What Angus Mail really throws for "451 try later" on RCPT TO (probed against a fake SMTP server): validUnsent=1, invalid=0. */
+    @Test
+    void aTemporaryRefusalOnRcptIsFailedSoItIsRetried() throws Exception {
+        var to = new InternetAddress("d@e.f");
+        var cause = new SMTPAddressFailedException(to, "RCPT TO:<d@e.f>", 451, "451 try later");
+        var real = new SendFailedException("Invalid Addresses", cause, new Address[0], new Address[]{to}, new Address[0]);
+        assertThat(failWith(new MailSendException("busy", real))).isEqualTo(SendOutcome.FAILED);
+        assertThat(SendOutcome.FAILED.isTransient()).isTrue();
+    }
+
+    /** "421 rate limited" on DATA: SMTPSendFailedException code=421 with validUnsent=1. */
+    @Test
+    void aTemporaryRefusalOnDataIsFailedSoItIsRetried() throws Exception {
+        var to = new InternetAddress("d@e.f");
+        var real = new SMTPSendFailedException("DATA", 421, "421 rate limited", null, new Address[0], new Address[]{to}, new Address[0]);
+        assertThat(failWith(new MailSendException("busy", real))).isEqualTo(SendOutcome.FAILED);
+    }
+
+    @Test
+    void aPermanentRefusalOnRcptIsRejected() throws Exception {
+        var to = new InternetAddress("d@e.f");
+        var cause = new SMTPAddressFailedException(to, "RCPT TO:<d@e.f>", 550, "550 no such user");
+        var real = new SendFailedException("Invalid Addresses", cause, new Address[0], new Address[0], new Address[]{to});
+        assertThat(failWith(new MailSendException("refused", real))).isEqualTo(SendOutcome.REJECTED);
+        // A 5xx wins even when the exception only lists the recipient as valid-but-unsent.
+        var odd = new SMTPSendFailedException("DATA", 554, "554 rejected", null, new Address[0], new Address[]{to}, new Address[0]);
+        assertThat(failWith(new MailSendException("refused", odd))).isEqualTo(SendOutcome.REJECTED);
+    }
+
+    @Test
+    void aSendFailureWithoutAnyCodeIsNotPermanent() throws Exception {
+        var to = new InternetAddress("d@e.f");
+        var real = new SendFailedException("odd", null, new Address[0], new Address[]{to}, new Address[0]);
+        assertThat(failWith(new MailSendException("x", real))).isEqualTo(SendOutcome.FAILED);
     }
 
     @Test

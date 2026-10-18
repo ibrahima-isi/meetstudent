@@ -4,6 +4,7 @@ import jakarta.mail.AuthenticationFailedException;
 import jakarta.mail.MessagingException;
 import jakarta.mail.SendFailedException;
 import jakarta.mail.internet.AddressException;
+import org.eclipse.angus.mail.smtp.SMTPAddressFailedException;
 import org.eclipse.angus.mail.smtp.SMTPSendFailedException;
 import org.springframework.mail.MailAuthenticationException;
 import org.springframework.mail.MailSendException;
@@ -40,7 +41,18 @@ final class SendOutcomeClassifier {
         if (chain.stream().anyMatch(SendOutcomeClassifier::isTls)) {
             return SendOutcome.TLS_FAILED;
         }
-        if (chain.stream().anyMatch(SendOutcomeClassifier::isRefusal)) {
+        var codes = chain.stream().mapToInt(SendOutcomeClassifier::smtpCode).filter(c -> c > 0).toArray();
+        var permanentCode = java.util.Arrays.stream(codes).anyMatch(c -> c >= 500 && c < 600);
+        var temporaryCode = java.util.Arrays.stream(codes).anyMatch(c -> c >= 400 && c < 500);
+        if (chain.stream().anyMatch(t -> t instanceof AddressException) || permanentCode) {
+            return SendOutcome.REJECTED;
+        }
+        if (temporaryCode) {
+            // 4xx (greylisting, rate limit, mailbox busy): the same mail may well pass a little later. Angus lists
+            // such a recipient as "valid unsent", so the address arrays say nothing about permanence: the code does.
+            return SendOutcome.FAILED;
+        }
+        if (chain.stream().anyMatch(SendOutcomeClassifier::hasInvalidAddresses)) {
             return SendOutcome.REJECTED;
         }
         if (chain.stream().anyMatch(SendOutcomeClassifier::isConnection)) {
@@ -60,21 +72,23 @@ final class SendOutcomeClassifier {
         return false;
     }
 
-    private static boolean isRefusal(Throwable t) {
-        if (t instanceof AddressException) {
-            return true;
+    /** SMTP reply code carried by Angus' exceptions, 0 when the node has none. */
+    private static int smtpCode(Throwable t) {
+        if (t instanceof SMTPSendFailedException e) {
+            return e.getReturnCode();
         }
-        if (t instanceof SMTPSendFailedException smtp && smtp.getReturnCode() >= 500 && smtp.getReturnCode() < 600) {
-            return true;
+        if (t instanceof SMTPAddressFailedException e) {
+            return e.getReturnCode();
         }
-        if (t instanceof SendFailedException sent) {
-            return notEmpty(sent.getInvalidAddresses()) || notEmpty(sent.getValidUnsentAddresses());
-        }
-        return false;
+        return 0;
     }
 
-    private static boolean notEmpty(Object[] values) {
-        return values != null && values.length > 0;
+    private static boolean hasInvalidAddresses(Throwable t) {
+        if (t instanceof SendFailedException sent) {
+            var invalid = sent.getInvalidAddresses();
+            return invalid != null && invalid.length > 0;
+        }
+        return false;
     }
 
     private static boolean isConnection(Throwable t) {
