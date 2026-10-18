@@ -57,10 +57,12 @@ public class ContactProperties {
     @Getter
     @Setter
     public static class Retry {
+        private static final Duration DEFAULT_INITIAL_DELAY = Duration.ofSeconds(2);
+
         /** Total attempts including the first one; clamped to 1..{@link Mail#MAX_ATTEMPTS_LIMIT}. */
         private int maxAttempts = 3;
         /** Wait before the second attempt. */
-        private Duration initialDelay = Duration.ofSeconds(2);
+        private Duration initialDelay = DEFAULT_INITIAL_DELAY;
         /** Each further wait is the previous one times this (2 s, then 10 s with the default 5). */
         private int backoffMultiplier = 5;
 
@@ -70,7 +72,9 @@ public class ContactProperties {
 
         /** Wait after the {@code attempt}-th failed attempt (1-based), never negative and capped at {@link Mail#MAX_DELAY}. */
         public Duration delayAfter(int attempt) {
-            var base = initialDelay == null || initialDelay.isNegative() ? Duration.ZERO : initialDelay;
+            // Unset (blank variable) means the default, never "retry at once"; a negative value is treated as zero.
+            var configured = initialDelay == null ? DEFAULT_INITIAL_DELAY : initialDelay;
+            var base = configured.isNegative() ? Duration.ZERO : configured;
             var multiplier = Math.max(1, backoffMultiplier);
             var delay = base;
             for (int i = 1; i < attempt; i++) {

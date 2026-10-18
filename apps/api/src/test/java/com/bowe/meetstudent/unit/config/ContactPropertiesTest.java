@@ -46,4 +46,11 @@ class ContactPropertiesTest {
         retry.setBackoffMultiplier(0);
         assertThat(retry.delayAfter(3)).isEqualTo(Duration.ofSeconds(2));
     }
+
+    @Test
+    void anUnsetDelayFallsBackToTheDefaultNeverToABusyRetryLoop() {
+        retry.setInitialDelay(null);
+        assertThat(retry.delayAfter(1)).isEqualTo(Duration.ofSeconds(2));
+        assertThat(retry.delayAfter(2)).isEqualTo(Duration.ofSeconds(10));
+    }
 }
