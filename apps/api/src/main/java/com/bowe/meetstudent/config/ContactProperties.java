@@ -74,14 +74,20 @@ public class ContactProperties {
         private static final Duration DEFAULT_INITIAL_DELAY = Duration.ofSeconds(2);
 
         /** Total attempts including the first one; clamped to 1..{@link Mail#MAX_ATTEMPTS_LIMIT}. */
-        private int maxAttempts = 3;
+        private static final int DEFAULT_MAX_ATTEMPTS = 3;
+        private static final int DEFAULT_BACKOFF_MULTIPLIER = 5;
+
+        // Boxed on purpose: a present but blank environment variable (compose passes "VAR:" through) binds as null,
+        // and a primitive would fail the whole binding at startup instead of keeping the default.
+        private Integer maxAttempts = DEFAULT_MAX_ATTEMPTS;
         /** Wait before the second attempt. */
         private Duration initialDelay = DEFAULT_INITIAL_DELAY;
         /** Each further wait is the previous one times this (2 s, then 10 s with the default 5). */
-        private int backoffMultiplier = 5;
+        private Integer backoffMultiplier = DEFAULT_BACKOFF_MULTIPLIER;
 
         public int effectiveMaxAttempts() {
-            return Math.max(1, Math.min(maxAttempts, Mail.MAX_ATTEMPTS_LIMIT));
+            var configured = maxAttempts == null ? DEFAULT_MAX_ATTEMPTS : maxAttempts;
+            return Math.max(1, Math.min(configured, Mail.MAX_ATTEMPTS_LIMIT));
         }
 
         /** Wait after the {@code attempt}-th failed attempt (1-based), never negative and capped at {@link Mail#MAX_DELAY}. */
@@ -89,7 +95,7 @@ public class ContactProperties {
             // Unset (blank variable) means the default, never "retry at once"; a negative value is treated as zero.
             var configured = initialDelay == null ? DEFAULT_INITIAL_DELAY : initialDelay;
             var base = configured.isNegative() ? Duration.ZERO : configured;
-            var multiplier = Math.max(1, backoffMultiplier);
+            var multiplier = Math.max(1, backoffMultiplier == null ? DEFAULT_BACKOFF_MULTIPLIER : backoffMultiplier);
             var delay = base;
             for (int i = 1; i < attempt; i++) {
                 delay = delay.multipliedBy(multiplier);
