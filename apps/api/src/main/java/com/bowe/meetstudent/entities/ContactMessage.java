@@ -1,7 +1,10 @@
 package com.bowe.meetstudent.entities;
 
 import jakarta.persistence.Column;
+import com.bowe.meetstudent.entities.enums.ContactMailStatus;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -47,4 +50,18 @@ public class ContactMessage {
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
+
+    /** State of the team mail; PENDING from the insert until the background delivery has finished. */
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "mail_status", nullable = false, length = 16)
+    private ContactMailStatus mailStatus = ContactMailStatus.PENDING;
+
+    /** Send attempts of the latest delivery run (0 until one has run, or when mail is disabled). */
+    @Builder.Default
+    @Column(name = "mail_attempts", nullable = false)
+    private int mailAttempts = 0;
+
+    @Column(name = "mail_sent_at")
+    private Instant mailSentAt;
 }

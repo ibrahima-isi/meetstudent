@@ -116,4 +116,33 @@ public class MailConfig {
         executor.setAwaitTerminationSeconds(10);
         return executor;
     }
+
+    /**
+     * Contact-form mails get their own small pool: a delivery can hold its thread for the whole retry backoff,
+     * and the form is public, so a flood must only ever fill this queue and never delay a verification or a
+     * reset mail (those use {@code mailExecutor}). A full queue drops the mail with a warning; the message row
+     * then stays PENDING and an admin can resend it.
+     */
+    @Bean(name = "contactMailExecutor")
+    public TaskExecutor contactMailExecutor(MailProperties properties) {
+        if (!properties.getMail().isAsync()) {
+            return new SyncTaskExecutor();
+        }
+        var executor = new ThreadPoolTaskExecutor();
+        executor.setThreadNamePrefix("contact-mail-");
+        // Fixed size: threads beyond the core are only created once the queue is full, so core == max.
+        executor.setCorePoolSize(2);
+        executor.setMaxPoolSize(2);
+        executor.setQueueCapacity(50);
+        executor.setRejectedExecutionHandler((task, pool) -> {
+            if (pool.isShutdown()) {
+                log.warn("Contact mail executor is shutting down: a contact mail was dropped (its message stays PENDING)");
+            } else {
+                log.warn("Contact mail queue is full: a contact mail was dropped (its message stays PENDING, resend it from the back office)");
+            }
+        });
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(10);
+        return executor;
+    }
 }

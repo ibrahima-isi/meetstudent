@@ -43,5 +43,8 @@ class ContactMailDisabledIntegrationTests {
                 .andExpect(jsonPath("$.status").value("accepted"));
 
         assertThat(repository.count()).isEqualTo(1);
+        var row = repository.findAll().get(0);
+        assertThat(row.getMailStatus()).isEqualTo(com.bowe.meetstudent.entities.enums.ContactMailStatus.SKIPPED);
+        assertThat(row.getMailAttempts()).isZero();
     }
 }

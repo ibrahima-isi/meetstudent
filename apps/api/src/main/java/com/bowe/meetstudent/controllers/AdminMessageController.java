@@ -32,7 +32,8 @@ public class AdminMessageController {
     @ApiResponse(responseCode = "200", description = "Page of messages")
     public Page<AdminMessageDTO> list(@ParameterObject Pageable pageable) {
         return service.list(pageable).map(m -> new AdminMessageDTO(m.getId(), m.getSenderEmail(), m.getSubject(),
-                m.getBody(), m.getLanguage(), m.getCreatedAt()));
+                m.getBody(), m.getLanguage(), m.getCreatedAt(), m.getMailStatus().name(), m.getMailAttempts(),
+                m.getMailSentAt()));
     }
 
     @DeleteMapping("/{id}")

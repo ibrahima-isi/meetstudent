@@ -119,4 +119,24 @@ class AdminMessagesIntegrationTests {
                 .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.error").value("Not Found"));
     }
+
+    @Test
+    void listExposesTheMailDeliveryState() throws Exception {
+        var sentAt = Instant.parse("2026-03-01T10:00:05Z");
+        var saved = save("delivered", Instant.parse("2026-03-01T10:00:00Z"));
+        saved.setMailStatus(com.bowe.meetstudent.entities.enums.ContactMailStatus.SENT);
+        saved.setMailAttempts(2);
+        saved.setMailSentAt(sentAt);
+        repository.save(saved);
+        save("fresh", Instant.parse("2026-02-01T10:00:00Z"));
+
+        mockMvc.perform(get(URL).with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].mailStatus").value("SENT"))
+                .andExpect(jsonPath("$.content[0].mailAttempts").value(2))
+                .andExpect(jsonPath("$.content[0].mailSentAt").value("2026-03-01T10:00:05Z"))
+                .andExpect(jsonPath("$.content[1].mailStatus").value("PENDING"))
+                .andExpect(jsonPath("$.content[1].mailAttempts").value(0))
+                .andExpect(jsonPath("$.content[1].mailSentAt").doesNotExist());
+    }
 }
