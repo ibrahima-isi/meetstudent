@@ -13,3 +13,4 @@
 **/output.xml
 **/report.html
 **/target/
+.DS_Store
