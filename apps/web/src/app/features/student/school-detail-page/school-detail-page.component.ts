@@ -10,6 +10,7 @@ import { ROLE_EXPERT, ROLE_STUDENT } from '@models/roles';
 import { School, Program, Tag, Course } from '@models/entities';
 import { ProgramService } from '@services/program.service';
 import { SchoolService } from '@services/school.service';
+import { UserService } from '@services/user.service';
 import { TokenService } from '@services/token.service';
 import { LocaleService } from '@services/locale.service';
 import { WishlistService } from '@services/wishlist.service';
@@ -33,6 +34,7 @@ export class SchoolDetailPageComponent {
   private programService = inject(ProgramService);
   private readonly schoolService = inject(SchoolService);
   private readonly tokenService = inject(TokenService);
+  private readonly userService = inject(UserService);
   private readonly router = inject(Router);
   private readonly locale = inject(LocaleService);
   private readonly pageTitle = inject(PageTitleService);
@@ -54,8 +56,17 @@ export class SchoolDetailPageComponent {
   readonly canWishlist = this.wishlist.available;
   /** Mirrors the API: students and experts rate schools. */
   readonly canRateSchool = computed(() => this.roleName() === ROLE_STUDENT || this.roleName() === ROLE_EXPERT);
-  /** Mirrors the API: only experts rate programmes and courses. */
-  readonly canRateProgramAndCourse = computed(() => this.roleName() === ROLE_EXPERT);
+  /**
+   * An expert whose account is pending or rejected is told why instead of getting controls the API would refuse.
+   * An absent status (a session stored before approval existed) is not blocked: the API stays the judge.
+   */
+  readonly expertBlockedStatus = computed(() => {
+    const status = this.tokenService.user()?.expertStatus;
+    return this.roleName() === ROLE_EXPERT && (status === 'PENDING' || status === 'REJECTED') ? status : null;
+  });
+  /** Mirrors the API: only approved experts rate programmes and courses. */
+  readonly canRateProgramAndCourse = computed(() => this.roleName() === ROLE_EXPERT && this.expertBlockedStatus() === null);
+  protected readonly profileLink = computed(() => ['/', this.locale.active(), 'profile']);
 
   /** Applying goes through the contact page, in the language being read. */
   protected readonly contactLink = computed(() => ['/', this.locale.active(), 'contact']);
@@ -80,6 +91,10 @@ export class SchoolDetailPageComponent {
   showCoursesModal = signal(false);
 
   constructor() {
+    // The stored session can predate the admin's decision: read the account again for an expert.
+    if (this.roleName() === ROLE_EXPERT) {
+      this.userService.refreshSessionUser().subscribe();
+    }
     // The wishlist lives on the server: fetch it so the heart reflects it after a reload.
     if (this.canWishlist()) {
       this.wishlist.load();

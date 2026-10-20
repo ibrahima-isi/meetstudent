@@ -1,4 +1,11 @@
 <div class="min-h-screen bg-muted/50" *transloco="let t">
+  <!-- Why an expert whose account is not approved yet (or was rejected) cannot rate programmes and courses. -->
+  <ng-template #expertBlockedNotice let-status let-testid="testid">
+    <p role="note" [attr.data-testid]="testid" class="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+      {{ t(status === 'PENDING' ? 'schoolDetail.expertBlocked.pending' : 'schoolDetail.expertBlocked.rejected') }}
+      <a [routerLink]="profileLink()" class="font-medium underline">{{ t('schoolDetail.expertBlocked.link') }}</a>
+    </p>
+  </ng-template>
   @if (showLoginPrompt()) {
     <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
       <div class="bg-card rounded-xl shadow-xl max-w-md w-full p-6">
@@ -203,6 +210,9 @@
                       ></app-star-rating>
                     </div>
                   }
+                  @else if (expertBlockedStatus(); as blocked) {
+                    <ng-container *ngTemplateOutlet="expertBlockedNotice; context: { $implicit: blocked, testid: 'expert-rating-blocked' }" />
+                  }
                   
                   @if (hasCapacity(programme)) {
                     <div class="flex items-center gap-2 text-sm font-medium mt-4">
@@ -348,6 +358,9 @@
                         [showCommentInput]="true"
                       ></app-star-rating>
                     </div>
+                  }
+                  @else if (expertBlockedStatus(); as blocked) {
+                    <ng-container *ngTemplateOutlet="expertBlockedNotice; context: { $implicit: blocked, testid: 'course-expert-rating-blocked' }" />
                   }
                 </div>
               }

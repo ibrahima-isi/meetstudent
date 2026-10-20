@@ -13,6 +13,7 @@ import com.bowe.meetstudent.repositories.UserRepository;
 import com.bowe.meetstudent.repositories.SchoolRepository;
 import com.bowe.meetstudent.repositories.ProgramRepository;
 import com.bowe.meetstudent.entities.Role;
+import com.bowe.meetstudent.entities.enums.ExpertStatus;
 import com.bowe.meetstudent.entities.enums.UserTokenPurpose;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -22,6 +23,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.ArrayList;
@@ -34,6 +36,7 @@ import java.util.ArrayList;
 public class UserService {
 
     private static final String DEFAULT_REGISTRATION_ROLE = "ROLE_STUDENT";
+    private static final String EXPERT_ROLE = "ROLE_EXPERT";
 
     private final UserRepository userRepository;
     private final SchoolRepository schoolRepository;
@@ -57,18 +60,40 @@ public class UserService {
 
     public UserEntity registerPublic(UserEntity userEntity, String requestedRole, PasswordEncoder passwordEncoder) {
         String roleName = requestedRole == null ? DEFAULT_REGISTRATION_ROLE : requestedRole;
-        if (!DEFAULT_REGISTRATION_ROLE.equals(roleName) && !"ROLE_EXPERT".equals(roleName)) {
+        if (!DEFAULT_REGISTRATION_ROLE.equals(roleName) && !EXPERT_ROLE.equals(roleName)) {
             throw new FieldValidationException("role", "Choisissez un rôle étudiant ou enseignant");
         }
         String qualification = checkedQualification(userEntity.getQualification());
-        if ("ROLE_EXPERT".equals(roleName) && (qualification == null || qualification.isBlank())) {
+        if (EXPERT_ROLE.equals(roleName) && (qualification == null || qualification.isBlank())) {
             throw new FieldValidationException("qualification", "Indiquez votre spécialité");
         }
         userEntity.setQualification(qualification);
         Role role = roleRepository.findByName(roleName)
                 .orElseThrow(() -> new ResourceNotFoundException("Registration role not found"));
         userEntity.setRole(role);
+        // A teacher starts pending: the Expert rights come only once an admin approves the account.
+        userEntity.setExpertStatus(EXPERT_ROLE.equals(roleName)
+                ? ExpertStatus.PENDING : null);
         return saveUser(userEntity, passwordEncoder);
+    }
+
+    /**
+     * An admin who makes someone an Expert approves them at the same time; any other role carries no status.
+     * Keeping the same role leaves an existing decision untouched.
+     */
+    private void applyAdminRole(UserEntity user, Role newRole) {
+        boolean wasExpert = user.getRole() != null && EXPERT_ROLE.equals(user.getRole().getName());
+        boolean isExpert = EXPERT_ROLE.equals(newRole.getName());
+        user.setRole(newRole);
+        if (isExpert && !wasExpert) {
+            user.setExpertStatus(ExpertStatus.APPROVED);
+            user.setExpertStatusReason(null);
+            user.setExpertDecisionDate(LocalDateTime.now());
+        } else if (!isExpert) {
+            user.setExpertStatus(null);
+            user.setExpertStatusReason(null);
+            user.setExpertDecisionDate(null);
+        }
     }
 
     private String checkedQualification(String value) {
@@ -172,7 +197,7 @@ public class UserService {
             if (updates.getLastname() != null) existing.setLastname(updates.getLastname());
             if (updates.getBirthday() != null) existing.setBirthday(updates.getBirthday());
             if (updates.getQualification() != null) existing.setQualification(checkedQualification(updates.getQualification()));
-            if (allowRoleUpdate && updates.getRole() != null) existing.setRole(updates.getRole());
+            if (allowRoleUpdate && updates.getRole() != null) applyAdminRole(existing, updates.getRole());
 
             if (updates.getPassword() != null && !updates.getPassword().isEmpty()) {
                 existing.setPassword(encoder.encode(updates.getPassword()));

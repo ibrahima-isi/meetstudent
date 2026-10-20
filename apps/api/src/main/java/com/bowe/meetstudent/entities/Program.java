@@ -6,6 +6,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.proxy.HibernateProxy;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
 
@@ -20,6 +21,18 @@ import java.util.Objects;
 public class Program extends BaseEntity{
 
     private Integer duration;
+
+    @Column(length = 1000)
+    private String description;
+
+    @Column(name = "available_seats")
+    private Integer availableSeats;
+
+    @Column(name = "annual_fee", precision = 10, scale = 2)
+    private BigDecimal annualFee;
+
+    @Column(length = 20)
+    private String level;
 
     @Column(name = "photo_media_id")
     private Integer photoMediaId;

@@ -25,6 +25,10 @@ describe('ProfilePageComponent translations', () => {
   let setUser: jasmine.Spy;
   let clear: jasmine.Spy;
 
+  function q(selector: string): HTMLElement | null {
+    return (fixture.nativeElement as HTMLElement).querySelector(selector);
+  }
+
   function text(): string {
     return (fixture.nativeElement as HTMLElement).textContent ?? '';
   }
@@ -115,6 +119,46 @@ describe('ProfilePageComponent translations', () => {
     expect(fixture.nativeElement.querySelector('app-user-documents')).not.toBeNull();
     expect(text()).toContain('BAC type');
     expect(text()).not.toContain('Specialty');
+  });
+
+  it('shows a pending expert that the account awaits validation', async () => {
+    user.set({ firstname: 'Awa', lastname: 'D', email: '', role: { name: 'ROLE_EXPERT' }, expertStatus: 'PENDING' });
+    await render('fr');
+
+    expect(q('[data-testid="expert-status"]')?.textContent).toContain('En attente de validation');
+  });
+
+  it('shows a rejected expert the decision and the reason', async () => {
+    user.set({ firstname: 'Awa', lastname: 'D', email: '', role: { name: 'ROLE_EXPERT' }, expertStatus: 'REJECTED', expertStatusReason: 'Diplôme illisible' });
+    await render('en');
+
+    expect(q('[data-testid="expert-status"]')?.textContent).toContain('rejected');
+    expect(q('[data-testid="expert-status-reason"]')?.textContent).toContain('Diplôme illisible');
+  });
+
+  it('shows an approved expert the confirmation', async () => {
+    user.set({ firstname: 'Awa', lastname: 'D', email: '', role: { name: 'ROLE_EXPERT' }, expertStatus: 'APPROVED' });
+    await render('en');
+
+    expect(q('[data-testid="expert-status"]')?.textContent).toContain('approved');
+    expect(q('[data-testid="expert-status-reason"]')).toBeNull();
+  });
+
+  it('shows no approval status to a student', async () => {
+    await render('fr');
+
+    expect(q('[data-testid="expert-status"]')).toBeNull();
+  });
+
+  it('refreshes the status of an expert from the API so a decision shows without signing in again', async () => {
+    user.set({ id: 7, firstname: 'Awa', lastname: 'D', email: '', role: { name: 'ROLE_EXPERT' }, expertStatus: 'PENDING' });
+    await render('en');
+    const req = TestBed.inject(HttpTestingController).expectOne(`${environment.apiUrl}/users/id/7`);
+    req.flush({ id: 7, firstname: 'Awa', lastname: 'D', email: '', role: { name: 'ROLE_EXPERT' }, expertStatus: 'APPROVED' });
+    fixture.detectChanges();
+
+    expect(q('[data-testid="expert-status"]')?.textContent).toContain('approved');
+    expect(setUser).toHaveBeenCalledWith(jasmine.objectContaining({ expertStatus: 'APPROVED' }));
   });
 
   it('shows the specialty to an expert, with no documents panel', async () => {

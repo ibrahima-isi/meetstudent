@@ -212,6 +212,22 @@
         </div>
       </section>
 
+      @if (isExpert() && profile().expertStatus; as status) {
+        <section data-testid="expert-status" class="rounded-2xl border border-border bg-card p-5 sm:p-6">
+          <h2 class="text-xl font-semibold tracking-tight text-foreground">{{ t('profile.expertStatus.title') }}</h2>
+          <p class="mt-3 flex items-center gap-2 font-medium text-foreground">
+            <lucide-icon [img]="status === 'APPROVED' ? BadgeCheck : status === 'REJECTED' ? CircleX : Hourglass"
+              [class]="'h-5 w-5 shrink-0 ' + (status === 'APPROVED' ? 'text-green-700 dark:text-green-400' : status === 'REJECTED' ? 'text-destructive' : 'text-amber-700 dark:text-amber-400')"
+              aria-hidden="true"></lucide-icon>
+            <span>{{ t(status === 'APPROVED' ? 'profile.expertStatus.approved' : status === 'REJECTED' ? 'profile.expertStatus.rejected' : 'profile.expertStatus.pending') }}</span>
+          </p>
+          <p class="mt-2 text-sm text-muted-foreground">{{ t(status === 'APPROVED' ? 'profile.expertStatus.approvedHelp' : status === 'REJECTED' ? 'profile.expertStatus.rejectedHelp' : 'profile.expertStatus.pendingHelp') }}</p>
+          @if (status === 'REJECTED' && profile().expertStatusReason; as reason) {
+            <p data-testid="expert-status-reason" class="mt-2 text-sm text-foreground">{{ t('profile.expertStatus.reason', { reason }) }}</p>
+          }
+        </section>
+      }
+
       <section data-testid="profile-email-card" class="rounded-2xl border border-border bg-card p-5 sm:p-6">
         <app-profile-email-section />
       </section>

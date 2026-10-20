@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input, ou
 import { HttpErrorResponse } from '@angular/common/http';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { Observable, catchError, map, of, switchMap, tap, throwError } from 'rxjs';
-import { Program, ProgramInput } from '@models/program';
+import { PROGRAM_LEVELS, Program, ProgramInput, ProgramLevel } from '@models/program';
 import { School } from '@models/school';
 import { MediaService } from '@services/media.service';
 import { ProgramService } from '@services/program.service';
@@ -16,12 +16,36 @@ import { ProgramAccreditations } from './program-accreditations';
 const optionalYears = (control: AbstractControl<string>): ValidationErrors | null =>
   /^([1-9]\d*)?$/.test(control.value.trim()) ? null : { years: true };
 
+/** Empty, or a whole number of 0 or more (6 digits max, like the API bound). */
+const optionalCount = (control: AbstractControl<string>): ValidationErrors | null =>
+  /^(\d{1,6})?$/.test(control.value.trim()) ? null : { count: true };
+
+/** Empty, or an amount of 0 or more with at most 2 decimals (the API stores cents). */
+const optionalAmount = (control: AbstractControl<string>): ValidationErrors | null =>
+  /^(\d{1,8}([.,]\d{1,2})?)?$/.test(control.value.trim()) ? null : { amount: true };
+
+const LEVEL_LABELS: Record<ProgramLevel, string> = {
+  BTS_DUT: 'BTS/DUT',
+  LICENCE: 'Licence',
+  MASTER: 'Master',
+  DOCTORAT: 'Doctorat',
+  AUTRE: 'Autre',
+};
+
 /** An upload that failed, as opposed to the program save itself. */
 class UploadFailed {
   constructor(readonly cause: unknown) {}
 }
 
-type FieldName = 'name' | 'code' | 'duration' | 'schoolId';
+type FieldName =
+  | 'name'
+  | 'code'
+  | 'duration'
+  | 'schoolId'
+  | 'description'
+  | 'availableSeats'
+  | 'annualFee'
+  | 'level';
 
 @Component({
   selector: 'app-program-form',
@@ -92,6 +116,66 @@ type FieldName = 'name' | 'code' | 'duration' | 'schoolId';
         </div>
       </div>
 
+      <div class="grid gap-4 md:grid-cols-6">
+        <div class="space-y-1 md:col-span-6">
+          <label for="description" class="text-sm font-medium text-foreground">Description (1000 caractères max.)</label>
+          <textarea
+            id="description"
+            rows="4"
+            formControlName="description"
+            [attr.aria-invalid]="errorOf('description') ? 'true' : null"
+            class="field-input"
+          ></textarea>
+          <p class="text-xs text-muted-foreground" data-hint>Laisser vide efface la description.</p>
+          @if (errorOf('description'); as message) {
+            <p class="text-xs text-destructive" data-error="description">{{ message }}</p>
+          }
+        </div>
+        <div class="space-y-1 md:col-span-2">
+          <label for="level" class="text-sm font-medium text-foreground">Niveau</label>
+          <select id="level" formControlName="level" class="field-input">
+            <option value="">Non précisé</option>
+            @for (level of levels; track level) {
+              <option [value]="level">{{ levelLabels[level] }}</option>
+            }
+          </select>
+          <p class="text-xs text-muted-foreground" data-hint>Laisser vide conserve la valeur actuelle.</p>
+          @if (errorOf('level'); as message) {
+            <p class="text-xs text-destructive" data-error="level">{{ message }}</p>
+          }
+        </div>
+        <div class="space-y-1 md:col-span-2">
+          <label for="availableSeats" class="text-sm font-medium text-foreground">Places disponibles</label>
+          <input
+            id="availableSeats"
+            type="text"
+            inputmode="numeric"
+            formControlName="availableSeats"
+            [attr.aria-invalid]="errorOf('availableSeats') ? 'true' : null"
+            class="field-input"
+          />
+          <p class="text-xs text-muted-foreground" data-hint>Laisser vide conserve la valeur actuelle.</p>
+          @if (errorOf('availableSeats'); as message) {
+            <p class="text-xs text-destructive" data-error="availableSeats">{{ message }}</p>
+          }
+        </div>
+        <div class="space-y-1 md:col-span-2">
+          <label for="annualFee" class="text-sm font-medium text-foreground">Frais annuels (€)</label>
+          <input
+            id="annualFee"
+            type="text"
+            inputmode="decimal"
+            formControlName="annualFee"
+            [attr.aria-invalid]="errorOf('annualFee') ? 'true' : null"
+            class="field-input"
+          />
+          <p class="text-xs text-muted-foreground" data-hint>Laisser vide conserve la valeur actuelle.</p>
+          @if (errorOf('annualFee'); as message) {
+            <p class="text-xs text-destructive" data-error="annualFee">{{ message }}</p>
+          }
+        </div>
+      </div>
+
       <app-image-field
         fieldId="photo"
         label="Photo"
@@ -142,7 +226,14 @@ export class ProgramForm implements OnInit {
     code: ['', Validators.maxLength(5)],
     duration: ['', optionalYears],
     schoolId: [''],
+    description: ['', Validators.maxLength(1000)],
+    availableSeats: ['', optionalCount],
+    annualFee: ['', optionalAmount],
+    level: [''],
   });
+
+  readonly levels = PROGRAM_LEVELS;
+  readonly levelLabels = LEVEL_LABELS;
 
   readonly saving = signal(false);
   readonly error = signal('');
@@ -169,6 +260,10 @@ export class ProgramForm implements OnInit {
         code: program.code ?? '',
         duration: program.duration ? String(program.duration) : '',
         schoolId: program.schoolId ? String(program.schoolId) : '',
+        description: program.description ?? '',
+        availableSeats: program.availableSeats != null ? String(program.availableSeats) : '',
+        annualFee: program.annualFee != null ? String(program.annualFee) : '',
+        level: program.level ?? '',
       });
     }
   }
@@ -185,6 +280,8 @@ export class ProgramForm implements OnInit {
     if (typeof errors['server'] === 'string') return errors['server'];
     if (errors['required']) return 'Le nom est obligatoire.';
     if (errors['maxlength']) return `${errors['maxlength'].requiredLength} caractères maximum.`;
+    if (errors['count']) return 'Indiquez un nombre entier (0 ou plus).';
+    if (errors['amount']) return 'Indiquez un montant en euros (0 ou plus, 2 décimales max.).';
     if (errors['years']) return "Indiquez un nombre entier d'années (1 ou plus).";
     return 'Valeur invalide.';
   }
@@ -229,10 +326,18 @@ export class ProgramForm implements OnInit {
     const v = this.form.getRawValue();
     const code = v.code.trim();
     const duration = v.duration.trim();
+    const description = v.description.trim();
+    const seats = v.availableSeats.trim();
+    const fee = v.annualFee.trim().replace(',', '.');
     const input: ProgramInput = {
       ...(code ? { code } : {}),
       name: v.name.trim(),
       ...(duration ? { duration: Number(duration) } : {}),
+      // On edit an empty description is sent: the API reads '' as "clear" (null keeps).
+      ...(description || this.program() ? { description } : {}),
+      ...(seats ? { availableSeats: Number(seats) } : {}),
+      ...(fee ? { annualFee: Number(fee) } : {}),
+      ...(v.level ? { level: v.level as ProgramLevel } : {}),
       ...(v.schoolId ? { schoolId: Number(v.schoolId) } : {}),
       ...(photoId !== null ? { photoMediaId: photoId } : {}),
     };

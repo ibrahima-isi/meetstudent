@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { LucideAngularModule, ArrowLeft, User as UserIcon, Phone, MapPin, GraduationCap, Book, Save, Heart, Briefcase } from 'lucide-angular';
+import { LucideAngularModule, ArrowLeft, User as UserIcon, Phone, MapPin, GraduationCap, Book, Save, Heart, Briefcase, BadgeCheck, CircleX, Hourglass } from 'lucide-angular';
 import { pluralKey } from '@i18n/plural';
 import { LocaleService } from '@services/locale.service';
 import { TokenService } from '@services/token.service';
@@ -58,6 +58,9 @@ export class ProfilePageComponent implements OnInit {
   readonly Save = Save;
   readonly Heart = Heart;
   readonly Briefcase = Briefcase;
+  readonly BadgeCheck = BadgeCheck;
+  readonly CircleX = CircleX;
+  readonly Hourglass = Hourglass;
 
   profile = signal<Partial<User>>({
     firstname: '',
@@ -119,9 +122,18 @@ export class ProfilePageComponent implements OnInit {
     if (currentUser) {
       this.profile.set(currentUser);
       this.resetForm();
+      this.refreshExpertStatus(currentUser);
     }
 
     if (this.canWishlist()) this.wishlist.load();
+  }
+
+  /** An admin decides while the expert is away: reading the account again brings the decision in. */
+  private refreshExpertStatus(current: Partial<User>): void {
+    if (current.role?.name !== ROLE_EXPERT) return;
+    this.userService.refreshSessionUser().subscribe((updated) => {
+      if (updated) this.profile.set(updated);
+    });
   }
 
   /** The key for a count, by the plural rule of the language being read. */
