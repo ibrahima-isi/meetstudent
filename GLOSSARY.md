@@ -12,7 +12,7 @@ A teacher account, created by choosing "teacher" at registration. An expert sign
 
 ## Statut d'approbation
 
-Where an expert account stands in the administrator's review: pending (the starting point), approved or rejected, with an optional reason when rejected. It only concerns experts, it is shown to the expert alone, and a decision takes effect immediately without the expert signing in again. Experts who existed before the review was introduced are approved.
+Where an expert account stands in the administrator's review: pending (the starting point), approved or rejected, with an optional reason when rejected. It only concerns experts, it is shown to the expert and to administrators, and a decision takes effect immediately without the expert signing in again. Experts who existed before the review was introduced are approved.
 
 ## Forum
 

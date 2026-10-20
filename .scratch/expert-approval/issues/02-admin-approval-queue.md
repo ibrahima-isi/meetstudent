@@ -4,7 +4,7 @@
 
 **Blocked by:** [01](01-status-and-rating-guard.md)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Worktree:** `expert-approval-02`
 

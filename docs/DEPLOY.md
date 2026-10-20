@@ -434,9 +434,11 @@ Keep the host patched (`unattended-upgrades`) and the Traefik image current.
 - Anyone can register as a teacher (`ROLE_EXPERT`), but the account starts `PENDING`: until an admin approves it
   the expert rates schools only, like a student (programs and courses answer 403). Migration `V29` marks every
   expert that already exists `APPROVED`, so no acquired right is removed; run `scripts/backup.sh` before the first
-  deploy that includes it. The back office queue to approve or reject experts comes with the next tickets: until
-  then an approval is a database update (`update users set expert_status = 'APPROVED', expert_decision_date = now() where id = ...`), which takes
-  effect on the next request without the expert signing in again. An admin who changes a role to expert via
+  deploy that includes it. Admins approve or reject experts in the back office, entry
+  "Experts" (tabs pending / approved / rejected, optional reason of 255 characters at rejection); a decision takes
+  effect on the next request without the expert signing in again. Ratings an expert already published are kept
+  when the account is rejected. The SQL update (`update users set expert_status = 'APPROVED', expert_decision_date = now() where id = ...`)
+  is now only an emergency fallback, for instance when no admin can reach the back office. An admin who changes a role to expert via
   `PATCH /users/{id}/role` approves the account at the same time (even a previously rejected expert moved to another
   role and back); leaving the expert role clears the status, and setting the expert role on an expert changes nothing.
 - Single server, single database: no high availability; recovery depends on

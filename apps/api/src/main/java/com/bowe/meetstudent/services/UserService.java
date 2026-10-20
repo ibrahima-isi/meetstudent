@@ -84,7 +84,13 @@ public class UserService {
     private void applyAdminRole(UserEntity user, Role newRole) {
         boolean wasExpert = user.getRole() != null && EXPERT_ROLE.equals(user.getRole().getName());
         boolean isExpert = EXPERT_ROLE.equals(newRole.getName());
+        boolean roleChanged = user.getRole() == null || !java.util.Objects.equals(user.getRole().getId(), newRole.getId());
         user.setRole(newRole);
+        if (roleChanged) {
+            // A new role must not ride on tokens issued under the old one (ADR 0001): revoke access and refresh sessions.
+            user.setPasswordVersion(Math.incrementExact(user.getPasswordVersion()));
+            refreshTokenService.deleteByUserId(user.getId());
+        }
         if (isExpert && !wasExpert) {
             user.setExpertStatus(ExpertStatus.APPROVED);
             user.setExpertStatusReason(null);
