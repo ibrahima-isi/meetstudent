@@ -5,6 +5,7 @@ import { LucideAngularModule, ArrowLeft, MapPin, Heart, GraduationCap, Clock, Ca
 import { ImageWithFallbackComponent } from '@shared/components/image-with-fallback/image-with-fallback.component';
 import { StarRatingComponent } from '@shared/components/star-rating/star-rating.component';
 import { ErrorStateComponent } from '@shared/components/error-state/error-state.component';
+import { WishlistHeartComponent } from '@shared/components/wishlist-heart/wishlist-heart.component';
 import { ROLE_EXPERT, ROLE_STUDENT } from '@models/roles';
 import { School, Program, Tag, Course, programLevelKey } from '@models/entities';
 import { ProgramService } from '@services/program.service';
@@ -20,7 +21,7 @@ import { PageTitleService } from '@shared/page-title';
 
 @Component({
   selector: 'app-school-detail-page',
-  imports: [CommonModule, LucideAngularModule, ImageWithFallbackComponent, StarRatingComponent, TranslocoDirective, ErrorStateComponent, RouterLink],
+  imports: [CommonModule, LucideAngularModule, ImageWithFallbackComponent, StarRatingComponent, TranslocoDirective, ErrorStateComponent, RouterLink, WishlistHeartComponent],
   templateUrl: './school-detail-page.component.html'
 })
 export class SchoolDetailPageComponent {

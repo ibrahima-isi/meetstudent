@@ -10,7 +10,9 @@ import { Page, Program } from '@models/entities';
 import { LocaleService } from '@services/locale.service';
 import { MediaService } from '@services/media.service';
 import { ProgramService } from '@services/program.service';
+import { WishlistService } from '@services/wishlist.service';
 import { ErrorStateComponent } from '@shared/components/error-state/error-state.component';
+import { WishlistHeartComponent } from '@shared/components/wishlist-heart/wishlist-heart.component';
 import { ImageWithFallbackComponent } from '@shared/components/image-with-fallback/image-with-fallback.component';
 import { parseIdList } from '@shared/compare-selection';
 import { roundRating } from '@shared/format-rating';
@@ -24,12 +26,13 @@ const COMPARE_MAX = 3;
 
 @Component({
   selector: 'app-programs-page',
-  imports: [FormsModule, RouterLink, LucideAngularModule, TranslocoDirective, ErrorStateComponent, ImageWithFallbackComponent],
+  imports: [FormsModule, RouterLink, LucideAngularModule, TranslocoDirective, ErrorStateComponent, ImageWithFallbackComponent, WishlistHeartComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './programs-page.component.html',
 })
 export class ProgramsPageComponent implements OnInit {
   private readonly programService = inject(ProgramService);
+  private readonly wishlist = inject(WishlistService);
   private readonly mediaService = inject(MediaService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -107,6 +110,8 @@ export class ProgramsPageComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // The hearts reflect the server's list; only a student has one.
+    if (this.wishlist.available()) this.wishlist.load();
     this.applyUrlTerm(this.route.snapshot.queryParamMap.get('q'));
     this.selectedIds.set(parseIdList(this.route.snapshot.queryParamMap.get('compare'), COMPARE_MAX));
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {

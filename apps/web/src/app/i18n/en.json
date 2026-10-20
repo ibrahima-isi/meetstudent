@@ -499,7 +499,7 @@
       "other": "{{ count }} schools"
     },
     "empty": "Your wishlist is empty",
-    "emptyHint": "Add schools to find them again easily",
+    "emptyHint": "Add schools or programmes to find them again easily",
     "addAction": "Add to wishlist",
     "removeAction": "Remove from wishlist",
     "viewMore": "View more",
@@ -713,5 +713,10 @@
       "DOCTORAT": "Doctorate",
       "AUTRE": "Other"
     }
+  },
+  "programWishlist": {
+    "heading": "Programmes",
+    "schoolsHeading": "Schools",
+    "loadError": "Your saved programmes could not be loaded."
   }
 }

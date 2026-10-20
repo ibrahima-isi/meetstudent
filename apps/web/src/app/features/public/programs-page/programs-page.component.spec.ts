@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { provideZonelessChangeDetection } from '@angular/core';
+import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter, Router } from '@angular/router';
@@ -9,6 +9,8 @@ import { firstValueFrom, of, Subject, throwError } from 'rxjs';
 import { translocoOptions } from '@i18n/transloco.config';
 import { LocaleService } from '@services/locale.service';
 import { ProgramService } from '@services/program.service';
+import { TokenService } from '@services/token.service';
+import { WishlistService } from '@services/wishlist.service';
 import { ProgramsPageComponent } from './programs-page.component';
 
 describe('ProgramsPageComponent', () => {
@@ -347,6 +349,73 @@ describe('ProgramsPageComponent', () => {
       await settle();
 
       expect(router.url).toBe('/en/programs/compare?ids=2,3');
+    });
+  });
+
+  describe('wishlist hearts', () => {
+    const hearts = () => Array.from(el().querySelectorAll<HTMLButtonElement>('[data-testid="program-wishlist-toggle"]'));
+
+    it('puts a heart on every card; a student saves a program without leaving the list', async () => {
+      const toggleProgram = jasmine.createSpy('toggleProgram');
+      const load = jasmine.createSpy('load');
+      TestBed.configureTestingModule({
+        providers: [
+          provideZonelessChangeDetection(),
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          provideRouter([{ path: 'programs', component: ProgramsPageComponent }]),
+          provideTransloco(translocoOptions),
+          { provide: ProgramService, useValue: { getPrograms, searchProgramsByName } },
+          { provide: TokenService, useValue: { isAuthenticated: () => true, user: signal({ id: 9, role: { name: 'ROLE_STUDENT' } }) } },
+          {
+            provide: WishlistService,
+            useValue: { available: () => true, load, hasProgram: () => false, isProgramPending: () => false, toggleProgram },
+          },
+        ],
+      });
+      await firstValueFrom(TestBed.inject(LocaleService).use('en'));
+      router = TestBed.inject(Router);
+      harness = await RouterTestingHarness.create();
+      await harness.navigateByUrl('/programs', ProgramsPageComponent);
+      await settle();
+      const before = router.url;
+
+      expect(hearts().length).toBe(2);
+      expect(load).toHaveBeenCalled();
+      hearts()[0].click();
+      await settle();
+
+      expect(toggleProgram).toHaveBeenCalledWith(jasmine.objectContaining({ id: 1 }));
+      expect(router.url).toBe(before);
+    });
+
+    it('invites an anonymous visitor to sign in, without opening anything else', async () => {
+      TestBed.configureTestingModule({
+        providers: [
+          provideZonelessChangeDetection(),
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          provideRouter([{ path: 'programs', component: ProgramsPageComponent }]),
+          provideTransloco(translocoOptions),
+          { provide: ProgramService, useValue: { getPrograms, searchProgramsByName } },
+          // Simulated session: the real TokenService reads localStorage, which other specs may leave a session in.
+          { provide: TokenService, useValue: { isAuthenticated: () => false, user: signal(null) } },
+          {
+            provide: WishlistService,
+            useValue: { available: () => false, load: () => undefined, hasProgram: () => false, isProgramPending: () => false, toggleProgram: () => undefined },
+          },
+        ],
+      });
+      await firstValueFrom(TestBed.inject(LocaleService).use('fr'));
+      router = TestBed.inject(Router);
+      harness = await RouterTestingHarness.create();
+      await harness.navigateByUrl('/programs', ProgramsPageComponent);
+      await settle();
+      const navigate = spyOn(router, 'navigate');
+
+      hearts()[0].click();
+
+      expect(navigate).toHaveBeenCalledWith(['/', 'fr', 'login'], { queryParams: { returnUrl: jasmine.any(String) } });
     });
   });
 });

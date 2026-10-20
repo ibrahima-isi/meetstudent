@@ -15,6 +15,7 @@ import { UserDocumentsComponent } from '../user-documents/user-documents.compone
 import { ProfileEmailSectionComponent } from './profile-email-section/profile-email-section.component';
 import { MeshBackgroundComponent } from '@shared/components/mesh-background/mesh-background.component';
 import { WishlistItemComponent } from '@shared/components/wishlist-item/wishlist-item.component';
+import { WishlistProgramItemComponent } from '@shared/components/wishlist-program-item/wishlist-program-item.component';
 import { TranslocoDirective } from '@jsverse/transloco';
 
 /** The fields of the API's 400 body (`{ field: message }`) this form can show. */
@@ -35,6 +36,7 @@ type SaveStatus = 'saved' | 'fieldErrors' | 'failed' | null;
     ProfileEmailSectionComponent,
     MeshBackgroundComponent,
     WishlistItemComponent,
+    WishlistProgramItemComponent,
     TranslocoDirective,
   ],
   templateUrl: './profile-page.component.html'

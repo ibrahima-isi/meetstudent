@@ -2,7 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, catchError, map, of, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { User } from '@models/entities';
+import { Program, User } from '@models/entities';
 import { MediaService } from './media.service';
 import { TokenService } from './token.service';
 
@@ -123,5 +123,29 @@ export class UserService {
     return this.http.delete<User>(`${this.apiUrl}/${userId}/wishlist/${schoolId}`).pipe(
       map(user => this.mapUserFields(user))
     );
+  }
+
+  /** Programs of the student's wishlist (schools stay on `UserDTO.wishlist`). */
+  getProgramWishlist(userId: number): Observable<Program[]> {
+    return this.http.get<Program[]>(`${this.apiUrl}/${userId}/wishlist/programs`).pipe(
+      map(programs => programs.map(program => this.mapProgram(program)))
+    );
+  }
+
+  /** Idempotent; answers the updated list of programs. */
+  addProgramToWishlist(userId: number, programId: number): Observable<Program[]> {
+    return this.http.post<Program[]>(`${this.apiUrl}/${userId}/wishlist/programs/${programId}`, {}).pipe(
+      map(programs => programs.map(program => this.mapProgram(program)))
+    );
+  }
+
+  removeProgramFromWishlist(userId: number, programId: number): Observable<Program[]> {
+    return this.http.delete<Program[]>(`${this.apiUrl}/${userId}/wishlist/programs/${programId}`).pipe(
+      map(programs => programs.map(program => this.mapProgram(program)))
+    );
+  }
+
+  private mapProgram(program: Program): Program {
+    return { ...program, photoImageUrl: this.mediaService.resolveUrl(program.photo) ?? program.photoImageUrl };
   }
 }
