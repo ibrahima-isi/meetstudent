@@ -59,11 +59,11 @@ describe('WishlistItemComponent', () => {
     expect(text()).toContain('4.3');
   });
 
-  it('says "1 programme" for one and counts in French too', async () => {
+  it('says "1 formation" for one in French, and not the plural', async () => {
     await render(school({ programs: [{ id: 1 } as never] }), 'fr');
 
-    expect(text()).toContain('1 programme');
-    expect(text()).not.toContain('1 programmes');
+    expect(text()).toContain('1 formation');
+    expect(text()).not.toContain('1 formations');
   });
 
   it('has a "View more" link to the school page, in the language being read', async () => {

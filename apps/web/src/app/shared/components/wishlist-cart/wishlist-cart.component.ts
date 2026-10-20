@@ -6,6 +6,7 @@ import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { LucideAngularModule, ShoppingCart, X, GraduationCap } from 'lucide-angular';
 import { ErrorStateComponent } from '@shared/components/error-state/error-state.component';
 import { WishlistItemComponent } from '@shared/components/wishlist-item/wishlist-item.component';
+import { WishlistProgramItemComponent } from '@shared/components/wishlist-program-item/wishlist-program-item.component';
 import { WishlistService } from '@services/wishlist.service';
 import { TokenService } from '@services/token.service';
 import { LocaleService } from '@services/locale.service';
@@ -18,7 +19,7 @@ import { pluralKey } from '@i18n/plural';
     '(document:pointerdown)': 'onPointerDown($event)',
     '(document:keydown.escape)': 'onEscape()',
   },
-  imports: [CommonModule, LucideAngularModule, TranslocoDirective, ErrorStateComponent, RouterLink, WishlistItemComponent],
+  imports: [CommonModule, LucideAngularModule, TranslocoDirective, ErrorStateComponent, RouterLink, WishlistItemComponent, WishlistProgramItemComponent],
   template: `
     <div [class]="compact() ? '' : 'sm:relative'" *transloco="let t">
       <button
@@ -32,9 +33,9 @@ import { pluralKey } from '@i18n/plural';
         @if (!compact()) {
           <span class="hidden sm:inline">{{ t('wishlist.button') }}</span>
         }
-        @if (isAuthenticated() && wishlist.schools().length > 0) {
+        @if (isAuthenticated() && total() > 0) {
           <span class="absolute -top-1 -right-1 w-5 h-5 bg-indigo-600 text-white rounded-full flex items-center justify-center text-xs">
-            {{ wishlist.schools().length }}
+            {{ total() }}
           </span>
         }
       </button>
@@ -58,7 +59,15 @@ import { pluralKey } from '@i18n/plural';
               </button>
             </div>
             <p class="text-muted-foreground mt-1 text-sm">
-              {{ t(plural('wishlist.count', wishlist.schools().length), { count: wishlist.schools().length }) }}
+              @if (wishlist.schools().length > 0 || wishlist.programs().length === 0) {
+                {{ t(plural('wishlist.count', wishlist.schools().length), { count: wishlist.schools().length }) }}
+              }
+              @if (wishlist.schools().length > 0 && wishlist.programs().length > 0) {
+                ·
+              }
+              @if (wishlist.programs().length > 0) {
+                {{ t(plural('wishlist.programmes', wishlist.programs().length), { count: wishlist.programs().length }) }}
+              }
             </p>
           </div>
 
@@ -67,28 +76,61 @@ import { pluralKey } from '@i18n/plural';
               <p role="status" aria-busy="true" class="p-8 text-center text-muted-foreground animate-pulse">{{ t('common.loading') }}</p>
             } @else if (wishlist.status() === 'error') {
               <app-error-state [message]="t('wishlist.loadError')" (retry)="wishlist.load()" />
-            } @else if (wishlist.schools().length === 0) {
+            } @else if (total() === 0) {
               <div class="p-8 text-center">
                 <lucide-icon [img]="GraduationCap" class="w-12 h-12 text-muted-foreground/50 mx-auto mb-3"></lucide-icon>
                 <p class="text-muted-foreground">{{ t('wishlist.empty') }}</p>
                 <p class="text-muted-foreground mt-1 text-sm">{{ t('wishlist.emptyHint') }}</p>
+                @if (wishlist.programsError()) {
+                  <p role="status" class="mt-2 text-sm text-muted-foreground">{{ t('programWishlist.loadError') }}</p>
+                }
               </div>
             } @else {
-              <ul role="list" class="space-y-3 p-4">
-                @for (school of wishlist.schools(); track school.id) {
-                  <li>
-                    <app-wishlist-item
-                      [school]="school"
-                      [removing]="wishlist.isPending(school.id)"
-                      (removed)="wishlist.toggle($event)"
-                    />
-                  </li>
+              @if (wishlist.programsError()) {
+                <p role="status" data-testid="programs-load-error" class="px-4 pt-4 text-sm text-muted-foreground">{{ t('programWishlist.loadError') }}</p>
+              }
+              <div class="space-y-4 p-4">
+                @if (wishlist.schools().length > 0) {
+                  <section>
+                    @if (wishlist.programs().length > 0) {
+                      <h4 class="mb-2 text-sm font-semibold text-foreground">{{ t('programWishlist.schoolsHeading') }}</h4>
+                    }
+                    <ul role="list" class="space-y-3">
+                      @for (school of wishlist.schools(); track school.id) {
+                        <li>
+                          <app-wishlist-item
+                            [school]="school"
+                            [removing]="wishlist.isPending(school.id)"
+                            (removed)="wishlist.toggle($event)"
+                          />
+                        </li>
+                      }
+                    </ul>
+                  </section>
                 }
-              </ul>
+                @if (wishlist.programs().length > 0) {
+                  <section>
+                    @if (wishlist.schools().length > 0) {
+                      <h4 class="mb-2 text-sm font-semibold text-foreground">{{ t('programWishlist.heading') }}</h4>
+                    }
+                    <ul role="list" class="space-y-3">
+                      @for (program of wishlist.programs(); track program.id) {
+                        <li>
+                          <app-wishlist-program-item
+                            [program]="program"
+                            [removing]="wishlist.isProgramPending(program.id)"
+                            (removed)="wishlist.toggleProgram($event)"
+                          />
+                        </li>
+                      }
+                    </ul>
+                  </section>
+                }
+              </div>
             }
           </div>
 
-          @if (wishlist.schools().length > 0) {
+          @if (total() > 0) {
             <div class="border-t border-border bg-muted/50 p-4">
               <a [routerLink]="['/', locale.active(), 'profile']" class="btn btn-primary w-full">
                 {{ t('wishlist.manage') }}
@@ -111,6 +153,9 @@ export class WishlistCartComponent implements OnInit {
    * that has no reason to know, and the host had to hard-code `true` to say it.
    */
   readonly isAuthenticated = computed(() => this.tokenService.isAuthenticated());
+
+  /** Schools and programs together: what the badge counts and what makes the list non-empty. */
+  protected readonly total = computed(() => this.wishlist.schools().length + this.wishlist.programs().length);
 
   /** Icon and badge only; the accessible name stays. */
   readonly compact = input(false);

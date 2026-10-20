@@ -17,6 +17,9 @@ describe('ProfilePageComponent translations', () => {
   let fixture: ComponentFixture<ProfilePageComponent>;
   let user: ReturnType<typeof signal<Partial<User> | null>>;
   let saved: ReturnType<typeof signal<unknown[]>>;
+  let savedPrograms: ReturnType<typeof signal<unknown[]>>;
+  let toggleProgram: jasmine.Spy;
+  let programsError: ReturnType<typeof signal<boolean>>;
   let toggle: jasmine.Spy;
   let load: jasmine.Spy;
   let setUser: jasmine.Spy;
@@ -48,6 +51,9 @@ describe('ProfilePageComponent translations', () => {
 
   beforeEach(() => {
     saved = signal<unknown[]>([]);
+    savedPrograms = signal<unknown[]>([]);
+    toggleProgram = jasmine.createSpy('toggleProgram');
+    programsError = signal(false);
     toggle = jasmine.createSpy('toggle');
     load = jasmine.createSpy('load');
     setUser = jasmine.createSpy('setUser');
@@ -63,7 +69,7 @@ describe('ProfilePageComponent translations', () => {
         provideRouter([]),
         provideTransloco(translocoOptions),
         { provide: TokenService, useValue: { user, setUser, clear } },
-        { provide: WishlistService, useValue: { available: computed(() => user()?.role?.name === 'ROLE_STUDENT'), schools: saved, load, toggle, isPending: () => false } },
+        { provide: WishlistService, useValue: { available: computed(() => user()?.role?.name === 'ROLE_STUDENT'), schools: saved, programs: savedPrograms, programsError, load, toggle, toggleProgram, isPending: () => false, isProgramPending: () => false } },
       ],
     });
   });
@@ -222,6 +228,35 @@ describe('ProfilePageComponent translations', () => {
     const link = Array.from(root.querySelectorAll('a')).find((a) => /view more/i.test(a.textContent ?? ''));
     expect(link?.getAttribute('href')).toBe('/en/schools/3');
     expect(text()).toContain('1 programme');
+  });
+
+  it('shows the wishlisted programmes too, and removes one through the service', async () => {
+    const programme = { id: 11, name: 'Licence Informatique', schoolId: 3, schoolName: 'Real School' };
+    savedPrograms.set([programme]);
+    await render('en');
+
+    expect(text()).toContain('Licence Informatique');
+    expect(text()).not.toContain('Explore schools');
+    (fixture.nativeElement.querySelector('[data-testid="wishlist-program-remove"]') as HTMLButtonElement).click();
+    expect(toggleProgram).toHaveBeenCalledWith(programme);
+  });
+
+  it('names the two groups when schools and programmes are both saved', async () => {
+    saved.set([{ id: 3, name: 'Real School', address: { location: '', city: '', country: '' } }]);
+    savedPrograms.set([{ id: 11, name: 'Licence Informatique', schoolId: 3 }]);
+    await render('en');
+
+    expect(text()).toContain('Schools');
+    expect(text()).toContain('Programmes');
+  });
+
+  it('keeps the schools and notes it quietly when only the programmes failed to load', async () => {
+    saved.set([{ id: 3, name: 'Real School', address: { location: '', city: '', country: '' } }]);
+    programsError.set(true);
+    await render('en');
+
+    expect(text()).toContain('Real School');
+    expect(text()).toContain('Your saved programmes could not be loaded.');
   });
 
   it('invites a student with an empty wishlist to explore the schools', async () => {

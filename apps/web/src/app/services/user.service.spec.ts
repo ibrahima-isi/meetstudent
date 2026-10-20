@@ -62,6 +62,35 @@ describe('UserService', () => {
     req.flush({});
   });
 
+  describe('program wishlist', () => {
+    const url = `${environment.apiUrl}/users/5/wishlist/programs`;
+
+    it('reads the programs of the wishlist', () => {
+      let result: { id?: number; name: string }[] = [];
+      service.getProgramWishlist(5).subscribe((r) => (result = r));
+      const req = httpMock.expectOne(url);
+      expect(req.request.method).toBe('GET');
+      req.flush([{ id: 3, name: 'Licence Info' }]);
+      expect(result.map((p) => p.id)).toEqual([3]);
+    });
+
+    it('adds a program with a POST and returns the updated list', () => {
+      let result: { id?: number; name: string }[] = [];
+      service.addProgramToWishlist(5, 3).subscribe((r) => (result = r));
+      const req = httpMock.expectOne(`${url}/3`);
+      expect(req.request.method).toBe('POST');
+      req.flush([{ id: 3, name: 'Licence Info' }]);
+      expect(result.map((p) => p.id)).toEqual([3]);
+    });
+
+    it('removes a program with a DELETE', () => {
+      service.removeProgramFromWishlist(5, 3).subscribe();
+      const req = httpMock.expectOne(`${url}/3`);
+      expect(req.request.method).toBe('DELETE');
+      req.flush([]);
+    });
+  });
+
   it('PATCHes the profile fields to /users/{id} and returns the saved user', () => {
     const saved = { id: 5, firstname: 'Awa', lastname: 'Diop', email: 'a@b.sn', role: { name: 'ROLE_STUDENT' } } as User;
     let result: User | undefined;

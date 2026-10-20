@@ -496,20 +496,20 @@
   },
   "wishlist": {
     "button": "Souhaits",
-    "title": "Mes établissements souhaités",
+    "title": "Ma liste de souhaits",
     "count": {
       "one": "{{ count }} établissement",
       "other": "{{ count }} établissements"
     },
-    "empty": "Aucun établissement dans vos souhaits",
-    "emptyHint": "Ajoutez des établissements pour les retrouver facilement",
+    "empty": "Votre liste de souhaits est vide",
+    "emptyHint": "Ajoutez des établissements ou des formations pour les retrouver facilement",
     "addAction": "Ajouter aux souhaits",
     "removeAction": "Retirer des souhaits",
     "viewMore": "Voir plus",
     "manage": "Gérer ma liste de souhaits",
     "programmes": {
-      "one": "{{ count }} programme",
-      "other": "{{ count }} programmes"
+      "one": "{{ count }} formation",
+      "other": "{{ count }} formations"
     },
     "updateError": "Votre liste de souhaits n'a pas pu être mise à jour. Veuillez réessayer.",
     "dismiss": "Fermer",
@@ -693,5 +693,10 @@
       "account": "Compte",
       "rights": "Tous droits réservés."
     }
+  },
+  "programWishlist": {
+    "heading": "Formations",
+    "schoolsHeading": "Établissements",
+    "loadError": "Vos formations enregistrées n'ont pas pu être chargées."
   }
 }

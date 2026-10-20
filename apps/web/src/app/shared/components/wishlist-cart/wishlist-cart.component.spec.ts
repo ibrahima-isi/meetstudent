@@ -198,6 +198,9 @@ describe('WishlistCartComponent', () => {
 describe('WishlistCartComponent data states', () => {
   let fixture: ComponentFixture<WishlistCartComponent>;
   let saved: ReturnType<typeof signal<unknown[]>>;
+  let savedPrograms: ReturnType<typeof signal<unknown[]>>;
+  let toggleProgram: jasmine.Spy;
+  let programsError: ReturnType<typeof signal<boolean>>;
   let status: ReturnType<typeof signal<'idle' | 'loading' | 'loaded' | 'error'>>;
   let load: jasmine.Spy;
   let toggle: jasmine.Spy;
@@ -206,6 +209,9 @@ describe('WishlistCartComponent data states', () => {
 
   async function open() {
     saved = signal<unknown[]>([]);
+    savedPrograms = signal<unknown[]>([]);
+    toggleProgram = jasmine.createSpy('toggleProgram');
+    programsError = signal(false);
     status = signal('loaded');
     load = jasmine.createSpy('load');
     toggle = jasmine.createSpy('toggle');
@@ -218,7 +224,19 @@ describe('WishlistCartComponent data states', () => {
         { provide: TokenService, useValue: { isAuthenticated: signal(true), user: signal({ id: 9 }) } },
         {
           provide: WishlistService,
-          useValue: { schools: saved, status, load, toggle, error: signal(false), has: () => true, isPending: () => false },
+          useValue: {
+            schools: saved,
+            programs: savedPrograms,
+            programsError,
+            status,
+            load,
+            toggle,
+            toggleProgram,
+            error: signal(false),
+            has: () => true,
+            isPending: () => false,
+            isProgramPending: () => false,
+          },
         },
         provideTransloco(translocoOptions),
       ],
@@ -279,6 +297,73 @@ describe('WishlistCartComponent data states', () => {
     (q('[data-testid="wishlist-remove"]') as HTMLButtonElement).click();
 
     expect(toggle).toHaveBeenCalledWith(school);
+  });
+
+  it('lists the wishlisted programmes next to the schools, and counts both', async () => {
+    await open();
+    saved.set([{ id: 5, name: 'Real School', address: { city: 'Dakar' } }]);
+    savedPrograms.set([{ id: 11, name: 'Licence Informatique', schoolId: 5, schoolName: 'Real School' }]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(text()).toContain('Real School');
+    expect(text()).toContain('Licence Informatique');
+    expect(text()).toContain('1 school');
+    expect(text()).toContain('1 programme');
+    expect(text()).toContain('Schools');
+    expect(text()).toContain('Programmes');
+    expect(q('.bg-indigo-600')?.textContent?.trim()).toBe('2');
+  });
+
+  it('is not empty when only programmes are saved, and removes one through the service', async () => {
+    await open();
+    const programme = { id: 11, name: 'Licence Informatique', schoolId: 5 };
+    savedPrograms.set([programme]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(text()).not.toContain('Your wishlist is empty');
+    (q('[data-testid="wishlist-program-remove"]') as HTMLButtonElement).click();
+    expect(toggleProgram).toHaveBeenCalledWith(programme);
+  });
+
+  it('hides the school count when only programmes are saved', async () => {
+    await open();
+    savedPrograms.set([{ id: 11, name: 'Licence Informatique', schoolId: 5 }]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(text()).toContain('1 programme');
+    expect(text()).not.toContain('0 schools');
+  });
+
+  it('keeps the schools and adds a quiet note when only the programmes could not be loaded', async () => {
+    await open();
+    saved.set([{ id: 5, name: 'Real School', address: { city: 'Dakar' } }]);
+    programsError.set(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(text()).toContain('Real School');
+    expect(text()).toContain('Your saved programmes could not be loaded.');
+    expect(q('app-error-state')).toBeNull();
+  });
+
+  it('words an empty list for schools and programmes alike, in both languages', async () => {
+    await open();
+    expect(text()).toContain('My wishlist');
+    expect(text()).toContain('Your wishlist is empty');
+    expect(text()).toContain('Add schools or programmes to find them again easily');
+
+    await firstValueFrom(TestBed.inject(LocaleService).use('fr'));
+    await TestBed.inject(TranslocoService).load('fr');
+    TestBed.inject(TranslocoService).setActiveLang('fr');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(text()).toContain('Ma liste de souhaits');
+    expect(text()).toContain('Votre liste de souhaits est vide');
+    expect(text()).toContain('Ajoutez des établissements ou des formations pour les retrouver facilement');
   });
 
   it('shows the shared error state with retry when the wishlist cannot be loaded', async () => {

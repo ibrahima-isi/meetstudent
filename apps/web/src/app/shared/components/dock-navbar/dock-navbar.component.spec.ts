@@ -66,7 +66,7 @@ describe('DockNavbarComponent', () => {
         { provide: AuthService, useValue: { logout } },
         {
           provide: WishlistService,
-          useValue: { available: computed(() => currentUser().role.name === 'ROLE_STUDENT'), schools: signal([]), status: signal('idle'), error: signal(false), load: () => undefined, toggle: () => undefined, isPending: () => false, has: () => false },
+          useValue: { available: computed(() => currentUser().role.name === 'ROLE_STUDENT'), schools: signal([]), programs: signal([]), programsError: signal(false), status: signal('idle'), error: signal(false), load: () => undefined, toggle: () => undefined, isPending: () => false, has: () => false },
         },
         { provide: LocaleService, useValue: { active: signal('fr'), remember: () => undefined } },
         {
