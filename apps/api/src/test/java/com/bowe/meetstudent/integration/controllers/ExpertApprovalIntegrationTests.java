@@ -199,7 +199,7 @@ class ExpertApprovalIntegrationTests {
         role("ROLE_EXPERT");
         mvc.perform(post("/api/v1/users").contentType(MediaType.APPLICATION_JSON)
                         .content(register("ROLE_EXPERT", "sneaky@example.com").replace("}", ",\"expertStatus\":\"APPROVED\"}")))
-                .andReturn();
+                .andExpect(status().isCreated());
         assertThat(users.findByEmailIgnoreCase("sneaky@example.com").orElseThrow().getExpertStatus())
                 .isEqualTo(ExpertStatus.PENDING);
     }

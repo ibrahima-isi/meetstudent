@@ -694,6 +694,7 @@
   "programDetail": {
     "back": "Back to programmes",
     "loadError": "This programme could not be loaded.",
+    "notFound": "Programme not found.",
     "about": "About",
     "years": {
       "one": "{{ count }} year",

@@ -6,6 +6,7 @@ import com.bowe.meetstudent.entities.Program;
 import com.bowe.meetstudent.entities.Role;
 import com.bowe.meetstudent.entities.School;
 import com.bowe.meetstudent.entities.UserEntity;
+import com.bowe.meetstudent.entities.enums.ExpertStatus;
 import com.bowe.meetstudent.mappers.Mapper;
 import com.bowe.meetstudent.mappers.implementations.SchoolMapper;
 import com.bowe.meetstudent.repositories.RoleRepository;
@@ -556,10 +557,10 @@ class UserControllerIntegrationTests {
         var dto = TestDataUtil.createUserDto();
         dto.setRole(ensureRole("ROLE_EXPERT"));
         var ownerEntity = userMapper.toEntity(dto);
-        ownerEntity.setExpertStatus(com.bowe.meetstudent.entities.enums.ExpertStatus.APPROVED);
+        ownerEntity.setExpertStatus(ExpertStatus.APPROVED);
         var owner = userService.saveUser(ownerEntity, passwordEncoder);
         var observer = userService.saveUser(UserEntity.builder().email("observer104@example.com")
-                .password(dto.getPassword()).role(dto.getRole()).expertStatus(com.bowe.meetstudent.entities.enums.ExpertStatus.APPROVED).build(), passwordEncoder);
+                .password(dto.getPassword()).role(dto.getRole()).expertStatus(ExpertStatus.APPROVED).build(), passwordEncoder);
         var firstDevice = deletionLogin(owner.getEmail(), dto.getPassword());
         var secondDevice = deletionLogin(owner.getEmail(), dto.getPassword());
         var otherDevice = deletionLogin(observer.getEmail(), dto.getPassword());
