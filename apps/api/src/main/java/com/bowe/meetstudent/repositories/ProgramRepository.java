@@ -4,6 +4,7 @@ import com.bowe.meetstudent.entities.Program;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -18,6 +19,11 @@ public interface ProgramRepository extends JpaRepository<Program, Integer> {
 
     @Query("SELECT DISTINCT p FROM Program p JOIN p.programAccreditations pa JOIN pa.accreditation a WHERE (:accreditationCode = '' OR LOWER(a.code) LIKE LOWER(CONCAT('%', CAST(:accreditationCode AS text), '%')))")
     List<Program> findProgramByProgramAccreditationsContainingIgnoreCase (@Param("accreditationCode") String accreditationCode);
+
+    /** Wishlist links are owned by the user side, so the program side must clear them itself (H2 has no Flyway cascade). */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(value = "DELETE FROM user_program_wishlist WHERE program_id = :programId", nativeQuery = true)
+    void deleteWishlistLinks(@Param("programId") Integer programId);
 
     Page<Program> findByNameContainingIgnoreCase(String name, Pageable pageable);
 

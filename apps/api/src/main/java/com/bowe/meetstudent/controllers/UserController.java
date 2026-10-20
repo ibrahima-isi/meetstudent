@@ -2,9 +2,11 @@ package com.bowe.meetstudent.controllers;
 
 import com.bowe.meetstudent.dto.AdminUpdateUserRoleRequest;
 import com.bowe.meetstudent.dto.DeleteAccountRequest;
+import com.bowe.meetstudent.dto.ProgramDTO;
 import com.bowe.meetstudent.dto.RegisterRequest;
 import com.bowe.meetstudent.dto.UpdateProfileRequest;
 import com.bowe.meetstudent.dto.UserDTO;
+import com.bowe.meetstudent.entities.Program;
 import com.bowe.meetstudent.entities.Role;
 import com.bowe.meetstudent.entities.UserEntity;
 import com.bowe.meetstudent.exceptions.TooManyRequestsException;
@@ -45,6 +47,7 @@ public class UserController {
     private final UserService userService;
     private final PasswordEncoder encoder;
     private final Mapper<UserEntity, UserDTO> userMapper;
+    private final Mapper<Program, ProgramDTO> programMapper;
     private final RoleService roleService;
     private final EmailVerificationService emailVerificationService;
 
@@ -226,6 +229,39 @@ public class UserController {
         checkOwnershipOrAdmin(principal, userId);
         UserEntity user = userService.removeFromWishlist(userId, schoolId);
         return ResponseEntity.ok(userMapper.toDTO(user));
+    }
+
+    @GetMapping("/{userId}/wishlist/programs")
+    @Operation(summary = "List the programs in a user wishlist", description = "Returns the programs of the student's personal wishlist. Owner only.")
+    public ResponseEntity<List<ProgramDTO>> getProgramWishlist(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Integer userId) {
+        checkOwnershipOrAdmin(principal, userId);
+        return ResponseEntity.ok(toProgramDTOs(userService.getProgramWishlist(userId)));
+    }
+
+    @PostMapping("/{userId}/wishlist/programs/{programId}")
+    @Operation(summary = "Add a program to user wishlist", description = "Idempotent. Answers the updated list of programs; 404 when the program does not exist.")
+    public ResponseEntity<List<ProgramDTO>> addProgramToWishlist(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Integer userId,
+            @PathVariable Integer programId) {
+        checkOwnershipOrAdmin(principal, userId);
+        return ResponseEntity.ok(toProgramDTOs(userService.addProgramToWishlist(userId, programId)));
+    }
+
+    @DeleteMapping("/{userId}/wishlist/programs/{programId}")
+    @Operation(summary = "Remove a program from user wishlist", description = "Answers the updated list of programs.")
+    public ResponseEntity<List<ProgramDTO>> removeProgramFromWishlist(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Integer userId,
+            @PathVariable Integer programId) {
+        checkOwnershipOrAdmin(principal, userId);
+        return ResponseEntity.ok(toProgramDTOs(userService.removeProgramFromWishlist(userId, programId)));
+    }
+
+    private List<ProgramDTO> toProgramDTOs(List<Program> programs) {
+        return programs.stream().map(programMapper::toDTO).toList();
     }
 
     private void checkOwnershipOrAdmin(UserPrincipal principal, Integer userId) {
