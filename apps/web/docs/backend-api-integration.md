@@ -401,3 +401,11 @@ shapes before coding against them.
 - Unknown `?sort=` property: 400 `ErrorResponse` (was 500). Unacceptable `Accept` header: 406 with a JSON `ErrorResponse` body.
 - `POST/PUT/PATCH /schools` with an unknown tag id: 400 `{"tags": "Unknown tag <id>"}` (was 500).
 - Account deletion removes the user's stored files only after the database commit, best-effort.
+
+## Program wishlist (program-wishlist/01)
+
+- `GET /api/v1/users/{userId}/wishlist/programs` returns the programs of the wishlist as a `List<ProgramDTO>`.
+- `POST` and `DELETE /api/v1/users/{userId}/wishlist/programs/{programId}` also answer `200` with the updated `List<ProgramDTO>`. This differs from the school wishlist (`/wishlist/{schoolId}`), which answers a `UserDTO`.
+- `POST` is idempotent; an unknown program is `404`.
+- `ROLE_STUDENT` and owner only: another user is `403`, an expert is `403`, an anonymous caller is `401`.
+- `UserDTO.wishlist` still lists schools only; programs are read through the endpoint above.

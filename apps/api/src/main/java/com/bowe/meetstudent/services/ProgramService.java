@@ -58,6 +58,7 @@ public class ProgramService {
     public void delete(int id) {
         this.programRepository.findById(id).ifPresent(program -> {
             mediaService.deleteById(program.getPhotoMediaId());
+            this.programRepository.deleteWishlistLinks(id);
             this.programRepository.deleteById(id);
         });
     }
