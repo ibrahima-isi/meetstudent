@@ -24,6 +24,8 @@ public class ModelMapperConfig {
                     mapping.skip(com.bowe.meetstudent.entities.UserEntity::setExpertStatus);
                     mapping.skip(com.bowe.meetstudent.entities.UserEntity::setExpertStatusReason);
                     mapping.skip(com.bowe.meetstudent.entities.UserEntity::setExpertDecisionDate);
+                    // UserDTO.wishlist holds schools; loose matching would otherwise bind it to the program wishlist.
+                    mapping.skip(com.bowe.meetstudent.entities.UserEntity::setProgramWishlist);
                 });
         return modelMapper;
     }

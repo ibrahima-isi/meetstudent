@@ -694,6 +694,7 @@
   "programDetail": {
     "back": "Retour aux formations",
     "loadError": "Cette formation n'a pas pu être chargée.",
+    "notFound": "Formation introuvable.",
     "about": "Présentation",
     "years": {
       "one": "{{ count }} an",

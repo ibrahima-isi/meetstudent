@@ -31,7 +31,7 @@ export interface Program {
 /**
  * Body of POST / PUT `/programs`. The API patches on PUT: an omitted `code`,
  * `duration`, `description`, `availableSeats`, `annualFee`, `level`, `schoolId` or
- * `photoMediaId` keeps the stored value (none of them can be cleared once set).
+ * `photoMediaId` keeps the stored value. Only `description` can be cleared, by sending an empty or blank string; the other fields can be replaced but never cleared.
  */
 export interface ProgramInput {
   code?: string;

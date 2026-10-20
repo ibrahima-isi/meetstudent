@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, RESPONSE_INIT, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslocoDirective } from '@jsverse/transloco';
@@ -9,6 +9,7 @@ import { Program, programLevelKey } from '@models/entities';
 import { LocaleService } from '@services/locale.service';
 import { ProgramService } from '@services/program.service';
 import { WishlistService } from '@services/wishlist.service';
+import { PageTitleService } from '@shared/page-title';
 import { ErrorStateComponent } from '@shared/components/error-state/error-state.component';
 import { WishlistHeartComponent } from '@shared/components/wishlist-heart/wishlist-heart.component';
 
@@ -28,6 +29,8 @@ export class ProgramDetailPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly locale = inject(LocaleService);
   private readonly wishlist = inject(WishlistService);
+  private readonly pageTitle = inject(PageTitleService);
+  private readonly responseInit = inject(RESPONSE_INIT, { optional: true });
 
   protected readonly ArrowLeft = ArrowLeft;
   protected readonly Clock = Clock;
@@ -37,7 +40,7 @@ export class ProgramDetailPageComponent implements OnInit {
 
   protected readonly program = signal<Program | null>(null);
   /** 'error' shows the retry surface, never placeholder data. */
-  protected readonly status = signal<'loading' | 'loaded' | 'error'>('loading');
+  protected readonly status = signal<'loading' | 'loaded' | 'error' | 'notFound'>('loading');
   protected readonly lang = computed(() => this.locale.active());
 
   private readonly retry$ = new Subject<void>();
@@ -50,10 +53,18 @@ export class ProgramDetailPageComponent implements OnInit {
           // Digits only: Number() would also accept "1e3" or "0x10".
           const numeric = /^\d{1,10}$/.test(id) ? Number(id) : 0;
           if (!Number.isSafeInteger(numeric) || numeric <= 0) {
-            this.fail();
+            this.markNotFound();
             return EMPTY;
           }
-          return this.programService.getProgram(numeric).pipe(catchError(() => of(null)));
+          return this.programService.getProgram(numeric).pipe(
+            catchError((error: { status?: number }) => {
+              if (error?.status === 404) {
+                this.markNotFound();
+                return EMPTY;
+              }
+              return of(null);
+            }),
+          );
         }),
         takeUntilDestroyed(),
       )
@@ -63,6 +74,7 @@ export class ProgramDetailPageComponent implements OnInit {
           return;
         }
         this.program.set(program);
+        this.pageTitle.set(program.name);
         this.status.set('loaded');
       });
   }
@@ -75,6 +87,15 @@ export class ProgramDetailPageComponent implements OnInit {
   /** Retry action of the error state. */
   protected load(): void {
     this.retry$.next();
+  }
+
+  /** Unknown programme: no retry, and HTTP 404 when server-rendered (the Response is built from RESPONSE_INIT after rendering). */
+  private markNotFound(): void {
+    if (this.responseInit) {
+      this.responseInit.status = 404;
+    }
+    this.program.set(null);
+    this.status.set('notFound');
   }
 
   private fail(): void {
