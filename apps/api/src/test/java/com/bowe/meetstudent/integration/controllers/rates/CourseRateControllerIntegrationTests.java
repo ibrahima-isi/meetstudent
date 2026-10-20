@@ -4,6 +4,7 @@ import com.bowe.meetstudent.TestDataUtil;
 import com.bowe.meetstudent.dto.CourseRateDTO;
 import com.bowe.meetstudent.entities.Course;
 import com.bowe.meetstudent.entities.UserEntity;
+import com.bowe.meetstudent.entities.enums.ExpertStatus;
 import com.bowe.meetstudent.entities.Role;
 import com.bowe.meetstudent.mappers.implementations.CourseMapper;
 import com.bowe.meetstudent.services.CourseService;
@@ -68,6 +69,7 @@ class CourseRateControllerIntegrationTests {
                 .email(email)
                 .password("password")
                 .role(role)
+                .expertStatus("ROLE_EXPERT".equals(roleName) ? ExpertStatus.APPROVED : null)
                 .build(), passwordEncoder);
     }
 

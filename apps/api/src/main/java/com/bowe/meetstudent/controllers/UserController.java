@@ -175,7 +175,7 @@ public class UserController {
 
     @PatchMapping(path = "{id}/role")
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Change a user's role (admin only)", description = "Assigns a new role to the user. Restricted to administrators.")
+    @Operation(summary = "Change a user's role (admin only)", description = "Assigns a new role to the user. Restricted to administrators. Making someone an Expert approves the account at once (a rejected expert who is moved to another role and back becomes APPROVED); leaving the Expert role clears the approval status; setting the Expert role again on an expert leaves the decision unchanged.")
     @ApiResponse(responseCode = "200", description = "Role updated")
     @ApiResponse(responseCode = "400", description = "Unknown role")
     @ApiResponse(responseCode = "403", description = "Caller is not an administrator")

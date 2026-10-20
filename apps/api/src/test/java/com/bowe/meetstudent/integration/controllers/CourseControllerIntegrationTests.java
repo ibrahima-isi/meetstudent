@@ -15,6 +15,7 @@ import com.bowe.meetstudent.services.ProgramService;
 import com.bowe.meetstudent.services.RoleService;
 import com.bowe.meetstudent.services.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -176,6 +177,116 @@ class CourseControllerIntegrationTests {
                 .andExpect(MockMvcResultMatchers.status().isConflict());
         mockMvc.perform(MockMvcRequestBuilders.get(url))
                 .andExpect(MockMvcResultMatchers.status().isOk());
+    }
+
+    @Test
+    void courseDescriptionIsCreatedReadPatchedAndKeptWhenOmitted() throws Exception {
+        String created = mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/courses")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Algo\",\"code\":\"D02A\",\"description\":\"Introduction aux algorithmes\"}")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isCreated())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.description").value("Introduction aux algorithmes"))
+                .andReturn().getResponse().getContentAsString();
+        int id = objectMapper.readTree(created).get("id").asInt();
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/courses/" + id))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.description").value("Introduction aux algorithmes"));
+
+        mockMvc.perform(MockMvcRequestBuilders.patch("/api/v1/courses/" + id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Algo 2\"}")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.description").value("Introduction aux algorithmes"));
+
+        mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/courses/" + id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"description\":\"Nouvelle description\"}")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.description").value("Nouvelle description"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.name").value("Algo 2"));
+    }
+
+    @Test
+    void courseWithoutDescriptionReadsNull() throws Exception {
+        var course = courseService.save(courseMapper.toEntity(TestDataUtil.createCourseDto()));
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/courses/" + course.getId()))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.description").value(Matchers.nullValue()));
+    }
+
+    @Test
+    void courseDescriptionOver1000CharactersIsRejectedWithFieldError() throws Exception {
+        String tooLong = "x".repeat(1001);
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/courses")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Long\",\"description\":\"" + tooLong + "\"}")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isBadRequest())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.description").isNotEmpty());
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/courses")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Max\",\"description\":\"" + "x".repeat(1000) + "\"}")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isCreated());
+    }
+
+    @Test
+    void blankDescriptionClearsOnPatchAndPutAndIsNullOnCreate() throws Exception {
+        String created = mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/courses")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Blanc\",\"description\":\"   \"}")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isCreated())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.description").value(Matchers.nullValue()))
+                .andReturn().getResponse().getContentAsString();
+        int id = objectMapper.readTree(created).get("id").asInt();
+        for (String method : new String[]{"patch", "put"}) {
+            mockMvc.perform(MockMvcRequestBuilders.patch("/api/v1/courses/" + id)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"description\":\"  Texte  \"}")
+                            .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                    .andExpect(MockMvcResultMatchers.jsonPath("$.description").value("Texte"));
+            var builder = method.equals("patch")
+                    ? MockMvcRequestBuilders.patch("/api/v1/courses/" + id)
+                    : MockMvcRequestBuilders.put("/api/v1/courses/" + id);
+            mockMvc.perform(builder.contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"description\":\"\"}")
+                            .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                    .andExpect(MockMvcResultMatchers.status().isOk())
+                    .andExpect(MockMvcResultMatchers.jsonPath("$.description").value(Matchers.nullValue()));
+        }
+    }
+
+    @Test
+    void courseDescriptionWithControlCharacterIsRejected() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/courses")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Nul\",\"description\":\"a\\u0000b\"}")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isBadRequest())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.description").isNotEmpty());
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/courses")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Nl\",\"description\":\"a\\nb\\tc\"}")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isCreated());
+    }
+
+    @Test
+    void courseDescriptionWriteIsAdminOnly() throws Exception {
+        var course = courseService.save(courseMapper.toEntity(TestDataUtil.createCourseDto()));
+        String body = "{\"description\":\"Interdit\"}";
+        mockMvc.perform(MockMvcRequestBuilders.patch("/api/v1/courses/" + course.getId())
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(MockMvcResultMatchers.status().isUnauthorized());
+        mockMvc.perform(MockMvcRequestBuilders.patch("/api/v1/courses/" + course.getId())
+                        .contentType(MediaType.APPLICATION_JSON).content(body)
+                        .with(TestDataUtil.mockUser("ROLE_STUDENT")))
+                .andExpect(MockMvcResultMatchers.status().isForbidden());
     }
 
     @Test
@@ -465,7 +576,8 @@ class CourseControllerIntegrationTests {
         var role = roleService.findRoleByName("ROLE_EXPERT")
                 .orElseGet(() -> roleService.createRole(Role.builder().name("ROLE_EXPERT").build()));
         return userService.saveUser(UserEntity.builder().firstname("Rate").lastname("Expert")
-                .email("rate.expert@example.com").password("password").role(role).build(), passwordEncoder).getId();
+                .email("rate.expert@example.com").password("password").role(role)
+                .expertStatus(com.bowe.meetstudent.entities.enums.ExpertStatus.APPROVED).build(), passwordEncoder).getId();
     }
 
     private int saveRatedCourse(String name, String code, double note, int expertId) throws Exception {

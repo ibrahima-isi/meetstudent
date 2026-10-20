@@ -101,7 +101,7 @@ public class WebSecurityConfig {
                                 // Wishlist restricted to Students
                                 .requestMatchers("/api/v1/users/*/wishlist/**").hasRole("STUDENT")
 
-                                // Rating Permissions (More granular check in Controller)
+                                // Rating Permissions (More granular check in Controller; program/course ratings also need an APPROVED expert: @RequiresApprovedExpert)
                                 .requestMatchers("/api/v1/school-rates/**").hasAnyRole("STUDENT", "EXPERT")
                                 .requestMatchers("/api/v1/program-rates/**").hasRole("EXPERT")
                                 .requestMatchers("/api/v1/course-rates/**").hasRole("EXPERT")

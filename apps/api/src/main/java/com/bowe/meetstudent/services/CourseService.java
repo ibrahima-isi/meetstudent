@@ -25,7 +25,13 @@ public class CourseService {
                 : courseRepository.existsByCodeIgnoreCaseAndIdNot(course.getCode(), course.getId()))) {
             throw new ConflictException("A course with this code already exists");
         }
+        course.setDescription(normalizeDescription(course.getDescription()));
         return this.courseRepository.save(course);
+    }
+
+    /** Blank means "no description": stored as null, otherwise stripped. */
+    private static String normalizeDescription(String description) {
+        return description == null || description.isBlank() ? null : description.strip();
     }
 
     public Page<Course> findAll(Pageable pageable) {
@@ -74,6 +80,7 @@ public class CourseService {
 
             if (updates.getName() != null) existing.setName(updates.getName());
             if (updates.getCode() != null) existing.setCode(updates.getCode());
+            if (updates.getDescription() != null) existing.setDescription(normalizeDescription(updates.getDescription()));
             if (updates.getPhotoMediaId() != null) existing.setPhotoMediaId(updates.getPhotoMediaId());
             if (updates.getProgram() != null) existing.setProgram(updates.getProgram());
             

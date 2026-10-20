@@ -431,8 +431,14 @@ Keep the host patched (`unattended-upgrades`) and the Traefik image current.
   demo server first.
 - Migration `V24` permanently deletes older duplicate ratings (it keeps the latest per user and target) before
   adding the unique constraints: run `scripts/backup.sh` before the first deploy that includes it.
-- Anyone can register as a teacher (`ROLE_EXPERT`) with no admin validation; experts can rate programs and
-  courses (one rating per user per target). Promote or demote through the back office if that becomes a problem.
+- Anyone can register as a teacher (`ROLE_EXPERT`), but the account starts `PENDING`: until an admin approves it
+  the expert rates schools only, like a student (programs and courses answer 403). Migration `V29` marks every
+  expert that already exists `APPROVED`, so no acquired right is removed; run `scripts/backup.sh` before the first
+  deploy that includes it. The back office queue to approve or reject experts comes with the next tickets: until
+  then an approval is a database update (`update users set expert_status = 'APPROVED', expert_decision_date = now() where id = ...`), which takes
+  effect on the next request without the expert signing in again. An admin who changes a role to expert via
+  `PATCH /users/{id}/role` approves the account at the same time (even a previously rejected expert moved to another
+  role and back); leaving the expert role clears the status, and setting the expert role on an expert changes nothing.
 - Single server, single database: no high availability; recovery depends on
   your off-site backups.
 - No full CSP, and no WAF or CDN in front.

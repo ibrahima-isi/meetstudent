@@ -55,6 +55,21 @@ class UploadFailed {
         </div>
       </div>
 
+      <div class="space-y-1">
+        <label for="description" class="text-sm font-medium text-foreground">Description (1000 caractères max.)</label>
+        <textarea
+          id="description"
+          rows="5"
+          formControlName="description"
+          [attr.aria-invalid]="errorOf('description') ? 'true' : null"
+          class="field-input"
+        ></textarea>
+        <p class="text-xs text-muted-foreground">Laisser vide efface la description.</p>
+        @if (errorOf('description'); as message) {
+          <p class="text-xs text-destructive" data-error="description">{{ message }}</p>
+        }
+      </div>
+
       <app-image-field
         fieldId="photo"
         label="Photo"
@@ -100,6 +115,7 @@ export class CourseForm implements OnInit {
   readonly form = inject(FormBuilder).nonNullable.group({
     name: ['', [notBlank, Validators.maxLength(50)]],
     code: ['', Validators.maxLength(5)],
+    description: ['', Validators.maxLength(1000)],
   });
 
   readonly saving = signal(false);
@@ -111,7 +127,7 @@ export class CourseForm implements OnInit {
 
   ngOnInit() {
     const course = this.course();
-    if (course) this.form.setValue({ name: course.name ?? '', code: course.code ?? '' });
+    if (course) this.form.setValue({ name: course.name ?? '', code: course.code ?? '', description: course.description ?? '' });
   }
 
   onFile(file: File | null) {
@@ -119,7 +135,7 @@ export class CourseForm implements OnInit {
     this.uploadedId = null;
   }
 
-  errorOf(name: 'name' | 'code'): string {
+  errorOf(name: 'name' | 'code' | 'description'): string {
     const control = this.form.controls[name];
     if (!control.touched || !control.errors) return '';
     const errors = control.errors;
@@ -168,9 +184,11 @@ export class CourseForm implements OnInit {
   private persist(photoId: number | null): Observable<Course> {
     const v = this.form.getRawValue();
     const code = v.code.trim();
+    const description = v.description.trim();
     const input: CourseInput = {
       ...(code ? { code } : {}),
       name: v.name.trim(),
+      ...(description || this.course() ? { description } : {}),
       programId: this.programId(),
       ...(photoId !== null ? { photoMediaId: photoId } : {}),
     };

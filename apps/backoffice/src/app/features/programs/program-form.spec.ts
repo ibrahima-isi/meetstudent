@@ -176,7 +176,7 @@ describe('ProgramForm', () => {
     submit();
     const req = backend.expectOne(`${api}/programs/7`);
     expect(req.request.method).toBe('PUT');
-    expect(req.request.body).toEqual({ code: 'MST', name: 'Master 2', duration: 2, schoolId: 8 });
+    expect(req.request.body).toEqual({ code: 'MST', name: 'Master 2', duration: 2, description: '', schoolId: 8 });
     req.flush({ id: 7, name: 'Master 2' });
     expect(saved.length).toBe(1);
   });
@@ -254,6 +254,136 @@ describe('ProgramForm', () => {
     submit();
     submit();
     backend.expectOne(`${api}/programs`).flush({ id: 1, name: 'Master' });
+  });
+
+  describe('details', () => {
+    const detailed: Program = { ...existing, description: 'Texte', availableSeats: 0, annualFee: 1250.5, level: 'MASTER' };
+    const choosePlain = (id: string, value: string) => {
+      const select = q<HTMLSelectElement>(id)!;
+      select.value = value;
+      select.dispatchEvent(new Event('change'));
+    };
+
+    it('prefills description, seats (even 0), fee and level on edit', () => {
+      setup(detailed);
+      expect(q<HTMLTextAreaElement>('#description')!.value).toBe('Texte');
+      expect(q<HTMLInputElement>('#availableSeats')!.value).toBe('0');
+      expect(q<HTMLInputElement>('#annualFee')!.value).toBe('1250.5');
+      expect(q<HTMLSelectElement>('#level')!.value).toBe('MASTER');
+    });
+
+    it('offers the closed list of levels, none selected on create', () => {
+      setup();
+      const values = Array.from(el().querySelectorAll<HTMLOptionElement>('#level option')).map((o) => o.value);
+      expect(values).toEqual(['', 'BTS_DUT', 'LICENCE', 'MASTER', 'DOCTORAT', 'AUTRE']);
+      expect(q<HTMLSelectElement>('#level')!.value).toBe('');
+    });
+
+    it('sends the four details when filled', () => {
+      setup();
+      type('#name', 'Master');
+      type('#description', ' Un programme ');
+      type('#availableSeats', '30');
+      type('#annualFee', '1250.50');
+      choosePlain('#level', 'LICENCE');
+      submit();
+      const req = backend.expectOne(`${api}/programs`);
+      expect(req.request.body).toEqual({
+        name: 'Master',
+        description: 'Un programme',
+        availableSeats: 30,
+        annualFee: 1250.5,
+        level: 'LICENCE',
+      });
+      req.flush({ id: 1, name: 'Master' });
+    });
+
+    it('sends 0 seats and a free (0) fee instead of dropping them', () => {
+      setup();
+      type('#name', 'Master');
+      type('#availableSeats', '0');
+      type('#annualFee', '0');
+      submit();
+      const req = backend.expectOne(`${api}/programs`);
+      expect(req.request.body).toEqual({ name: 'Master', availableSeats: 0, annualFee: 0 });
+      req.flush({ id: 1, name: 'Master' });
+    });
+
+    it('rejects bad seats, bad fee and a too long description', () => {
+      setup();
+      type('#name', 'Master');
+      type('#availableSeats', '-1');
+      type('#annualFee', '1.234');
+      type('#description', 'x'.repeat(1001));
+      submit();
+      backend.expectNone(`${api}/programs`);
+      expect(errorOf('availableSeats')).toContain('entier');
+      expect(errorOf('annualFee')).toContain('montant');
+      expect(errorOf('description')).toContain('1000');
+      type('#availableSeats', '1.5');
+      type('#annualFee', 'abc');
+      submit();
+      expect(errorOf('availableSeats')).toContain('entier');
+      expect(errorOf('annualFee')).toContain('montant');
+    });
+
+    it('accepts a decimal comma: 1250,50 is sent as 1250.5', () => {
+      setup();
+      type('#name', 'Master');
+      type('#annualFee', '1250,50');
+      submit();
+      const req = backend.expectOne(`${api}/programs`);
+      expect(req.request.body).toEqual({ name: 'Master', annualFee: 1250.5 });
+      req.flush({ id: 1, name: 'Master' });
+    });
+
+    it('sends an empty description on edit so that it clears the stored one', () => {
+      setup(detailed);
+      type('#description', '');
+      submit();
+      const req = backend.expectOne(`${api}/programs/7`);
+      expect(req.request.body.description).toBe('');
+      req.flush({ id: 7, name: 'Master' });
+    });
+
+    it('omits the description on create when left empty', () => {
+      setup();
+      type('#name', 'Master');
+      submit();
+      const req = backend.expectOne(`${api}/programs`);
+      expect('description' in req.request.body).toBeFalse();
+      req.flush({ id: 1, name: 'Master' });
+    });
+
+    it('refuses more than 6 digits of seats', () => {
+      setup();
+      type('#name', 'Master');
+      type('#availableSeats', '1000000');
+      submit();
+      backend.expectNone(`${api}/programs`);
+      expect(errorOf('availableSeats')).toContain('entier');
+    });
+
+    it('tells that an empty field keeps the current value', () => {
+      setup();
+      const hints = el().querySelectorAll('[data-hint]');
+      expect(hints.length).toBe(4);
+      expect(hints[0].textContent).toContain('Laisser vide efface la description');
+      hints.forEach((h, i) => {
+        if (i > 0) expect(h.textContent).toContain('Laisser vide conserve la valeur actuelle');
+      });
+    });
+
+    it('maps server errors on the new fields onto the controls', () => {
+      setup();
+      type('#name', 'Master');
+      submit();
+      backend
+        .expectOne(`${api}/programs`)
+        .flush({ level: 'level invalide' }, { status: 400, statusText: 'Bad Request' });
+      fixture.detectChanges();
+      expect(errorOf('level')).toBe('level invalide');
+    });
   });
 
   it('emits cancelled', () => {
