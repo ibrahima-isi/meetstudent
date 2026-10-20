@@ -145,7 +145,7 @@ New issues and specs use local Markdown under `.scratch/<feature>/`. Before read
 
 ### Ticket progress
 
-Ticket creation is complete only after its entry is saved in `docs/completion.md`, immediately after each ticket and before creating the next one. Read the mandatory lifecycle rules in `docs/agents/issue-tracker.md` when creating, claiming or completing tickets.
+Completion tracking is **per spec**: one file `docs/completion/<spec-folder>.md` for each `.scratch/<spec-folder>/`, created as soon as the spec's tickets are created, with each ticket's entry saved right after its ticket file and before the next ticket. Once all tickets of the spec are merged and confirmed, leave the file alone and move on; the owner reviews it and deletes it. The legacy `docs/completion.md` is frozen, add nothing new to it. Rules in `docs/agents/issue-tracker.md`; read them when creating, claiming or completing tickets.
 
 ### Triage labels
 
