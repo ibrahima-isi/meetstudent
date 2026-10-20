@@ -17,16 +17,25 @@ public class CapturingEmailSender implements EmailSender {
     private final List<EmailMessage> messages = new CopyOnWriteArrayList<>();
 
     private volatile SendOutcome outcome = SendOutcome.SENT;
+    private volatile RuntimeException failure;
 
     @Override
     public SendOutcome send(EmailMessage message) {
         messages.add(message);
+        if (failure != null) {
+            throw failure;
+        }
         return outcome;
     }
 
     /** Makes every following send report this outcome (the message is still recorded). */
     public void respondWith(SendOutcome outcome) {
         this.outcome = outcome;
+    }
+
+    /** Makes every following send throw this exception (the message is still recorded). */
+    public void throwOnSend(RuntimeException failure) {
+        this.failure = failure;
     }
 
     @Override
@@ -45,6 +54,7 @@ public class CapturingEmailSender implements EmailSender {
     public void clear() {
         messages.clear();
         outcome = SendOutcome.SENT;
+        failure = null;
     }
 
     /** Pulls the token out of the link in the plain-text body. */

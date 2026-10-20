@@ -6,8 +6,11 @@ import com.bowe.meetstudent.entities.enums.ExpertStatus;
 import com.bowe.meetstudent.exceptions.ConflictException;
 import com.bowe.meetstudent.exceptions.FieldValidationException;
 import com.bowe.meetstudent.exceptions.ResourceNotFoundException;
+import com.bowe.meetstudent.mail.EmailType;
+import com.bowe.meetstudent.mail.ExpertEmailRequested;
 import com.bowe.meetstudent.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -28,6 +31,7 @@ public class AdminExpertService {
     private static final Sort NEWEST_FIRST = Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"));
 
     private final UserRepository users;
+    private final ApplicationEventPublisher events;
 
     /** Fixed order (registration date desc, then id desc): any requested sort is ignored, the size is capped. */
     @Transactional(readOnly = true)
@@ -36,20 +40,32 @@ public class AdminExpertService {
         return status == null ? users.findExperts(page) : users.findExpertsByStatus(status, page);
     }
 
-    /** @throws ResourceNotFoundException unknown user (404); @throws ConflictException not an Expert (409) */
+    /**
+     * Idempotent: approving an already approved Expert changes nothing (date kept) and sends no mail.
+     * The mail goes out after commit, in {@code lang} (fr or en, French by default).
+     *
+     * @throws ResourceNotFoundException unknown user (404); @throws ConflictException not an Expert (409)
+     */
     @Transactional
-    public UserEntity approve(int id) {
+    public UserEntity approve(int id, String lang) {
         var expert = lockedExpert(id);
-        decide(expert, ExpertStatus.APPROVED, null);
+        if (decide(expert, ExpertStatus.APPROVED, null)) {
+            notify(expert, EmailType.EXPERT_APPROVED, lang, null);
+        }
         return expert;
     }
 
-    /** The reason is optional: trimmed, blank means none, at most 255 characters, no control characters. */
+    /**
+     * The reason is optional: trimmed, blank means none, at most 255 characters, no control characters. Idempotent
+     * like {@link #approve}: rejecting an already rejected Expert keeps the first reason and date and sends no mail.
+     */
     @Transactional
-    public UserEntity reject(int id, String reason) {
+    public UserEntity reject(int id, String reason, String lang) {
         var checked = checkedReason(reason);
         var expert = lockedExpert(id);
-        decide(expert, ExpertStatus.REJECTED, checked);
+        if (decide(expert, ExpertStatus.REJECTED, checked)) {
+            notify(expert, EmailType.EXPERT_REJECTED, lang, checked);
+        }
         return expert;
     }
 
@@ -61,10 +77,19 @@ public class AdminExpertService {
         return user;
     }
 
-    private void decide(UserEntity expert, ExpertStatus status, String reason) {
+    /** @return true when the status really changed (only then are the date and the mail written) */
+    private boolean decide(UserEntity expert, ExpertStatus status, String reason) {
+        if (expert.getExpertStatus() == status) {
+            return false;
+        }
         expert.setExpertStatus(status);
         expert.setExpertStatusReason(reason);
         expert.setExpertDecisionDate(LocalDateTime.now());
+        return true;
+    }
+
+    private void notify(UserEntity expert, EmailType type, String lang, String reason) {
+        events.publishEvent(new ExpertEmailRequested(type, expert.getId(), expert.getEmail(), expert.getFirstname(), lang, reason));
     }
 
     private String checkedReason(String value) {

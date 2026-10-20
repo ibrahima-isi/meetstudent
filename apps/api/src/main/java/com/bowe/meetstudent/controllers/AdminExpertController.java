@@ -43,23 +43,28 @@ public class AdminExpertController {
     }
 
     @PostMapping("/{id}/approve")
-    @Operation(summary = "Approve an Expert (also re-approves a rejected one); clears the reason")
+    @Operation(summary = "Approve an Expert (also re-approves a rejected one); clears the reason",
+            description = "Idempotent: an already approved Expert is returned unchanged and no mail is sent. Otherwise the "
+                    + "Expert is mailed after commit in ?lang=fr|en (French by default).")
     @ApiResponse(responseCode = "200", description = "The expert after the decision")
     @ApiResponse(responseCode = "404", description = "User not found")
     @ApiResponse(responseCode = "409", description = "The account is not an Expert")
-    public AdminExpertDTO approve(@PathVariable int id) {
-        return toDto(service.approve(id));
+    public AdminExpertDTO approve(@PathVariable int id, @RequestParam(required = false) String lang) {
+        return toDto(service.approve(id, lang));
     }
 
     @PostMapping("/{id}/reject")
     @Operation(summary = "Reject an Expert (also valid for an approved one) with an optional reason",
             description = "Body {\"reason\": \"...\"} is optional: trimmed, blank means none, 255 characters at most, "
-                    + "no control characters (400 {\"reason\": ...}). Ratings already published are kept.")
+                    + "no control characters (400 {\"reason\": ...}). Ratings already published are kept. Idempotent: an already "
+                    + "rejected Expert keeps its first reason and date and no mail is sent; otherwise the reason is mailed "
+                    + "(escaped) in ?lang=fr|en (French by default).")
     @ApiResponse(responseCode = "200", description = "The expert after the decision")
     @ApiResponse(responseCode = "404", description = "User not found")
     @ApiResponse(responseCode = "409", description = "The account is not an Expert")
-    public AdminExpertDTO reject(@PathVariable int id, @RequestBody(required = false) RejectExpertRequest request) {
-        return toDto(service.reject(id, request == null ? null : request.reason()));
+    public AdminExpertDTO reject(@PathVariable int id, @RequestBody(required = false) RejectExpertRequest request,
+                                 @RequestParam(required = false) String lang) {
+        return toDto(service.reject(id, request == null ? null : request.reason(), lang));
     }
 
     private static AdminExpertDTO toDto(UserEntity u) {

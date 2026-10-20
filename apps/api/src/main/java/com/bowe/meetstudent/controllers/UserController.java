@@ -9,7 +9,10 @@ import com.bowe.meetstudent.dto.UserDTO;
 import com.bowe.meetstudent.entities.Program;
 import com.bowe.meetstudent.entities.Role;
 import com.bowe.meetstudent.entities.UserEntity;
+import com.bowe.meetstudent.entities.enums.ExpertStatus;
 import com.bowe.meetstudent.exceptions.TooManyRequestsException;
+import com.bowe.meetstudent.mail.EmailType;
+import com.bowe.meetstudent.mail.ExpertEmailRequested;
 import com.bowe.meetstudent.mappers.Mapper;
 import com.bowe.meetstudent.security.UserPrincipal;
 import com.bowe.meetstudent.services.EmailVerificationService;
@@ -22,6 +25,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -50,6 +54,7 @@ public class UserController {
     private final Mapper<Program, ProgramDTO> programMapper;
     private final RoleService roleService;
     private final EmailVerificationService emailVerificationService;
+    private final ApplicationEventPublisher events;
 
     @PostMapping
     @Operation(summary = "Create a new user", description = "Registers a student or teacher account; student is the default.")
@@ -81,6 +86,14 @@ public class UserController {
         } catch (Exception ex) {
             // Exception last so the stack trace is kept; messages here never carry a token or a link.
             log.warn("Verification email not queued after registration userId={}", savedUser.getId(), ex);
+        }
+        if (savedUser.getExpertStatus() == ExpertStatus.PENDING) {
+            try {
+                events.publishEvent(new ExpertEmailRequested(EmailType.EXPERT_REQUEST_RECEIVED, savedUser.getId(),
+                        savedUser.getEmail(), savedUser.getFirstname(), request.getLang(), null));
+            } catch (Exception ex) {
+                log.warn("Expert request email not queued userId={} cause={}", savedUser.getId(), ex.getClass().getSimpleName());
+            }
         }
         UserDTO savedUserDto = this.userMapper.toDTO(savedUser);
         return new ResponseEntity<>(savedUserDto, HttpStatus.CREATED);

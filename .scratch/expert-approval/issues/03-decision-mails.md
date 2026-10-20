@@ -4,11 +4,11 @@
 
 **Blocked by:** [02](02-admin-approval-queue.md)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Worktree:** `expert-approval-03`
 
-- [ ] Trois nouveaux types de mail via le service de messagerie existant (résultats d'envoi, envoi après commit)
-- [ ] Le motif de rejet est échappé dans le mail ; aucun secret ni donnée inutile
-- [ ] Un échec d'envoi ne bloque pas la décision ni l'inscription
-- [ ] Tests d'intégration sur le contenu et le destinataire des mails, rouge d'abord
+- [x] Trois nouveaux types de mail via le service de messagerie existant (résultats d'envoi, envoi après commit)
+- [x] Le motif de rejet est échappé dans le mail ; aucun secret ni donnée inutile
+- [x] Un échec d'envoi ne bloque pas la décision ni l'inscription
+- [x] Tests d'intégration sur le contenu et le destinataire des mails, rouge d'abord
