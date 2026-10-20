@@ -1,12 +1,12 @@
 import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 import { timeout } from 'rxjs';
-import { School } from '@models/entities';
+import { Program, School } from '@models/entities';
 import { ROLE_STUDENT } from '@models/roles';
 import { TokenService } from './token.service';
 import { UserService } from './user.service';
 
 /**
- * The user's wishlist of SCHOOLS (the backend models it that way). The server
+ * The user's wishlist of schools and programs (two server lists, one service). The server
  * is the source of truth: it is loaded from the API, mutations are applied
  * optimistically and then replaced by the server's answer, or rolled back.
  */
@@ -28,13 +28,19 @@ export class WishlistService {
 
   private readonly state = signal<School[]>([]);
   private readonly pending = signal<ReadonlySet<number>>(new Set());
+  private readonly programState = signal<Program[]>([]);
+  private readonly programPending = signal<ReadonlySet<number>>(new Set());
 
   readonly schools = this.state.asReadonly();
+  readonly programs = this.programState.asReadonly();
+  /** True when only the program list could not be read; the schools are unaffected. */
+  readonly programsError = signal(false);
   readonly available = computed(() => this.tokenService.user()?.role?.name === ROLE_STUDENT);
   readonly status = signal<'idle' | 'loading' | 'loaded' | 'error'>('idle');
   /** True after a failed add/remove (already rolled back) until dismissed. */
   readonly error = signal(false);
   private readonly ids = computed(() => new Set(this.state().map((s) => s.id)));
+  private readonly programIds = computed(() => new Set(this.programState().map((p) => p.id)));
 
   constructor() {
     // The one place every sign-out path goes through (dock, home page, refresh
@@ -68,11 +74,22 @@ export class WishlistService {
     return schoolId !== undefined && this.pending().has(schoolId);
   }
 
+  hasProgram(programId: number | undefined): boolean {
+    return programId !== undefined && this.programIds().has(programId);
+  }
+
+  isProgramPending(programId: number | undefined): boolean {
+    return programId !== undefined && this.programPending().has(programId);
+  }
+
   /** Forgets everything; called on logout so the next session never sees this one's list. */
   clear(): void {
     this.generation++;
     this.state.set([]);
     this.pending.set(new Set());
+    this.programState.set([]);
+    this.programPending.set(new Set());
+    this.programsError.set(false);
     this.status.set('idle');
     this.error.set(false);
   }
@@ -88,6 +105,7 @@ export class WishlistService {
     const userId = this.tokenService.user()?.id;
     if (userId === undefined) {
       this.state.set([]);
+      this.programState.set([]);
       return;
     }
     // Home and the navbar cart both ask on entry; one request answers both.
@@ -110,6 +128,29 @@ export class WishlistService {
         this.syncOwner();
         if (generation === this.generation) {
           this.status.set('error');
+        }
+      },
+    });
+    this.loadPrograms(userId, generation);
+  }
+
+  /**
+   * Programs load apart from the schools: if that endpoint fails the schools still show, and
+   * `programsError` carries a quiet, non-blocking note instead of the shared error state.
+   */
+  private loadPrograms(userId: number, generation: number): void {
+    this.programsError.set(false);
+    this.userService.getProgramWishlist(userId).pipe(timeout(LOAD_TIMEOUT_MS)).subscribe({
+      next: (programs) => {
+        this.syncOwner();
+        if (generation === this.generation) {
+          this.programState.set(programs);
+        }
+      },
+      error: () => {
+        this.syncOwner();
+        if (generation === this.generation) {
+          this.programsError.set(true);
         }
       },
     });
@@ -152,6 +193,58 @@ export class WishlistService {
         this.error.set(true);
         this.setPending(schoolId, false);
       },
+    });
+  }
+
+  /** Adds or removes a program, like {@link toggle} does for a school. */
+  toggleProgram(program: Program): void {
+    this.syncOwner();
+    if (!this.available()) return;
+    const userId = this.tokenService.user()?.id;
+    const programId = program.id;
+    if (userId === undefined || programId === undefined || this.isProgramPending(programId)) {
+      return;
+    }
+
+    const generation = this.generation;
+    const adding = !this.hasProgram(programId);
+    this.error.set(false);
+    this.setProgramPending(programId, true);
+    this.programState.update((list) => (adding ? [...list, program] : list.filter((p) => p.id !== programId)));
+
+    const request = adding
+      ? this.userService.addProgramToWishlist(userId, programId)
+      : this.userService.removeProgramFromWishlist(userId, programId);
+    request.subscribe({
+      next: (programs) => {
+        this.syncOwner();
+        if (generation !== this.generation) {
+          return;
+        }
+        this.programState.set(programs);
+        this.setProgramPending(programId, false);
+      },
+      error: () => {
+        this.syncOwner();
+        if (generation !== this.generation) {
+          return;
+        }
+        this.programState.update((list) => (adding ? list.filter((p) => p.id !== programId) : [...list, program]));
+        this.error.set(true);
+        this.setProgramPending(programId, false);
+      },
+    });
+  }
+
+  private setProgramPending(programId: number, on: boolean): void {
+    this.programPending.update((current) => {
+      const next = new Set(current);
+      if (on) {
+        next.add(programId);
+      } else {
+        next.delete(programId);
+      }
+      return next;
     });
   }
 

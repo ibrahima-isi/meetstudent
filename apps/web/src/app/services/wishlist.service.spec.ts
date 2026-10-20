@@ -3,7 +3,7 @@ import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Subject, of, throwError } from 'rxjs';
-import { School, User } from '@models/entities';
+import { Program, School, User } from '@models/entities';
 import { TokenService } from './token.service';
 import { UserService } from './user.service';
 import { WishlistService } from './wishlist.service';
@@ -21,8 +21,16 @@ describe('WishlistService', () => {
 
   beforeEach(() => {
     user = signal<{ id: number; role: { name: string } } | null>(session(9));
-    userService = jasmine.createSpyObj('UserService', ['getUser', 'addToWishlist', 'removeFromWishlist']);
+    userService = jasmine.createSpyObj('UserService', [
+      'getUser',
+      'addToWishlist',
+      'removeFromWishlist',
+      'getProgramWishlist',
+      'addProgramToWishlist',
+      'removeProgramFromWishlist',
+    ]);
     userService.getUser.and.returnValue(of(userWith([a])));
+    userService.getProgramWishlist.and.returnValue(of([]));
     TestBed.configureTestingModule({
       providers: [
         provideZonelessChangeDetection(),
@@ -307,6 +315,142 @@ describe('WishlistService', () => {
     expect(userService.getUser).toHaveBeenCalledTimes(2);
     expect(service.schools()).toEqual([b]);
   });
+
+  describe('programs', () => {
+    const p1: Program = { id: 11, name: 'Licence Info' };
+    const p2: Program = { id: 12, name: 'Master Data' };
+
+    it('loads the programs next to the schools', () => {
+      userService.getProgramWishlist.and.returnValue(of([p1]));
+
+      service.load();
+
+      expect(userService.getProgramWishlist).toHaveBeenCalledWith(9);
+      expect(service.programs()).toEqual([p1]);
+      expect(service.hasProgram(11)).toBeTrue();
+      expect(service.hasProgram(12)).toBeFalse();
+      expect(service.status()).toBe('loaded');
+      expect(service.programsError()).toBeFalse();
+    });
+
+    it('keeps the schools when only the program list fails, and says so without blocking', () => {
+      userService.getProgramWishlist.and.returnValue(throwError(() => new Error('no V32')));
+
+      service.load();
+
+      expect(service.status()).toBe('loaded');
+      expect(service.schools()).toEqual([a]);
+      expect(service.programs()).toEqual([]);
+      expect(service.programsError()).toBeTrue();
+    });
+
+    it('still reports the blocking error when the schools fail', () => {
+      userService.getUser.and.returnValue(throwError(() => new Error('down')));
+
+      service.load();
+
+      expect(service.status()).toBe('error');
+    });
+
+    it('forgets the partial error on clear', () => {
+      userService.getProgramWishlist.and.returnValue(throwError(() => new Error('x')));
+      service.load();
+
+      service.clear();
+
+      expect(service.programsError()).toBeFalse();
+    });
+
+    it('shows an added program at once, then keeps the server answer', () => {
+      const reply = new Subject<Program[]>();
+      userService.addProgramToWishlist.and.returnValue(reply);
+
+      service.toggleProgram(p2);
+
+      expect(userService.addProgramToWishlist).toHaveBeenCalledWith(9, 12);
+      expect(service.hasProgram(12)).toBeTrue();
+      expect(service.isProgramPending(12)).toBeTrue();
+
+      reply.next([p1, p2]);
+      reply.complete();
+
+      expect(service.programs()).toEqual([p1, p2]);
+      expect(service.isProgramPending(12)).toBeFalse();
+    });
+
+    it('rolls an add back and flags the error when the server refuses', () => {
+      userService.addProgramToWishlist.and.returnValue(throwError(() => new Error('boom')));
+
+      service.toggleProgram(p2);
+
+      expect(service.hasProgram(12)).toBeFalse();
+      expect(service.error()).toBeTrue();
+      expect(service.isProgramPending(12)).toBeFalse();
+    });
+
+    it('removes a program and rolls it back on failure', () => {
+      userService.getProgramWishlist.and.returnValue(of([p1]));
+      service.load();
+      userService.removeProgramFromWishlist.and.returnValue(throwError(() => new Error('boom')));
+
+      service.toggleProgram(p1);
+
+      expect(userService.removeProgramFromWishlist).toHaveBeenCalledWith(9, 11);
+      expect(service.hasProgram(11)).toBeTrue();
+      expect(service.error()).toBeTrue();
+    });
+
+    it('keeps a successful removal', () => {
+      userService.getProgramWishlist.and.returnValue(of([p1]));
+      service.load();
+      userService.removeProgramFromWishlist.and.returnValue(of([]));
+
+      service.toggleProgram(p1);
+
+      expect(service.programs()).toEqual([]);
+    });
+
+    it('ignores a second toggle while the first is in flight', () => {
+      userService.addProgramToWishlist.and.returnValue(new Subject<Program[]>());
+
+      service.toggleProgram(p2);
+      service.toggleProgram(p2);
+
+      expect(userService.addProgramToWishlist).toHaveBeenCalledTimes(1);
+    });
+
+    it('never touches the API for an expert', () => {
+      user.set(session(9, 'ROLE_EXPERT'));
+      TestBed.tick();
+
+      service.toggleProgram(p1);
+
+      expect(userService.addProgramToWishlist).not.toHaveBeenCalled();
+      expect(service.programs()).toEqual([]);
+    });
+
+    it('forgets the programs on clear and when the session ends', () => {
+      userService.getProgramWishlist.and.returnValue(of([p1]));
+      service.load();
+
+      user.set(null);
+      TestBed.tick();
+
+      expect(service.programs()).toEqual([]);
+    });
+
+    it('ignores a program answer that arrives after clear', () => {
+      const reply = new Subject<Program[]>();
+      userService.addProgramToWishlist.and.returnValue(reply);
+      service.toggleProgram(p2);
+
+      service.clear();
+      reply.next([p2]);
+
+      expect(service.programs()).toEqual([]);
+      expect(service.isProgramPending(12)).toBeFalse();
+    });
+  });
 });
 
 describe('WishlistService HTTP boundary', () => {
@@ -335,6 +479,8 @@ describe('WishlistService HTTP boundary', () => {
     const request = http.expectOne(`${environment.apiUrl}/users/id/9`);
     expect(request.request.method).toBe('GET');
     request.flush({ id: 9, wishlist: [school] });
+    http.expectOne(`${environment.apiUrl}/users/9/wishlist/programs`).flush([{ id: 5, name: 'P' }]);
+    expect(service.programs().map((item) => item.id)).toEqual([5]);
     expect(service.schools().map((item) => item.id)).toEqual([1]);
     http.verify();
   });

@@ -226,21 +226,59 @@
         <section class="rounded-2xl border border-border bg-card p-5 lg:sticky lg:top-28">
           <h2 class="text-xl font-semibold tracking-tight text-foreground">{{ t('profile.wishlistTitle') }}</h2>
           <p class="mt-1 text-sm text-muted-foreground">
-            {{ t(plural('wishlist.count', wishlist.schools().length), { count: wishlist.schools().length }) }}
+            @if (wishlist.schools().length > 0 || wishlist.programs().length === 0) {
+              {{ t(plural('wishlist.count', wishlist.schools().length), { count: wishlist.schools().length }) }}
+            }
+            @if (wishlist.schools().length > 0 && wishlist.programs().length > 0) {
+              ·
+            }
+            @if (wishlist.programs().length > 0) {
+              {{ t(plural('wishlist.programmes', wishlist.programs().length), { count: wishlist.programs().length }) }}
+            }
           </p>
+          @if (wishlist.programsError()) {
+            <p role="status" class="mt-2 text-sm text-muted-foreground">{{ t('programWishlist.loadError') }}</p>
+          }
 
-          @if (wishlist.schools().length > 0) {
-            <ul role="list" class="mt-4 space-y-3">
-              @for (school of wishlist.schools(); track school.id) {
-                <li>
-                  <app-wishlist-item
-                    [school]="school"
-                    [removing]="wishlist.isPending(school.id)"
-                    (removed)="wishlist.toggle($event)"
-                  />
-                </li>
+          @if (wishlist.schools().length + wishlist.programs().length > 0) {
+            <div class="mt-4 space-y-4">
+              @if (wishlist.schools().length > 0) {
+                <section>
+                  @if (wishlist.programs().length > 0) {
+                    <h3 class="mb-2 text-sm font-semibold text-foreground">{{ t('programWishlist.schoolsHeading') }}</h3>
+                  }
+                  <ul role="list" class="space-y-3">
+                    @for (school of wishlist.schools(); track school.id) {
+                      <li>
+                        <app-wishlist-item
+                          [school]="school"
+                          [removing]="wishlist.isPending(school.id)"
+                          (removed)="wishlist.toggle($event)"
+                        />
+                      </li>
+                    }
+                  </ul>
+                </section>
               }
-            </ul>
+              @if (wishlist.programs().length > 0) {
+                <section>
+                  @if (wishlist.schools().length > 0) {
+                    <h3 class="mb-2 text-sm font-semibold text-foreground">{{ t('programWishlist.heading') }}</h3>
+                  }
+                  <ul role="list" class="space-y-3">
+                    @for (program of wishlist.programs(); track program.id) {
+                      <li>
+                        <app-wishlist-program-item
+                          [program]="program"
+                          [removing]="wishlist.isProgramPending(program.id)"
+                          (removed)="wishlist.toggleProgram($event)"
+                        />
+                      </li>
+                    }
+                  </ul>
+                </section>
+              }
+            </div>
           } @else {
             <div class="mt-4 rounded-xl border border-dashed border-border-strong p-6 text-center">
               <lucide-icon [img]="Heart" class="mx-auto mb-3 h-10 w-10 text-muted-foreground/50" aria-hidden="true"></lucide-icon>

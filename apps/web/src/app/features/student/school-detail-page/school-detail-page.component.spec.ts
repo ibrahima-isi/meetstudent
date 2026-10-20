@@ -32,6 +32,9 @@ describe('SchoolDetailPageComponent', () => {
     load: jasmine.Spy;
     toggle: jasmine.Spy;
     has: (id: number) => boolean;
+    hasProgram: (id: number) => boolean;
+    isProgramPending: (id: number) => boolean;
+    toggleProgram: jasmine.Spy;
     isPending: (id: number) => boolean;
     dismissError: jasmine.Spy;
   };
@@ -78,6 +81,9 @@ describe('SchoolDetailPageComponent', () => {
       load: jasmine.createSpy('load'),
       toggle: jasmine.createSpy('toggle'),
       has: (id: number) => saved().some((s) => s.id === id),
+      hasProgram: () => false,
+      isProgramPending: () => false,
+      toggleProgram: jasmine.createSpy('toggleProgram'),
       isPending: () => false,
       dismissError: jasmine.createSpy('dismissError'),
     };
@@ -231,6 +237,31 @@ describe('SchoolDetailPageComponent', () => {
       await renderAt('/schools/7');
 
       expect(wishlist.load).toHaveBeenCalled();
+    });
+
+    describe('programme hearts', () => {
+      const heart = () => harness.routeNativeElement?.querySelector('[data-testid="program-wishlist-toggle"]') as HTMLButtonElement | null;
+      const withProgramme = () =>
+        schoolServiceSpy.getSchool.and.returnValue(of({ ...mockSchool, programs: [{ id: 21, name: 'Licence Info' } as Program] }));
+
+      it('lets a student save a programme from the list', async () => {
+        withProgramme();
+        await renderAt('/schools/7');
+        await settle();
+
+        heart()!.click();
+
+        expect(wishlist.toggleProgram).toHaveBeenCalledWith(jasmine.objectContaining({ id: 21 }));
+      });
+
+      it('shows no programme heart to an expert', async () => {
+        currentUser.set({ id: 4, role: { name: 'ROLE_EXPERT' } });
+        withProgramme();
+        await renderAt('/schools/7');
+        await settle();
+
+        expect(heart()).toBeNull();
+      });
     });
 
     it('shows no student heart or wishlist load to an expert', async () => {
