@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslocoDirective } from '@jsverse/transloco';
@@ -8,7 +8,9 @@ import { pluralKey } from '@i18n/plural';
 import { Program, programLevelKey } from '@models/entities';
 import { LocaleService } from '@services/locale.service';
 import { ProgramService } from '@services/program.service';
+import { WishlistService } from '@services/wishlist.service';
 import { ErrorStateComponent } from '@shared/components/error-state/error-state.component';
+import { WishlistHeartComponent } from '@shared/components/wishlist-heart/wishlist-heart.component';
 
 /**
  * Public page of one programme. Every administrator-typed text (description of
@@ -17,14 +19,15 @@ import { ErrorStateComponent } from '@shared/components/error-state/error-state.
  */
 @Component({
   selector: 'app-program-detail-page',
-  imports: [RouterLink, LucideAngularModule, TranslocoDirective, ErrorStateComponent],
+  imports: [RouterLink, LucideAngularModule, TranslocoDirective, ErrorStateComponent, WishlistHeartComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './program-detail-page.component.html',
 })
-export class ProgramDetailPageComponent {
+export class ProgramDetailPageComponent implements OnInit {
   private readonly programService = inject(ProgramService);
   private readonly route = inject(ActivatedRoute);
   private readonly locale = inject(LocaleService);
+  private readonly wishlist = inject(WishlistService);
 
   protected readonly ArrowLeft = ArrowLeft;
   protected readonly Clock = Clock;
@@ -62,6 +65,11 @@ export class ProgramDetailPageComponent {
         this.program.set(program);
         this.status.set('loaded');
       });
+  }
+
+  ngOnInit(): void {
+    // The heart reflects the server's list; only a student has one.
+    if (this.wishlist.available()) this.wishlist.load();
   }
 
   /** Retry action of the error state. */

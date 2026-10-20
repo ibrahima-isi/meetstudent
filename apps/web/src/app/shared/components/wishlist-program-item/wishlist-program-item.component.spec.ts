@@ -52,17 +52,17 @@ describe('WishlistProgramItemComponent', () => {
     expect(text()).toContain('3 years');
   });
 
-  it('links to the school page in the language being read', async () => {
+  it('links to the programme page in the language being read', async () => {
     await render(program(), 'fr');
 
     const link = Array.from(el().querySelectorAll('a')).find((a) => /voir plus/i.test(a.textContent ?? ''));
-    expect(link?.getAttribute('href')).toBe('/fr/schools/4');
+    expect(link?.getAttribute('href')).toBe('/fr/programs/11');
   });
 
-  it('shows no link when the API did not say which school it belongs to', async () => {
+  it('still links to the programme when the API did not say which school it belongs to', async () => {
     await render(program({ schoolId: undefined }));
 
-    expect(el().querySelector('a')).toBeNull();
+    expect(el().querySelector('a')?.getAttribute('href')).toBe('/en/programs/11');
   });
 
   it('reports the remove click and disables the button while pending', async () => {

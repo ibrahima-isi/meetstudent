@@ -7,7 +7,7 @@ import { Program } from '@models/entities';
 import { LocaleService } from '@services/locale.service';
 
 /**
- * One wishlisted program: its name, its school and its length, with a link to the school page.
+ * One wishlisted program: its name, its school and its length, with a link to the programme page.
  * Used by the cart panel and by the profile; removing is the parent's call, so the item only
  * reports the click.
  */
@@ -41,8 +41,8 @@ import { LocaleService } from '@services/locale.service';
         }
       </div>
 
-      @if (program().schoolId; as schoolId) {
-        <a [routerLink]="['/', lang(), 'schools', schoolId]" class="btn btn-secondary mt-3 h-8 px-3 text-sm">
+      @if (program().id; as programId) {
+        <a [routerLink]="['/', lang(), 'programs', programId]" class="btn btn-secondary mt-3 h-8 px-3 text-sm">
           {{ t('wishlist.viewMore') }}
         </a>
       }
