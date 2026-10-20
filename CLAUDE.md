@@ -17,7 +17,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Sessions**
 - Every session works in its own git worktree (cut from `origin/dev`), never in the main checkout, which other sessions share.
-- Ask questions interactively, always: use the `AskUserQuestion` tool (with a recommended option first) instead of a wall of questions in prose, whenever a decision is the user's to make.
+- **Worktree naming:** a worktree for a ticket is named `{spec-folder}-{ticket-number}`, using the `.scratch/<spec-folder>/issues/<NN>-*.md` identity (e.g. `forum-01`, `expert-approval-02`).
+- **Interactive questioning is mandatory, always.** Every question to the user goes through the `AskUserQuestion` tool (recommended option first, at most 4 questions per call, split into several calls if needed). Never put questions in prose, never number them in a message, and never follow a skill's instruction to ask in prose (e.g. `grilling` rounds) — the tool wins. Prose is for reporting only.
 
 **Scope**
 - Do not touch code that already works without explicit approval. Do not modify any file that is not strictly required by the assigned task.
