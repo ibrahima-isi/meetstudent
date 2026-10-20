@@ -1,0 +1,88 @@
+<div class="min-h-screen bg-muted/50" *transloco="let t">
+  <div class="bg-gradient-to-br from-indigo-600 to-purple-700 text-white">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-12">
+      <a
+        [routerLink]="['/', lang(), 'programs']"
+        class="inline-flex items-center gap-2 text-indigo-100 hover:text-white dark:hover:text-white mb-6 text-sm"
+      >
+        <lucide-icon [img]="ArrowLeft" class="w-4 h-4" aria-hidden="true"></lucide-icon>
+        {{ t('programDetail.back') }}
+      </a>
+      @if (program(); as p) {
+        <h1 data-testid="program-name" class="text-3xl font-bold break-words">{{ p.name }}</h1>
+        @if (p.schoolId != null && p.schoolName) {
+          <p data-testid="program-school" class="mt-2 text-indigo-100">
+            <a [routerLink]="['/', lang(), 'schools', p.schoolId]" class="underline hover:text-white dark:hover:text-white">{{ p.schoolName }}</a>
+          </p>
+        }
+      }
+    </div>
+  </div>
+
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    @if (status() === 'loading') {
+      <div role="status" aria-busy="true" class="space-y-4 animate-pulse">
+        <span class="sr-only">{{ t('common.loading') }}</span>
+        <div class="h-6 bg-muted rounded w-1/3" aria-hidden="true"></div>
+        <div class="h-24 bg-muted rounded" aria-hidden="true"></div>
+      </div>
+    } @else if (status() === 'error') {
+      <app-error-state [message]="t('programDetail.loadError')" (retry)="load()" />
+    } @else if (program(); as p) {
+      @let level = levelKey(p.level);
+      <div class="flex flex-wrap gap-x-6 gap-y-3 text-sm font-medium text-muted-foreground mb-6">
+        @if (level) {
+          <div data-testid="program-level" class="flex items-center gap-2">
+            <lucide-icon [img]="GraduationCap" class="w-4 h-4 text-indigo-500 dark:text-indigo-400" aria-hidden="true"></lucide-icon>
+            <span>{{ t(level) }}</span>
+          </div>
+        }
+        @if (p.duration != null && p.duration > 0) {
+          <div data-testid="program-duration" class="flex items-center gap-2">
+            <lucide-icon [img]="Clock" class="w-4 h-4 text-indigo-500 dark:text-indigo-400" aria-hidden="true"></lucide-icon>
+            <span>{{ t(plural('programDetail.years', p.duration), { count: p.duration }) }}</span>
+          </div>
+        }
+        @if (p.annualFee != null) {
+          <div data-testid="program-fee" class="flex items-center gap-2">
+            <lucide-icon [img]="Euro" class="w-4 h-4 text-indigo-500 dark:text-indigo-400" aria-hidden="true"></lucide-icon>
+            <span>{{ t('programDetail.feePerYear', { amount: fee(p.annualFee) }) }}</span>
+          </div>
+        }
+        @if (p.availableSeats != null) {
+          <div data-testid="program-seats" class="flex items-center gap-2">
+            <lucide-icon [img]="Users" class="w-4 h-4 text-indigo-500 dark:text-indigo-400" aria-hidden="true"></lucide-icon>
+            @if (p.availableSeats === 0) {
+              <span class="text-red-700 dark:text-red-400 font-bold">{{ t('programDetail.full') }}</span>
+            } @else {
+              <span>{{ t(plural('programDetail.seats', p.availableSeats), { count: p.availableSeats }) }}</span>
+            }
+          </div>
+        }
+      </div>
+
+      @if (p.description) {
+        <section class="bg-card rounded-xl border border-border shadow-sm p-6 mb-6">
+          <h2 class="text-foreground text-xl font-bold mb-3">{{ t('programDetail.about') }}</h2>
+          <p data-testid="program-description" class="text-foreground whitespace-pre-line break-words">{{ p.description }}</p>
+        </section>
+      }
+
+      @if (p.courses && p.courses.length > 0) {
+        <section data-testid="program-courses" class="bg-card rounded-xl border border-border shadow-sm p-6">
+          <h2 class="text-foreground text-xl font-bold mb-4">{{ t('programDetail.courses', { count: p.courses.length }) }}</h2>
+          <ul class="space-y-4">
+            @for (course of p.courses; track course.id) {
+              <li data-testid="course-item" class="border-b border-border last:border-b-0 pb-4 last:pb-0">
+                <h3 class="text-foreground font-bold break-words">{{ course.name }}</h3>
+                @if (course.description) {
+                  <p class="text-muted-foreground text-sm mt-1 whitespace-pre-line break-words">{{ course.description }}</p>
+                }
+              </li>
+            }
+          </ul>
+        </section>
+      }
+    }
+  </div>
+</div>

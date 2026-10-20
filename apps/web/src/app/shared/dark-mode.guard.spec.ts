@@ -33,6 +33,7 @@ import { ProgramsRankingPageComponent } from '../features/public/programs-rankin
 import { SchoolsComparePageComponent } from '../features/public/schools-compare-page/schools-compare-page.component';
 import { CoursesComparePageComponent } from '../features/public/courses-compare-page/courses-compare-page.component';
 import { ProgramsComparePageComponent } from '../features/public/programs-compare-page/programs-compare-page.component';
+import { ProgramDetailPageComponent } from '../features/public/program-detail-page/program-detail-page.component';
 import { ProgramsPageComponent } from '../features/public/programs-page/programs-page.component';
 import { AccreditationsPageComponent } from '../features/public/accreditations-page/accreditations-page.component';
 import { CoursesPageComponent } from '../features/public/courses-page/courses-page.component';
@@ -121,8 +122,8 @@ describe('dark mode: no light-only palette classes', () => {
 
   const secondSchool = { ...school, id: 2, name: 'Stanford', tags: [] };
   const programmes = [
-    { id: 10, name: 'Computer Science', level: 'Master', duration: 2, startDate: '2026-09', capacity: 30, enrolled: 12, rating: 4, description: 'p', courses: [{ id: 100, name: 'Algorithms', code: 'CS101' }] },
-    { id: 11, name: 'Law', level: 'Bachelor', duration: 3, startDate: '2026-09', capacity: 20, enrolled: 20, rating: 3 },
+    { id: 10, name: 'Computer Science', level: 'MASTER', duration: 2, startDate: '2026-09', availableSeats: 18, rating: 4, description: 'p', courses: [{ id: 100, name: 'Algorithms', code: 'CS101' }] },
+    { id: 11, name: 'Law', level: 'LICENCE', duration: 3, startDate: '2026-09', availableSeats: 0, rating: 3 },
   ];
   const detailedSchool = {
     ...school,
@@ -282,6 +283,20 @@ describe('dark mode: no light-only palette classes', () => {
         c.status.set('loaded');
       },
     ],
+    [
+      'program detail page loaded',
+      ProgramDetailPageComponent,
+      (c) => {
+        c.program.set({
+          id: 1, name: 'Data', schoolId: 1, schoolName: 'School', description: 'd', level: 'MASTER', annualFee: 1500,
+          availableSeats: 3, duration: 2, courses: [{ id: 1, name: 'Algorithms', description: 'a' }],
+        });
+        c.status.set('loaded');
+      },
+    ],
+    ['program detail page full', ProgramDetailPageComponent, (c) => { c.program.set({ id: 1, name: 'Data', availableSeats: 0 }); c.status.set('loaded'); }],
+    ['program detail page loading', ProgramDetailPageComponent, (c) => c.status.set('loading')],
+    ['program detail page error', ProgramDetailPageComponent, (c) => c.status.set('error')],
     ['programs page loading', ProgramsPageComponent, (c) => c.status.set('loading')],
     ['programs page error', ProgramsPageComponent, (c) => c.status.set('error')],
     [

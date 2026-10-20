@@ -319,8 +319,8 @@ describe('SchoolDetailPageComponent', () => {
 
   describe('translations', () => {
     const programs = [
-      { id: 1, name: 'Prog A', duration: 3, capacity: 10, enrolled: 5, school: { id: 7 } },
-      { id: 2, name: 'Prog B', duration: 1, capacity: 1, enrolled: 0, school: { id: 7 } },
+      { id: 1, name: 'Prog A', duration: 3, availableSeats: 5, school: { id: 7 } },
+      { id: 2, name: 'Prog B', duration: 1, availableSeats: 1, school: { id: 7 } },
     ] as Program[];
 
     async function renderIn(lang: 'fr' | 'en'): Promise<string> {
@@ -644,12 +644,27 @@ describe('SchoolDetailPageComponent', () => {
       expect(emptySpans.length).withContext('empty spans left on the page').toBe(0);
     });
 
+    it('shows no level for a value outside the closed list', async () => {
+      await renderWith(mockSchool, [{ id: 1, name: 'Prog', duration: 3, level: 'Master' as never }]);
+
+      expect(harness.routeNativeElement!.querySelector('[data-testid="programme-level"]')).toBeNull();
+      expect(text()).not.toContain('programDetail');
+    });
+
     it('shows the level, with its icon, when the programme has one', async () => {
-      await renderWith(mockSchool, [{ id: 1, name: 'Prog', duration: 3, level: 'Master' }]);
+      await renderWith(mockSchool, [{ id: 1, name: 'Prog', duration: 3, level: 'MASTER' }]);
 
       const level = harness.routeNativeElement!.querySelector('[data-testid="programme-level"]');
       expect(level?.textContent?.trim()).toBe('Master');
       expect(level?.querySelector('lucide-icon')).not.toBeNull();
+    });
+
+    it('links each programme to its public page, in the current language', async () => {
+      await renderWith(mockSchool, [{ id: 42, name: 'Prog', duration: 3 }]);
+
+      const link = harness.routeNativeElement!.querySelector('a[data-testid="programme-link"]');
+      expect(link?.getAttribute('href')).toBe('/en/programs/42');
+      expect(link?.textContent).toContain('Prog');
     });
 
     it('shows no availability, waiting list or intake for a programme without capacity or start date', async () => {
@@ -662,7 +677,7 @@ describe('SchoolDetailPageComponent', () => {
     });
 
     it('shows availability and intake when the programme has them', async () => {
-      await renderWith(mockSchool, [{ id: 1, name: 'Prog', duration: 3, capacity: 30, enrolled: 10, startDate: '2026-09' }]);
+      await renderWith(mockSchool, [{ id: 1, name: 'Prog', duration: 3, availableSeats: 20, startDate: '2026-09' }]);
 
       expect(text()).toContain('20 places available');
       expect(text()).toContain('Intake: 2026-09');
@@ -670,7 +685,7 @@ describe('SchoolDetailPageComponent', () => {
     });
 
     it('offers the waiting list only when the programme is known to be full', async () => {
-      await renderWith(mockSchool, [{ id: 1, name: 'Prog', duration: 3, capacity: 10, enrolled: 10 }]);
+      await renderWith(mockSchool, [{ id: 1, name: 'Prog', duration: 3, availableSeats: 0 }]);
 
       expect(text()).toContain('Full');
       expect(text()).toContain('Waiting list');
@@ -688,7 +703,7 @@ describe('SchoolDetailPageComponent', () => {
       });
 
       it('is never dead: the waiting-list entry of a full programme is a live link too', async () => {
-        await renderWith(mockSchool, [{ id: 1, name: 'Prog', duration: 3, capacity: 10, enrolled: 10 }]);
+        await renderWith(mockSchool, [{ id: 1, name: 'Prog', duration: 3, availableSeats: 0 }]);
 
         expect(applyLink()?.textContent).toContain('Waiting list');
         expect(applyLink()?.getAttribute('href')).toBe('/en/contact?school=Test%20School');

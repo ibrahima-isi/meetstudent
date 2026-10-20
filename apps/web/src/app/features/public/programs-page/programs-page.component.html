@@ -116,7 +116,17 @@
               <app-wishlist-heart [program]="program" class="absolute top-3 right-3" />
             </div>
             <div class="p-5 flex-1 flex flex-col gap-3">
-              <h2 class="text-foreground text-xl font-bold line-clamp-2">{{ program.name }}</h2>
+              <h2 class="text-foreground text-xl font-bold line-clamp-2">
+                @if (program.id != null) {
+                  <a
+                    data-testid="program-link"
+                    [routerLink]="['/', lang(), 'programs', program.id]"
+                    class="hover:underline hover:text-indigo-600 dark:hover:text-indigo-400"
+                  >{{ program.name }}</a>
+                } @else {
+                  {{ program.name }}
+                }
+              </h2>
 
               @if (program.rating != null) {
                 <div data-testid="program-rate" class="flex items-center gap-1 text-sm">

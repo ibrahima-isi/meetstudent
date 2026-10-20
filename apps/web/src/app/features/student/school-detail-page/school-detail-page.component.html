@@ -171,15 +171,25 @@
               <div class="flex items-start justify-between mb-4">
                 <div class="flex-1">
                   <div class="flex items-start justify-between mb-2">
-                    <h3 class="text-foreground flex-1 line-clamp-2 text-lg font-bold">{{ programme.name }}</h3>
+                    <h3 class="text-foreground flex-1 line-clamp-2 text-lg font-bold">
+                      @if (programme.id != null) {
+                        <a
+                          data-testid="programme-link"
+                          [routerLink]="['/', lang(), 'programs', programme.id]"
+                          class="hover:underline hover:text-indigo-600 dark:hover:text-indigo-400"
+                        >{{ programme.name }}</a>
+                      } @else {
+                        {{ programme.name }}
+                      }
+                    </h3>
                     <app-wishlist-heart [program]="programme" class="ml-2 shrink-0" />
                   </div>
                   
                   <div class="flex items-center gap-4 flex-wrap text-muted-foreground mb-3 text-sm font-medium">
-                    @if (programme.level) {
+                    @if (levelKey(programme.level); as level) {
                       <div data-testid="programme-level" class="flex items-center gap-2">
                         <lucide-icon [img]="GraduationCap" class="w-4 h-4 text-indigo-500 dark:text-indigo-400"></lucide-icon>
-                        <span>{{ programme.level }}</span>
+                        <span>{{ t(level) }}</span>
                       </div>
                     }
                     @if (programme.duration != null && programme.duration > 0) {
@@ -214,14 +224,14 @@
                     <ng-container *ngTemplateOutlet="expertBlockedNotice; context: { $implicit: blocked, testid: 'expert-rating-blocked' }" />
                   }
                   
-                  @if (hasCapacity(programme)) {
+                  @if (programme.availableSeats != null) {
                     <div class="flex items-center gap-2 text-sm font-medium mt-4">
                       <lucide-icon [img]="Users" class="w-4 h-4 text-muted-foreground"></lucide-icon>
                       <span>
                         @if (isFull(programme)) {
                           <span class="text-red-600 dark:text-red-400 font-bold">{{ t('schoolDetail.full') }}</span>
                         } @else {
-                          <span class="text-muted-foreground">{{ t(plural('schoolDetail.placesLeft', placesLeft(programme)), { count: placesLeft(programme) }) }}</span>
+                          <span class="text-muted-foreground">{{ t(plural('programDetail.seats', programme.availableSeats), { count: programme.availableSeats }) }}</span>
                         }
                       </span>
                     </div>

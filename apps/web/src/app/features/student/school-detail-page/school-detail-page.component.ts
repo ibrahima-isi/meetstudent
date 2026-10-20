@@ -7,7 +7,7 @@ import { StarRatingComponent } from '@shared/components/star-rating/star-rating.
 import { ErrorStateComponent } from '@shared/components/error-state/error-state.component';
 import { WishlistHeartComponent } from '@shared/components/wishlist-heart/wishlist-heart.component';
 import { ROLE_EXPERT, ROLE_STUDENT } from '@models/roles';
-import { School, Program, Tag, Course } from '@models/entities';
+import { School, Program, Tag, Course, programLevelKey } from '@models/entities';
 import { ProgramService } from '@services/program.service';
 import { SchoolService } from '@services/school.service';
 import { UserService } from '@services/user.service';
@@ -69,6 +69,8 @@ export class SchoolDetailPageComponent {
   protected readonly profileLink = computed(() => ['/', this.locale.active(), 'profile']);
 
   /** Applying goes through the contact page, in the language being read. */
+  protected readonly levelKey = programLevelKey;
+  protected readonly lang = computed(() => this.locale.active());
   protected readonly contactLink = computed(() => ['/', this.locale.active(), 'contact']);
 
   readonly ArrowLeft = ArrowLeft;
@@ -212,19 +214,9 @@ export class SchoolDetailPageComponent {
 
   protected readonly roundRating = roundRating;
 
-  /** Capacity is not in the API yet: availability is only shown when it is. */
-  protected hasCapacity(programme: Program): boolean {
-    return typeof programme.capacity === 'number';
-  }
-
-  /** Known to be full; unknown capacity is not full. */
+  /** Known to be full: the administrator declared 0 seats. Unknown seats are not full. */
   protected isFull(programme: Program): boolean {
-    return this.hasCapacity(programme) && this.placesLeft(programme) === 0;
-  }
-
-  /** Seats left in a programme; never negative. */
-  protected placesLeft(programme: Program): number {
-    return Math.max((programme.capacity || 0) - (programme.enrolled || 0), 0);
+    return programme.availableSeats === 0;
   }
 
   toggleWishlist(school: School) {

@@ -25,7 +25,7 @@ type Fake = {
   // Things the page must never show.
   level?: string;
   description?: string;
-  capacity?: number;
+  availableSeats?: number;
   reviewCount?: number;
   accreditations?: { id: number; name: string }[];
 };
@@ -139,14 +139,14 @@ describe('ProgramsComparePageComponent', () => {
     expect(cells('Duration')[1]).toBe('Not provided');
   });
 
-  it('never renders level, description, capacity, review count or accreditations', async () => {
+  it('never renders level, description, seats, review count or accreditations', async () => {
     data[1] = of({
-      id: 1, name: 'Mid', level: 'Master', description: 'A long description', capacity: 40, reviewCount: 12,
+      id: 1, name: 'Mid', level: 'MASTER', description: 'A long description', availableSeats: 40, reviewCount: 12,
       accreditations: [{ id: 1, name: 'CAMES' }],
     });
     await open('/compare?ids=1,3');
 
-    for (const hidden of ['Master', 'A long description', '40', '12', 'CAMES', 'Level', 'Description', 'Capacity', 'Accreditation']) {
+    for (const hidden of ['Master', 'A long description', '40', '12', 'CAMES', 'Level', 'Description', 'Seats', 'places', 'Accreditation']) {
       expect(text()).withContext(hidden).not.toContain(hidden);
     }
   });
