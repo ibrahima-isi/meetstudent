@@ -7,7 +7,7 @@ import { API_URL, SERVER_URL } from '@services/api-config';
 import { Course } from '@models/course';
 
 const api = 'http://api.test/api/v1';
-const existing: Course = { id: 9, code: 'ALG', name: 'Algèbre', photoMediaId: 4 };
+const existing: Course = { id: 9, code: 'ALG', name: 'Algèbre', photoMediaId: 4, description: 'Bases de l’algèbre' };
 
 describe('CourseForm', () => {
   let fixture: ComponentFixture<CourseForm>;
@@ -80,6 +80,60 @@ describe('CourseForm', () => {
     expect(el().textContent).toContain('déjà enregistrée');
   });
 
+  it('prefills the description on edit', () => {
+    setup(existing);
+    expect(q<HTMLTextAreaElement>('#description')!.value).toBe('Bases de l’algèbre');
+  });
+
+  it('limits the description to 1000 characters', () => {
+    setup();
+    type('#name', 'Algèbre');
+    type('#description', 'd'.repeat(1001));
+    submit();
+    backend.expectNone(`${api}/courses`);
+    expect(errorOf('description')).toContain('1000');
+    type('#description', 'd'.repeat(1000));
+    fixture.detectChanges();
+    expect(errorOf('description')).toBe('');
+  });
+
+  it('sends the trimmed description, and omits it when empty', () => {
+    setup();
+    type('#name', 'Algèbre');
+    type('#description', '  Un cours  ');
+    submit();
+    const req = backend.expectOne(`${api}/courses`);
+    expect(req.request.body).toEqual({ name: 'Algèbre', programId: 4, description: 'Un cours' });
+    req.flush({ id: 11, name: 'Algèbre' });
+  });
+
+  it('sends an emptied description on edit so the server clears it', () => {
+    setup(existing);
+    type('#description', '   ');
+    submit();
+    const req = backend.expectOne(`${api}/courses/9`);
+    expect(req.request.body.description).toBe('');
+    req.flush({ id: 9, name: 'Algèbre' });
+  });
+
+  it('tells that leaving the description empty erases it', () => {
+    setup();
+    expect(el().textContent).toContain('Laisser vide efface la description');
+  });
+
+  it('shows the server error of the description field', () => {
+    setup();
+    type('#name', 'Algèbre');
+    type('#description', 'x');
+    submit();
+    backend.expectOne(`${api}/courses`).flush(
+      { description: 'description must be at most 1000 characters' },
+      { status: 400, statusText: 'Bad Request' },
+    );
+    fixture.detectChanges();
+    expect(errorOf('description')).toContain('1000');
+  });
+
   it('offers course-specific accreditation links when editing a saved course', () => {
     setup(existing);
     expect(q('app-course-accreditations')).not.toBeNull();
@@ -121,13 +175,13 @@ describe('CourseForm', () => {
     expect(saved.length).toBe(1);
   });
 
-  it('updates with PUT, omitting an empty code and the photo when none was chosen', () => {
+  it('updates with PUT, sending an empty description to clear it, omitting an empty code and the photo when none was chosen', () => {
     setup({ id: 9, name: 'Algèbre' });
     type('#name', 'Algèbre 2');
     submit();
     const req = backend.expectOne(`${api}/courses/9`);
     expect(req.request.method).toBe('PUT');
-    expect(req.request.body).toEqual({ name: 'Algèbre 2', programId: 4 });
+    expect(req.request.body).toEqual({ name: 'Algèbre 2', programId: 4, description: '' });
     req.flush({ id: 9, name: 'Algèbre 2' });
     expect(saved.length).toBe(1);
   });
