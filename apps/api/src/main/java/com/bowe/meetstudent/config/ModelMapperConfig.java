@@ -17,9 +17,14 @@ public class ModelMapperConfig {
         modelMapper.getConfiguration().setMatchingStrategy(MatchingStrategies.LOOSE);
         modelMapper.getConfiguration().setSkipNullEnabled(true);
 
-        // Credential version is server-owned; loose matching otherwise maps password into it.
+        // Credential version and expert approval are server-owned; loose matching otherwise maps password / createdAt into them.
         modelMapper.typeMap(com.bowe.meetstudent.dto.UserDTO.class, com.bowe.meetstudent.entities.UserEntity.class)
-                .addMappings(mapping -> mapping.skip(com.bowe.meetstudent.entities.UserEntity::setPasswordVersion));
+                .addMappings(mapping -> {
+                    mapping.skip(com.bowe.meetstudent.entities.UserEntity::setPasswordVersion);
+                    mapping.skip(com.bowe.meetstudent.entities.UserEntity::setExpertStatus);
+                    mapping.skip(com.bowe.meetstudent.entities.UserEntity::setExpertStatusReason);
+                    mapping.skip(com.bowe.meetstudent.entities.UserEntity::setExpertDecisionDate);
+                });
         return modelMapper;
     }
 }

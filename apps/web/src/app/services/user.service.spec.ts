@@ -5,6 +5,7 @@ import { UserService } from './user.service';
 import { environment } from '../../environments/environment';
 import { User } from '@models/entities';
 import { provideZonelessChangeDetection } from '@angular/core';
+import { TokenService } from './token.service';
 
 describe('UserService', () => {
   let service: UserService;
@@ -111,6 +112,45 @@ describe('UserService', () => {
       expect(req.request.method).toBe('POST');
       expect(req.request.params.get('lang')).toBe('en');
       req.flush({ status: 'accepted' }, { status: 202, statusText: 'Accepted' });
+    });
+  });
+
+  describe('refreshSessionUser', () => {
+    afterEach(() => TestBed.inject(TokenService).clear());
+
+    it('re-reads the signed-in account and keeps the new approval status in the session', () => {
+      const tokens = TestBed.inject(TokenService);
+      tokens.setUser({ id: 5, firstname: 'A', lastname: 'B', email: 'a@b.c', role: { name: 'ROLE_EXPERT' }, expertStatus: 'PENDING' } as User);
+      let result: User | null = null;
+
+      service.refreshSessionUser().subscribe((user) => (result = user));
+      httpMock.expectOne(`${environment.apiUrl}/users/id/5`).flush({
+        id: 5, firstname: 'A', lastname: 'B', email: 'a@b.c', role: { name: 'ROLE_EXPERT' }, expertStatus: 'APPROVED',
+      });
+
+      expect(tokens.user()?.expertStatus).toBe('APPROVED');
+      expect((result as User | null)?.expertStatus).toBe('APPROVED');
+    });
+
+    it('asks nothing when nobody is signed in', () => {
+      let result: User | null | undefined;
+
+      service.refreshSessionUser().subscribe((user) => (result = user));
+
+      httpMock.expectNone(`${environment.apiUrl}/users/id/5`);
+      expect(result).toBeNull();
+    });
+
+    it('keeps the session as it was when the API fails', () => {
+      const tokens = TestBed.inject(TokenService);
+      tokens.setUser({ id: 5, role: { name: 'ROLE_EXPERT' }, expertStatus: 'PENDING' } as User);
+      let result: User | null | undefined;
+
+      service.refreshSessionUser().subscribe((user) => (result = user));
+      httpMock.expectOne(`${environment.apiUrl}/users/id/5`).flush('x', { status: 500, statusText: 'err' });
+
+      expect(tokens.user()?.expertStatus).toBe('PENDING');
+      expect(result).toBeNull();
     });
   });
 });
