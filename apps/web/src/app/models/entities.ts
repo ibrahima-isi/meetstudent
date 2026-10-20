@@ -111,7 +111,23 @@ export interface School extends BaseEntity {
   coverImageUrl?: string;
 }
 
+/** Closed list the API accepts for a programme level. */
+export const PROGRAM_LEVELS = ['BTS_DUT', 'LICENCE', 'MASTER', 'DOCTORAT', 'AUTRE'] as const;
+export type ProgramLevel = (typeof PROGRAM_LEVELS)[number];
+
+/** Translation key of a level, only for a value of the closed list. */
+export function programLevelKey(level: string | null | undefined): string | null {
+  return level && (PROGRAM_LEVELS as readonly string[]).includes(level) ? `programDetail.levels.${level}` : null;
+}
+
 export interface Program extends BaseEntity {
+  /** Optional, plain text. */
+  description?: string | null;
+  /** Seats the administrator declares open; absent when unknown (0 means full). */
+  availableSeats?: number | null;
+  /** Yearly fee in euros; absent when unknown. */
+  annualFee?: number | null;
+  level?: ProgramLevel | null;
   duration?: number | null; // In years
   /** Write: media id. Read: resolved `photo`. */
   photoMediaId?: number;
@@ -127,18 +143,16 @@ export interface Program extends BaseEntity {
   programRates?: ProgramRate[];
   accreditations?: Accreditation[];
   // Transient fields for UI compatibility
-  level?: string;
-  description?: string;
   rating?: number;
   reviewCount?: number;
   startDate?: string;
-  capacity?: number;
-  enrolled?: number;
   /** Absolute image URL resolved from `photo` by the service layer. */
   photoImageUrl?: string;
 }
 
 export interface Course extends BaseEntity {
+  /** Optional, plain text. */
+  description?: string | null;
   /** Write: media id. Read: resolved `photo`. */
   photoMediaId?: number;
   photo?: Media | null;

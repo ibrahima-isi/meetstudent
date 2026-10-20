@@ -92,6 +92,15 @@ describe('ProgramsPageComponent', () => {
     expect(text()).toContain('2 programmes found');
   });
 
+  it('links each card to the public page of the program, in the current language', async () => {
+    await open('/programs');
+    const card = q('[data-testid="program-card"]') as HTMLElement;
+
+    const link = card.querySelector('a[data-testid="program-link"]');
+    expect(link?.getAttribute('href')).toBe('/en/programs/1');
+    expect(link?.textContent).toContain('Computer Science');
+  });
+
   it('shows name, code, duration, one-decimal rate, school link and photo of a complete program', async () => {
     await open('/programs');
     const card = q('[data-testid="program-card"]') as HTMLElement;
@@ -117,7 +126,7 @@ describe('ProgramsPageComponent', () => {
     expect(card.textContent).toContain('Not provided');
     expect(card.querySelector('[data-testid="program-rate"]')).toBeNull();
     expect(card.textContent).not.toContain('Licence');
-    expect(card.querySelector('a')).toBeNull();
+    expect(card.querySelector('a[href*="/schools/"]')).toBeNull();
   });
 
   it('shows a translated empty message when there are no programs', async () => {

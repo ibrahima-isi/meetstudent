@@ -25,7 +25,7 @@ type LoadResult =
  * Public side-by-side comparison of 2 to 3 programmes, picked on the catalogue
  * and carried in `?ids=`. Ranking: average rating descending, unrated last,
  * then name, then id. Only what the API sends is shown; the rest says so.
- * Level, description, capacity, review count and accreditations are never
+ * Level, description, seats, review count and accreditations are never
  * shown: the API has none (or, for accreditations, the service fills an empty
  * list that would falsely read as "none").
  */

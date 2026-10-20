@@ -62,6 +62,7 @@
     "register": "Create account",
     "home": "Home",
     "school": "School",
+    "program": "Programme",
     "profile": "My profile",
     "about": "About",
     "contact": "Contact",
@@ -463,10 +464,6 @@
     },
     "intake": "Intake: {{ date }}",
     "rateProgramme": "Rate this programme",
-    "placesLeft": {
-      "one": "{{ count }} place available",
-      "other": "{{ count }} places available"
-    },
     "full": "Full",
     "apply": "Apply now",
     "waitlist": "Waiting list",
@@ -676,6 +673,29 @@
       "product": "Product",
       "account": "Account",
       "rights": "All rights reserved."
+    }
+  },
+  "programDetail": {
+    "back": "Back to programmes",
+    "loadError": "This programme could not be loaded.",
+    "about": "About",
+    "years": {
+      "one": "{{ count }} year",
+      "other": "{{ count }} years"
+    },
+    "feePerYear": "{{ amount }} per year",
+    "seats": {
+      "one": "{{ count }} place available",
+      "other": "{{ count }} places available"
+    },
+    "full": "Full",
+    "courses": "Courses ({{ count }})",
+    "levels": {
+      "BTS_DUT": "BTS / DUT",
+      "LICENCE": "Bachelor",
+      "MASTER": "Master",
+      "DOCTORAT": "Doctorate",
+      "AUTRE": "Other"
     }
   }
 }

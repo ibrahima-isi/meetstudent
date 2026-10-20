@@ -62,6 +62,7 @@
     "register": "Inscription",
     "home": "Accueil",
     "school": "Établissement",
+    "program": "Formation",
     "profile": "Mon profil",
     "about": "À propos",
     "contact": "Contact",
@@ -463,10 +464,6 @@
     },
     "intake": "Rentrée: {{ date }}",
     "rateProgramme": "Évaluer cette formation",
-    "placesLeft": {
-      "one": "{{ count }} place disponible",
-      "other": "{{ count }} places disponibles"
-    },
     "full": "Complet",
     "apply": "Postuler maintenant",
     "waitlist": "Liste d'attente",
@@ -676,6 +673,29 @@
       "product": "Produit",
       "account": "Compte",
       "rights": "Tous droits réservés."
+    }
+  },
+  "programDetail": {
+    "back": "Retour aux formations",
+    "loadError": "Cette formation n'a pas pu être chargée.",
+    "about": "Présentation",
+    "years": {
+      "one": "{{ count }} an",
+      "other": "{{ count }} ans"
+    },
+    "feePerYear": "{{ amount }} par an",
+    "seats": {
+      "one": "{{ count }} place disponible",
+      "other": "{{ count }} places disponibles"
+    },
+    "full": "Complet",
+    "courses": "Cours ({{ count }})",
+    "levels": {
+      "BTS_DUT": "BTS / DUT",
+      "LICENCE": "Licence",
+      "MASTER": "Master",
+      "DOCTORAT": "Doctorat",
+      "AUTRE": "Autre"
     }
   }
 }

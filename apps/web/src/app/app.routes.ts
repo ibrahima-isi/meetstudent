@@ -51,13 +51,23 @@ export const routes: Routes = [
               ),
           },
           {
-            // Public; no `programs/:id` exists, and this stays ahead of any future one.
+            // Public, and ahead of `programs/:id` or "compare" would be taken for an id.
             path: 'programs/compare',
             pathMatch: 'full',
             title: 'pageTitle.comparePrograms',
             loadComponent: () =>
               import('./features/public/programs-compare-page/programs-compare-page.component').then(
                 (m) => m.ProgramsComparePageComponent,
+              ),
+          },
+          {
+            // Public and server-rendered (see app.routes.server.ts).
+            path: 'programs/:id',
+            pathMatch: 'full',
+            title: 'pageTitle.program',
+            loadComponent: () =>
+              import('./features/public/program-detail-page/program-detail-page.component').then(
+                (m) => m.ProgramDetailPageComponent,
               ),
           },
           {

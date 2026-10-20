@@ -76,6 +76,16 @@ describe('server routes', () => {
     expect(paths.indexOf(':lang/programs/compare')).toBeLessThan(paths.indexOf('**'));
   });
 
+  it('server-renders the public programme page, unguarded, after the comparison and before the catch-all', () => {
+    const paths = serverRoutes.map((r) => r.path);
+
+    expect(modeOf(':lang/programs/:id')).toBe(RenderMode.Server);
+    expect(guardedPaths(routes)).not.toContain(':lang/programs/:id');
+    expect(allRoutes(routes).find((r) => r.path === ':lang/programs/:id')?.route.canActivate).toBeUndefined();
+    expect(paths.indexOf(':lang/programs/:id')).toBeGreaterThan(paths.indexOf(':lang/programs/compare'));
+    expect(paths.indexOf(':lang/programs/:id')).toBeLessThan(paths.indexOf('**'));
+  });
+
   it('server-renders the public courses comparison, listed before the catch-all', () => {
     const paths = serverRoutes.map((r) => r.path);
 
