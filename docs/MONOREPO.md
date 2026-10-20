@@ -163,6 +163,14 @@ stale: check the merge base before opening a PR against it. A working-branch PR
 should compare cleanly against `origin/dev`, and a promotion PR should compare
 cleanly from `origin/dev` to `origin/main`.
 
+## Working with agents: ask interactively, always
+
+Any question to the owner goes through the `AskUserQuestion` tool, with the
+recommended option first and at most 4 questions per call. No wall of questions
+in prose, no numbered question lists in a message, even when a skill prescribes
+them: the tool wins over the skill. Prose is for reporting results only. The
+same rule is stated in the root `CLAUDE.md` (Working agreement → Sessions).
+
 ## CI and branch protection
 
 A single workflow, `.github/workflows/ci.yml`, runs three jobs — the published

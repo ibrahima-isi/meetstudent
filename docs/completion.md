@@ -279,3 +279,32 @@ Demande du propriétaire : finaliser le service de messagerie et fournir les var
 - [x] API : résultat d'envoi (`SendOutcome` : `SENT`, `DISABLED`, `LOGGED`, `AUTH_FAILED`, `CONNECTION_FAILED`, `TLS_FAILED`, `REJECTED`, `FAILED`) au lieu d'un échec silencieux ; mail de contact fiable (exécuteur dédié `contactMailExecutor`, 3 tentatives pour les échecs passagers dont les refus 4xx, état d'envoi enregistré : migrations `V27` et `V28`) ; `POST /api/v1/admin/messages/{id}/resend` (202 / 404 / 503 / 409 si un envoi est en cours) ; `POST /api/v1/admin/mail/test` (200 `SENT` ou `LOGGED`, 502 avec la catégorie, 503, 429) ; préréglages `MAIL_PROVIDER=brevo|gmail|ses|custom` (les `SPRING_MAIL_*` explicites l'emportent) ; Mailpit optionnel (profil compose `mail`) ; `CONTACT_RECIPIENT` et les nouveaux réglages passés par `compose.yml` et `compose.prod.yml` (le premier ne l'était pas) ; documentation complète (DEPLOY, production.md, `.env*.example`). Preuves : rouge d'abord pour chaque point (écarts signalés par le sous-agent : certains éléments écrits avant leur test, prouvés non vacueux par mutation ; test d'intégration `LOGGED` non vu rouge) ; **`./mvnw clean verify` relancé par moi : 818 tests, 0 échec** (801 avant la correction de la revue) ; test réel avec un serveur SMTP local (STARTTLS, TLS implicite, AUTH) et PostgreSQL 18 : inscription, renvoi de vérification, mot de passe oublié, changement d'e-mail, contact, champ piège, renvoi admin, auto-test, panne puis reprise du serveur avec réessais, mauvais mot de passe (`AUTH_FAILED`), destinataire refusé (`REJECTED`), certificat non approuvé (`TLS_FAILED`) ; 11 fichiers `.eml` contrôlés (sujet encodé RFC 2047, `multipart/alternative`, origine des liens = `FRONTEND_BASE_URL`, injection d'en-tête par saut de ligne sans effet), aucune adresse, aucun secret ni jeton dans les journaux. Revue de sécurité Opus : rien de bloquant côté sécurité ; un défaut de logique corrigé (un refus temporaire 4xx était classé définitif, donc jamais réessayé), plus renvoi concurrent (409 + délai de reprise), `LOGGED` pour le profil dev-log, `MAIL_ENABLED=yes|on|1`, variables de réessai vides, image Mailpit épinglée. **Jamais testé** : une vraie connexion à Brevo, Gmail ou SES (pas de DNS dans le bac à sable), l'image Mailpit (non téléchargeable), le comportement derrière le vrai Traefik. Risques ouverts : un message resté `PENDING` après un arrêt forcé n'est repris qu'à la main (renvoi admin, possible après 15 minutes) ; le cooldown de l'auto-test est en mémoire ; la liste des messages du back office n'affiche pas encore l'état d'envoi (suivi à venir).
 - [x] Back office : état d'envoi de chaque message (badge texte : envoyé avec la date, en cours, échec avec le nombre de tentatives, mail désactivé, statut inconnu), bouton « Renvoyer le mail » (désactivé pendant la requête, 404 / 409 / 503 traduits, liste rechargée puis une seule fois de plus après 2 s), carte « Tester l'envoi d'e-mails » dans les paramètres (neuf messages français selon la catégorie, 429 avec `Retry-After`, aucun texte brut du serveur affiché, seules les catégories connues sont lues). Preuves : rouge d'abord (services : `TS2339` méthode et service absents ; page Messages : 13 échecs sur 13 nouveaux tests ; paramètres : 17 sur 17). Relancé par moi : back office `npm test` **399/399**, `ng build` OK. Non vérifié : rendu dans un navigateur réel, appel contre l'API réelle (seulement les tests Karma). Reste à faire sur la messagerie : un vrai envoi sur le serveur démo (Brevo, Gmail ou SES).
 
+
+## expert-approval
+
+Spec : [.scratch/expert-approval/spec.md](../.scratch/expert-approval/spec.md). Approbation du compte Expert (enseignant), un ticket par tranche.
+- [ ] [expert-approval/01](../.scratch/expert-approval/issues/01-status-and-rating-guard.md) : Statut d'approbation et blocage de la notation. État : ready-for-agent, non commencé.
+- [ ] [expert-approval/02](../.scratch/expert-approval/issues/02-admin-approval-queue.md) : File d'approbation des experts au back office. État : ready-for-agent, non commencé.
+- [ ] [expert-approval/03](../.scratch/expert-approval/issues/03-decision-mails.md) : Mails de demande et de décision. État : ready-for-agent, non commencé.
+
+## program-details
+
+Spec : [.scratch/program-details/spec.md](../.scratch/program-details/spec.md). Description, places, frais et niveau des formations ; description des cours ; page publique.
+- [ ] [program-details/01](../.scratch/program-details/issues/01-program-fields.md) : Champs de la formation (description, places, frais, niveau). État : ready-for-agent, non commencé.
+- [ ] [program-details/02](../.scratch/program-details/issues/02-course-description.md) : Description du cours. État : ready-for-agent, non commencé.
+- [ ] [program-details/03](../.scratch/program-details/issues/03-public-program-page.md) : Page publique d'une formation. État : ready-for-agent, non commencé.
+
+## program-wishlist
+
+Spec : [.scratch/program-wishlist/spec.md](../.scratch/program-wishlist/spec.md). Liste de souhaits des formations (étudiants).
+- [ ] [program-wishlist/01](../.scratch/program-wishlist/issues/01-api-program-wishlist.md) : API de la liste de souhaits des formations. État : ready-for-agent, non commencé.
+- [ ] [program-wishlist/02](../.scratch/program-wishlist/issues/02-web-unified-wishlist.md) : Liste de souhaits unifiée au web. État : ready-for-agent, non commencé.
+
+## forum
+
+Spec : [.scratch/forum/spec.md](../.scratch/forum/spec.md). Forum : fils, réponses, signalements et modération.
+- [ ] [forum/01](../.scratch/forum/issues/01-api-threads-replies.md) : API des fils et des réponses. État : ready-for-agent, non commencé.
+- [ ] [forum/02](../.scratch/forum/issues/02-web-forum-pages.md) : Pages web du forum. État : ready-for-agent, non commencé.
+- [ ] [forum/03](../.scratch/forum/issues/03-api-reports-moderation.md) : API des signalements et de la modération. État : ready-for-agent, non commencé.
+- [ ] [forum/04](../.scratch/forum/issues/04-backoffice-forum.md) : Page Forum du back office. État : ready-for-agent, non commencé.
+- [ ] [forum/05](../.scratch/forum/issues/05-web-report-and-states.md) : Signalement et états côté web. État : ready-for-agent, non commencé.
