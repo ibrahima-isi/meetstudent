@@ -2,6 +2,7 @@ package com.bowe.meetstudent.repositories;
 
 import com.bowe.meetstudent.entities.UserEntity;
 import com.bowe.meetstudent.entities.Role;
+import com.bowe.meetstudent.entities.enums.ExpertStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -24,6 +25,10 @@ public interface UserRepository extends JpaRepository<UserEntity, Integer> {
 
     @Query("select u.passwordVersion from UserEntity u where u.id = :id")
     Optional<Integer> findPasswordVersionById(@Param("id") Integer id);
+
+    /** Current approval status of an Expert, read live; empty for any user who is not an Expert (or unknown). */
+    @Query("select u.expertStatus from UserEntity u where u.id = :id and u.role.name = 'ROLE_EXPERT'")
+    Optional<ExpertStatus> findExpertStatusById(@Param("id") Integer id);
 
     Optional<UserEntity> findByEmailIgnoreCase(String email);
     List<UserEntity> findByRole(Role role);

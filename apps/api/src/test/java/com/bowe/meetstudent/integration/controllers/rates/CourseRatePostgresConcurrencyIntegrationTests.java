@@ -4,6 +4,7 @@ import com.bowe.meetstudent.TestDataUtil;
 import com.bowe.meetstudent.dto.CourseRateDTO;
 import com.bowe.meetstudent.entities.Role;
 import com.bowe.meetstudent.entities.UserEntity;
+import com.bowe.meetstudent.entities.enums.ExpertStatus;
 import com.bowe.meetstudent.mappers.implementations.CourseMapper;
 import com.bowe.meetstudent.services.RoleService;
 import com.bowe.meetstudent.services.CourseService;
@@ -54,7 +55,7 @@ class CourseRatePostgresConcurrencyIntegrationTests {
     void concurrentFirstRatingsReturnOneCreationAndOneConflictThenRetryUpdatesTheWinner() throws Exception {
         var role = roles.findRoleByName("ROLE_EXPERT").orElseGet(() -> roles.createRole(Role.builder().name("ROLE_EXPERT").build()));
         var user = users.saveUser(UserEntity.builder().email(UUID.randomUUID() + "@example.com")
-                .password("password").role(role).build(), encoder);
+                .password("password").role(role).expertStatus(ExpertStatus.APPROVED).build(), encoder);
         var course = courses.save(courseMapper.toEntity(TestDataUtil.createCourseDto()));
         var barrier = new InsertBarrier();
         try (var pool = Executors.newFixedThreadPool(2)) {

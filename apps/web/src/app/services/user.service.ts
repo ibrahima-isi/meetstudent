@@ -1,9 +1,10 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, map, tap } from 'rxjs';
+import { Observable, catchError, map, of, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { User } from '@models/entities';
 import { MediaService } from './media.service';
+import { TokenService } from './token.service';
 
 /**
  * The backend `UpdateProfileRequest`. Every field is optional: an omitted (null)
@@ -27,6 +28,7 @@ export interface ProfileUpdate {
 export class UserService {
   private http = inject(HttpClient);
   private mediaService = inject(MediaService);
+  private tokenService = inject(TokenService);
   private apiUrl = `${environment.apiUrl}/users`;
 
   private usersSignal = signal<User[]>([]);
@@ -62,6 +64,23 @@ export class UserService {
         coverImageUrl: this.mediaService.resolveUrl(school.cover) ?? school.coverImageUrl
       }))
     };
+  }
+
+  /** Re-reads the signed-in account and stores the fresh approval status in the session. */
+  refreshSessionUser(): Observable<User | null> {
+    const current = this.tokenService.user();
+    if (current?.id === undefined) return of(null);
+    return this.getUser(current.id).pipe(
+      map((fresh) => {
+        const { expertStatus, expertStatusReason } = fresh;
+        if (expertStatus === current.expertStatus && expertStatusReason === current.expertStatusReason) return current;
+        const updated: User = { ...current, expertStatus, expertStatusReason };
+        this.tokenService.setUser(updated);
+        return updated;
+      }),
+      // The session stays as it was: the API remains the judge of every action.
+      catchError(() => of(null)),
+    );
   }
 
   /** Self-service profile save: `PATCH /users/{id}` (the owner or an admin). */

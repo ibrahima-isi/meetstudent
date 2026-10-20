@@ -549,9 +549,11 @@ class UserControllerIntegrationTests {
     void deletionRemovesDependentRatingsWishlistMediaAndAllDevicesButPreservesOtherUsers() throws Exception {
         var dto = TestDataUtil.createUserDto();
         dto.setRole(ensureRole("ROLE_EXPERT"));
-        var owner = userService.saveUser(userMapper.toEntity(dto), passwordEncoder);
+        var ownerEntity = userMapper.toEntity(dto);
+        ownerEntity.setExpertStatus(com.bowe.meetstudent.entities.enums.ExpertStatus.APPROVED);
+        var owner = userService.saveUser(ownerEntity, passwordEncoder);
         var observer = userService.saveUser(UserEntity.builder().email("observer104@example.com")
-                .password(dto.getPassword()).role(dto.getRole()).build(), passwordEncoder);
+                .password(dto.getPassword()).role(dto.getRole()).expertStatus(com.bowe.meetstudent.entities.enums.ExpertStatus.APPROVED).build(), passwordEncoder);
         var firstDevice = deletionLogin(owner.getEmail(), dto.getPassword());
         var secondDevice = deletionLogin(owner.getEmail(), dto.getPassword());
         var otherDevice = deletionLogin(observer.getEmail(), dto.getPassword());
