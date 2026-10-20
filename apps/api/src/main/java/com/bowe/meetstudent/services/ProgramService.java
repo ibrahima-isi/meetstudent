@@ -19,8 +19,16 @@ public class ProgramService {
     private final ProgramRepository programRepository;
     private final MediaService mediaService;
 
+    /** Blank means "no description" (stored null); otherwise the text is stripped. */
+    private static String normalizeDescription(String description) {
+        if (description == null) return null;
+        var stripped = description.strip();
+        return stripped.isEmpty() ? null : stripped;
+    }
+
     @Transactional
     public Program save(Program program) {
+        program.setDescription(normalizeDescription(program.getDescription()));
         if (program.getCode() != null && (program.getId() == null
                 ? programRepository.existsByCodeIgnoreCase(program.getCode())
                 : programRepository.existsByCodeIgnoreCaseAndIdNot(program.getCode(), program.getId()))) {
@@ -81,6 +89,11 @@ public class ProgramService {
             if (updates.getName() != null) existing.setName(updates.getName());
             if (updates.getCode() != null) existing.setCode(updates.getCode());
             if (updates.getDuration() != null) existing.setDuration(updates.getDuration());
+            // null keeps; '' or blank clears (stored null)
+            if (updates.getDescription() != null) existing.setDescription(normalizeDescription(updates.getDescription()));
+            if (updates.getAvailableSeats() != null) existing.setAvailableSeats(updates.getAvailableSeats());
+            if (updates.getAnnualFee() != null) existing.setAnnualFee(updates.getAnnualFee());
+            if (updates.getLevel() != null) existing.setLevel(updates.getLevel());
             if (updates.getPhotoMediaId() != null) existing.setPhotoMediaId(updates.getPhotoMediaId());
             if (updates.getSchool() != null) existing.setSchool(updates.getSchool());
             
