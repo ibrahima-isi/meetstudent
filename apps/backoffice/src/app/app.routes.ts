@@ -29,6 +29,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/tags/tags-page').then((m) => m.TagsPage),
       },
       {
+        path: 'experts',
+        loadComponent: () => import('./features/experts/experts-page').then((m) => m.ExpertsPage),
+      },
+      {
         path: 'messages',
         loadComponent: () => import('./features/messages/messages-page').then((m) => m.MessagesPage),
       },

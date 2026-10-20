@@ -64,6 +64,12 @@ describe('Shell (responsive menu)', () => {
     expect(link!.getAttribute('href')).toBe('/messages');
   });
 
+  it('lists an Experts entry in the sidebar', () => {
+    const link = Array.from(sidebar().querySelectorAll('a')).find((a) => a.textContent?.trim() === 'Experts');
+    expect(link).toBeDefined();
+    expect(link!.getAttribute('href')).toBe('/experts');
+  });
+
   it('closes on Escape and gives focus back to the toggle', () => {
     toggle().click();
     fixture.detectChanges();

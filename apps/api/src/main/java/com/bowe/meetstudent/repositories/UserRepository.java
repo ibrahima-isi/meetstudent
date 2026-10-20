@@ -3,6 +3,8 @@ package com.bowe.meetstudent.repositories;
 import com.bowe.meetstudent.entities.UserEntity;
 import com.bowe.meetstudent.entities.Role;
 import com.bowe.meetstudent.entities.enums.ExpertStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -29,6 +31,15 @@ public interface UserRepository extends JpaRepository<UserEntity, Integer> {
     /** Current approval status of an Expert, read live; empty for any user who is not an Expert (or unknown). */
     @Query("select u.expertStatus from UserEntity u where u.id = :id and u.role.name = 'ROLE_EXPERT'")
     Optional<ExpertStatus> findExpertStatusById(@Param("id") Integer id);
+
+    /** Admin queue: Experts only, optionally of one status. The caller fixes the sort. */
+    @Query(value = "select u from UserEntity u join fetch u.role r where r.name = 'ROLE_EXPERT'",
+            countQuery = "select count(u) from UserEntity u where u.role.name = 'ROLE_EXPERT'")
+    Page<UserEntity> findExperts(Pageable pageable);
+
+    @Query(value = "select u from UserEntity u join fetch u.role r where r.name = 'ROLE_EXPERT' and u.expertStatus = :status",
+            countQuery = "select count(u) from UserEntity u where u.role.name = 'ROLE_EXPERT' and u.expertStatus = :status")
+    Page<UserEntity> findExpertsByStatus(@Param("status") ExpertStatus status, Pageable pageable);
 
     Optional<UserEntity> findByEmailIgnoreCase(String email);
     List<UserEntity> findByRole(Role role);
