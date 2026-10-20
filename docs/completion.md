@@ -283,22 +283,23 @@ Demande du propriétaire : finaliser le service de messagerie et fournir les var
 ## expert-approval
 
 Spec : [.scratch/expert-approval/spec.md](../.scratch/expert-approval/spec.md). Approbation du compte Expert (enseignant), un ticket par tranche.
-- [ ] [expert-approval/01](../.scratch/expert-approval/issues/01-status-and-rating-guard.md) : Statut d'approbation et blocage de la notation. État : ready-for-agent, non commencé.
+- [x] [expert-approval/01](../.scratch/expert-approval/issues/01-status-and-rating-guard.md) : Statut d'approbation et blocage de la notation. État : resolved. **Fusionné** dans `dev` (PR #201, V29). Statut PENDING/APPROVED/REJECTED, garde `@RequiresApprovedExpert` lisant la base à chaque requête (ADR 0001), profil et fiche école web. Preuves : tests rouges d'abord (4 sur 8 à la première exécution), `./mvnw clean verify` 358 unitaires + 473 d'intégration, web 1373, CI verte ; Opus : V29 rejouée sur PostgreSQL 18, démarrage `ddl-auto: validate`, smoke HTTP réel 403/201/403 dans la même session, revue de sécurité sans bloquant. Non vérifié : le test de migration saute en CI (il faut une base jetable), rendu navigateur réel.
 - [ ] [expert-approval/02](../.scratch/expert-approval/issues/02-admin-approval-queue.md) : File d'approbation des experts au back office. État : ready-for-agent, non commencé.
 - [ ] [expert-approval/03](../.scratch/expert-approval/issues/03-decision-mails.md) : Mails de demande et de décision. État : ready-for-agent, non commencé.
 
 ## program-details
 
 Spec : [.scratch/program-details/spec.md](../.scratch/program-details/spec.md). Description, places, frais et niveau des formations ; description des cours ; page publique.
-- [ ] [program-details/01](../.scratch/program-details/issues/01-program-fields.md) : Champs de la formation (description, places, frais, niveau). État : ready-for-agent, non commencé.
-- [ ] [program-details/02](../.scratch/program-details/issues/02-course-description.md) : Description du cours. État : ready-for-agent, non commencé.
-- [ ] [program-details/03](../.scratch/program-details/issues/03-public-program-page.md) : Page publique d'une formation. État : ready-for-agent, non commencé.
+- [x] [program-details/01](../.scratch/program-details/issues/01-program-fields.md) : Champs de la formation (description, places, frais, niveau). État : resolved. **Fusionné** dans `dev` (PR #199, V30). Description, places (0..100000), frais annuels, niveau (liste fermée) ; la description se vide avec `""` (décision propriétaire), les trois autres champs ne sont pas vidables. Preuves : tests rouges d'abord, API 468 tests, back office 410, CI verte ; Opus : V30 sur PostgreSQL 18, 33/33 et 29/29 relancés. Reste : le commentaire de `models/program.ts` dit encore que rien ne peut être vidé.
+- [x] [program-details/02](../.scratch/program-details/issues/02-course-description.md) : Description du cours. État : resolved. **Fusionné** dans `dev` (PR #198, V31). Description du cours (≤1000, caractères de contrôle refusés, blanc = vide). Preuves : tests rouges d'abord, API 358 + 466, back office 405, CI verte ; Opus : V31 sur PostgreSQL 18, 26/26 et 21/21 relancés. Reste : la phrase de CLAUDE.md sur la description du cours.
+- [x] [program-details/03](../.scratch/program-details/issues/03-public-program-page.md) : Page publique d'une formation. État : resolved. **Fusionné** dans `dev` (PR #202). Page publique `/:lang/programs/:id` rendue côté serveur, texte brut, niveau via `programLevelKey`, code mort `capacity/enrolled` supprimé. Preuves : web 1382, `ng build`, CI verte ; Opus : rendu SSR réel contre une fausse API (200, script échappé, erreur 404 et id invalide), revue de sécurité sans bloquant. Un défaut bloquant trouvé en revue (clé `schools.viewDetails` supprimée par erreur) corrigé avec une spec. Non vérifié : 375 px et mode sombre en navigateur réel. Reste : titre de page et statut 404 en SSR.
 
 ## program-wishlist
 
 Spec : [.scratch/program-wishlist/spec.md](../.scratch/program-wishlist/spec.md). Liste de souhaits des formations (étudiants).
-- [ ] [program-wishlist/01](../.scratch/program-wishlist/issues/01-api-program-wishlist.md) : API de la liste de souhaits des formations. État : ready-for-agent, non commencé.
-- [ ] [program-wishlist/02](../.scratch/program-wishlist/issues/02-web-unified-wishlist.md) : Liste de souhaits unifiée au web. État : ready-for-agent, non commencé.
+- [x] [program-wishlist/01](../.scratch/program-wishlist/issues/01-api-program-wishlist.md) : API de la liste de souhaits des formations. État : resolved. **Fusionné** dans `dev` (PR #200, V32). `GET|POST|DELETE /api/v1/users/{userId}/wishlist/programs[/{programId}]`, STUDENT et propriétaire, ajout idempotent, cascades. Preuves : 5 tests d'intégration (4 rouges d'abord), `verify` 358 + 466, CI verte ; Opus : V32 sur PostgreSQL 18 et application démarrée en `validate`, mutation de `deleteWishlistLinks` rouge. Reste : `skip(UserEntity::setProgramWishlist)` dans `ModelMapperConfig`.
+- [x] [program-wishlist/02](../.scratch/program-wishlist/issues/02-web-unified-wishlist.md) : Liste de souhaits unifiée au web. État : resolved. **Fusionné** dans `dev` (PR #203). Cœur `<app-wishlist-heart>` (liste des formations et fiche école), panier et profil unifiés, chargement séparé écoles/formations. Preuves : web 1396 sur 6 lancements consécutifs après correction d'un test instable, CI verte. Non confirmé par Opus après les deux dernières corrections ; non vérifié en navigateur réel. Reste : cœur et lien « voir plus » sur la page formation (program-wishlist/03).
+- [ ] [program-wishlist/03](../.scratch/program-wishlist/issues/03-heart-on-program-page.md) : Cœur sur la page formation et lien « voir plus ». État : ready-for-agent, non commencé.
 
 ## forum
 
