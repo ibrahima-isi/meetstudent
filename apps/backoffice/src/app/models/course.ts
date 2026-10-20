@@ -14,6 +14,7 @@ export interface Course {
   id: number;
   code?: string | null;
   name: string;
+  description?: string | null;
   programId?: number | null;
   photoMediaId?: number | null;
   photo?: (Pick<Media, 'id'> & Partial<Media>) | null;
@@ -27,6 +28,7 @@ export interface Course {
 export interface CourseInput {
   code?: string;
   name: string;
+  description?: string;
   programId: number;
   photoMediaId?: number;
 }

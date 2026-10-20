@@ -22,6 +22,9 @@ public class Course extends BaseEntity {
     @Column(name = "photo_media_id")
     private Integer photoMediaId;
 
+    @Column(name = "description", length = 1000)
+    private String description;
+
     @ManyToOne
     @JoinColumn(name = "program_id")
     private Program program;
