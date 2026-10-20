@@ -83,6 +83,156 @@ class ProgramControllerIntegrationTests {
         return mediaRepository.save(media);
     }
 
+    private static final String FULL_DETAILS = "{\"name\":\"Detail\",\"code\":\"PD001\",\"description\":\"Un programme\","
+            + "\"availableSeats\":30,\"annualFee\":1250.50,\"level\":\"MASTER\"}";
+
+    private int createDetailedProgram() throws Exception {
+        String body = mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/programs")
+                        .contentType(MediaType.APPLICATION_JSON).content(FULL_DETAILS)
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        return objectMapper.readTree(body).get("id").asInt();
+    }
+
+    @Test
+    void adminCreatesAProgramWithDetailsAndAnonymousReadsThem() throws Exception {
+        int id = createDetailedProgram();
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/programs/" + id))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.description").value("Un programme"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.availableSeats").value(30))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.annualFee").value(1250.50))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.level").value("MASTER"));
+    }
+
+    @Test
+    void programWithoutDetailsStaysValidWithNullFields() throws Exception {
+        String body = mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/programs")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Bare\",\"code\":\"PD002\"}")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isCreated())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.description").doesNotExist())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.availableSeats").doesNotExist())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.annualFee").doesNotExist())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.level").doesNotExist())
+                .andReturn().getResponse().getContentAsString();
+        int id = objectMapper.readTree(body).get("id").asInt();
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/programs/" + id))
+                .andExpect(MockMvcResultMatchers.status().isOk());
+    }
+
+    @Test
+    void patchOfOneDetailKeepsTheOthersAndNullKeeps() throws Exception {
+        int id = createDetailedProgram();
+        mockMvc.perform(MockMvcRequestBuilders.patch("/api/v1/programs/" + id)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"availableSeats\":0}")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.availableSeats").value(0))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.description").value("Un programme"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.annualFee").value(1250.50))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.level").value("MASTER"));
+        mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/programs/" + id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"description\":null,\"availableSeats\":null,\"annualFee\":null,\"level\":null}")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.description").value("Un programme"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.availableSeats").value(0))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.annualFee").value(1250.50))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.level").value("MASTER"));
+    }
+
+    @Test
+    void emptyOrBlankDescriptionClearsItAndTextIsStripped() throws Exception {
+        int id = createDetailedProgram();
+        mockMvc.perform(MockMvcRequestBuilders.patch("/api/v1/programs/" + id)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"description\":\"\"}")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.description").doesNotExist())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.level").value("MASTER"));
+        mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/programs/" + id)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"description\":\"  Texte \\n\"}")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.description").value("Texte"));
+        mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/programs/" + id)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"description\":\"   \"}")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.description").doesNotExist());
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/programs")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"B\",\"description\":\"  \"}")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isCreated())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.description").doesNotExist());
+    }
+
+    @Test
+    void invalidDetailsAnswer400WithAFieldMessage() throws Exception {
+        String tooLong = "x".repeat(1001);
+        String[][] cases = {
+                {"{\"name\":\"A\",\"availableSeats\":-1}", "availableSeats"},
+                {"{\"name\":\"A\",\"annualFee\":-0.01}", "annualFee"},
+                {"{\"name\":\"A\",\"annualFee\":1.234}", "annualFee"},
+                {"{\"name\":\"A\",\"description\":\"" + tooLong + "\"}", "description"},
+                {"{\"name\":\"A\",\"level\":\"PHD\"}", "level"},
+                {"{\"name\":\"A\",\"availableSeats\":100001}", "availableSeats"},
+                {"{\"name\":\"A\",\"description\":\"a\\u0000b\"}", "description"},
+        };
+        for (String[] c : cases) {
+            mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/programs")
+                            .contentType(MediaType.APPLICATION_JSON).content(c[0])
+                            .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                    .andExpect(MockMvcResultMatchers.status().isBadRequest())
+                    .andExpect(MockMvcResultMatchers.jsonPath("$." + c[1]).isNotEmpty());
+        }
+        int id = createDetailedProgram();
+        mockMvc.perform(MockMvcRequestBuilders.patch("/api/v1/programs/" + id)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"level\":\"PHD\"}")
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isBadRequest())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.level").isNotEmpty());
+    }
+
+    @Test
+    void everyListedLevelIsAccepted() throws Exception {
+        int n = 0;
+        for (String level : new String[]{"BTS_DUT", "LICENCE", "MASTER", "DOCTORAT", "AUTRE"}) {
+            mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/programs")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"name\":\"L\",\"code\":\"LV" + (n++) + "\",\"level\":\"" + level + "\"}")
+                            .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                    .andExpect(MockMvcResultMatchers.status().isCreated())
+                    .andExpect(MockMvcResultMatchers.jsonPath("$.level").value(level));
+        }
+    }
+
+    @Test
+    void onlyAnAdminCanWriteTheDetails() throws Exception {
+        int id = createDetailedProgram();
+        mockMvc.perform(MockMvcRequestBuilders.patch("/api/v1/programs/" + id)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"availableSeats\":5}"))
+                .andExpect(MockMvcResultMatchers.status().isUnauthorized());
+        mockMvc.perform(MockMvcRequestBuilders.patch("/api/v1/programs/" + id)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"availableSeats\":5}")
+                        .with(TestDataUtil.mockUser("ROLE_STUDENT")))
+                .andExpect(MockMvcResultMatchers.status().isForbidden());
+        mockMvc.perform(MockMvcRequestBuilders.patch("/api/v1/programs/" + id)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"availableSeats\":5}")
+                        .with(TestDataUtil.mockUser("ROLE_EXPERT")))
+                .andExpect(MockMvcResultMatchers.status().isForbidden());
+    }
+
+    @Test
+    void listAndNameSearchExposeTheDetails() throws Exception {
+        createDetailedProgram();
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/programs"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].level").value("MASTER"));
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/programs/name/Detail"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.content[0].annualFee").value(1250.50));
+    }
+
     @Test
     void duplicateProgramCodeReturnsConflictOnCreateAndPatch() throws Exception {
         mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/programs")
