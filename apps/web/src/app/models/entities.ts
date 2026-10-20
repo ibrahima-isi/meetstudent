@@ -59,6 +59,8 @@ export interface Media {
   publicUrl: string | null;
 }
 
+export type ExpertStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
 export interface User extends AbstractEntity {
   firstname: string;
   lastname: string;
@@ -66,6 +68,10 @@ export interface User extends AbstractEntity {
   email: string;
   /** Absent from older payloads; only an explicit `false` means "to confirm". */
   emailVerified?: boolean;
+  /** Approval of an Expert (teacher) account; absent for other roles. Sent to the account owner only. */
+  expertStatus?: ExpertStatus;
+  /** Why an expert was rejected, when the admin gave a reason. */
+  expertStatusReason?: string;
   role: Role;
   qualification?: string;
   /** Private media — fetch content via MediaService.blobUrl(id), not <img src>. */

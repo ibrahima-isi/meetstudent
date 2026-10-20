@@ -3,6 +3,8 @@ import { provideZonelessChangeDetection } from '@angular/core';
 import { StarRatingComponent } from './star-rating.component';
 import { RatingService } from '@services/rating.service';
 import { TokenService } from '@services/token.service';
+import { UserService } from '@services/user.service';
+import { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom, of, Subject, throwError } from 'rxjs';
 import { provideTransloco, TranslocoService } from '@jsverse/transloco';
 import { translocoOptions } from '@i18n/transloco.config';
@@ -15,11 +17,14 @@ describe('StarRatingComponent', () => {
   let fixture: ComponentFixture<StarRatingComponent>;
   let ratingServiceSpy: jasmine.SpyObj<RatingService>;
   let tokenServiceSpy: jasmine.SpyObj<TokenService>;
+  let userServiceSpy: jasmine.SpyObj<UserService>;
 
   beforeEach(async () => {
     ratingServiceSpy = jasmine.createSpyObj('RatingService', ['rateSchool', 'rateProgram', 'rateCourse']);
     tokenServiceSpy = jasmine.createSpyObj('TokenService', ['user']);
     tokenServiceSpy.user.and.returnValue({ id: 1 } as any);
+    userServiceSpy = jasmine.createSpyObj('UserService', ['refreshSessionUser']);
+    userServiceSpy.refreshSessionUser.and.returnValue(of(null));
 
     await TestBed.configureTestingModule({
       imports: [StarRatingComponent],
@@ -29,6 +34,7 @@ describe('StarRatingComponent', () => {
         provideHttpClientTesting(),
         { provide: RatingService, useValue: ratingServiceSpy },
         { provide: TokenService, useValue: tokenServiceSpy },
+        { provide: UserService, useValue: userServiceSpy },
         provideTransloco(translocoOptions),
       ]
     }).compileComponents();
@@ -240,6 +246,19 @@ describe('StarRatingComponent', () => {
       expect(emitted).toEqual([]);
       expect(q('[role="alert"][data-testid="rating-error"]')).not.toBeNull();
       expect(component.isSubmitting()).toBeFalse();
+    });
+
+    it('explains a 403 on a programme rating as an account approval matter, not a generic failure', () => {
+      ratingServiceSpy.rateProgram.and.returnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
+      fixture.componentRef.setInput('itemType', 'program');
+      component.rating.set(4);
+
+      component.submitRating();
+      fixture.detectChanges();
+
+      expect(q('[data-testid="rating-blocked"]')).not.toBeNull();
+      expect(q('[data-testid="rating-error"]')).toBeNull();
+      expect(userServiceSpy.refreshSessionUser).toHaveBeenCalled();
     });
 
     it('lets the visitor retry after a failure', () => {

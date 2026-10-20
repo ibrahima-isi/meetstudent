@@ -483,6 +483,11 @@
     "courseList": "Liste des cours disponibles",
     "noCourses": "Aucun cours trouvé pour ce programme.",
     "rateCourse": "Évaluer ce cours",
+    "expertBlocked": {
+      "pending": "Votre compte enseignant est en attente de validation : vous ne pouvez pas encore noter les formations ni les cours.",
+      "rejected": "Votre demande de compte enseignant a été refusée : vous ne pouvez pas noter les formations ni les cours.",
+      "link": "Voir mon statut"
+    },
     "close": "Fermer",
     "loading": "Chargement de l'établissement…",
     "loadError": "Cet établissement n'a pas pu être chargé.",
@@ -519,6 +524,7 @@
     "submit": "Publier mon avis",
     "submitting": "Envoi...",
     "thanks": "Merci, votre avis a été enregistré.",
+    "expertBlocked": "Votre compte enseignant ne permet pas de noter ici : il est en attente de validation ou a été refusé. Consultez votre statut dans votre profil.",
     "error": "Votre avis n'a pas pu être enregistré. Veuillez réessayer."
   },
   "profile": {
@@ -538,6 +544,16 @@
     "profileType": "Type de profil",
     "roleStudent": "Étudiant",
     "roleExpert": "Expert / Enseignant",
+    "expertStatus": {
+      "title": "Validation du compte enseignant",
+      "pending": "En attente de validation",
+      "pendingHelp": "Un administrateur examine votre demande. En attendant, vous pouvez noter les établissements, mais pas les formations ni les cours.",
+      "approved": "Compte approuvé",
+      "approvedHelp": "Vous pouvez noter les établissements, les formations et les cours.",
+      "rejected": "Demande refusée",
+      "rejectedHelp": "Vous pouvez toujours noter les établissements, mais pas les formations ni les cours.",
+      "reason": "Motif : {{ reason }}"
+    },
     "bacType": "Type de BAC",
     "bacPlaceholder": "Sélectionnez votre BAC",
     "specialty": "Spécialité",
