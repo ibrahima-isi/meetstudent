@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import { provideZonelessChangeDetection } from '@angular/core';
+import { Provider, provideZonelessChangeDetection, RESPONSE_INIT } from '@angular/core';
+import { Title } from '@angular/platform-browser';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
@@ -43,7 +44,7 @@ describe('ProgramDetailPageComponent', () => {
     harness.detectChanges();
   }
 
-  async function open(id: string, answer: unknown | 'skip' | { status: number }, lang: 'fr' | 'en' = 'en') {
+  async function open(id: string, answer: unknown | 'skip' | { status: number }, lang: 'fr' | 'en' = 'en', extra: Provider[] = []) {
     TestBed.configureTestingModule({
       providers: [
         provideZonelessChangeDetection(),
@@ -51,6 +52,7 @@ describe('ProgramDetailPageComponent', () => {
         provideHttpClientTesting(),
         provideRouter([{ path: 'programs/:id', component: ProgramDetailPageComponent }]),
         provideTransloco(translocoOptions),
+        ...extra,
       ],
     });
     await firstValueFrom(TestBed.inject(LocaleService).use(lang));
@@ -132,18 +134,33 @@ describe('ProgramDetailPageComponent', () => {
     expect(byId('program-description')?.children.length).toBe(0);
   });
 
-  it('shows the shared error state when the program does not exist, and retries', async () => {
+  it('shows a not-found message with a link to the programmes and no retry when the program does not exist', async () => {
     await open('5', { status: 404 });
 
-    expect(q('[role="alert"]')).not.toBeNull();
-    expect(byId('program-name')).toBeNull();
-
-    (q('[role="alert"] button') as HTMLButtonElement).click();
-    respond(full);
-    await settle();
-
+    expect(byId('program-not-found')?.textContent).toContain('Programme not found');
     expect(q('[role="alert"]')).toBeNull();
-    expect(byId('program-name')?.textContent).toContain('Computer Science');
+    expect(q('[data-testid="program-not-found"] button')).toBeNull();
+    expect(byId('program-name')).toBeNull();
+    expect(q('[data-testid="program-not-found"] a')?.getAttribute('href')).toBe('/en/programs');
+  });
+
+  it('puts the program name in the page title once loaded', async () => {
+    await open('5', full);
+    expect(TestBed.inject(Title).getTitle()).toBe('Computer Science | MeetStudent');
+  });
+
+  it('answers HTTP 404 on the server when the API says the program does not exist', async () => {
+    const responseInit: ResponseInit = { status: 200 };
+    await open('5', { status: 404 }, 'en', [{ provide: RESPONSE_INIT, useValue: responseInit }]);
+    expect(responseInit.status).toBe(404);
+  });
+
+  it('keeps HTTP 200 on the server when the API merely fails', async () => {
+    const responseInit: ResponseInit = { status: 200 };
+    await open('5', { status: 500 }, 'en', [{ provide: RESPONSE_INIT, useValue: responseInit }]);
+    expect(responseInit.status).toBe(200);
+    expect(q('[role="alert"] button')).not.toBeNull();
+    expect(byId('program-not-found')).toBeNull();
   });
 
   it('shows the error state when the API fails', async () => {
@@ -152,21 +169,17 @@ describe('ProgramDetailPageComponent', () => {
     expect(q('[role="alert"]')).not.toBeNull();
   });
 
-  for (const bad of ['1e3', '0x10', '0', '12345678901', '1.5']) {
-    it(`refuses the id "${bad}" without calling the API`, async () => {
-      await open(bad, 'skip');
+  for (const bad of ['1e3', '0x10', '0', '12345678901', '1.5', 'abc']) {
+    it(`treats the id "${bad}" as not found without calling the API, with HTTP 404 on the server`, async () => {
+      const responseInit: ResponseInit = { status: 200 };
+      await open(bad, 'skip', 'en', [{ provide: RESPONSE_INIT, useValue: responseInit }]);
 
-      expect(q('[role="alert"]')).not.toBeNull();
+      expect(byId('program-not-found')).not.toBeNull();
+      expect(q('[role="alert"]')).toBeNull();
+      expect(responseInit.status).toBe(404);
       http.expectNone(() => true);
     });
   }
-
-  it('shows the error state without calling the API when the id is not a number', async () => {
-    await open('abc', 'skip');
-
-    expect(q('[role="alert"]')).not.toBeNull();
-    http.expectNone(() => true);
-  });
 
   it('shows a loading state while the program is pending', async () => {
     await open('5', 'skip');
