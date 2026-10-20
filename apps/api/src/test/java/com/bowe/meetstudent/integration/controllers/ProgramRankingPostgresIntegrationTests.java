@@ -131,7 +131,8 @@ class ProgramRankingPostgresIntegrationTests {
 
     private int expert(Role role) {
         return users.saveUser(UserEntity.builder().firstname("Rank").lastname("Expert")
-                .email(UUID.randomUUID() + "@example.com").password("password").role(role).build(), encoder).getId();
+                .email(UUID.randomUUID() + "@example.com").password("password").role(role)
+                .expertStatus(com.bowe.meetstudent.entities.enums.ExpertStatus.APPROVED).build(), encoder).getId();
     }
 
     /** Codes are unique and capped at 5 characters; a per-run stem keeps the test repeatable on a persistent database. */

@@ -480,6 +480,11 @@
     "courseList": "Available courses",
     "noCourses": "No courses found for this programme.",
     "rateCourse": "Rate this course",
+    "expertBlocked": {
+      "pending": "Your teacher account is awaiting approval: you cannot rate programmes or courses yet.",
+      "rejected": "Your teacher account request was rejected: you cannot rate programmes or courses.",
+      "link": "See my status"
+    },
     "close": "Close",
     "loading": "Loading school…",
     "loadError": "This school could not be loaded.",
@@ -516,6 +521,7 @@
     "submit": "Post my review",
     "submitting": "Sending...",
     "thanks": "Thanks, your rating was saved.",
+    "expertBlocked": "Your teacher account cannot rate here: it is awaiting approval or was rejected. Check your status in your profile.",
     "error": "Your rating could not be saved. Please try again."
   },
   "profile": {
@@ -535,6 +541,16 @@
     "profileType": "Profile type",
     "roleStudent": "Student",
     "roleExpert": "Expert / Teacher",
+    "expertStatus": {
+      "title": "Teacher account approval",
+      "pending": "Awaiting approval",
+      "pendingHelp": "An administrator is reviewing your request. Meanwhile you can rate schools, but not programmes or courses.",
+      "approved": "Account approved",
+      "approvedHelp": "You can rate schools, programmes and courses.",
+      "rejected": "Request rejected",
+      "rejectedHelp": "You can still rate schools, but not programmes or courses.",
+      "reason": "Reason: {{ reason }}"
+    },
     "bacType": "BAC type",
     "bacPlaceholder": "Select your BAC",
     "specialty": "Specialty",

@@ -576,7 +576,8 @@ class CourseControllerIntegrationTests {
         var role = roleService.findRoleByName("ROLE_EXPERT")
                 .orElseGet(() -> roleService.createRole(Role.builder().name("ROLE_EXPERT").build()));
         return userService.saveUser(UserEntity.builder().firstname("Rate").lastname("Expert")
-                .email("rate.expert@example.com").password("password").role(role).build(), passwordEncoder).getId();
+                .email("rate.expert@example.com").password("password").role(role)
+                .expertStatus(com.bowe.meetstudent.entities.enums.ExpertStatus.APPROVED).build(), passwordEncoder).getId();
     }
 
     private int saveRatedCourse(String name, String code, double note, int expertId) throws Exception {

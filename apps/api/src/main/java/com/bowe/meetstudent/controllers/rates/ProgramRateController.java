@@ -3,6 +3,7 @@ package com.bowe.meetstudent.controllers.rates;
 import com.bowe.meetstudent.dto.ProgramRateDTO;
 import com.bowe.meetstudent.entities.rates.ProgramRate;
 import com.bowe.meetstudent.mappers.Mapper;
+import com.bowe.meetstudent.security.RequiresApprovedExpert;
 import com.bowe.meetstudent.security.UserPrincipal;
 import com.bowe.meetstudent.services.ProgramRateService;
 import com.bowe.meetstudent.services.ProgramService;
@@ -25,6 +26,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequiredArgsConstructor
@@ -39,7 +41,7 @@ public class ProgramRateController {
 
     @PostMapping
     @Operation(summary = "Rate a program", description = "Allows experts to post a rating and comment for an educational program.")
-    @PreAuthorize("hasRole('EXPERT')")
+    @RequiresApprovedExpert
     public ResponseEntity<ProgramRateDTO> create(
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestBody @Valid ProgramRateDTO dto) {
@@ -63,7 +65,7 @@ public class ProgramRateController {
         ));
 
         // One rating per user per target: rating again updates it in place (200) instead of adding a row.
-        var existing = rate.getProgram() == null ? java.util.Optional.<ProgramRate>empty()
+        var existing = rate.getProgram() == null ? Optional.<ProgramRate>empty()
                 : service.findByUserAndProgram(rate.getUserEntity().getId(), rate.getProgram().getId());
         try {
             if (existing.isPresent()) {
