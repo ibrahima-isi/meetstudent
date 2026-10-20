@@ -2,6 +2,7 @@ package com.bowe.meetstudent.integration.controllers;
 
 import com.bowe.meetstudent.TestDataUtil;
 import com.bowe.meetstudent.dto.UserDTO;
+import com.bowe.meetstudent.entities.Program;
 import com.bowe.meetstudent.entities.Role;
 import com.bowe.meetstudent.entities.School;
 import com.bowe.meetstudent.entities.UserEntity;
@@ -11,12 +12,14 @@ import com.bowe.meetstudent.repositories.RoleRepository;
 import com.bowe.meetstudent.services.SchoolService;
 import com.bowe.meetstudent.services.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
@@ -57,6 +60,9 @@ class UserControllerIntegrationTests {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private JdbcTemplate jdbc;
 
     @Test
     void testThatCreateUserReturnStatusCode201Created() throws Exception {
@@ -645,6 +651,152 @@ class UserControllerIntegrationTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(java.util.Map.of("username", email, "password", password))))
                 .andExpect(MockMvcResultMatchers.status().isOk()).andReturn().getResponse().getContentAsString());
+    }
+
+    private UserEntity wishlistUser(String roleName, String email) {
+        UserDTO dto = TestDataUtil.createUserDto();
+        dto.setEmail(email);
+        dto.setRole(ensureRole(roleName));
+        return userService.saveUser(userMapper.toEntity(dto), passwordEncoder);
+    }
+
+    private Program wishlistProgram(String name) {
+        var school = schoolService.save(schoolMapper.toEntity(TestDataUtil.createSchoolDto()));
+        return programs.save(Program.builder().name(name).school(school).build());
+    }
+
+    @Test
+    void testThatProgramWishlistCanBeManagedAndAddIsIdempotent() throws Exception {
+        var user = wishlistUser("ROLE_STUDENT", "pw1@example.com");
+        var program = wishlistProgram("Wished program");
+        var base = "/api/v1/users/" + user.getId() + "/wishlist/programs";
+
+        mockMvc.perform(MockMvcRequestBuilders.get(base).with(TestDataUtil.mockUser(user.getId(), "ROLE_STUDENT")))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.length()").value(0));
+
+        for (int i = 0; i < 2; i++) {
+            mockMvc.perform(MockMvcRequestBuilders.post(base + "/" + program.getId())
+                            .with(TestDataUtil.mockUser(user.getId(), "ROLE_STUDENT")))
+                    .andExpect(MockMvcResultMatchers.status().isOk())
+                    .andExpect(MockMvcResultMatchers.jsonPath("$.length()").value(1))
+                    .andExpect(MockMvcResultMatchers.jsonPath("$[0].id").value(program.getId()));
+        }
+
+        mockMvc.perform(MockMvcRequestBuilders.get(base).with(TestDataUtil.mockUser(user.getId(), "ROLE_STUDENT")))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.length()").value(1))
+                .andExpect(MockMvcResultMatchers.jsonPath("$[0].name").value("Wished program"));
+
+        mockMvc.perform(MockMvcRequestBuilders.delete(base + "/" + program.getId())
+                        .with(TestDataUtil.mockUser(user.getId(), "ROLE_STUDENT")))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void testThatAddingAnUnknownProgramToTheWishlistAnswers404() throws Exception {
+        var user = wishlistUser("ROLE_STUDENT", "pw2@example.com");
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/users/" + user.getId() + "/wishlist/programs/9999")
+                        .with(TestDataUtil.mockUser(user.getId(), "ROLE_STUDENT")))
+                .andExpect(MockMvcResultMatchers.status().isNotFound());
+    }
+
+    @Test
+    void testThatProgramWishlistIsStudentAndOwnerOnly() throws Exception {
+        var owner = wishlistUser("ROLE_STUDENT", "pw3@example.com");
+        var expert = wishlistUser("ROLE_EXPERT", "pw4@example.com");
+        var program = wishlistProgram("Private list program");
+        var path = "/api/v1/users/" + owner.getId() + "/wishlist/programs";
+
+        // another student
+        mockMvc.perform(MockMvcRequestBuilders.post(path + "/" + program.getId())
+                        .with(TestDataUtil.mockUser(owner.getId() + 100, "ROLE_STUDENT")))
+                .andExpect(MockMvcResultMatchers.status().isForbidden());
+        mockMvc.perform(MockMvcRequestBuilders.get(path).with(TestDataUtil.mockUser(owner.getId() + 100, "ROLE_STUDENT")))
+                .andExpect(MockMvcResultMatchers.status().isForbidden());
+        // expert, even on their own id
+        var expertPath = "/api/v1/users/" + expert.getId() + "/wishlist/programs";
+        mockMvc.perform(MockMvcRequestBuilders.post(expertPath + "/" + program.getId())
+                        .with(TestDataUtil.mockUser(expert.getId(), "ROLE_EXPERT")))
+                .andExpect(MockMvcResultMatchers.status().isForbidden());
+        mockMvc.perform(MockMvcRequestBuilders.get(expertPath).with(TestDataUtil.mockUser(expert.getId(), "ROLE_EXPERT")))
+                .andExpect(MockMvcResultMatchers.status().isForbidden());
+        // anonymous
+        mockMvc.perform(MockMvcRequestBuilders.post(path + "/" + program.getId()))
+                .andExpect(MockMvcResultMatchers.status().isUnauthorized());
+        mockMvc.perform(MockMvcRequestBuilders.get(path))
+                .andExpect(MockMvcResultMatchers.status().isUnauthorized());
+        mockMvc.perform(MockMvcRequestBuilders.delete(path + "/" + program.getId()))
+                .andExpect(MockMvcResultMatchers.status().isUnauthorized());
+
+        Assertions.assertEquals(0,
+                jdbc.queryForObject("select count(*) from user_program_wishlist", Integer.class));
+    }
+
+    @Test
+    void testThatDeletingAProgramRemovesItFromWishlists() throws Exception {
+        var user = wishlistUser("ROLE_STUDENT", "pw5@example.com");
+        var kept = wishlistProgram("Kept program");
+        var doomed = wishlistProgram("Doomed program");
+        var base = "/api/v1/users/" + user.getId() + "/wishlist/programs";
+        for (var p : List.of(kept, doomed)) {
+            mockMvc.perform(MockMvcRequestBuilders.post(base + "/" + p.getId())
+                            .with(TestDataUtil.mockUser(user.getId(), "ROLE_STUDENT")))
+                    .andExpect(MockMvcResultMatchers.status().isOk());
+        }
+
+        mockMvc.perform(MockMvcRequestBuilders.delete("/api/v1/programs/" + doomed.getId())
+                        .with(TestDataUtil.mockUser(999, "ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().is2xxSuccessful());
+
+        mockMvc.perform(MockMvcRequestBuilders.get(base).with(TestDataUtil.mockUser(user.getId(), "ROLE_STUDENT")))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.length()").value(1))
+                .andExpect(MockMvcResultMatchers.jsonPath("$[0].id").value(kept.getId()));
+        Assertions.assertEquals(1,
+                jdbc.queryForObject("select count(*) from user_program_wishlist", Integer.class));
+    }
+
+    @Test
+    void testThatDeletingAnAccountLeavesNoProgramWishlistRow() throws Exception {
+        var user = wishlistUser("ROLE_STUDENT", "pw6@example.com");
+        var other = wishlistUser("ROLE_STUDENT", "pw7@example.com");
+        var program = wishlistProgram("Shared program");
+        for (var u : List.of(user, other)) {
+            mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/users/" + u.getId() + "/wishlist/programs/" + program.getId())
+                            .with(TestDataUtil.mockUser(u.getId(), "ROLE_STUDENT")))
+                    .andExpect(MockMvcResultMatchers.status().isOk());
+        }
+
+        mockMvc.perform(MockMvcRequestBuilders.delete("/api/v1/users/" + user.getId())
+                        .with(TestDataUtil.mockUser(999, "ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isNoContent());
+
+        Assertions.assertEquals(1,
+                jdbc.queryForObject("select count(*) from user_program_wishlist", Integer.class));
+        Assertions.assertEquals(1,
+                jdbc.queryForObject("select count(*) from user_program_wishlist where user_id = ?", Integer.class, other.getId()));
+    }
+
+    @Test
+    void testThatProgramWishlistRemovalIsRefusedForAnotherStudentAndAnExpert() throws Exception {
+        var owner = wishlistUser("ROLE_STUDENT", "pw8@example.com");
+        var expert = wishlistUser("ROLE_EXPERT", "pw9@example.com");
+        var program = wishlistProgram("Protected program");
+        var path = "/api/v1/users/" + owner.getId() + "/wishlist/programs/" + program.getId();
+        mockMvc.perform(MockMvcRequestBuilders.post(path).with(TestDataUtil.mockUser(owner.getId(), "ROLE_STUDENT")))
+                .andExpect(MockMvcResultMatchers.status().isOk());
+
+        mockMvc.perform(MockMvcRequestBuilders.delete(path)
+                        .with(TestDataUtil.mockUser(owner.getId() + 100, "ROLE_STUDENT")))
+                .andExpect(MockMvcResultMatchers.status().isForbidden());
+        mockMvc.perform(MockMvcRequestBuilders.delete(path)
+                        .with(TestDataUtil.mockUser(expert.getId(), "ROLE_EXPERT")))
+                .andExpect(MockMvcResultMatchers.status().isForbidden());
+
+        Assertions.assertEquals(1,
+                jdbc.queryForObject("select count(*) from user_program_wishlist", Integer.class));
     }
 
     private Role ensureRole(String roleName) {

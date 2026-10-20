@@ -64,4 +64,13 @@ public class UserEntity extends AbstractEntity {
         inverseJoinColumns = @JoinColumn(name = "school_id")
     )
     private List<School> wishlist;
+
+    @ManyToMany
+    @JoinTable(
+        name = "user_program_wishlist",
+        joinColumns = @JoinColumn(name = "user_id"),
+        inverseJoinColumns = @JoinColumn(name = "program_id")
+    )
+    @JsonIgnore
+    private List<Program> programWishlist;
 }

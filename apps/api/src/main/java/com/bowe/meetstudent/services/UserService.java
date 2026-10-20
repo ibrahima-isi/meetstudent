@@ -1,6 +1,7 @@
 package com.bowe.meetstudent.services;
 
 import com.bowe.meetstudent.entities.UserEntity;
+import com.bowe.meetstudent.entities.Program;
 import com.bowe.meetstudent.entities.School;
 import com.bowe.meetstudent.exceptions.FieldValidationException;
 import com.bowe.meetstudent.exceptions.ResourceNotFoundException;
@@ -10,6 +11,7 @@ import com.bowe.meetstudent.repositories.CourseRateRepository;
 import com.bowe.meetstudent.repositories.RoleRepository;
 import com.bowe.meetstudent.repositories.UserRepository;
 import com.bowe.meetstudent.repositories.SchoolRepository;
+import com.bowe.meetstudent.repositories.ProgramRepository;
 import com.bowe.meetstudent.entities.Role;
 import com.bowe.meetstudent.entities.enums.UserTokenPurpose;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +37,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final SchoolRepository schoolRepository;
+    private final ProgramRepository programRepository;
     private final RoleRepository roleRepository;
     private final MediaService mediaService;
     private final UserTokenService userTokenService;
@@ -222,6 +225,38 @@ public class UserService {
         }
         
         return userRepository.save(user);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Program> getProgramWishlist(Integer userId) {
+        var user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        return user.getProgramWishlist() == null ? List.of() : new ArrayList<>(user.getProgramWishlist());
+    }
+
+    @Transactional
+    public List<Program> addProgramToWishlist(Integer userId, Integer programId) {
+        var user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        var program = programRepository.findById(programId)
+                .orElseThrow(() -> new ResourceNotFoundException("Program not found"));
+        if (user.getProgramWishlist() == null) {
+            user.setProgramWishlist(new ArrayList<>());
+        }
+        if (user.getProgramWishlist().stream().noneMatch(p -> p.getId().equals(programId))) {
+            user.getProgramWishlist().add(program);
+        }
+        return new ArrayList<>(userRepository.save(user).getProgramWishlist());
+    }
+
+    @Transactional
+    public List<Program> removeProgramFromWishlist(Integer userId, Integer programId) {
+        var user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        if (user.getProgramWishlist() != null) {
+            user.getProgramWishlist().removeIf(p -> p.getId().equals(programId));
+        }
+        return user.getProgramWishlist() == null ? List.of() : new ArrayList<>(user.getProgramWishlist());
     }
 
 }
