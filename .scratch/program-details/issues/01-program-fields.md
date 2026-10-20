@@ -4,13 +4,13 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Worktree:** `program-details-01`
 
-- [ ] Migration : colonnes optionnelles (description ≤1000, places entier ≥0, frais décimal ≥0 en euros, niveau liste fermée BTS/DUT, Licence, Master, Doctorat, Autre)
-- [ ] DTO et PATCH : null garde la valeur ; validation 400 par champ (négatifs, trop long, niveau inconnu)
-- [ ] Écriture ADMIN seulement ; lecture publique ; formations sans ces champs inchangées
-- [ ] Back office : formulaire de formation étendu
-- [ ] Contrat documenté (CLAUDE.md « API contract quirks » et note « no capacity… »)
-- [ ] Tests d'intégration et specs du formulaire, rouge d'abord
+- [x] Migration : colonnes optionnelles (description ≤1000, places entier ≥0, frais décimal ≥0 en euros, niveau liste fermée BTS/DUT, Licence, Master, Doctorat, Autre)
+- [x] DTO et PATCH : null garde la valeur ; validation 400 par champ (négatifs, trop long, niveau inconnu)
+- [x] Écriture ADMIN seulement ; lecture publique ; formations sans ces champs inchangées
+- [x] Back office : formulaire de formation étendu
+- [x] Contrat documenté (CLAUDE.md « API contract quirks » et note « no capacity… »)
+- [x] Tests d'intégration et specs du formulaire, rouge d'abord
