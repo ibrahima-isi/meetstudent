@@ -1,10 +1,12 @@
 package com.bowe.meetstudent.entities;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.bowe.meetstudent.entities.enums.ExpertStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 
@@ -56,6 +58,18 @@ public class UserEntity extends AbstractEntity {
 
     @Column(length = 100)
     private String qualification;
+
+    /** Approval status of an Expert; null for every other role. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "expert_status", length = 10)
+    private ExpertStatus expertStatus;
+
+    /** Optional reason given by the admin when rejecting (max 255). */
+    @Column(name = "expert_status_reason", length = 255)
+    private String expertStatusReason;
+
+    @Column(name = "expert_decision_date")
+    private LocalDateTime expertDecisionDate;
 
     @ManyToMany
     @JoinTable(

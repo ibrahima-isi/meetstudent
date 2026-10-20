@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { LucideAngularModule, Star, MessageSquare } from 'lucide-angular';
 import { RatingService } from '@services/rating.service';
 import { TokenService } from '@services/token.service';
+import { UserService } from '@services/user.service';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { roundRating } from '@shared/format-rating';
@@ -81,6 +83,10 @@ import { roundRating } from '@shared/format-rating';
         <p data-testid="rating-done" role="status" class="text-sm font-medium text-green-700 dark:text-green-400">{{ 'rating.thanks' | transloco }}</p>
       }
 
+      @if (blocked()) {
+        <p data-testid="rating-blocked" role="alert" class="text-sm font-medium text-amber-800 dark:text-amber-300">{{ 'rating.expertBlocked' | transloco }}</p>
+      }
+
       @if (failed()) {
         <p data-testid="rating-error" role="alert" class="text-sm font-medium text-red-700 dark:text-red-400">{{ 'rating.error' | transloco }}</p>
       }
@@ -99,6 +105,7 @@ export class StarRatingComponent {
 
   private ratingService = inject(RatingService);
   private tokenService = inject(TokenService);
+  private userService = inject(UserService);
 
   rating = signal<number>(0);
   hoverRating = signal<number>(0);
@@ -108,6 +115,8 @@ export class StarRatingComponent {
   submitted = signal(false);
   /** True after a failed request, until the next attempt. */
   failed = signal(false);
+  /** True when the API answered 403 for a programme or course: the expert account is not approved. */
+  blocked = signal(false);
   /** The average as read by people; `rating` itself stays exact for the stars. */
   protected shownRating = computed(() => roundRating(this.rating()));
   /** The read-only mode shows the average given by the parent, rounded once for stars and speech. */
@@ -143,6 +152,7 @@ export class StarRatingComponent {
     }
 
     this.failed.set(false);
+    this.blocked.set(false);
     this.isSubmitting.set(true);
     const userId = user.id;
     const commentText = this.comment();
@@ -159,9 +169,15 @@ export class StarRatingComponent {
         this.submitted.set(true);
         this.onRate.emit({ note, comment: commentText });
       },
-      error: () => {
+      error: (err: unknown) => {
         // Not reported to the parent: the rating was not saved.
         this.isSubmitting.set(false);
+        if (err instanceof HttpErrorResponse && err.status === 403 && this.itemType() !== 'school') {
+          // The session may be stale: re-read the account so the page reflects the real status.
+          this.blocked.set(true);
+          this.userService.refreshSessionUser().subscribe();
+          return;
+        }
         this.failed.set(true);
       }
     });

@@ -12,6 +12,7 @@ import { School, Program, Course, Page } from '@models/entities';
 import { ProgramService } from '@services/program.service';
 import { SchoolService } from '@services/school.service';
 import { TokenService } from '@services/token.service';
+import { UserService } from '@services/user.service';
 import { RatingService } from '@services/rating.service';
 import { LocaleService } from '@services/locale.service';
 import { WishlistService } from '@services/wishlist.service';
@@ -21,8 +22,9 @@ describe('SchoolDetailPageComponent', () => {
   let programServiceSpy: jasmine.SpyObj<ProgramService>;
   let schoolServiceSpy: jasmine.SpyObj<SchoolService>;
   let ratingServiceSpy: jasmine.SpyObj<RatingService>;
+  let userServiceSpy: jasmine.SpyObj<UserService>;
   let authenticated: ReturnType<typeof signal<boolean>>;
-  let currentUser: ReturnType<typeof signal<{ id: number; role: { name: string } } | null>>;
+  let currentUser: ReturnType<typeof signal<{ id: number; role: { name: string }; expertStatus?: 'PENDING' | 'APPROVED' | 'REJECTED' } | null>>;
   let locale: ReturnType<typeof signal<'fr' | 'en'>>;
   let harness: RouterTestingHarness;
   let wishlist: {
@@ -68,6 +70,8 @@ describe('SchoolDetailPageComponent', () => {
       'rateProgram',
       'rateCourse',
     ]);
+    userServiceSpy = jasmine.createSpyObj('UserService', ['refreshSessionUser']);
+    userServiceSpy.refreshSessionUser.and.returnValue(of(null));
     authenticated = signal(true);
     currentUser = signal<{ id: number; role: { name: string } } | null>({ id: 3, role: { name: 'ROLE_STUDENT' } });
     const saved = signal<School[]>([]);
@@ -98,6 +102,7 @@ describe('SchoolDetailPageComponent', () => {
         { provide: ProgramService, useValue: programServiceSpy },
         { provide: SchoolService, useValue: schoolServiceSpy },
         { provide: RatingService, useValue: ratingServiceSpy },
+        { provide: UserService, useValue: userServiceSpy },
         { provide: TokenService, useValue: { isAuthenticated: authenticated, user: currentUser } },
         { provide: WishlistService, useValue: wishlist },
         { provide: LocaleService, useValue: { active: locale } },
@@ -466,6 +471,60 @@ describe('SchoolDetailPageComponent', () => {
 
       expect(q('[data-testid="school-rating"] app-star-rating')).not.toBeNull();
       expect(q('[data-testid="programme-rating"] app-star-rating')).not.toBeNull();
+    });
+
+    it('explains to a pending expert why programme rating is unavailable, while the school stays ratable', async () => {
+      currentUser.set({ id: 4, role: { name: 'ROLE_EXPERT' }, expertStatus: 'PENDING' });
+      await render();
+
+      expect(q('[data-testid="programme-rating"]')).toBeNull();
+      expect(q('[data-testid="school-rating"] app-star-rating')).not.toBeNull();
+      expect(q('[data-testid="expert-rating-blocked"]')?.textContent).toContain('awaiting approval');
+    });
+
+    it('explains to a rejected expert that programme rating is unavailable', async () => {
+      currentUser.set({ id: 4, role: { name: 'ROLE_EXPERT' }, expertStatus: 'REJECTED' });
+      await render();
+
+      expect(q('[data-testid="programme-rating"]')).toBeNull();
+      expect(q('[data-testid="expert-rating-blocked"]')?.textContent).toContain('was rejected');
+    });
+
+    it('re-reads the account of an expert so a decision shows without signing in again', async () => {
+      currentUser.set({ id: 4, role: { name: 'ROLE_EXPERT' }, expertStatus: 'PENDING' });
+      userServiceSpy.refreshSessionUser.and.callFake(() => {
+        currentUser.set({ id: 4, role: { name: 'ROLE_EXPERT' }, expertStatus: 'APPROVED' });
+        return of(null);
+      });
+      await render();
+
+      expect(userServiceSpy.refreshSessionUser).toHaveBeenCalledTimes(1);
+      expect(q('[data-testid="expert-rating-blocked"]')).toBeNull();
+      expect(q('[data-testid="programme-rating"] app-star-rating')).not.toBeNull();
+    });
+
+    it('does not re-read the account of a student', async () => {
+      await render();
+
+      expect(userServiceSpy.refreshSessionUser).not.toHaveBeenCalled();
+    });
+
+    it('keeps the rating controls for an approved expert and shows no blocking notice', async () => {
+      currentUser.set({ id: 4, role: { name: 'ROLE_EXPERT' }, expertStatus: 'APPROVED' });
+      await render();
+
+      expect(q('[data-testid="programme-rating"] app-star-rating')).not.toBeNull();
+      expect(q('[data-testid="expert-rating-blocked"]')).toBeNull();
+    });
+
+    it('explains the block in the courses modal too', async () => {
+      currentUser.set({ id: 4, role: { name: 'ROLE_EXPERT' }, expertStatus: 'PENDING' });
+      const component = await render();
+      component.openCoursesModal({ ...progs[0], courses: [{ id: 9, name: 'C' } as Course] });
+      await settle();
+
+      expect(q('[data-testid="course-rating"]')).toBeNull();
+      expect(q('[data-testid="course-expert-rating-blocked"]')).not.toBeNull();
     });
 
     it('offers expert-only course rating controls in the courses modal', async () => {

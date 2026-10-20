@@ -3,6 +3,7 @@ package com.bowe.meetstudent.controllers.rates;
 import com.bowe.meetstudent.dto.CourseRateDTO;
 import com.bowe.meetstudent.entities.rates.CourseRate;
 import com.bowe.meetstudent.mappers.Mapper;
+import com.bowe.meetstudent.security.RequiresApprovedExpert;
 import com.bowe.meetstudent.security.UserPrincipal;
 import com.bowe.meetstudent.services.CourseRateService;
 import com.bowe.meetstudent.services.CourseService;
@@ -25,6 +26,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequiredArgsConstructor
@@ -38,7 +40,7 @@ public class CourseRateController {
 
     @PostMapping
     @Operation(summary = "Rate a course", description = "Allows experts to post a rating and comment for a specific course.")
-    @PreAuthorize("hasRole('EXPERT')")
+    @RequiresApprovedExpert
     public ResponseEntity<CourseRateDTO> create(
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestBody @Valid CourseRateDTO dto) {
@@ -62,7 +64,7 @@ public class CourseRateController {
         ));
 
         // One rating per user per target: rating again updates it in place (200) instead of adding a row.
-        var existing = rate.getCourse() == null ? java.util.Optional.<CourseRate>empty()
+        var existing = rate.getCourse() == null ? Optional.<CourseRate>empty()
                 : service.findByUserAndCourse(rate.getUserEntity().getId(), rate.getCourse().getId());
         try {
             if (existing.isPresent()) {

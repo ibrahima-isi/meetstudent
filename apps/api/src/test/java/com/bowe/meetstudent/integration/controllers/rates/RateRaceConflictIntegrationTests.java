@@ -6,6 +6,7 @@ import com.bowe.meetstudent.dto.ProgramRateDTO;
 import com.bowe.meetstudent.dto.SchoolRateDTO;
 import com.bowe.meetstudent.entities.Role;
 import com.bowe.meetstudent.entities.UserEntity;
+import com.bowe.meetstudent.entities.enums.ExpertStatus;
 import com.bowe.meetstudent.entities.rates.CourseRate;
 import com.bowe.meetstudent.entities.rates.ProgramRate;
 import com.bowe.meetstudent.entities.rates.SchoolRate;
@@ -68,7 +69,8 @@ class RateRaceConflictIntegrationTests {
         Role role = roleService.findRoleByName(roleName).orElseGet(() ->
                 roleService.createRole(Role.builder().name(roleName).build()));
         return userService.saveUser(UserEntity.builder().firstname("T").lastname("U")
-                .email("race@example.com").password("password").role(role).build(), passwordEncoder);
+                .email("race@example.com").password("password").role(role)
+                .expertStatus("ROLE_EXPERT".equals(roleName) ? ExpertStatus.APPROVED : null).build(), passwordEncoder);
     }
 
     private static DataIntegrityViolationException race(String constraint) {

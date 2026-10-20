@@ -1,6 +1,7 @@
 package com.bowe.meetstudent.dto;
 
 import com.bowe.meetstudent.entities.Role;
+import com.bowe.meetstudent.entities.enums.ExpertStatus;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.*;
@@ -44,4 +45,7 @@ public class UserDTO extends AbstractDTO {
     private List<SchoolDTO> wishlist;
     private String photoUrl;
     private boolean emailVerified;
+    /** Expert approval status and rejection reason: sent to the account owner and admins only (UserDTO is only returned to the owner or an admin). */
+    private ExpertStatus expertStatus;
+    private String expertStatusReason;
 }
