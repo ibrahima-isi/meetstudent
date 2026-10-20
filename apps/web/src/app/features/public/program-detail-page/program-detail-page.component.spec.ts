@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { Provider, provideZonelessChangeDetection, RESPONSE_INIT } from '@angular/core';
+import { Provider, provideZonelessChangeDetection, RESPONSE_INIT, signal } from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -9,6 +9,8 @@ import { provideTransloco } from '@jsverse/transloco';
 import { firstValueFrom } from 'rxjs';
 import { translocoOptions } from '@i18n/transloco.config';
 import { LocaleService } from '@services/locale.service';
+import { TokenService } from '@services/token.service';
+import { WishlistService } from '@services/wishlist.service';
 import { ProgramDetailPageComponent } from './program-detail-page.component';
 
 describe('ProgramDetailPageComponent', () => {
@@ -52,6 +54,7 @@ describe('ProgramDetailPageComponent', () => {
         provideHttpClientTesting(),
         provideRouter([{ path: 'programs/:id', component: ProgramDetailPageComponent }]),
         provideTransloco(translocoOptions),
+        { provide: TokenService, useValue: { isAuthenticated: () => false, user: signal(null) } },
         ...extra,
       ],
     });
@@ -77,6 +80,49 @@ describe('ProgramDetailPageComponent', () => {
   }
 
   afterEach(() => http?.verify());
+
+  describe('wishlist heart', () => {
+    let load: jasmine.Spy;
+    const wishlistStub = (available: boolean, signedIn = true): Provider[] => {
+      load = jasmine.createSpy('load');
+      return [
+        { provide: TokenService, useValue: { user: () => (signedIn ? { id: 9 } : null), isAuthenticated: () => signedIn } },
+        {
+          provide: WishlistService,
+          useValue: {
+            available: () => available,
+            load,
+            hasProgram: () => false,
+            isProgramPending: () => false,
+            toggleProgram: () => undefined,
+          },
+        },
+      ];
+    };
+    const heart = () => byId('program-wishlist-toggle');
+
+    it('puts the heart in the header and loads the list once for a student', async () => {
+      await open('5', full, 'en', wishlistStub(true));
+
+      expect(heart()).not.toBeNull();
+      expect(heart()?.closest('.bg-gradient-to-br')).not.toBeNull();
+      expect(load).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows no heart and does not load the list for an expert', async () => {
+      await open('5', full, 'en', wishlistStub(false));
+
+      expect(heart()).toBeNull();
+      expect(load).not.toHaveBeenCalled();
+    });
+
+    it('keeps the heart for an anonymous visitor, who is invited to sign in', async () => {
+      await open('5', full, 'en', wishlistStub(false, false));
+
+      expect(heart()).not.toBeNull();
+      expect(load).not.toHaveBeenCalled();
+    });
+  });
 
   it('shows name, school link, description, level, fee, seats and courses with their description', async () => {
     await open('5', full);
