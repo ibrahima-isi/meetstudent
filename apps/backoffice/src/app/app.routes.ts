@@ -37,6 +37,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/messages/messages-page').then((m) => m.MessagesPage),
       },
       {
+        path: 'forum',
+        loadComponent: () => import('./features/forum/forum-page').then((m) => m.ForumPage),
+      },
+      {
         path: 'settings',
         loadComponent: () => import('./features/settings/settings-page').then((m) => m.SettingsPage),
       },

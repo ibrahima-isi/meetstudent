@@ -49,6 +49,7 @@ describe('routes', () => {
       '/programs': 'Filières et cours',
       '/tags': 'Tags et accréditations',
       '/messages': 'Messages',
+      '/forum': 'Forum',
       '/settings': 'Paramètres du site',
     };
     const harness = await RouterTestingHarness.create();

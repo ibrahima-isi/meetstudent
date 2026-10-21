@@ -32,15 +32,6 @@ interface NavItem {
           <span aria-hidden="true">&#9776;</span>
         </button>
         <span class="text-lg font-semibold">MeetStudent <span class="text-xs font-normal text-muted-foreground">Admin</span></span>
-        <span
-          data-forum
-          role="link"
-          aria-disabled="true"
-          tabindex="-1"
-          class="cursor-not-allowed text-sm text-muted-foreground"
-        >
-          Forum – Bientôt
-        </span>
         <span class="ml-auto min-w-0 truncate text-sm text-muted-foreground">{{ displayName() }}</span>
         <button
           type="button"
@@ -104,6 +95,7 @@ export class Shell {
     { path: '/tags', label: 'Tags et accréditations' },
     { path: '/experts', label: 'Experts' },
     { path: '/messages', label: 'Messages' },
+    { path: '/forum', label: 'Forum' },
     { path: '/settings', label: 'Paramètres' },
   ];
   readonly displayName = computed(() => {

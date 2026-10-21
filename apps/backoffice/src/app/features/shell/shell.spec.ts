@@ -64,6 +64,14 @@ describe('Shell (responsive menu)', () => {
     expect(link!.getAttribute('href')).toBe('/messages');
   });
 
+  it('lists an active Forum entry in the sidebar, no longer "Bientôt"', () => {
+    const link = Array.from(sidebar().querySelectorAll('a')).find((a) => a.textContent?.trim() === 'Forum');
+    expect(link).toBeDefined();
+    expect(link!.getAttribute('href')).toBe('/forum');
+    expect(el().querySelector('[data-forum]')).toBeNull();
+    expect(el().textContent).not.toContain('Bientôt');
+  });
+
   it('lists an Experts entry in the sidebar', () => {
     const link = Array.from(sidebar().querySelectorAll('a')).find((a) => a.textContent?.trim() === 'Experts');
     expect(link).toBeDefined();
@@ -144,17 +152,6 @@ describe('Shell (responsive menu)', () => {
       const spy = spyOn(router, 'navigateByUrl').and.resolveTo(true);
       el().querySelector<HTMLButtonElement>('[data-logout]')!.click();
       expect(spy).toHaveBeenCalledWith('/login');
-    });
-
-    it('has a Forum entry announced as disabled, not focusable and without navigation', () => {
-      const forum = navbar().querySelector<HTMLElement>('[data-forum]')!;
-      expect(forum).not.toBeNull();
-      expect(forum.textContent).toContain('Forum');
-      expect(forum.textContent).toContain('Bientôt');
-      expect(forum.getAttribute('aria-disabled')).toBe('true');
-      expect(forum.tagName).not.toBe('A');
-      expect(forum.hasAttribute('href')).toBeFalse();
-      expect(forum.tabIndex).toBeLessThan(0);
     });
   });
 
