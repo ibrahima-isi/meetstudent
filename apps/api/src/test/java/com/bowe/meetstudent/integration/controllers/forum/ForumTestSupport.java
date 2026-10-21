@@ -2,6 +2,7 @@ package com.bowe.meetstudent.integration.controllers.forum;
 
 import com.bowe.meetstudent.TestDataUtil;
 import com.bowe.meetstudent.entities.ForumReply;
+import com.bowe.meetstudent.entities.ForumReport;
 import com.bowe.meetstudent.entities.ForumThread;
 import com.bowe.meetstudent.entities.Role;
 import com.bowe.meetstudent.entities.School;
@@ -9,8 +10,10 @@ import com.bowe.meetstudent.entities.UserEntity;
 import com.bowe.meetstudent.entities.enums.ExpertStatus;
 import com.bowe.meetstudent.mappers.implementations.SchoolMapper;
 import com.bowe.meetstudent.repositories.ForumReplyRepository;
+import com.bowe.meetstudent.repositories.ForumReportRepository;
 import com.bowe.meetstudent.repositories.ForumThreadRepository;
 import com.bowe.meetstudent.repositories.RoleRepository;
+import com.bowe.meetstudent.repositories.UserRepository;
 import com.bowe.meetstudent.services.SchoolService;
 import com.bowe.meetstudent.services.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -41,12 +44,13 @@ abstract class ForumTestSupport {
     @Autowired ObjectMapper json;
     @Autowired RoleRepository roles;
     @Autowired UserService userService;
-    @Autowired com.bowe.meetstudent.repositories.UserRepository userRepository;
+    @Autowired UserRepository userRepository;
     @Autowired PasswordEncoder encoder;
     @Autowired SchoolService schools;
     @Autowired SchoolMapper schoolMapper;
     @Autowired ForumThreadRepository threads;
     @Autowired ForumReplyRepository replies;
+    @Autowired ForumReportRepository reports;
 
     private Role role(String name) {
         return roles.findByName(name).orElseGet(() -> roles.save(Role.builder().name(name).build()));
@@ -96,6 +100,20 @@ abstract class ForumTestSupport {
         map.put("body", body);
         if (schoolId != null) map.put("schoolId", schoolId);
         return json.writeValueAsString(map);
+    }
+
+    String reasonBody(String reason) throws Exception {
+        return json.writeValueAsString(Map.of("reason", reason));
+    }
+
+    ForumReport reportOf(ForumThread thread, UserEntity reporter, String reason, Instant createdAt) {
+        return reports.save(ForumReport.builder().thread(thread).reporter(reporter)
+                .reason(reason).targetSnapshot(thread.getBody()).createdAt(createdAt).build());
+    }
+
+    ForumReport reportOf(ForumReply reply, UserEntity reporter, String reason, Instant createdAt) {
+        return reports.save(ForumReport.builder().reply(reply).reporter(reporter)
+                .reason(reason).targetSnapshot(reply.getBody()).createdAt(createdAt).build());
     }
 
     String replyBody(String body) throws Exception {

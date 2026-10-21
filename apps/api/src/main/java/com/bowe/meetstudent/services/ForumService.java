@@ -118,10 +118,17 @@ public class ForumService {
 
     // ---- replies -------------------------------------------------------------------------------
 
-    /** @throws ConflictException the thread is locked (409) */
+    /**
+     * The thread is read under its row lock (SELECT ... FOR UPDATE), like {@link ForumModerationService#lockThread}: a
+     * reply and a lock on the same thread are serialised, so no reply is saved after a lock committed. Replies to
+     * one thread queue on that row for the length of this short transaction.
+     *
+     * @throws ConflictException the thread is locked (409)
+     */
     @Transactional
     public ForumReply createReply(int threadId, int authorId, String body) {
-        var thread = getThread(threadId, false);
+        var thread = threads.findByIdForUpdate(threadId).filter(t -> !t.isHidden())
+                .orElseThrow(() -> new ResourceNotFoundException("Thread not found"));
         if (thread.isLocked()) {
             throw new ConflictException("This thread is locked");
         }
@@ -148,14 +155,16 @@ public class ForumService {
 
     // ---- helpers -------------------------------------------------------------------------------
 
+    /** The thread under its row lock: an edit or delete and a hide/lock on the same row are serialised. */
     private ForumThread ownThread(int id, int actorId) {
-        var thread = getThread(id, false);
+        var thread = threads.findByIdForUpdate(id).filter(t -> !t.isHidden())
+                .orElseThrow(() -> new ResourceNotFoundException("Thread not found"));
         requireAuthor(thread.getAuthor(), actorId);
         return thread;
     }
 
     private ForumReply ownReply(int id, int actorId) {
-        var reply = replies.findWithAuthorById(id).filter(r -> !r.isHidden() && !r.getThread().isHidden())
+        var reply = replies.findByIdForUpdate(id).filter(r -> !r.isHidden() && !r.getThread().isHidden())
                 .orElseThrow(() -> new ResourceNotFoundException("Reply not found"));
         requireAuthor(reply.getAuthor(), actorId);
         return reply;

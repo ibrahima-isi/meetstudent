@@ -2,11 +2,13 @@ package com.bowe.meetstudent.controllers;
 
 import com.bowe.meetstudent.dto.ForumReplyDTO;
 import com.bowe.meetstudent.dto.ForumReplyRequest;
+import com.bowe.meetstudent.dto.ForumReportRequest;
 import com.bowe.meetstudent.dto.ForumThreadDTO;
 import com.bowe.meetstudent.dto.ForumThreadRequest;
 import com.bowe.meetstudent.exceptions.ErrorResponse;
 import com.bowe.meetstudent.security.RequiresForumWriter;
 import com.bowe.meetstudent.security.UserPrincipal;
+import com.bowe.meetstudent.services.ForumReportService;
 import com.bowe.meetstudent.services.ForumService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -20,6 +22,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -45,6 +48,7 @@ import java.util.List;
 public class ForumController {
 
     private final ForumService service;
+    private final ForumReportService reportService;
 
     // ---- threads -------------------------------------------------------------------------------
 
@@ -81,8 +85,8 @@ public class ForumController {
     @RequiresForumWriter
     @Operation(summary = "Open a thread",
             description = "Students and approved experts. Title up to 150 and message up to 5000 characters, plain text "
-                    + "(control and invisible characters refused). Optional schoolId. At most 5 messages per minute "
-                    + "and per user, threads and replies together.")
+                    + "(control and invisible characters refused). Optional schoolId. Rate limited per user (configurable "
+                    + "budget, threads, replies and edits together).")
     @ApiResponse(responseCode = "201", description = "Thread created")
     @ApiResponse(responseCode = "400", description = "Validation error: {field: message}; unknown school: {\"schoolId\": ...}")
     @ApiResponse(responseCode = "401", description = "Not signed in")
@@ -99,7 +103,7 @@ public class ForumController {
     @RequiresForumWriter
     @Operation(summary = "Edit a thread (author only)",
             description = "Replaces title and message; schoolId in the body is ignored (a thread keeps its school). "
-                    + "Allowed on a locked thread. Counts toward the write limit (5 per minute and per user, with creations); deletes do not.")
+                    + "Allowed on a locked thread. Counts toward the (configurable) write limit shared with creations; deletes do not.")
     @ApiResponse(responseCode = "200", description = "The updated thread")
     @ApiResponse(responseCode = "403", description = "Not the author")
     @ApiResponse(responseCode = "404", description = "Unknown or hidden thread")
@@ -153,7 +157,7 @@ public class ForumController {
 
     @PutMapping("/replies/{id}")
     @RequiresForumWriter
-    @Operation(summary = "Edit a reply (author only)", description = "Allowed on a locked thread. Counts toward the write limit (5 per minute and per user, with creations); deletes do not.")
+    @Operation(summary = "Edit a reply (author only)", description = "Allowed on a locked thread. Counts toward the (configurable) write limit shared with creations; deletes do not.")
     @ApiResponse(responseCode = "200", description = "The updated reply")
     @ApiResponse(responseCode = "403", description = "Not the author")
     @ApiResponse(responseCode = "404", description = "Unknown or hidden reply")
@@ -172,6 +176,47 @@ public class ForumController {
     public ResponseEntity<Void> deleteReply(@PathVariable int id, @AuthenticationPrincipal UserPrincipal principal) {
         service.deleteReply(id, principal.getId());
         return ResponseEntity.noContent().build();
+    }
+
+    // ---- reports -------------------------------------------------------------------------------
+
+    @PostMapping("/threads/{id}/report")
+    @PreAuthorize("hasAnyRole('STUDENT', 'EXPERT')")
+    @Operation(summary = "Report a thread's opening message",
+            description = "Any signed-in student or expert (approved or not); administrators moderate instead. Body "
+                    + "{\"reason\": \"...\"}: required, trimmed, 255 characters at most, no control or invisible characters. "
+                    + "One report per user and message, never on your own message. Reports have their own configurable "
+                    + "per-user budget, separate from the write one. Readable by administrators only.")
+    @ApiResponse(responseCode = "201", description = "Report recorded (no body)")
+    @ApiResponse(responseCode = "400", description = "Validation error: {\"reason\": ...}")
+    @ApiResponse(responseCode = "401", description = "Not signed in")
+    @ApiResponse(responseCode = "403", description = "Administrator")
+    @ApiResponse(responseCode = "404", description = "Unknown or hidden thread")
+    @ApiResponse(responseCode = "409", description = "Already reported by you, or your own message")
+    @ApiResponse(responseCode = "429", description = "Too many reports; see Retry-After (seconds)",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<Void> reportThread(@PathVariable int id, @RequestBody @Valid ForumReportRequest request,
+                                             @AuthenticationPrincipal UserPrincipal principal) {
+        reportService.reportThread(id, principal.getId(), request.reason());
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    @PostMapping("/replies/{id}/report")
+    @PreAuthorize("hasAnyRole('STUDENT', 'EXPERT')")
+    @Operation(summary = "Report a reply",
+            description = "Same rules as reporting a thread. A reply of a hidden thread is hidden too (404).")
+    @ApiResponse(responseCode = "201", description = "Report recorded (no body)")
+    @ApiResponse(responseCode = "400", description = "Validation error: {\"reason\": ...}")
+    @ApiResponse(responseCode = "401", description = "Not signed in")
+    @ApiResponse(responseCode = "403", description = "Administrator")
+    @ApiResponse(responseCode = "404", description = "Unknown or hidden reply")
+    @ApiResponse(responseCode = "409", description = "Already reported by you, or your own message")
+    @ApiResponse(responseCode = "429", description = "Too many reports; see Retry-After (seconds)",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<Void> reportReply(@PathVariable int id, @RequestBody @Valid ForumReportRequest request,
+                                            @AuthenticationPrincipal UserPrincipal principal) {
+        reportService.reportReply(id, principal.getId(), request.reason());
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     // ---- helpers -------------------------------------------------------------------------------

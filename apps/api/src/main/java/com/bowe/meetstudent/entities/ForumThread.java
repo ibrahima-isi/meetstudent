@@ -15,6 +15,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
@@ -27,6 +28,7 @@ import java.time.Instant;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
+@DynamicUpdate
 @Table(name = "forum_threads", indexes = {
         @Index(name = "idx_forum_threads_created_at", columnList = "created_at DESC, id DESC"),
         @Index(name = "idx_forum_threads_school", columnList = "school_id, created_at DESC, id DESC"),
