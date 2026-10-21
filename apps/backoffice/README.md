@@ -34,6 +34,10 @@ The login page links to the public web app's French recovery journey (`/fr/forgo
 
 Serve `dist/backoffice/browser` as static files with a fallback to `index.html` for unknown paths (SPA routing). The API must allow this origin in CORS.
 
+## Forum page
+
+`/forum` (menu « Forum ») is the moderation queue of the public forum, served by `ForumAdminService` (`/api/v1/admin/forum`). Tabs Ouverts / Traités / Rejetés list the reports, 10 per page, newest first. Each card shows the reason, the reporter's first name, the reported excerpt **and** the current excerpt, with a warning when the message changed since the report. Actions: Masquer/Démasquer, Verrouiller/Déverrouiller (threads), Supprimer (final, asks for confirmation, also removes the reports on it), Clore/Rejeter (open reports). Everything user-written (titles, excerpts, reasons, first names) is bound as text only and the admin never edits someone else's text. Known limits: no per-target report counter (the API has none) and the API does not say whether a thread is locked, so both lock buttons are offered.
+
 ## Conventions
 
 Same rules as `apps/web/.claude/CLAUDE.md` (signals, `inject()`, `OnPush`, native control flow, zoneless). Layout: `features/<area>/` pages (lazy-loaded in `app.routes.ts`, children of the `Shell` route behind `adminGuard`), `services/` one per backend resource, `shared/components/` reusable UI (`app-alert`), aliases `@services/*`, `@models/*`, `@shared/*`, `@guards/*`. Use `API_URL` (never `environment.apiUrl` directly) to build request URLs.
