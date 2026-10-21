@@ -1,0 +1,163 @@
+<div *transloco="let t" class="mx-auto max-w-4xl px-4 pb-20 pt-28 sm:px-6 lg:px-8 lg:pt-36">
+  <app-mesh-background />
+
+  <a data-testid="forum-back" class="mb-6 inline-flex items-center gap-2 text-sm text-brand hover:underline" [routerLink]="['/', lang(), 'forum']">
+    <lucide-icon [img]="ArrowLeft" class="h-4 w-4" aria-hidden="true" />
+    {{ t('forum.thread.back') }}
+  </a>
+
+  @switch (status()) {
+    @case ('loading') {
+      <div role="status" aria-busy="true" class="animate-pulse space-y-4">
+        <span class="sr-only">{{ t('forum.thread.loading') }}</span>
+        <div class="h-8 w-2/3 rounded bg-muted" aria-hidden="true"></div>
+        <div class="h-32 rounded-2xl bg-muted" aria-hidden="true"></div>
+      </div>
+    }
+    @case ('notFound') {
+      <div data-testid="forum-not-found" class="py-12 text-center">
+        <p class="text-lg font-semibold text-foreground">{{ t('forum.thread.notFoundTitle') }}</p>
+        <p class="mt-1 text-muted-foreground">{{ t('forum.thread.notFoundText') }}</p>
+      </div>
+    }
+    @case ('error') {
+      <app-error-state [message]="t('forum.thread.loadError')" (retry)="load()" />
+    }
+    @default {
+      @if (thread(); as th) {
+        <article class="rounded-3xl border border-border bg-card p-5 sm:p-8">
+          <header data-testid="forum-thread-head" class="space-y-3">
+            <div class="flex items-start justify-between gap-3">
+              <h1 dir="auto" class="min-w-0 break-words text-3xl font-semibold tracking-tight text-foreground">{{ th.title }}</h1>
+              @if (th.locked) {
+                <span data-testid="forum-locked-badge" class="inline-flex shrink-0 items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+                  <lucide-icon [img]="Lock" class="h-3 w-3" aria-hidden="true" />
+                  {{ t('forum.thread.locked') }}
+                </span>
+              }
+            </div>
+            <app-forum-author [name]="th.authorName" [role]="th.authorRole" [deleted]="th.authorDeleted" [createdAt]="th.createdAt" [modifiedAt]="th.modifiedAt" [hidden]="th.hidden" />
+            @if (th.schoolName) {
+              <p dir="auto" class="min-w-0 break-words text-sm text-muted-foreground">{{ t('forum.thread.about', { school: th.schoolName }) }}</p>
+            }
+          </header>
+
+          @if (editingThread()) {
+            <div class="mt-6">
+              <app-forum-composer kind="thread" [existing]="{ id: th.id, title: th.title, body: th.body }" (savedThread)="threadSaved($event)" (cancelled)="cancelThreadEdit()" />
+            </div>
+          } @else {
+            <p data-testid="forum-thread-body" dir="auto" class="mt-6 whitespace-pre-line break-words text-foreground">{{ th.body }}</p>
+            @if (th.mine && canWrite()) {
+              <div class="mt-5 flex flex-wrap items-center gap-2">
+                <button type="button" data-testid="forum-edit" data-edit-for="thread-edit" class="btn btn-secondary" (click)="editingThread.set(true)">
+                  <lucide-icon [img]="Pencil" class="h-4 w-4" aria-hidden="true" />
+                  {{ t('forum.actions.edit') }}
+                </button>
+                @if (isConfirming('thread', th.id)) {
+                  <span class="text-sm text-foreground">{{ t('forum.actions.deleteQuestion') }}</span>
+                  <button type="button" data-testid="forum-confirm-delete" class="btn btn-primary" [disabled]="deleting()" (click)="confirmDelete()">{{ t('forum.actions.confirmDelete') }}</button>
+                  <button type="button" data-testid="forum-cancel-delete" class="btn btn-ghost" (click)="cancelDelete()">{{ t('forum.actions.cancel') }}</button>
+                } @else {
+                  <button type="button" data-testid="forum-delete" [attr.data-delete-for]="'thread-' + th.id" class="btn btn-secondary" (click)="ask('thread', th.id)">
+                    <lucide-icon [img]="Trash2" class="h-4 w-4" aria-hidden="true" />
+                    {{ t('forum.actions.delete') }}
+                  </button>
+                }
+              </div>
+            }
+          }
+        </article>
+
+        <div data-testid="forum-live" role="status" aria-live="polite" class="sr-only">{{ liveMessage() }}</div>
+
+        @if (actionError()) {
+          <p data-testid="forum-action-error" role="alert" class="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">{{ t(actionErrorKey()!) }}</p>
+        }
+
+        <section class="mt-10" aria-labelledby="forum-replies-title">
+          <h2 id="forum-replies-title" tabindex="-1" class="mb-4 text-xl font-semibold text-foreground">
+            {{ t('forum.thread.repliesTitle') }}
+            <span class="font-normal text-muted-foreground">· {{ t(repliesKey(th.replyCount), { count: th.replyCount }) }}</span>
+          </h2>
+
+          @switch (repliesStatus()) {
+            @case ('loading') {
+              <div data-testid="forum-replies-loading" role="status" aria-busy="true" class="animate-pulse space-y-3">
+                <span class="sr-only">{{ t('forum.thread.loading') }}</span>
+                <div class="h-20 rounded-2xl bg-muted" aria-hidden="true"></div>
+              </div>
+            }
+            @case ('error') {
+              <div data-testid="forum-replies-error"><app-error-state [message]="t('forum.thread.repliesError')" (retry)="retryReplies()" /></div>
+            }
+            @default {
+              @if (replies().length === 0) {
+                <p data-testid="forum-no-replies" class="rounded-2xl border border-border bg-card p-6 text-center text-muted-foreground">{{ t('forum.thread.noReplies') }}</p>
+              } @else {
+                <ul class="space-y-4">
+                  @for (reply of replies(); track reply.id) {
+                    <li data-testid="forum-reply" [attr.data-reply-id]="reply.id" tabindex="-1" class="rounded-2xl border border-border bg-card p-5">
+                      <app-forum-author [name]="reply.authorName" [role]="reply.authorRole" [deleted]="reply.authorDeleted" [createdAt]="reply.createdAt" [modifiedAt]="reply.modifiedAt" [hidden]="reply.hidden" />
+                      @if (editingReplyId() === reply.id) {
+                        <div class="mt-3">
+                          <app-forum-composer kind="reply" [existing]="{ id: reply.id, body: reply.body }" (savedReply)="replySaved($event)" (locked)="lockedMeanwhile()" (cancelled)="cancelReplyEdit(reply.id)" />
+                        </div>
+                      } @else {
+                        <p data-testid="forum-reply-body" dir="auto" class="mt-3 whitespace-pre-line break-words text-foreground">{{ reply.body }}</p>
+                        @if (reply.mine && canWrite()) {
+                          <div class="mt-4 flex flex-wrap items-center gap-2">
+                            <button type="button" data-testid="forum-reply-edit" [attr.data-edit-for]="'reply-' + reply.id" class="btn btn-ghost" (click)="editingReplyId.set(reply.id)">
+                              <lucide-icon [img]="Pencil" class="h-4 w-4" aria-hidden="true" />
+                              {{ t('forum.actions.edit') }}
+                            </button>
+                            @if (isConfirming('reply', reply.id)) {
+                              <span class="text-sm text-foreground">{{ t('forum.actions.deleteQuestion') }}</span>
+                              <button type="button" data-testid="forum-confirm-delete" class="btn btn-primary" [disabled]="deleting()" (click)="confirmDelete()">{{ t('forum.actions.confirmDelete') }}</button>
+                              <button type="button" data-testid="forum-cancel-delete" class="btn btn-ghost" (click)="cancelDelete()">{{ t('forum.actions.cancel') }}</button>
+                            } @else {
+                              <button type="button" data-testid="forum-reply-delete" [attr.data-delete-for]="'reply-' + reply.id" class="btn btn-ghost" (click)="ask('reply', reply.id)">
+                                <lucide-icon [img]="Trash2" class="h-4 w-4" aria-hidden="true" />
+                                {{ t('forum.actions.delete') }}
+                              </button>
+                            }
+                          </div>
+                        }
+                      }
+                    </li>
+                  }
+                </ul>
+                @if (moreFailed()) {
+                  <p data-testid="forum-more-error" role="alert" class="mt-4 text-sm text-red-600 dark:text-red-400">{{ t('forum.thread.loadMoreError') }}</p>
+                }
+                @if (hasMore()) {
+                  <div class="mt-6 text-center">
+                    <button type="button" data-testid="forum-more" class="btn btn-secondary" [disabled]="loadingMore()" (click)="loadMore()">
+                      {{ t(loadingMore() ? 'forum.thread.loadingMore' : 'forum.thread.loadMore') }}
+                    </button>
+                  </div>
+                }
+              }
+            }
+          }
+        </section>
+
+        <section class="mt-10">
+          @if (th.locked) {
+            <p data-testid="forum-locked-notice" role="note" class="flex items-center gap-2 rounded-2xl border border-border bg-card p-4 text-foreground">
+              <lucide-icon [img]="Lock" class="h-4 w-4 shrink-0" aria-hidden="true" />
+              <span class="min-w-0 break-words">{{ t('forum.thread.lockedNotice') }}</span>
+            </p>
+          } @else if (canWrite()) {
+            <div class="rounded-3xl border border-border bg-card p-5 sm:p-6">
+              <p class="mb-4 text-sm text-muted-foreground">{{ t('forum.plainText') }}</p>
+              <app-forum-composer kind="reply" [threadId]="th.id" (savedReply)="replyCreated($event)" (locked)="lockedMeanwhile()" />
+            </div>
+          } @else {
+            <app-forum-gate [state]="writeState()" />
+          }
+        </section>
+      }
+    }
+  }
+</div>

@@ -41,6 +41,10 @@ import { HomePageComponent } from '../features/student/home-page/home-page.compo
 import { ProfilePageComponent } from '../features/student/profile-page/profile-page.component';
 import { SchoolDetailPageComponent } from '../features/student/school-detail-page/school-detail-page.component';
 import { UserDocumentsComponent } from '../features/student/user-documents/user-documents.component';
+import { ForumPageComponent } from '../features/public/forum-page/forum-page.component';
+import { ForumThreadPageComponent } from '../features/public/forum-thread-page/forum-thread-page.component';
+import { ForumComposerComponent } from '../features/public/forum-shared/forum-composer.component';
+import { ForumGateComponent } from '../features/public/forum-shared/forum-gate.component';
 import { PublicShellComponent } from './layouts/public-shell/public-shell.component';
 import { AuthLayoutComponent } from './layouts/auth-layout/auth-layout.component';
 import { AuthBrandPanelComponent } from './layouts/auth-layout/auth-brand-panel.component';
@@ -382,6 +386,58 @@ describe('dark mode: no light-only palette classes', () => {
         spyOn(TestBed.inject(ProgramService), 'getPrograms').and.returnValue(throwError(() => new Error('x')));
       }),
     ],
+    [
+      'forum list with threads, pager and open form',
+      ForumPageComponent,
+      (c) => {
+        c.threads.set([
+          { id: 1, title: 'T', body: 'B', authorName: 'Awa', authorRole: 'STUDENT', authorDeleted: false, mine: false, locked: true, hidden: false, replyCount: 2, schoolName: 'S', createdAt: '2026-10-01T00:00:00Z' },
+          { id: 2, title: 'T2', body: 'B2', authorDeleted: true, mine: false, locked: false, hidden: false, replyCount: 0, createdAt: '2026-10-01T00:00:00Z' },
+        ]);
+        c.totalPages.set(3);
+        c.pageNumber.set(1);
+        c.schools.set([{ id: 1, name: 'S' }]);
+        c.composing.set(true);
+        c.status.set('loaded');
+      },
+    ],
+    ['forum list loading', ForumPageComponent, (c) => c.status.set('loading')],
+    ['forum list empty', ForumPageComponent, (c) => c.status.set('loaded')],
+    ['forum list error', ForumPageComponent, (c) => c.status.set('error')],
+    [
+      'forum thread with replies, edit and delete',
+      ForumThreadPageComponent,
+      (c) => {
+        c.thread.set({ id: 1, title: 'T', body: 'B', authorName: 'Awa', authorRole: 'EXPERT', authorDeleted: false, mine: true, locked: false, hidden: false, replyCount: 1, createdAt: '2026-10-01T00:00:00Z', modifiedAt: '2026-10-02T00:00:00Z' });
+        c.replies.set([{ id: 2, threadId: 1, body: 'R', authorName: 'Moussa', authorRole: 'STUDENT', authorDeleted: false, mine: true, hidden: false, createdAt: '2026-10-01T00:00:00Z' }]);
+        c.confirming.set({ kind: 'reply', id: 2 });
+        c.actionError.set('failed');
+        c.hasMore.set(true);
+        c.moreFailed.set(true);
+        c.repliesStatus.set('loaded');
+        c.status.set('loaded');
+      },
+    ],
+    [
+      'forum thread locked, replies failing',
+      ForumThreadPageComponent,
+      (c) => {
+        c.thread.set({ id: 1, title: 'T', body: 'B', authorDeleted: true, mine: false, locked: true, hidden: false, replyCount: 0, createdAt: '2026-10-01T00:00:00Z' });
+        c.repliesStatus.set('error');
+        c.status.set('loaded');
+      },
+    ],
+    ['forum thread not found', ForumThreadPageComponent],
+    ['forum thread loading', ForumThreadPageComponent, (c) => c.status.set('loading')],
+    ['forum composer with errors', ForumComposerComponent, (c, f) => {
+      f.componentRef.setInput('kind', 'thread');
+      f.componentRef.setInput('schools', [{ id: 1, name: 'S' }]);
+      c.failure.set({ kind: 'rateLimited', seconds: 30 });
+      c.form.markAllAsTouched();
+    }],
+    ...(['anonymous', 'pending', 'rejected', 'readOnly'] as const).map(
+      (state) => [`forum gate (${state})`, ForumGateComponent, (_c: any, f: ComponentFixture<any>) => f.componentRef.setInput('state', state)] as [string, Type<unknown>, ((component: any, fixture: ComponentFixture<any>) => void)?],
+    ),
     ['profile (student, wishlist, documents)', ProfilePageComponent, profileAs(student)],
     ['profile editing as student', ProfilePageComponent, (c) => { profileAs(student)(c); c.isEditing.set(true); }],
     ['profile editing as expert', ProfilePageComponent, (c) => { profileAs(expert)(c); c.isEditing.set(true); }],

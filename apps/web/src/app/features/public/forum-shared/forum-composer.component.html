@@ -1,0 +1,95 @@
+<form *transloco="let t" [formGroup]="form" (ngSubmit)="submit()" class="space-y-4" novalidate>
+  @if (showTitle()) {
+    <div>
+      <label [for]="uid + '-title'" class="mb-1.5 block font-medium text-foreground">{{ t('forum.form.title') }}</label>
+      <input
+        [id]="uid + '-title'"
+        data-testid="forum-title"
+        type="text"
+        autocomplete="off"
+        formControlName="title"
+        class="field-input"
+        [placeholder]="t('forum.form.titlePlaceholder')"
+        [attr.aria-invalid]="errorFor('title') ? 'true' : null"
+        [attr.aria-describedby]="describedBy('title')"
+      />
+      <div class="mt-1.5 flex items-start justify-between gap-4">
+        <div>
+          @if (errorFor('title'); as err) {
+            <p [id]="uid + '-title-error'" data-testid="forum-title-error" class="text-sm text-red-600 dark:text-red-400">{{ t('forum.errors.' + err.key, { max: err.max }) }}</p>
+          }
+        </div>
+        <p [id]="uid + '-title-count'" data-testid="forum-title-count" class="shrink-0 text-sm text-muted-foreground">{{ t('forum.form.counter', { count: titleCount(), max: max.title }) }}</p>
+      </div>
+    </div>
+  }
+
+  <div>
+    <label [for]="uid + '-body'" class="mb-1.5 block font-medium text-foreground">{{ t(kind() === 'reply' ? 'forum.thread.writeReply' : 'forum.form.body') }}</label>
+    <textarea
+      [id]="uid + '-body'"
+      data-testid="forum-body"
+      rows="5"
+      formControlName="body"
+      class="field-input h-auto min-h-32 resize-y py-3 leading-relaxed"
+      [placeholder]="t(kind() === 'reply' ? 'forum.form.replyPlaceholder' : 'forum.form.bodyPlaceholder')"
+      [attr.aria-invalid]="errorFor('body') ? 'true' : null"
+      [attr.aria-describedby]="describedBy('body')"
+    ></textarea>
+    <div class="mt-1.5 flex items-start justify-between gap-4">
+      <div>
+        @if (errorFor('body'); as err) {
+          <p [id]="uid + '-body-error'" data-testid="forum-body-error" class="text-sm text-red-600 dark:text-red-400">{{ t('forum.errors.' + err.key, { max: err.max }) }}</p>
+        }
+      </div>
+      <p [id]="uid + '-body-count'" data-testid="forum-body-count" class="shrink-0 text-sm text-muted-foreground">{{ t('forum.form.counter', { count: bodyCount(), max: max.body }) }}</p>
+    </div>
+  </div>
+
+  @if (showSchool()) {
+    <div>
+      <label [for]="uid + '-school'" class="mb-1.5 block font-medium text-foreground">{{ t('forum.form.school') }}</label>
+      <select
+        [id]="uid + '-school'"
+        data-testid="forum-school"
+        formControlName="schoolId"
+        class="field-input"
+        [attr.aria-invalid]="schoolRefused() ? 'true' : null"
+        [attr.aria-describedby]="schoolRefused() ? uid + '-school-error' : null"
+      >
+        <option value="">{{ t('forum.form.noSchool') }}</option>
+        @for (school of schools(); track school.id) {
+          <option [value]="school.id">{{ school.name }}</option>
+        }
+      </select>
+      @if (schoolRefused()) {
+        <p [id]="uid + '-school-error'" data-testid="forum-school-error" class="mt-1.5 text-sm text-red-600 dark:text-red-400">{{ t('forum.errors.schoolInvalid') }}</p>
+      }
+    </div>
+  }
+
+  @if (alert(); as a) {
+    <div
+      role="alert"
+      data-testid="forum-alert"
+      class="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-900 dark:bg-red-950/40"
+    >
+      <lucide-icon [img]="AlertCircle" class="mt-0.5 h-5 w-5 shrink-0 text-red-600 dark:text-red-400" aria-hidden="true" />
+      <p class="min-w-0 break-words text-red-800 dark:text-red-200">{{ t(a.key, a.params) }}</p>
+    </div>
+  }
+
+  <div class="flex flex-wrap items-center gap-3">
+    <button type="submit" data-testid="forum-submit" class="btn btn-primary" [disabled]="sending() || cooldown() > 0" [attr.aria-busy]="sending() ? 'true' : null">
+      @if (sending()) {
+        <lucide-icon [img]="Loader2" class="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />
+        {{ t('forum.form.sending') }}
+      } @else {
+        {{ t(existing() ? 'forum.form.save' : kind() === 'thread' ? 'forum.form.submitThread' : 'forum.form.submitReply') }}
+      }
+    </button>
+    @if (showCancel()) {
+      <button type="button" data-testid="forum-cancel" class="btn btn-ghost" (click)="cancel()">{{ t('forum.form.cancel') }}</button>
+    }
+  </div>
+</form>

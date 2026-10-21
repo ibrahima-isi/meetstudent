@@ -409,3 +409,11 @@ shapes before coding against them.
 - `POST` is idempotent; an unknown program is `404`.
 - `ROLE_STUDENT` and owner only: another user is `403`, an expert is `403`, an anonymous caller is `401`.
 - `UserDTO.wishlist` still lists schools only; programs are read through the endpoint above.
+
+## Forum (forum/02)
+
+- The web consumes `/api/v1/forum` (`ForumService`): `GET /threads?page=&size=&schoolId=`, `GET /threads/{id}`, `GET|POST /threads/{id}/replies`, `POST /threads`, `PUT|DELETE /threads/{id}`, `PUT|DELETE /replies/{id}`. Pages: `/:lang/forum` (10 per page, filter and page in the URL) and `/:lang/forum/:id` (replies 20 per page, "show more").
+- Fields used: `authorName` (cleaned client side by `cleanDisplayName`, empty = "Member"), `authorDeleted` (shows the translated "Deleted user"), `authorRole`, `mine` (edit/delete buttons, only for writers), `locked`, `replyCount`, `modifiedAt` ("edited"). `hidden` (admin only) shows a "Hidden" badge. Unused: `schoolId` for display (the name is shown).
+- Errors mapped: 400 `{title|body|schoolId}` under the field, 401 (session ended), 403, 404, 409 (locked thread), 429 with `Retry-After` seconds (capped at 3600 for display).
+- `mine` depends on the caller: the server render is anonymous (no token), the browser request carries the bearer token and therefore skips the HTTP transfer cache (Angular default, not verified in a real browser), so `mine` is correct once the browser has fetched again.
+

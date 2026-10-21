@@ -101,6 +101,23 @@ export const routes: Routes = [
               ),
           },
           {
+            // Public and server-rendered (see app.routes.server.ts): reading needs no account.
+            path: 'forum',
+            pathMatch: 'full',
+            title: 'pageTitle.forum',
+            loadComponent: () =>
+              import('./features/public/forum-page/forum-page.component').then((m) => m.ForumPageComponent),
+          },
+          {
+            path: 'forum/:id',
+            pathMatch: 'full',
+            title: 'pageTitle.forumThread',
+            loadComponent: () =>
+              import('./features/public/forum-thread-page/forum-thread-page.component').then(
+                (m) => m.ForumThreadPageComponent,
+              ),
+          },
+          {
             path: 'schools/:id',
             title: 'pageTitle.school',
             canActivate: [authGuard],

@@ -116,6 +116,27 @@ describe('routes', () => {
     expect(TestBed.inject(Title).getTitle()).toBe('pageTitle.rankingsPrograms');
   });
 
+  it('opens the public forum list in the shell, without a login, with its own title', async () => {
+    await harness.navigateByUrl('/fr/forum');
+
+    const host = harness.fixture.nativeElement as HTMLElement;
+    expect(TestBed.inject(Router).url).toBe('/fr/forum');
+    expect(host.querySelector('app-forum-page')).toBeTruthy();
+    expect(navbar()).toBeTruthy();
+    expect(harness.routeNativeElement?.textContent).not.toContain('404');
+    expect(TestBed.inject(Title).getTitle()).toBe('pageTitle.forum');
+  });
+
+  it('opens one forum thread in the shell, without a login', async () => {
+    await harness.navigateByUrl('/fr/forum/5');
+
+    const host = harness.fixture.nativeElement as HTMLElement;
+    expect(TestBed.inject(Router).url).toBe('/fr/forum/5');
+    expect(host.querySelector('app-forum-thread-page')).toBeTruthy();
+    expect(navbar()).toBeTruthy();
+    expect(TestBed.inject(Title).getTitle()).toBe('pageTitle.forumThread');
+  });
+
   it('renders an unknown path under a valid locale as the 404', async () => {
     await harness.navigateByUrl('/fr/nope');
 

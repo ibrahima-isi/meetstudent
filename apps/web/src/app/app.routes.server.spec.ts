@@ -113,6 +113,18 @@ describe('server routes', () => {
     expect(paths.indexOf(':lang/rankings/programs')).toBeLessThan(paths.indexOf('**'));
   });
 
+  it('server-renders the public forum list and threads, unguarded, before the catch-all', () => {
+    const paths = serverRoutes.map((r) => r.path);
+
+    for (const path of [':lang/forum', ':lang/forum/:id']) {
+      expect(modeOf(path)).withContext(path).toBe(RenderMode.Server);
+      expect(guardedPaths(routes)).not.toContain(path);
+      expect(allRoutes(routes).find((r) => r.path === path)?.route.canActivate).withContext(path).toBeUndefined();
+      expect(paths.indexOf(path)).withContext(path).toBeGreaterThanOrEqual(0);
+      expect(paths.indexOf(path)).withContext(path).toBeLessThan(paths.indexOf('**'));
+    }
+  });
+
   it('keeps the public pages server-rendered for SEO', () => {
     expect(modeOf('**')).toBe(RenderMode.Server);
   });

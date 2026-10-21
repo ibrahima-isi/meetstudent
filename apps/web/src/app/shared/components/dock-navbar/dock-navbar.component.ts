@@ -81,11 +81,7 @@ import { nextDockVisible, SCROLL_DELTA_PX } from './dock-visibility';
       /* Scoped under .links so it outranks the bar's own ".links a" rules, container queries included. */
       .links .discover-panel a { display: block; padding: 0.55rem 0.9rem; border-radius: 0.75rem; font-size: 0.95rem; color: var(--foreground); text-decoration: none; white-space: nowrap; }
       .links .discover-panel a:hover { background: var(--accent); }
-      .forum-soon { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.8rem; font-size: 0.9rem; color: var(--muted-foreground); opacity: 0.7; cursor: not-allowed; user-select: none; }
-      .panel .forum-soon { font-size: 1rem; padding: 0.75rem 1rem; }
-      .soon-badge { padding: 0.05rem 0.45rem; border-radius: 9999px; background: var(--brand-soft); color: var(--brand-soft-foreground); font-size: 0.7rem; font-weight: 600; }
-      /* Narrower bars shrink the badge to a dot (the entry's title and aria-label still say "coming soon"), never hide it: a greyed entry needs a cue. */
-      @container (max-width: 89.99rem) { .links { gap: 0.1rem; } .discover-trigger { padding-inline: 0.35rem; } .links a, .links .forum-soon { padding-inline: 0.35rem; } .links .forum-soon { gap: 0.25rem; } .links .soon-badge { width: 0.4rem; height: 0.4rem; padding: 0; overflow: hidden; font-size: 0; background: var(--brand); } }
+      @container (max-width: 89.99rem) { .links { gap: 0.1rem; } .discover-trigger { padding-inline: 0.35rem; } .links a { padding-inline: 0.35rem; } }
       .actions { display: flex; align-items: center; gap: 0.25rem; margin-left: auto; }
       .wide-only { display: none; }
       @container (max-width: 39.99rem) { .collapse-xs { display: none; } }
@@ -139,7 +135,7 @@ import { nextDockVisible, SCROLL_DELTA_PX } from './dock-visibility';
           <a [routerLink]="['/', lang()]" fragment="reviews">{{ t('nav.reviews') }}</a>
           <a [routerLink]="['/', lang(), 'about']">{{ t('nav.about') }}</a>
           <a [routerLink]="['/', lang(), 'contact']">{{ t('nav.contact') }}</a>
-          <span class="forum-soon" data-testid="forum-soon" role="link" aria-disabled="true" tabindex="-1" [attr.title]="t('nav.comingSoon')" [attr.aria-label]="t('nav.forum') + ' – ' + t('nav.comingSoon')">{{ t('nav.forum') }} <span class="soon-badge">{{ t('nav.comingSoon') }}</span></span>
+          <a [routerLink]="['/', lang(), 'forum']">{{ t('nav.forum') }}</a>
         </div>
         <div class="actions">
           <span class="wide-only switchers">
@@ -209,7 +205,7 @@ import { nextDockVisible, SCROLL_DELTA_PX } from './dock-visibility';
           <a class="item" [routerLink]="['/', lang()]" fragment="reviews">{{ t('nav.reviews') }}</a>
           <a class="item" [routerLink]="['/', lang(), 'about']">{{ t('nav.about') }}</a>
           <a class="item" [routerLink]="['/', lang(), 'contact']">{{ t('nav.contact') }}</a>
-          <span class="forum-soon item" data-testid="forum-soon" role="link" aria-disabled="true" tabindex="-1" [attr.aria-label]="t('nav.forum') + ' – ' + t('nav.comingSoon')">{{ t('nav.forum') }} <span class="soon-badge">{{ t('nav.comingSoon') }}</span></span>
+          <a class="item" [routerLink]="['/', lang(), 'forum']">{{ t('nav.forum') }}</a>
           <div class="settings"><app-language-switcher (openChange)="onLanguageOpen($event)" /><app-theme-toggle /></div>
           @if (signedIn()) {
             <a class="btn btn-primary btn-lg" [routerLink]="['/', lang(), 'home']">{{ t('nav.mySpace') }}</a>

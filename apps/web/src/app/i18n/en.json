@@ -31,7 +31,6 @@
     "about": "About",
     "contact": "Contact",
     "forum": "Forum",
-    "comingSoon": "Soon",
     "language": "Language",
     "noAccount": "No account yet?",
     "login": "Log in",
@@ -62,6 +61,8 @@
     "register": "Create account",
     "home": "Home",
     "school": "School",
+    "forum": "Forum",
+    "forumThread": "Discussion",
     "program": "Programme",
     "profile": "My profile",
     "about": "About",
@@ -79,6 +80,105 @@
   "about": {
     "title": "About MeetStudent",
     "error": "This page could not be loaded."
+  },
+  "forum": {
+    "eyebrow": "Community",
+    "title": "Forum",
+    "intro": "Ask your questions, share your experience and help other students. Everyone can read; students and approved teachers can write.",
+    "plainText": "Plain text only: no formatting or links are interpreted.",
+    "filter": {
+      "label": "School",
+      "all": "All schools"
+    },
+    "list": {
+      "loading": "Loading discussions…",
+      "error": "The discussions could not be loaded.",
+      "empty": "No discussion yet. Be the first to open one.",
+      "outOfRange": "This page does not exist any more: there are fewer discussions now.",
+      "lastPage": "Go to the last page",
+      "emptyFiltered": "No discussion about this school yet.",
+      "newThread": "New discussion",
+      "closeForm": "Close",
+      "replies": {
+        "one": "{{ count }} reply",
+        "other": "{{ count }} replies"
+      },
+      "page": "Page {{ page }} of {{ total }}",
+      "prev": "Previous",
+      "next": "Next",
+      "pager": "Pagination"
+    },
+    "thread": {
+      "back": "Back to the forum",
+      "loading": "Loading the discussion…",
+      "loadError": "This discussion could not be loaded.",
+      "notFoundTitle": "Discussion not found",
+      "notFoundText": "This discussion does not exist or was removed.",
+      "repliesTitle": "Replies",
+      "noReplies": "No reply yet.",
+      "repliesError": "The replies could not be loaded.",
+      "loadMore": "Show more replies",
+      "loadingMore": "Loading…",
+      "loadMoreError": "More replies could not be loaded. Try again.",
+      "locked": "Locked",
+      "lockedNotice": "This discussion is locked: it cannot receive new replies.",
+      "about": "About {{ school }}",
+      "replyPosted": "Your reply was published.",
+      "writeReply": "Your reply"
+    },
+    "author": {
+      "deleted": "Deleted user",
+      "unknown": "Member",
+      "student": "Student",
+      "expert": "Expert",
+      "hidden": "Hidden",
+      "edited": "edited"
+    },
+    "actions": {
+      "edit": "Edit",
+      "delete": "Delete",
+      "confirmDelete": "Delete for good",
+      "cancel": "Cancel",
+      "deleteQuestion": "Delete this message? This cannot be undone.",
+      "failed": "The action failed. Try again.",
+      "forbidden": "You are not allowed to do this."
+    },
+    "form": {
+      "title": "Title",
+      "titlePlaceholder": "Your question in one line",
+      "body": "Message",
+      "bodyPlaceholder": "Explain your situation…",
+      "replyPlaceholder": "Write your reply…",
+      "school": "School (optional)",
+      "noSchool": "No school",
+      "counter": "{{ count }} / {{ max }}",
+      "submitThread": "Publish",
+      "submitReply": "Reply",
+      "save": "Save",
+      "sending": "Sending…",
+      "cancel": "Cancel"
+    },
+    "errors": {
+      "required": "This field is required.",
+      "tooLong": "{{ max }} characters at most.",
+      "invalid": "This value is not accepted. Remove special or invisible characters.",
+      "schoolInvalid": "This school is not valid. Choose another one or none.",
+      "rateLimited": "You are writing too fast: wait {{ seconds }} seconds, then try again.",
+      "rateLimitedNoDelay": "You are writing too fast: wait a minute, then try again.",
+      "locked": "This discussion is locked: your reply was not sent.",
+      "forbidden": "Your account is not allowed to write here.",
+      "signedOut": "Your session has ended. Sign in again, then retry.",
+      "notFound": "This discussion no longer exists.",
+      "failed": "Your message could not be sent. Please try again."
+    },
+    "gate": {
+      "anonymous": "Sign in to take part in the discussions.",
+      "login": "Sign in",
+      "pending": "Your teacher account is awaiting approval: you can read the forum but cannot write yet.",
+      "rejected": "Your teacher account request was rejected: you can read the forum but cannot write.",
+      "status": "See my status",
+      "readOnly": "Administrators see the forum read-only."
+    }
   },
   "contact": {
     "title": "Contact",
