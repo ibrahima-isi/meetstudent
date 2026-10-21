@@ -417,3 +417,11 @@ shapes before coding against them.
 - Errors mapped: 400 `{title|body|schoolId}` under the field, 401 (session ended), 403, 404, 409 (locked thread), 429 with `Retry-After` seconds (capped at 3600 for display).
 - `mine` depends on the caller: the server render is anonymous (no token), the browser request carries the bearer token and therefore skips the HTTP transfer cache (Angular default, not verified in a real browser), so `mine` is correct once the browser has fetched again.
 
+## Forum reports (forum/05)
+
+- `ForumService.reportThread(id, reason)` → `POST /api/v1/forum/threads/{id}/report`; `reportReply(id, reason)` → `POST /api/v1/forum/replies/{id}/report`. Body `{"reason"}` (required, trimmed, 255 characters at most, no control or invisible characters). `201` with no body.
+- Allowed for any signed-in non-administrator (student, expert pending or rejected included): the button is therefore shown to those states, not to the administrator (`403`) nor on the caller's own message (`mine`).
+- Errors mapped by `ForumReportComponent`: `400 {reason}` under the field, `401` session ended, `403` not allowed, `404` message gone (hidden or deleted: the button disappears), `409` already reported by the caller or own message (same status, one message; the button turns to "Reported"), `429` with `Retry-After` seconds (submit disabled meanwhile), other: retry with the text kept.
+- A reported message is never re-read by the web: the reason is not displayed anywhere. One report per user and message, even after the earlier one was closed; the web does not remember a report across a reload (a second try answers 409).
+- Hidden messages: only an administrator receives them (`hidden: true`); non-administrators get 404, so the web has no neutral "hidden" label for them.
+

@@ -49,3 +49,4 @@ export type ForumReplyPage = Page<ForumReply>;
 /** Server limits, mirrored so a visitor is told before sending. */
 export const FORUM_MAX_TITLE = 150;
 export const FORUM_MAX_BODY = 5000;
+export const FORUM_MAX_REASON = 255;

@@ -1,0 +1,63 @@
+<div *transloco="let t">
+  @if (result() !== 'gone') {
+    <button
+      type="button"
+      data-testid="forum-report-open"
+      class="btn btn-ghost"
+      [attr.aria-expanded]="expanded() ? 'true' : 'false'"
+      [attr.aria-controls]="expanded() ? uid + '-form' : null"
+      [attr.aria-disabled]="reported() ? 'true' : null"
+      (click)="toggle()"
+    >
+      <lucide-icon [img]="Flag" class="h-4 w-4" aria-hidden="true" />
+      {{ t(reported() ? 'forum.report.reported' : 'forum.report.open') }}
+    </button>
+  }
+
+  <p data-testid="forum-report-live" role="status" aria-live="polite" tabindex="-1" class="focus:outline-none text-sm text-foreground" [class.mt-2]="messageKey() !== ''">{{ messageKey() ? t(messageKey()) : '' }}</p>
+
+  @if (expanded()) {
+    <form [id]="uid + '-form'" data-testid="forum-report-form" [formGroup]="form" (ngSubmit)="submit()" class="mt-3 space-y-3 rounded-2xl border border-border bg-card p-4" novalidate>
+      <div>
+        <label [for]="uid + '-reason'" class="mb-1.5 block font-medium text-foreground">{{ t('forum.report.reason') }}</label>
+        <textarea
+          [id]="uid + '-reason'"
+          data-testid="forum-report-reason"
+          rows="3"
+          formControlName="reason"
+          class="field-input h-auto min-h-20 resize-y py-3 leading-relaxed"
+          [placeholder]="t('forum.report.placeholder')"
+          [attr.aria-invalid]="errorKey() ? 'true' : null"
+          [attr.aria-describedby]="(errorKey() ? uid + '-error ' : '') + uid + '-count'"
+        ></textarea>
+        <div class="mt-1.5 flex items-start justify-between gap-4">
+          <div>
+            @if (errorKey(); as err) {
+              <p [id]="uid + '-error'" data-testid="forum-report-error" class="text-sm text-red-600 dark:text-red-400">{{ t('forum.errors.' + err.key, { max: err.max }) }}</p>
+            }
+          </div>
+          <p [id]="uid + '-count'" data-testid="forum-report-count" class="shrink-0 text-sm text-muted-foreground">{{ t('forum.form.counter', { count: count(), max: max }) }}</p>
+        </div>
+      </div>
+
+      @if (alert(); as a) {
+        <div role="alert" data-testid="forum-report-alert" class="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-900 dark:bg-red-950/40">
+          <lucide-icon [img]="AlertCircle" class="mt-0.5 h-5 w-5 shrink-0 text-red-600 dark:text-red-400" aria-hidden="true" />
+          <p class="min-w-0 break-words text-red-800 dark:text-red-200">{{ t(a.key, a.params) }}</p>
+        </div>
+      }
+
+      <div class="flex flex-wrap items-center gap-3">
+        <button type="submit" data-testid="forum-report-submit" class="btn btn-primary" [disabled]="sending() || cooldown() > 0" [attr.aria-busy]="sending() ? 'true' : null">
+          @if (sending()) {
+            <lucide-icon [img]="Loader2" class="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />
+            {{ t('forum.form.sending') }}
+          } @else {
+            {{ t('forum.report.submit') }}
+          }
+        </button>
+        <button type="button" data-testid="forum-report-cancel" class="btn btn-ghost" (click)="close()">{{ t('forum.form.cancel') }}</button>
+      </div>
+    </form>
+  }
+</div>

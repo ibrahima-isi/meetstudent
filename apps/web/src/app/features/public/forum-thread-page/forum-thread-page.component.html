@@ -66,6 +66,9 @@
                 }
               </div>
             }
+            @if (canReport() && !th.mine) {
+              <div class="mt-5"><app-forum-report kind="thread" [targetId]="th.id" /></div>
+            }
           }
         </article>
 
@@ -122,6 +125,9 @@
                               </button>
                             }
                           </div>
+                        }
+                        @if (canReport() && !reply.mine) {
+                          <div class="mt-4"><app-forum-report kind="reply" [targetId]="reply.id" /></div>
                         }
                       }
                     </li>

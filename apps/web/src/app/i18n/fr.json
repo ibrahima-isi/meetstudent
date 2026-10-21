@@ -178,6 +178,22 @@
       "rejected": "Votre demande de compte enseignant a été rejetée : vous pouvez lire le forum mais pas y écrire.",
       "status": "Voir mon statut",
       "readOnly": "Les administrateurs voient le forum en lecture seule."
+    },
+    "report": {
+      "open": "Signaler",
+      "reported": "Signalé",
+      "reason": "Motif du signalement",
+      "placeholder": "Dites en quelques mots ce qui pose problème…",
+      "submit": "Envoyer le signalement",
+      "thanks": "Merci, votre signalement a été envoyé. Un modérateur va l'examiner.",
+      "conflict": "Vous avez déjà signalé ce message, ou c'est votre propre message : rien n'a été envoyé.",
+      "gone": "Ce message n'existe plus.",
+      "errors": {
+        "rateLimited": "Trop de signalements : patientez {{ seconds }} secondes, puis réessayez.",
+        "rateLimitedNoDelay": "Trop de signalements : patientez une minute, puis réessayez.",
+        "forbidden": "Votre compte n'est pas autorisé à signaler un message.",
+        "failed": "Votre signalement n'a pas pu être envoyé. Veuillez réessayer."
+      }
     }
   },
   "contact": {
