@@ -48,4 +48,30 @@ class ForumRateLimiterTest {
         }
         assertThat(limiter.trackedUsers()).isLessThanOrEqualTo(50);
     }
+
+    @Test
+    void reportsHaveTheirOwnBudgetOfTenPerHourPerUserAndDoNotShareTheWritesOne() {
+        for (int i = 0; i < 10; i++) {
+            limiter.checkReport(7);
+            clock.advance(Duration.ofSeconds(10));
+        }
+        // 10 reports over 100 s: the first one leaves the one-hour window 3500 s from now.
+        assertThatThrownBy(() -> limiter.checkReport(7))
+                .isInstanceOfSatisfying(TooManyRequestsException.class, ex -> assertThat(ex.getRetryAfterSeconds()).isEqualTo(3500));
+        assertThatCode(() -> limiter.checkReport(8)).doesNotThrowAnyException();
+        clock.advance(Duration.ofSeconds(3500));
+        assertThatCode(() -> limiter.checkReport(7)).doesNotThrowAnyException();
+    }
+
+    @Test
+    void sameUserSpendingTheReportsBudgetStillHasAllTheWritesAndViceVersa() {
+        for (int i = 0; i < 10; i++) {
+            limiter.checkReport(7);
+        }
+        for (int i = 0; i < 5; i++) {
+            limiter.check(7); // would throw if reports and writes shared one window (15 hits in a 5-slot window)
+        }
+        assertThatThrownBy(() -> limiter.check(7)).isInstanceOf(TooManyRequestsException.class);
+        assertThatThrownBy(() -> limiter.checkReport(7)).isInstanceOf(TooManyRequestsException.class);
+    }
 }

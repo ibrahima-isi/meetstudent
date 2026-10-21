@@ -95,6 +95,11 @@ app:
       max-per-window: 5
       window-seconds: 60
       max-tracked-users: 10000
+    # Reports per user and sliding window (separate from the writes budget above); beyond it: 429 + Retry-After.
+    report-rate-limit:
+      max-per-window: 10
+      window-seconds: 3600
+      max-tracked-users: 10000
   tokens:
     reset-ttl-minutes: 60
     verify-ttl-hours: 24
