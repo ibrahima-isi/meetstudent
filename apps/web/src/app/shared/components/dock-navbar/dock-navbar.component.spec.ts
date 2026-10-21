@@ -206,7 +206,7 @@ describe('DockNavbarComponent', () => {
       widen(px);
       const bar = dock().getBoundingClientRect();
       const found: string[] = [];
-      for (const child of Array.from(dock().querySelectorAll('.brand, .links a, .links .discover-trigger, .links .forum-soon, .actions > *'))) {
+      for (const child of Array.from(dock().querySelectorAll('.brand, .links a, .links .discover-trigger, .actions > *'))) {
         const box = child.getBoundingClientRect();
         if (box.width === 0) continue;
         if (box.right > bar.right + 0.5 || box.left < bar.left - 0.5) found.push(`${px}px: ${child.className} leaves the bar`);
@@ -226,16 +226,6 @@ describe('DockNavbarComponent', () => {
         });
       }
     }
-
-    it('always explains the greyed Forum entry with a visible coming-soon cue', async () => {
-      await mount('fr', true);
-      for (let px = 1200; px <= 1600; px += 20) {
-        widen(px);
-        const forum = root().querySelector('.links .forum-soon');
-        if (!shown(forum)) continue;
-        expect(shown(forum!.querySelector('.soon-badge'))).withContext(`${px}px`).toBeTrue();
-      }
-    });
 
     it('keeps only the brand and the menu button on a phone or a tablet', async () => {
       await mount('fr', false);
@@ -290,7 +280,7 @@ describe('DockNavbarComponent', () => {
     const panel = root().querySelector('#dock-menu') as HTMLElement;
 
     const hrefs = Array.from(panel.querySelectorAll('a')).map((a) => a.getAttribute('href'));
-    expect(hrefs).toEqual(['/fr/schools', '/fr/rankings/schools', '/fr#how-it-works', '/fr/programs', '/fr/courses', '/fr/accreditations', '/fr#reviews', '/fr/about', '/fr/contact', '/fr/login', '/fr/register']);
+    expect(hrefs).toEqual(['/fr/schools', '/fr/rankings/schools', '/fr#how-it-works', '/fr/programs', '/fr/courses', '/fr/accreditations', '/fr#reviews', '/fr/about', '/fr/contact', '/fr/forum', '/fr/login', '/fr/register']);
     expect(panel.querySelector('app-language-switcher')).toBeTruthy();
     expect(panel.querySelector('app-theme-toggle')).toBeTruthy();
     expect(panel.textContent).toContain('Pas encore de compte ?');
@@ -1127,45 +1117,37 @@ describe('DockNavbarComponent', () => {
     });
   });
 
-  describe('Forum coming soon', () => {
-    const forum = (scope: string) => root().querySelector<HTMLElement>(`${scope} [data-testid="forum-soon"]`);
+  describe('Forum entry', () => {
     const openMenu = () => {
       (root().querySelector('button.menu-btn') as HTMLButtonElement).click();
       fixture.detectChanges();
     };
 
     for (const signedIn of [false, true]) {
-      it(`shows a disabled Forum entry in the bar when ${signedIn ? 'signed in' : 'anonymous'}`, async () => {
+      it(`links the bar's Forum entry to the forum of the language read when ${signedIn ? 'signed in' : 'anonymous'}`, async () => {
         authenticated.set(signedIn);
         await render();
-        const entry = forum('.links')!;
+        const entry = root().querySelector<HTMLAnchorElement>('.links a[href$="/forum"]')!;
         expect(entry).not.toBeNull();
-        expect(entry.textContent).toContain('Forum');
-        expect(entry.textContent).toContain('Bientôt');
-        expect(entry.getAttribute('aria-disabled')).toBe('true');
-        expect(entry.getAttribute('tabindex')).toBe('-1');
-        expect(entry.hasAttribute('href')).toBeFalse();
-        expect(entry.closest('a')).toBeNull();
+        expect(entry.textContent?.trim()).toBe('Forum');
+        expect(entry.getAttribute('href')).toMatch(/^\/(fr|en)\/forum$/);
+        expect(entry.hasAttribute('aria-disabled')).toBeFalse();
       });
     }
 
-    it('shows the same disabled entry in the menu panel', async () => {
+    it('links the same entry in the menu panel', async () => {
       await render();
       openMenu();
-      const entry = forum('#dock-menu')!;
+      const entry = root().querySelector<HTMLAnchorElement>('#dock-menu a[href$="/forum"]')!;
       expect(entry).not.toBeNull();
-      expect(entry.textContent).toContain('Bientôt');
-      expect(entry.getAttribute('aria-disabled')).toBe('true');
-      expect(entry.getAttribute('tabindex')).toBe('-1');
+      expect(entry.textContent?.trim()).toBe('Forum');
     });
 
-    it('is translated in English and leads nowhere', async () => {
-      const transloco = TestBed.inject(TranslocoService);
-      await firstValueFrom(transloco.load('en'));
-      transloco.setActiveLang('en');
+    it('no longer shows any coming-soon cue', async () => {
       await render();
-      expect(forum('.links')!.textContent).toContain('Soon');
-      expect(root().querySelector('.links a[href*="forum"]')).toBeNull();
+      openMenu();
+      expect(root().querySelector('[data-testid="forum-soon"], .soon-badge')).toBeNull();
+      expect(root().textContent).not.toContain('Bientôt');
     });
   });
 });

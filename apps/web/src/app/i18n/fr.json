@@ -31,7 +31,6 @@
     "about": "À propos",
     "contact": "Contact",
     "forum": "Forum",
-    "comingSoon": "Bientôt",
     "language": "Langue",
     "noAccount": "Pas encore de compte ?",
     "login": "Se connecter",
@@ -62,6 +61,8 @@
     "register": "Inscription",
     "home": "Accueil",
     "school": "Établissement",
+    "forum": "Forum",
+    "forumThread": "Discussion",
     "program": "Formation",
     "profile": "Mon profil",
     "about": "À propos",
@@ -79,6 +80,105 @@
   "about": {
     "title": "À propos de MeetStudent",
     "error": "Cette page n'a pas pu être chargée."
+  },
+  "forum": {
+    "eyebrow": "Communauté",
+    "title": "Forum",
+    "intro": "Posez vos questions, partagez votre expérience et aidez d'autres étudiants. Tout le monde peut lire ; les étudiants et les enseignants approuvés peuvent écrire.",
+    "plainText": "Texte brut uniquement : aucune mise en forme ni aucun lien n'est interprété.",
+    "filter": {
+      "label": "Établissement",
+      "all": "Tous les établissements"
+    },
+    "list": {
+      "loading": "Chargement des discussions…",
+      "error": "Les discussions n'ont pas pu être chargées.",
+      "empty": "Aucune discussion pour l'instant. Soyez le premier à en ouvrir une.",
+      "outOfRange": "Cette page n'existe plus : il y a moins de discussions maintenant.",
+      "lastPage": "Aller à la dernière page",
+      "emptyFiltered": "Aucune discussion sur cet établissement pour l'instant.",
+      "newThread": "Nouvelle discussion",
+      "closeForm": "Fermer",
+      "replies": {
+        "one": "{{ count }} réponse",
+        "other": "{{ count }} réponses"
+      },
+      "page": "Page {{ page }} sur {{ total }}",
+      "prev": "Précédent",
+      "next": "Suivant",
+      "pager": "Pagination"
+    },
+    "thread": {
+      "back": "Retour au forum",
+      "loading": "Chargement de la discussion…",
+      "loadError": "Cette discussion n'a pas pu être chargée.",
+      "notFoundTitle": "Discussion introuvable",
+      "notFoundText": "Cette discussion n'existe pas ou a été supprimée.",
+      "repliesTitle": "Réponses",
+      "noReplies": "Aucune réponse pour l'instant.",
+      "repliesError": "Les réponses n'ont pas pu être chargées.",
+      "loadMore": "Voir plus de réponses",
+      "loadingMore": "Chargement…",
+      "loadMoreError": "Les réponses suivantes n'ont pas pu être chargées. Réessayez.",
+      "locked": "Verrouillé",
+      "lockedNotice": "Cette discussion est verrouillée : elle ne peut plus recevoir de réponse.",
+      "about": "À propos de {{ school }}",
+      "replyPosted": "Votre réponse a été publiée.",
+      "writeReply": "Votre réponse"
+    },
+    "author": {
+      "deleted": "Utilisateur supprimé",
+      "unknown": "Membre",
+      "student": "Étudiant",
+      "expert": "Expert",
+      "hidden": "Masqué",
+      "edited": "modifié"
+    },
+    "actions": {
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "confirmDelete": "Supprimer définitivement",
+      "cancel": "Annuler",
+      "deleteQuestion": "Supprimer ce message ? Cette action est définitive.",
+      "failed": "L'action a échoué. Réessayez.",
+      "forbidden": "Vous n'avez pas le droit de faire cela."
+    },
+    "form": {
+      "title": "Titre",
+      "titlePlaceholder": "Votre question en une ligne",
+      "body": "Message",
+      "bodyPlaceholder": "Expliquez votre situation…",
+      "replyPlaceholder": "Écrivez votre réponse…",
+      "school": "Établissement (facultatif)",
+      "noSchool": "Aucun établissement",
+      "counter": "{{ count }} / {{ max }}",
+      "submitThread": "Publier",
+      "submitReply": "Répondre",
+      "save": "Enregistrer",
+      "sending": "Envoi…",
+      "cancel": "Annuler"
+    },
+    "errors": {
+      "required": "Ce champ est obligatoire.",
+      "tooLong": "{{ max }} caractères au maximum.",
+      "invalid": "Cette valeur n'est pas acceptée. Retirez les caractères spéciaux ou invisibles.",
+      "schoolInvalid": "Cet établissement n'est pas valide. Choisissez-en un autre ou aucun.",
+      "rateLimited": "Vous écrivez trop vite : patientez {{ seconds }} secondes, puis réessayez.",
+      "rateLimitedNoDelay": "Vous écrivez trop vite : patientez une minute, puis réessayez.",
+      "locked": "Cette discussion est verrouillée : votre réponse n'a pas été envoyée.",
+      "forbidden": "Votre compte n'est pas autorisé à écrire ici.",
+      "signedOut": "Votre session est terminée. Reconnectez-vous, puis réessayez.",
+      "notFound": "Cette discussion n'existe plus.",
+      "failed": "Votre message n'a pas pu être envoyé. Veuillez réessayer."
+    },
+    "gate": {
+      "anonymous": "Connectez-vous pour participer aux discussions.",
+      "login": "Se connecter",
+      "pending": "Votre compte enseignant est en attente d'approbation : vous pouvez lire le forum mais pas encore y écrire.",
+      "rejected": "Votre demande de compte enseignant a été rejetée : vous pouvez lire le forum mais pas y écrire.",
+      "status": "Voir mon statut",
+      "readOnly": "Les administrateurs voient le forum en lecture seule."
+    }
   },
   "contact": {
     "title": "Contact",
