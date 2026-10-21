@@ -1,8 +1,10 @@
 package com.bowe.meetstudent.dto;
 
 import com.bowe.meetstudent.dto.validation.MaxUtf8Bytes;
+import com.bowe.meetstudent.dto.validation.SafeName;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -21,6 +23,8 @@ import java.util.Date;
 @Builder
 public class UpdateProfileRequest {
 
+    @Size(max = 100, message = "Prénom trop long (100 caractères maximum)")
+    @SafeName(message = "Prénom : caractères non autorisés")
     private String firstname;
 
     private String lastname;

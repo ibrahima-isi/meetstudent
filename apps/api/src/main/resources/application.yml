@@ -89,6 +89,12 @@ app:
       max-per-window: 5
       window-minutes: 60
       max-tracked-clients: 10000
+  forum:
+    # Messages (threads and replies together) per user and sliding window; beyond it: 429 + Retry-After.
+    rate-limit:
+      max-per-window: 5
+      window-seconds: 60
+      max-tracked-users: 10000
   tokens:
     reset-ttl-minutes: 60
     verify-ttl-hours: 24
