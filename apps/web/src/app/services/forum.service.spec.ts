@@ -107,6 +107,22 @@ describe('ForumService', () => {
     del.flush(null, { status: 204, statusText: 'No Content' });
   });
 
+  it('reports a thread or a reply with POST {reason} and no body in the answer', () => {
+    let done = 0;
+    service.reportThread(4, 'Spam').subscribe({ complete: () => done++ });
+    const thread = backend.expectOne('/api/v1/forum/threads/4/report');
+    expect(thread.request.method).toBe('POST');
+    expect(thread.request.body).toEqual({ reason: 'Spam' });
+    thread.flush(null, { status: 201, statusText: 'Created' });
+
+    service.reportReply(9, 'Insult').subscribe({ complete: () => done++ });
+    const reply = backend.expectOne('/api/v1/forum/replies/9/report');
+    expect(reply.request.method).toBe('POST');
+    expect(reply.request.body).toEqual({ reason: 'Insult' });
+    reply.flush(null, { status: 201, statusText: 'Created' });
+    expect(done).toBe(2);
+  });
+
   it('passes the server error through untouched so a page can map 400, 409 and 429', () => {
     let error: unknown;
     service.createReply(4, 'Hi').subscribe({ error: (e: unknown) => (error = e) });

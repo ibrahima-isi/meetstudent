@@ -596,6 +596,87 @@ describe('ForumThreadPageComponent', () => {
     });
   });
 
+  describe('reporting', () => {
+    const buttons = (scope: ParentNode = el()) => Array.from(scope.querySelectorAll<HTMLElement>('[data-testid="forum-report-open"]'));
+
+    it('offers Report on other people\'s thread and replies, never on mine', async () => {
+      await open('5', { role: 'ROLE_STUDENT', replies: replyPage([reply(1), reply(2, { mine: true })]) });
+
+      expect(buttons(el().querySelector('article')!).length).toBe(1);
+      expect(buttons(all('forum-reply')[0]).length).toBe(1);
+      expect(buttons(all('forum-reply')[1]).length).toBe(0);
+    });
+
+    it('does not offer it on my own thread', async () => {
+      await open('5', { role: 'ROLE_STUDENT', thread: thread({ mine: true }), replies: replyPage([reply(1)]) });
+      expect(buttons(el().querySelector('article')!).length).toBe(0);
+      expect(buttons(all('forum-reply')[0]).length).toBe(1);
+    });
+
+    it('offers it to any expert, pending or rejected included, as the API allows', async () => {
+      await open('5', { role: 'ROLE_EXPERT', status: 'PENDING', replies: replyPage([reply(1)]) });
+      expect(buttons().length).toBe(2);
+    });
+
+    it('offers it to a rejected expert too', async () => {
+      await open('5', { role: 'ROLE_EXPERT', status: 'REJECTED', replies: replyPage([reply(1)]) });
+      expect(buttons().length).toBe(2);
+    });
+
+    it('offers it on a locked thread', async () => {
+      await open('5', { role: 'ROLE_STUDENT', thread: thread({ locked: true }), replies: replyPage([reply(1)]) });
+      expect(buttons().length).toBe(2);
+    });
+
+    it('does not offer it to an anonymous visitor, who is invited to sign in', async () => {
+      await open('5', { replies: replyPage([reply(1)]) });
+      expect(buttons().length).toBe(0);
+      expect(byId('forum-gate')).not.toBeNull();
+    });
+
+    it('does not offer it to an administrator', async () => {
+      await open('5', { role: 'ROLE_ADMIN', replies: replyPage([reply(1)]) });
+      expect(buttons().length).toBe(0);
+    });
+
+    it('reports one reply, confirms on that reply only, and leaves the others alone', async () => {
+      await open('5', { role: 'ROLE_STUDENT', replies: replyPage([reply(11), reply(10)]) });
+      const first = all('forum-reply')[0];
+      first.querySelector<HTMLElement>('[data-testid="forum-report-open"]')!.click();
+      await settle();
+      const field = first.querySelector<HTMLTextAreaElement>('[data-testid="forum-report-reason"]')!;
+      field.value = 'Spam';
+      field.dispatchEvent(new Event('input'));
+      await settle();
+      first.querySelector<HTMLElement>('[data-testid="forum-report-submit"]')!.click();
+      await settle();
+      http.expectOne('/api/v1/forum/replies/11/report').flush(null, { status: 201, statusText: 'Created' });
+      await settle();
+
+      expect(first.textContent).toContain('Thank you');
+      expect(all('forum-reply')[1].textContent).not.toContain('Thank you');
+      expect(all('forum-reply').length).toBe(2);
+    });
+
+    it('reports the thread on the thread endpoint', async () => {
+      await open('5', { role: 'ROLE_STUDENT', replies: replyPage([]) });
+      const article = el().querySelector('article')!;
+      article.querySelector<HTMLElement>('[data-testid="forum-report-open"]')!.click();
+      await settle();
+      const field = article.querySelector<HTMLTextAreaElement>('[data-testid="forum-report-reason"]')!;
+      field.value = 'Off topic';
+      field.dispatchEvent(new Event('input'));
+      await settle();
+      article.querySelector<HTMLElement>('[data-testid="forum-report-submit"]')!.click();
+      await settle();
+      const request = http.expectOne('/api/v1/forum/threads/5/report');
+      expect(request.request.body).toEqual({ reason: 'Off topic' });
+      request.flush(null, { status: 201, statusText: 'Created' });
+      await settle();
+      expect(article.textContent).toContain('Thank you');
+    });
+  });
+
   it('locks the page the moment a reply is refused because the thread got locked', async () => {
     await open('5', { role: 'ROLE_STUDENT' });
     const field = byId<HTMLTextAreaElement>('forum-body')!;

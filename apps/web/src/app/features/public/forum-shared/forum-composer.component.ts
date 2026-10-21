@@ -9,12 +9,12 @@ import { ForumService } from '@services/forum.service';
 import { ForumField, ForumFailure, classifyForumError } from './forum-errors';
 
 /** Every control character but tab, CR and LF: the server refuses them. */
-const CONTROL_CHARS = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/;
+export const CONTROL_CHARS = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/;
 
-const notBlank = (control: AbstractControl): ValidationErrors | null =>
+export const notBlank = (control: AbstractControl): ValidationErrors | null =>
   typeof control.value === 'string' && control.value.trim() === '' ? { required: true } : null;
 
-const noControlChars = (control: AbstractControl): ValidationErrors | null =>
+export const noControlChars = (control: AbstractControl): ValidationErrors | null =>
   typeof control.value === 'string' && CONTROL_CHARS.test(control.value) ? { invalid: true } : null;
 
 export interface ComposerExisting {

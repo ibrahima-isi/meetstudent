@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 
-export type ForumField = 'title' | 'body' | 'schoolId';
-const FIELDS: ForumField[] = ['title', 'body', 'schoolId'];
+export type ForumField = 'title' | 'body' | 'schoolId' | 'reason';
+const FIELDS: ForumField[] = ['title', 'body', 'schoolId', 'reason'];
 
 /** What a failed forum call means for the visitor; the pages choose the words. */
 export type ForumFailure =
