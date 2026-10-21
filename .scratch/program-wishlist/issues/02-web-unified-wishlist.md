@@ -4,12 +4,12 @@
 
 **Blocked by:** [01](01-api-program-wishlist.md)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Worktree:** `program-wishlist-02`
 
-- [ ] Service : ajouter/retirer/lire formations ; état « déjà dans ma liste »
-- [ ] Panier et profil affichent écoles et formations ; cœur sur les formations
-- [ ] Cœur masqué aux experts ; visiteur anonyme invité à se connecter
-- [ ] fr/en, mode sombre
-- [ ] Specs du service et des composants, rouge d'abord
+- [x] Service : ajouter/retirer/lire formations ; état « déjà dans ma liste »
+- [x] Panier et profil affichent écoles et formations ; cœur sur les formations
+- [x] Cœur masqué aux experts ; visiteur anonyme invité à se connecter
+- [x] fr/en, mode sombre
+- [x] Specs du service et des composants, rouge d'abord

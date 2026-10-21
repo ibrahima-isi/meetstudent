@@ -11,23 +11,27 @@ New issues and specs for MeetStudent live as versioned Markdown files under `.sc
 - Record `Status:` near the top using the configured triage vocabulary. During execution, record `claimed` or `resolved` where appropriate.
 - Record `Blocked by:` near the top, using local ticket identities and relative Markdown links. External legacy blockers may use their GitHub URL.
 - Append discussion under `## Comments`; preserve existing content and decisions.
-- Keep local specs, tickets and the completion document in Git so future worktrees/sessions receive them.
+- Keep local specs, tickets and the completion files in Git so future worktrees/sessions receive them.
 
 ## Mandatory completion tracking
 
-Every ticket creation MUST immediately create or update the repository-root `docs/completion.md`. This applies to any ticket-creating skill or manual workflow in this project, including `to-tickets`, `triage` and wayfinding.
+Completion tracking is **per spec**, not one shared file. Every spec has its own file `docs/completion/<spec-folder>.md` (same name as its `.scratch/<spec-folder>/` directory, e.g. `docs/completion/forum.md`). This applies to any ticket-creating skill or manual workflow in this project, including `to-tickets`, `triage` and wayfinding.
 
-For each ticket, in this order:
+When tickets are created for a spec, create that spec's completion file **immediately**, in the same step, and add the entry of each ticket right after writing its ticket file:
 
 1. Write the ticket file.
-2. Create `docs/completion.md` if absent, or preserve and update it if present.
+2. Create `docs/completion/<spec-folder>.md` if absent (title, link to the spec), or preserve and update it if present.
 3. Add exactly one unchecked Markdown checklist entry with the canonical ticket identity, title, link and initial state. Save it before creating another ticket or reporting creation complete.
 
 A ticket without its saved completion entry is incompletely created. If either write fails, report the failure and reconcile that ticket before proceeding; never defer tracking until implementation begins or until the end of a batch.
 
-When claiming/resuming a ticket, read both its file and the completion document; keep its checkbox unchecked and record progress, blockers and the next action. Mark it checked only when the implementation and required verification are complete, and record actual test evidence and PR/delivery links. Set the ticket to resolved consistently; distinguish implementation completion from PR merge status. Reopening a ticket restores its unchecked state and records the reason.
+When claiming/resuming a ticket, read both its file and its spec's completion file; keep its checkbox unchecked and record progress, blockers and the next action. Mark it checked only when the implementation and required verification are complete, and record actual test evidence and PR/delivery links. Set the ticket to resolved consistently; distinguish implementation completion from PR merge status. Reopening a ticket restores its unchecked state and records the reason.
 
-Preserve all prior completed entries and evidence. Rerunning ticket creation updates the existing entry rather than duplicating it.
+**Closing a spec:** once every ticket of the spec is merged and confirmed, its completion file is final: move on to other work and do not touch it again. The owner then reviews the file, checks that the tickets were implemented, and deletes it. Never delete a completion file yourself.
+
+The legacy `docs/completion.md` (one file for every ticket since the start) is frozen: do not add new specs to it. Entries of specs already in it (e.g. `expert-approval`, `forum`) stay there until the owner has reviewed and removed it.
+
+Preserve all prior completed entries and evidence in a spec's file. Rerunning ticket creation updates the existing entry rather than duplicating it.
 
 ## Existing GitHub work
 
@@ -36,14 +40,14 @@ Spec #99 and its existing tickets #100–#129 remain GitHub records. No migratio
 ## Skill operations
 
 - Publish a spec: write the local spec file.
-- Publish a ticket: write its individual local file AND immediately save its completion entry as required above.
+- Publish a ticket: write its individual local file AND immediately save its entry in the spec's completion file as required above.
 - Fetch a ticket: read its referenced local file; for a canonical identity, locate the corresponding feature and numbered file. Use GitHub for the explicit legacy references above.
 - Change triage labels: update the ticket's Status field using `docs/agents/triage-labels.md`.
 
 ## Wayfinding operations
 
 - Map: `.scratch/<effort>/map.md`, holding Notes / Decisions-so-far / Fog.
-- Child: one numbered file in the effort's issues directory, with its Type and Status. Creating the child immediately updates the shared completion document.
+- Child: one numbered file in the effort's issues directory, with its Type and Status. Creating the child immediately updates its spec's completion file.
 - Blocking: local Blocked by links; a blocker is satisfied only when its implementation is resolved with the required verification.
 - Frontier: select an open, unclaimed ticket whose blockers are satisfied; prefer the agreed priority, then ticket number. Check external session-release conditions explicitly.
 - Claim: save Status: claimed before implementation, then update its completion progress.

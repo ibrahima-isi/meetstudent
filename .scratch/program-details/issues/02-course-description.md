@@ -4,11 +4,11 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Worktree:** `program-details-02`
 
-- [ ] Migration : description optionnelle ≤1000 sur le cours
-- [ ] DTO, PATCH, validation 400, écriture ADMIN seulement
-- [ ] Back office : champ description dans le formulaire de cours
-- [ ] Tests d'intégration et spec du formulaire, rouge d'abord
+- [x] Migration : description optionnelle ≤1000 sur le cours
+- [x] DTO, PATCH, validation 400, écriture ADMIN seulement
+- [x] Back office : champ description dans le formulaire de cours
+- [x] Tests d'intégration et spec du formulaire, rouge d'abord

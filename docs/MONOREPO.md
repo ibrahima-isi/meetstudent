@@ -171,6 +171,10 @@ in prose, no numbered question lists in a message, even when a skill prescribes
 them: the tool wins over the skill. Prose is for reporting results only. The
 same rule is stated in the root `CLAUDE.md` (Working agreement → Sessions).
 
+## Ticket completion tracking: one file per spec
+
+Tickets are tracked in `docs/completion/<spec-folder>.md`, one file per spec (matching `.scratch/<spec-folder>/`), created the moment the spec's tickets are created. When every ticket of a spec is merged and confirmed, the file is final and agents move on; the owner reads it to check the tickets were implemented, then deletes it. The old single `docs/completion.md` is frozen (legacy, to be reviewed and removed by the owner). Details: `docs/agents/issue-tracker.md`.
+
 ## CI and branch protection
 
 A single workflow, `.github/workflows/ci.yml`, runs three jobs — the published
