@@ -11,7 +11,8 @@ class SafeTextTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"a\u0007b", "a\u0000b", "a\u001bb", "a\u0085b", "a‮b", "a‪b", "a⁦b", "a⁩b",
-            "a​b", "a‏b", "a﻿b", "a b", "a b", "a\ud800b", "a\udc00"})
+            "a​b", "a‏b", "a﻿b", "a b", "a b", "a\ud800b", "a\udc00",
+            "a\u3164b", "a\u2800b", "a\u115Fb", "a\u1160b", "a\uFFA0b", "a\u180Eb"})
     void refusesControlFormatSeparatorAndLoneSurrogateCharacters(String text) {
         assertThat(SafeText.hasForbiddenCharacters(text)).isTrue();
     }

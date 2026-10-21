@@ -1,6 +1,7 @@
 package com.bowe.meetstudent.dto;
 
 import com.bowe.meetstudent.dto.validation.MaxUtf8Bytes;
+import com.bowe.meetstudent.dto.validation.SafeName;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Pattern;
@@ -20,6 +21,8 @@ import java.util.Date;
 public class RegisterRequest {
 
     @NotEmpty(message = "prenom vide")
+    @Size(max = 100, message = "Prénom trop long (100 caractères maximum)")
+    @SafeName(message = "Prénom : caractères non autorisés")
     private String firstname;
 
     @NotEmpty(message = "Nom vide")

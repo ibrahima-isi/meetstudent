@@ -76,6 +76,9 @@ public class WebSecurityConfig {
                                 .requestMatchers(HttpMethod.GET, "/api/v1/course-rates/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/v1/program-rates/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/v1/school-rates/**").permitAll()
+                                // Forum: public reading; writing needs a session (student or approved expert: @RequiresForumWriter)
+                                .requestMatchers(HttpMethod.GET, "/api/v1/forum/**").permitAll()
+                                .requestMatchers("/api/v1/forum/**").authenticated()
 
                                 // Admin CRUD and Moderation
                                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
