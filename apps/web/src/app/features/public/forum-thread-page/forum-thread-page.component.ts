@@ -17,6 +17,7 @@ import { ForumAuthorComponent } from '../forum-shared/forum-author.component';
 import { ForumComposerComponent } from '../forum-shared/forum-composer.component';
 import { classifyForumError } from '../forum-shared/forum-errors';
 import { ForumGateComponent } from '../forum-shared/forum-gate.component';
+import { ForumReportComponent } from '../forum-shared/forum-report.component';
 
 const REPLIES_PAGE_SIZE = 20;
 
@@ -38,6 +39,7 @@ type Confirming = { kind: 'thread' | 'reply'; id: number };
     ForumAuthorComponent,
     ForumComposerComponent,
     ForumGateComponent,
+    ForumReportComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'relative isolate block overflow-hidden' },
@@ -63,6 +65,8 @@ export class ForumThreadPageComponent {
   protected readonly lang = computed(() => this.locale.active());
   protected readonly writeState = injectForumWriteState();
   protected readonly canWrite = computed(() => this.writeState() === 'writer');
+  /** The API lets any signed-in student or expert report, a pending or rejected expert included; not an administrator. */
+  protected readonly canReport = computed(() => ['writer', 'pending', 'rejected'].includes(this.writeState()));
 
   protected readonly thread = signal<ForumThread | null>(null);
   protected readonly status = signal<'loading' | 'loaded' | 'error' | 'notFound'>('loading');

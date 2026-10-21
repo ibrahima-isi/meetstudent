@@ -178,6 +178,22 @@
       "rejected": "Your teacher account request was rejected: you can read the forum but cannot write.",
       "status": "See my status",
       "readOnly": "Administrators see the forum read-only."
+    },
+    "report": {
+      "open": "Report",
+      "reported": "Reported",
+      "reason": "Reason for the report",
+      "placeholder": "Tell us in a few words what is wrong…",
+      "submit": "Send report",
+      "thanks": "Thank you, your report was sent. A moderator will look at it.",
+      "conflict": "You already reported this message, or it is your own: nothing was sent.",
+      "gone": "This message no longer exists.",
+      "errors": {
+        "rateLimited": "Too many reports: wait {{ seconds }} seconds, then try again.",
+        "rateLimitedNoDelay": "Too many reports: wait a minute, then try again.",
+        "forbidden": "Your account is not allowed to report a message.",
+        "failed": "Your report could not be sent. Please try again."
+      }
     }
   },
   "contact": {

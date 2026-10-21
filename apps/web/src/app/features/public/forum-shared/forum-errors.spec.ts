@@ -18,6 +18,10 @@ describe('classifyForumError', () => {
     expect(classifyForumError(failure(400, 'oops'))).toEqual({ kind: 'failed' });
   });
 
+  it('knows the reason field of a report', () => {
+    expect(classifyForumError(failure(400, { reason: 'Motif invalide' }))).toEqual({ kind: 'fields', fields: { reason: true } });
+  });
+
   it('reads Retry-After in seconds on a 429', () => {
     expect(classifyForumError(failure(429, null, { 'Retry-After': '42' }))).toEqual({ kind: 'rateLimited', seconds: 42 });
   });

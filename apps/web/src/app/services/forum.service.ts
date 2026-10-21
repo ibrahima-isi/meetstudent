@@ -57,4 +57,13 @@ export class ForumService {
   deleteReply(id: number): Observable<void> {
     return this.http.delete<void>(`${this.url}/replies/${id}`);
   }
+
+  /** 201 without a body. 409: already reported by the caller, or the caller's own message. */
+  reportThread(id: number, reason: string): Observable<void> {
+    return this.http.post<void>(`${this.url}/threads/${id}/report`, { reason });
+  }
+
+  reportReply(id: number, reason: string): Observable<void> {
+    return this.http.post<void>(`${this.url}/replies/${id}/report`, { reason });
+  }
 }
