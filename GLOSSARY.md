@@ -36,5 +36,5 @@ The administrator's way to take a message out of the forum without destroying it
 
 ## Session (appareil)
 
-One device on which a user is signed in. A user can hold several sessions at once, each independent of the others. A session ends after seven days without activity on that device, and every session of the account ends together when its password changes, its e-mail address is confirmed or the account is deleted. Signing out in the browser only forgets the session on that device; it does not end it.
+One device on which a user is signed in. A user can hold several sessions at once, each independent of the others. A session ends when the user signs out on that device (the other devices stay signed in), after seven days without activity on that device, and every session of the account ends together when its password changes, its e-mail address is confirmed or the account is deleted.
 _Avoid_: token, connexion, login

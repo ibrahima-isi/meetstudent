@@ -117,7 +117,15 @@ export class AuthService {
     return this.capabilities$;
   }
 
+  /**
+   * Ends this device's session on the server, then forgets it locally right away.
+   * The call is fire-and-forget: offline or failing, the local sign-out still happens.
+   */
   logout() {
+    const refreshToken = this.tokenService.refreshToken();
+    if (refreshToken) {
+      this.http.post<void>(`${this.apiUrl}/logout`, { refreshToken }).pipe(catchError(() => EMPTY)).subscribe();
+    }
     this.tokenService.clear();
   }
 }
