@@ -355,6 +355,38 @@ class AuthIntegrationTests {
     }
 
     @Test
+    void logoutEndsOnlyThatSessionAndIsIdempotent() throws Exception {
+        var user = account("logout@test.com", "ROLE_STUDENT");
+        var laptop = credentials(user.getEmail(), "password123");
+        var phone = credentials(user.getEmail(), "password123");
+        var logout = objectMapper.writeValueAsString(java.util.Map.of("refreshToken", laptop.get("refreshToken").asText()));
+
+        mockMvc.perform(post("/api/v1/auth/logout").contentType(MediaType.APPLICATION_JSON).content(logout))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/v1/users/id/" + user.getId())
+                        .header("Authorization", "Bearer " + laptop.get("accessToken").asText()))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(post("/api/v1/auth/refresh").contentType(MediaType.APPLICATION_JSON).content(logout))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/v1/users/id/" + user.getId())
+                        .header("Authorization", "Bearer " + phone.get("accessToken").asText()))
+                .andExpect(status().isOk());
+        // Already gone: still 204.
+        mockMvc.perform(post("/api/v1/auth/logout").contentType(MediaType.APPLICATION_JSON).content(logout))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void logoutAnswers204ForUnknownTokenAnd400WithoutOne() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/logout").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"does-not-exist\"}"))
+                .andExpect(status().isNoContent());
+        mockMvc.perform(post("/api/v1/auth/logout").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void shouldFailAccessSecuredEndpoint_withoutToken() throws Exception {
         mockMvc.perform(get("/api/v1/users")) // Assuming this is secured now
                 .andExpect(status().isUnauthorized()); // Expect 401

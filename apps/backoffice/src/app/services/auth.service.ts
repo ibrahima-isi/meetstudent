@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, switchMap, tap, throwError } from 'rxjs';
+import { EMPTY, Observable, catchError, switchMap, tap, throwError } from 'rxjs';
 import { LoginResponse, ROLE_ADMIN, User } from '@models/entities';
 import { API_URL } from './api-config';
 import { TokenService } from './token.service';
@@ -41,7 +41,15 @@ export class AuthService {
       .pipe(tap((res) => this.tokens.setTokens(res.accessToken, res.refreshToken)));
   }
 
+  /**
+   * Ends this device's session on the server, then forgets it locally right away.
+   * The call is fire-and-forget: offline or failing, the local sign-out still happens.
+   */
   logout() {
+    const refreshToken = this.tokens.refreshToken();
+    if (refreshToken) {
+      this.http.post<void>(`${this.apiUrl}/auth/logout`, { refreshToken }).pipe(catchError(() => EMPTY)).subscribe();
+    }
     this.tokens.clear();
   }
 }

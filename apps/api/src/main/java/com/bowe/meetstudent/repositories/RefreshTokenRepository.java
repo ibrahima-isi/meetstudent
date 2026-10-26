@@ -24,6 +24,11 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Inte
     @Query("select r.user.id from RefreshToken r where r.token = :token")
     Optional<Integer> findUserIdByToken(@Param("token") String token);
 
+    /** Bulk delete of one session, whatever its current secret: a rotation may have replaced it meanwhile. */
+    @Modifying
+    @Query("delete from RefreshToken r where r.sessionId = :sessionId and r.user.id = :userId")
+    int deleteBySessionIdAndUserId(@Param("sessionId") UUID sessionId, @Param("userId") Integer userId);
+
     /** Bulk delete: a derived delete loads and versions each row and fails when a concurrent refresh touched it. */
     @Modifying
     @Query("delete from RefreshToken r where r.user.id = :userId")

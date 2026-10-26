@@ -17,6 +17,7 @@ describe('refreshInterceptor', () => {
   let backend: HttpTestingController;
   let tokens: TokenService;
   let auth: AuthService;
+  const logoutUrl = `${api}/auth/logout`;
   const refreshUrl = `${api}/auth/refresh`;
 
   beforeEach(() => {
@@ -39,6 +40,8 @@ describe('refreshInterceptor', () => {
   });
 
   afterEach(() => {
+    // A logout also ends the session on the server (fire-and-forget); answer it before checking for leftovers.
+    backend.match(logoutUrl).forEach((req) => req.flush(null, { status: 204, statusText: 'No Content' }));
     backend.verify();
     localStorage.clear();
   });
@@ -103,6 +106,7 @@ describe('refreshInterceptor', () => {
     backend.expectOne(refreshUrl).flush(null, unauthorized);
 
     expect(auth.logout).toHaveBeenCalledTimes(1);
+    expect(backend.expectOne(logoutUrl).request.body).toEqual({ refreshToken: 'old-refresh' });
     expect(tokens.token()).toBeNull();
     expect(error).toBeTruthy();
   });

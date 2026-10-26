@@ -139,6 +139,21 @@ public class RefreshTokenService {
         return session.getLastActivity().plus(INACTIVITY_TIMEOUT).isAfter(now);
     }
 
+    /**
+     * Sign-out: ends the session the refresh token belongs to, under the owner's row lock. The session is resolved
+     * before the lock and deleted by its stable {@code sid}, so a rotation that commits while we wait cannot save it.
+     * Unknown or already ended: nothing to do.
+     */
+    @Transactional
+    public void logout(String tokenValue) {
+        refreshTokenRepository.findByToken(tokenValue).ifPresent(token -> {
+            Integer userId = token.getUser().getId();
+            if (userRepository.findByIdForUpdate(userId).isPresent()) {
+                refreshTokenRepository.deleteBySessionIdAndUserId(token.getSessionId(), userId);
+            }
+        });
+    }
+
     /** Ends every session of the user. Callers hold the user's row lock. */
     @Transactional
     public int deleteByUserId(Integer userId) {

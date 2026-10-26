@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
@@ -20,6 +21,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -74,5 +76,14 @@ public class AuthController {
                 .accessToken(newAccessToken)
                 .refreshToken(rotation.token())
                 .build();
+    }
+
+    @PostMapping("/logout")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Sign out", description = "Ends the session (device) the refresh token belongs to; its access and refresh tokens stop working. Other sessions are kept. Idempotent: an unknown or already ended session also answers 204.")
+    @ApiResponse(responseCode = "204", description = "Session ended, or already gone")
+    @ApiResponse(responseCode = "400", description = "Missing refresh token")
+    public void logout(@RequestBody @Validated TokenRefreshRequest request) {
+        refreshTokenService.logout(request.getRefreshToken());
     }
 }

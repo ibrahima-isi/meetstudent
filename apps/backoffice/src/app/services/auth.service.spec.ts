@@ -62,6 +62,7 @@ describe('AuthService', () => {
     const { error } = loginAs('ROLE_STUDENT');
 
     expect(error).toBeInstanceOf(NotAdminError);
+    backend.expectOne(`${api}/auth/logout`).flush(null, { status: 204, statusText: 'No Content' });
     expect(tokens.token()).toBeNull();
     expect(tokens.user()).toBeNull();
     expect(localStorage.length).toBe(0);
@@ -86,9 +87,25 @@ describe('AuthService', () => {
     expect(tokens.refreshToken()).toBe('nr');
   });
 
-  it('logout clears the session', () => {
+  it('logout ends the session on the server and clears it locally', () => {
     tokens.setTokens('a', 'r');
     auth.logout();
     expect(tokens.isAuthenticated()).toBeFalse();
+    const req = backend.expectOne(`${api}/auth/logout`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ refreshToken: 'r' });
+    req.flush(null, { status: 204, statusText: 'No Content' });
+  });
+
+  it('logout still clears locally when the server call fails', () => {
+    tokens.setTokens('a', 'r');
+    auth.logout();
+    backend.expectOne(`${api}/auth/logout`).error(new ProgressEvent('offline'));
+    expect(tokens.isAuthenticated()).toBeFalse();
+  });
+
+  it('logout without a refresh token calls nothing', () => {
+    auth.logout();
+    backend.expectNone(`${api}/auth/logout`);
   });
 });
