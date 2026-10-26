@@ -39,6 +39,8 @@ describe('SiteFooterComponent', () => {
   }
 
   beforeEach(() => {
+    // Start signed out whatever an earlier spec left behind.
+    localStorage.clear();
     TestBed.configureTestingModule({
       providers: [
         provideZonelessChangeDetection(), provideRouter([]), provideHttpClient(),
