@@ -141,10 +141,10 @@ class SessionInactivityIntegrationTests {
     }
 
     @Test void historicalCredentialsKeepDeploymentGraceAndRotateWithoutAnAbsoluteRefreshDeadline() throws Exception {
-        // The fixture is the V21 migration output: a bounded compatibility row,
+        // The fixture is the V21 migration output (hashed by V35): a bounded compatibility row,
         // retaining the old secret and old fixed expiry, with a stable identity.
         sessions.save(com.bowe.meetstudent.entities.RefreshToken.builder().user(user)
-                .token("historical-refresh").sessionId(java.util.UUID.randomUUID()).legacy(true)
+                .token(AuthIntegrationTests.sha256Hex("historical-refresh")).sessionId(java.util.UUID.randomUUID()).legacy(true)
                 .lastActivity(start).expiryDate(start.plusSeconds(120)).build());
         var oldAccess = com.auth0.jwt.JWT.create().withSubject(user.getId().toString())
                 .withClaim("email", user.getEmail()).withClaim("roles", java.util.List.of("ROLE_STUDENT"))

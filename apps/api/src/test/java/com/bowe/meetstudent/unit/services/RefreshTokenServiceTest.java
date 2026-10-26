@@ -30,6 +30,9 @@ class RefreshTokenServiceTest {
     @Mock
     private java.time.Clock clock;
 
+    @Mock
+    private jakarta.persistence.EntityManager entityManager;
+
     @org.junit.jupiter.api.BeforeEach
     void time() { org.mockito.Mockito.when(clock.instant()).thenAnswer(invocation -> Instant.now()); }
 
@@ -50,5 +53,23 @@ class RefreshTokenServiceTest {
 
         assertSame(token, service.verifyExpiration(token));
         verify(refreshTokenRepository, never()).delete(token);
+    }
+
+    @Test
+    void createRefreshToken_storesTheSha256AndReturnsTheClearTokenOnce() throws Exception {
+        var user = com.bowe.meetstudent.entities.UserEntity.builder().id(1).passwordVersion(0).build();
+        org.mockito.Mockito.when(userRepository.findByIdForUpdate(1)).thenReturn(java.util.Optional.of(user));
+        org.mockito.Mockito.when(refreshTokenRepository.save(org.mockito.ArgumentMatchers.any(RefreshToken.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        var issued = service.createRefreshToken(1, 0);
+
+        org.junit.jupiter.api.Assertions.assertEquals(sha256Hex(issued.token()), issued.session().getToken());
+        org.junit.jupiter.api.Assertions.assertNotEquals(issued.token(), issued.session().getToken());
+    }
+
+    private static String sha256Hex(String raw) throws java.security.NoSuchAlgorithmException {
+        return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
+                .digest(raw.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
     }
 }
