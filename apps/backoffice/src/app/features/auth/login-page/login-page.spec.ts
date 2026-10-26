@@ -104,6 +104,7 @@ describe('LoginPage', () => {
     backend.expectOne(`${api}/users/email/a%40x.io`).flush({
       id: 2, firstname: 'S', lastname: 'T', email: 'a@x.io', role: { name: 'ROLE_STUDENT' },
     });
+    backend.expectOne(`${api}/auth/logout`).flush(null, { status: 204, statusText: 'No Content' });
     fixture.detectChanges();
 
     expect(alertText()).toContain('réservé aux administrateurs');
