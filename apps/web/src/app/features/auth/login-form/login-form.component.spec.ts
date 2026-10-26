@@ -41,7 +41,11 @@ describe('LoginFormComponent translations', () => {
     httpMock = TestBed.inject(HttpTestingController);
   });
 
-  afterEach(() => httpMock.verify());
+  afterEach(() => {
+    httpMock.verify();
+    // A successful sign-in persists the session; never hand it to the next spec.
+    localStorage.clear();
+  });
 
   it('renders in French, the source language', async () => {
     await render('fr');
