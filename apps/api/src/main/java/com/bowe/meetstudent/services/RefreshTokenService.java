@@ -146,7 +146,7 @@ public class RefreshTokenService {
      */
     @Transactional
     public void logout(String tokenValue) {
-        refreshTokenRepository.findByToken(tokenValue).ifPresent(token -> {
+        refreshTokenRepository.findByToken(UserTokenService.hash(tokenValue)).ifPresent(token -> {
             Integer userId = token.getUser().getId();
             if (userRepository.findByIdForUpdate(userId).isPresent()) {
                 refreshTokenRepository.deleteBySessionIdAndUserId(token.getSessionId(), userId);
