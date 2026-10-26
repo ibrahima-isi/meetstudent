@@ -50,12 +50,12 @@ public class AuthController {
                 .toList();
 
         int version = principal.getPasswordVersion() == null ? 0 : principal.getPasswordVersion();
-        var refreshToken = refreshTokenService.createRefreshToken(principal.getId(), version);
-        var token = jwtIssuer.issueToken(principal.getId(), principal.getUsername(), roles, version, refreshToken.getSessionId());
+        var issued = refreshTokenService.createRefreshToken(principal.getId(), version);
+        var token = jwtIssuer.issueToken(principal.getId(), principal.getUsername(), roles, version, issued.session().getSessionId());
 
         return LoginResponse.builder()
                 .accessToken(token)
-                .refreshToken(refreshToken.getToken())
+                .refreshToken(issued.token())
                 .build();
     }
 
@@ -72,7 +72,7 @@ public class AuthController {
         var newAccessToken = jwtIssuer.issueToken(user.getId(), user.getEmail(), List.of(roleName), user.getPasswordVersion(), rotation.refreshToken().getSessionId());
         return LoginResponse.builder()
                 .accessToken(newAccessToken)
-                .refreshToken(rotation.refreshToken().getToken())
+                .refreshToken(rotation.token())
                 .build();
     }
 }

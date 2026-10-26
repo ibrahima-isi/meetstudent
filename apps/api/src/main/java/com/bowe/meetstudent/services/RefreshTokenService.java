@@ -20,14 +20,19 @@ import java.util.UUID;
  * Everything that creates, rotates, extends or deletes them first takes the
  * user's row lock ({@link UserRepository#findByIdForUpdate}), the same lock credential changes take, so a refresh
  * and a password change never interleave.
+ * Only the SHA-256 of a refresh secret is stored (same hashing as {@link UserTokenService}); the clear value leaves
+ * the service once, in {@link IssuedSession} or {@link Rotation}, for the response.
  */
 @Service
 @RequiredArgsConstructor
 public class RefreshTokenService {
     private static final Duration INACTIVITY_TIMEOUT = Duration.ofDays(7);
 
-    /** The outcome of a rotation: the (locked, current) user and the replacement refresh token. */
-    public record Rotation(UserEntity user, RefreshToken refreshToken) {}
+    /** A new session and its refresh secret in clear, never stored. */
+    public record IssuedSession(RefreshToken session, String token) {}
+
+    /** The outcome of a rotation: the (locked, current) user, the session and its replacement secret in clear. */
+    public record Rotation(UserEntity user, RefreshToken refreshToken, String token) {}
 
     private final Clock clock;
 
@@ -36,7 +41,7 @@ public class RefreshTokenService {
     private final jakarta.persistence.EntityManager entityManager;
 
     public Optional<RefreshToken> findByToken(String token) {
-        return refreshTokenRepository.findByToken(token);
+        return refreshTokenRepository.findByToken(UserTokenService.hash(token));
     }
 
     /**
@@ -45,7 +50,7 @@ public class RefreshTokenService {
      * race against the change and is refused.
      */
     @Transactional
-    public RefreshToken createRefreshToken(Integer userId, int authenticatedVersion) {
+    public IssuedSession createRefreshToken(Integer userId, int authenticatedVersion) {
         UserEntity user = userRepository.findByIdForUpdate(userId)
                 .orElseThrow(() -> new InvalidRefreshTokenException("User no longer exists"));
         // Authentication loaded this entity before taking the lock: discard that stale snapshot.
@@ -54,10 +59,12 @@ public class RefreshTokenService {
             throw new InvalidRefreshTokenException("Credentials changed during sign-in");
         }
         var now = clock.instant();
-        return refreshTokenRepository.save(RefreshToken.builder().user(user)
+        var secret = UUID.randomUUID().toString();
+        var session = refreshTokenRepository.save(RefreshToken.builder().user(user)
                 .sessionId(UUID.randomUUID()).lastActivity(now)
                 .expiryDate(now.plus(INACTIVITY_TIMEOUT))
-                .token(UUID.randomUUID().toString()).passwordVersion(user.getPasswordVersion()).build());
+                .token(UserTokenService.hash(secret)).passwordVersion(user.getPasswordVersion()).build());
+        return new IssuedSession(session, secret);
     }
 
     /**
@@ -66,21 +73,23 @@ public class RefreshTokenService {
      */
     @Transactional
     public Rotation rotate(String tokenValue) {
-        Integer userId = refreshTokenRepository.findUserIdByToken(tokenValue)
+        var hash = UserTokenService.hash(tokenValue);
+        Integer userId = refreshTokenRepository.findUserIdByToken(hash)
                 .orElseThrow(() -> new InvalidRefreshTokenException("Refresh token is not in database!"));
         UserEntity user = userRepository.findByIdForUpdate(userId)
                 .orElseThrow(() -> new InvalidRefreshTokenException("Refresh token is not in database!"));
         entityManager.refresh(user);
         // Re-read under the lock: a change that committed while we waited has deleted the row.
-        RefreshToken token = refreshTokenRepository.findByToken(tokenValue)
+        RefreshToken token = refreshTokenRepository.findByToken(hash)
                 .orElseThrow(() -> new InvalidRefreshTokenException("Refresh token is not in database!"));
         verifyExpiration(token);
         if (token.getPasswordVersion() != user.getPasswordVersion()) {
             refreshTokenRepository.deleteAllByUserId(userId);
             throw new InvalidRefreshTokenException("Refresh token predates a credential change");
         }
-        token.setToken(UUID.randomUUID().toString());
-        return new Rotation(user, refreshTokenRepository.save(token));
+        var secret = UUID.randomUUID().toString();
+        token.setToken(UserTokenService.hash(secret));
+        return new Rotation(user, refreshTokenRepository.save(token), secret);
     }
 
     public RefreshToken verifyExpiration(RefreshToken token) {

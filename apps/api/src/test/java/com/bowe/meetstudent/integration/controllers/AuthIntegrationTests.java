@@ -16,6 +16,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -142,7 +143,7 @@ class AuthIntegrationTests {
                 .sign(com.auth0.jwt.algorithms.Algorithm.HMAC256(jwtProperties.getSecretKey()));
         refreshTokenRepository.save(com.bowe.meetstudent.entities.RefreshToken.builder().user(user)
                 .sessionId(java.util.UUID.randomUUID()).lastActivity(java.time.Instant.now()).legacy(true)
-                .token("legacy-refresh").expiryDate(java.time.Instant.now().plusSeconds(300)).build());
+                .token(sha256Hex("legacy-refresh")).expiryDate(java.time.Instant.now().plusSeconds(300)).build());
         mockMvc.perform(get("/api/v1/users/id/" + user.getId()).header("Authorization", "Bearer " + legacy))
                 .andExpect(status().isOk());
         var rotated = mockMvc.perform(post("/api/v1/auth/refresh").contentType(MediaType.APPLICATION_JSON)
@@ -168,6 +169,37 @@ class AuthIntegrationTests {
                     .andExpect(status().isUnauthorized());
         }
         credentials(user.getEmail(), "password123");
+    }
+
+    @Test
+    void refreshTokensAreStoredOnlyAsTheirSha256() throws Exception {
+        var user = account("hashed@test.com", "ROLE_STUDENT");
+        var issued = credentials(user.getEmail(), "password123").get("refreshToken").asText();
+        assertThat(refreshTokenRepository.findByToken(issued)).isEmpty();
+        assertThat(refreshTokenRepository.findByToken(sha256Hex(issued))).isPresent();
+
+        var rotated = objectMapper.readTree(mockMvc.perform(post("/api/v1/auth/refresh").contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(java.util.Map.of("refreshToken", issued))))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString()).get("refreshToken").asText();
+        assertThat(rotated).isNotEqualTo(issued);
+        assertThat(refreshTokenRepository.findByToken(rotated)).isEmpty();
+        assertThat(refreshTokenRepository.findByToken(sha256Hex(rotated))).isPresent();
+        assertThat(refreshTokenRepository.findByToken(sha256Hex(issued))).isEmpty();
+    }
+
+    @Test
+    void storedHashIsNotAcceptedAsARefreshToken() throws Exception {
+        var user = account("hash-replay@test.com", "ROLE_STUDENT");
+        var issued = credentials(user.getEmail(), "password123").get("refreshToken").asText();
+        mockMvc.perform(post("/api/v1/auth/refresh").contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(java.util.Map.of("refreshToken", sha256Hex(issued)))))
+                .andExpect(status().isUnauthorized());
+    }
+
+    /** What the database holds for a refresh token: its SHA-256 in lowercase hex, as V35 computes it. */
+    static String sha256Hex(String raw) throws java.security.NoSuchAlgorithmException {
+        return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
+                .digest(raw.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
     }
 
     private com.bowe.meetstudent.entities.UserEntity account(String email, String role) {
@@ -309,7 +341,7 @@ class AuthIntegrationTests {
                 .email("expired@test.com").password("password123").firstname("E").lastname("X")
                 .role(role).build(), passwordEncoder);
         refreshTokenRepository.save(com.bowe.meetstudent.entities.RefreshToken.builder()
-                .user(user).token("expired-token").sessionId(java.util.UUID.randomUUID())
+                .user(user).token(sha256Hex("expired-token")).sessionId(java.util.UUID.randomUUID())
                 .lastActivity(java.time.Instant.now().minus(java.time.Duration.ofDays(8)))
                 .expiryDate(java.time.Instant.now().minusSeconds(60)).build());
 
