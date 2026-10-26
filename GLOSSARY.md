@@ -33,3 +33,8 @@ A user's alert about one forum message (a thread's opening message or a reply), 
 ## Masquer (hide)
 
 The administrator's way to take a message out of the forum without destroying it: a hidden thread or reply is no longer returned to anyone but administrators (neither its text, nor in counts such as a thread's number of replies), its author can no longer edit or delete it, and it can be shown again. Hiding a thread hides its replies with it. Not to be confused with deleting, which is final and also removes the reports on the message.
+
+## Session (appareil)
+
+One device on which a user is signed in. A user can hold several sessions at once, each independent of the others. A session ends after seven days without activity on that device, and every session of the account ends together when its password changes, its e-mail address is confirmed or the account is deleted. Signing out in the browser only forgets the session on that device; it does not end it.
+_Avoid_: token, connexion, login
