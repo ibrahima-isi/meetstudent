@@ -19,6 +19,7 @@ describe('refreshInterceptor', () => {
   let navigate: jasmine.Spy;
   let activeLocale: ReturnType<typeof signal<'fr' | 'en'>>;
 
+  const logoutUrl = `${environment.apiUrl}/auth/logout`;
   const refreshUrl = `${environment.apiUrl}/auth/refresh`;
 
   beforeEach(() => {
@@ -43,6 +44,8 @@ describe('refreshInterceptor', () => {
   });
 
   afterEach(() => {
+    // A logout also ends the session on the server (fire-and-forget); answer it before checking for leftovers.
+    backend.match(logoutUrl).forEach((req) => req.flush(null, { status: 204, statusText: 'No Content' }));
     backend.verify();
     localStorage.clear();
   });
@@ -102,6 +105,7 @@ describe('refreshInterceptor', () => {
     backend.expectOne(refreshUrl).flush(null, { status: 401, statusText: 'Unauthorized' });
 
     expect(auth.logout).toHaveBeenCalledTimes(1);
+    expect(backend.expectOne(logoutUrl).request.body).toEqual({ refreshToken: 'old-refresh' });
     expect(tokens.token()).toBeNull();
     expect(error).toBeTruthy();
   });

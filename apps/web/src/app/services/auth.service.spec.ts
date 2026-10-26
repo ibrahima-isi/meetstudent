@@ -116,4 +116,29 @@ describe('AuthService password reset and capabilities', () => {
     expect(setUser).toHaveBeenCalledWith(fresh as never);
     expect(result).toEqual(fresh);
   });
+
+  it('logout ends the session on the server and clears it locally', () => {
+    const tokens = TestBed.inject(TokenService);
+    tokens.setTokens('a', 'r');
+    service.logout();
+    expect(tokens.isAuthenticated()).toBeFalse();
+    const req = backend.expectOne(`${base}/logout`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ refreshToken: 'r' });
+    req.flush(null, { status: 204, statusText: 'No Content' });
+  });
+
+  it('logout still clears locally when the server call fails', () => {
+    const tokens = TestBed.inject(TokenService);
+    tokens.setTokens('a', 'r');
+    service.logout();
+    backend.expectOne(`${base}/logout`).error(new ProgressEvent('offline'));
+    expect(tokens.isAuthenticated()).toBeFalse();
+  });
+
+  it('logout without a refresh token calls nothing', () => {
+    TestBed.inject(TokenService).clear();
+    service.logout();
+    backend.expectNone(`${base}/logout`);
+  });
 });
