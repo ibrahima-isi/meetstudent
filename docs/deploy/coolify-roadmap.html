@@ -1,0 +1,601 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Roadmap Coolify</title>
+<meta name="description" content="Roadmap interactive et rejouable pour déployer MeetStudent sur un VPS Hetzner piloté par Coolify, e-mails compris.">
+<style>
+:root {
+  --bg: #f7f7f5; --card: #ffffff; --fg: #1d1d1b; --muted: #6b6b66; --border: #e3e2dd;
+  --accent: #2f6f5e; --accent-soft: #e4f0ec; --warn: #8a5a00; --warn-soft: #fbf1dc;
+  --danger: #a33a2c; --code-bg: #f1f0ec; --ph: #b3261e; --ph-soft: #fde8e6; --done: #9a9a94;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #151614; --card: #1d1f1c; --fg: #e9e8e3; --muted: #a2a19b; --border: #31332f;
+    --accent: #7cc4ad; --accent-soft: #1f3530; --warn: #e8b85a; --warn-soft: #3a2f17;
+    --danger: #f08a7c; --code-bg: #262824; --ph: #ff9b8f; --ph-soft: #3d2320; --done: #6d6d68;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #151614; --card: #1d1f1c; --fg: #e9e8e3; --muted: #a2a19b; --border: #31332f;
+  --accent: #7cc4ad; --accent-soft: #1f3530; --warn: #e8b85a; --warn-soft: #3a2f17;
+  --danger: #f08a7c; --code-bg: #262824; --ph: #ff9b8f; --ph-soft: #3d2320; --done: #6d6d68;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--fg); font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+.wrap { max-width: 960px; margin: 0 auto; padding: 24px 16px 80px; }
+header h1 { font-size: 1.6rem; margin: 0 0 4px; }
+header p { margin: 0; color: var(--muted); }
+.bar { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 12px 0; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+.progress { height: 8px; background: var(--border); border-radius: 99px; overflow: hidden; }
+.progress > div { height: 100%; background: var(--accent); width: 0; transition: width .2s; }
+.bar-row { display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-top: 8px; font-size: .9rem; color: var(--muted); }
+.actions { display: flex; gap: 6px; flex-wrap: wrap; }
+button { font: inherit; font-size: .85rem; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--fg); cursor: pointer; }
+button:hover { border-color: var(--accent); }
+button.danger { color: var(--danger); }
+section.card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+details.phase { background: var(--card); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 12px; }
+details.phase > summary { list-style: none; cursor: pointer; padding: 14px 16px; display: flex; gap: 12px; align-items: center; }
+details.phase > summary::-webkit-details-marker { display: none; }
+.phase-num { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); font-weight: 600; font-size: .85rem; }
+.phase-title { flex: 1; font-weight: 600; }
+.phase-count { font-size: .8rem; color: var(--muted); white-space: nowrap; }
+.phase.complete .phase-num { background: var(--accent); color: var(--card); }
+.phase-body { padding: 0 16px 12px; }
+.phase-intro { color: var(--muted); margin: 0 0 8px; }
+.step { border-top: 1px solid var(--border); padding: 12px 0; display: grid; grid-template-columns: 24px 1fr; gap: 10px; }
+.step > div { min-width: 0; }
+.step input[type=checkbox] { width: 18px; height: 18px; margin-top: 3px; accent-color: var(--accent); }
+.step h3 { font-size: 1rem; margin: 0 0 4px; }
+.step.done h3 { color: var(--done); text-decoration: line-through; }
+.step p, .step ul, .step ol { margin: 6px 0; }
+.step ul, .step ol { padding-left: 20px; }
+.who { display: inline-block; font-size: .72rem; padding: 1px 7px; border-radius: 99px; background: var(--code-bg); color: var(--muted); margin-left: 6px; vertical-align: 2px; font-weight: 500; }
+.note { background: var(--warn-soft); color: var(--fg); border-left: 3px solid var(--warn); padding: 8px 10px; border-radius: 6px; margin: 8px 0; font-size: .92rem; }
+.pre { position: relative; margin: 8px 0; }
+pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; overflow-x: auto; font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; margin: 0; white-space: pre; }
+.pre button.copy { position: absolute; top: 6px; right: 6px; font-size: .75rem; padding: 2px 8px; }
+code { font: .9em ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--code-bg); padding: 1px 4px; border-radius: 4px; }
+pre code { background: none; padding: 0; }
+.ph { color: var(--ph); background: var(--ph-soft); border-radius: 3px; padding: 0 2px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px 14px; }
+label.field { display: flex; flex-direction: column; gap: 3px; font-size: .82rem; color: var(--muted); }
+label.field input, label.field select { font: 14px ui-monospace, SFMono-Regular, Menlo, monospace; padding: 7px 8px; border-radius: 7px; border: 1px solid var(--border); background: var(--bg); color: var(--fg); width: 100%; }
+label.field input:focus, label.field select:focus { outline: 2px solid var(--accent); outline-offset: 0; }
+h2 { font-size: 1.15rem; margin: 0 0 8px; }
+.small { font-size: .85rem; color: var(--muted); }
+.hidden { display: none !important; }
+a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Déployer MeetStudent sur Coolify</h1>
+    <p>VPS Hetzner · Coolify · images GHCR · sauvegardes R2 chiffrées · e-mails. Rejouable : remets la progression à zéro et recommence.</p>
+  </header>
+
+  <div class="bar">
+    <div class="progress"><div id="progress-fill"></div></div>
+    <div class="bar-row">
+      <span id="progress-text">0 / 0 étapes</span>
+      <span class="actions">
+        <button id="expand-all" type="button">Tout ouvrir</button>
+        <button id="export" type="button">Exporter (JSON)</button>
+        <button id="import" type="button">Importer</button>
+        <button id="theme" type="button">Thème</button>
+        <button id="reset" type="button" class="danger">Remettre la progression à zéro</button>
+      </span>
+    </div>
+  </div>
+
+  <section class="card">
+    <h2>Tes valeurs</h2>
+    <p class="small">Elles remplacent les <span class="ph">&lt;PLACEHOLDERS&gt;</span> dans toutes les commandes et restent dans ce navigateur. <strong>N'écris jamais de mot de passe, clé ou jeton ici</strong> : ils vont dans Coolify, GitHub et ton gestionnaire de mots de passe, pas dans cette page.</p>
+    <div class="grid" id="fields"></div>
+  </section>
+
+  <div id="phases"></div>
+
+  <section class="card">
+    <h2>Références</h2>
+    <ul class="small">
+      <li><code>docs/plans/2026-10-26-deploy-hetzner-coolify.md</code> : le plan et ses raisons.</li>
+      <li><code>docs/adr/0003-coolify-raw-compose-ghcr.md</code>, <code>docs/adr/0004-encrypted-offsite-backups-r2-eu.md</code> : les décisions.</li>
+      <li><code>.scratch/coolify-deploy/spec.md</code> : la spec du code (compose Coolify, service backup, job deploy).</li>
+      <li><code>docs/DEPLOY.md</code> §2b : e-mails (fournisseurs, tests, dépannage par code d'erreur) ; <code>apps/api/docs/production.md</code> : toutes les variables de l'API.</li>
+    </ul>
+  </section>
+</div>
+
+<input type="file" id="import-file" accept="application/json" class="hidden">
+
+<script>
+(function () {
+  'use strict';
+  var STORE = 'meetstudent-coolify-roadmap-v1';
+
+  // Values the page knows; everything else is a placeholder the owner fills in.
+  var FIELDS = [
+    { key: 'DOMAIN', label: 'Domaine du site et de l’API (sans https://)', def: '', hint: 'ex. meetstudent.me' },
+    { key: 'BO_DOMAIN', label: 'Domaine du back-office', def: '', hint: 'ex. admin.meetstudent.me' },
+    { key: 'DASHBOARD_MODE', label: 'Accès au dashboard Coolify', def: 'tunnel', options: [['tunnel', 'Tunnel SSH uniquement'], ['domain', 'Sous-domaine HTTPS + 2FA']] },
+    { key: 'COOLIFY_DOMAIN', label: 'Domaine du dashboard (si sous-domaine)', def: '', hint: 'ex. coolify.meetstudent.me' },
+    { key: 'VPS_IPV4', label: 'IPv4 du VPS', def: '' },
+    { key: 'VPS_IPV6', label: 'IPv6 du VPS', def: '' },
+    { key: 'MY_IP', label: 'Ton IP publique (pare-feu temporaire)', def: '' },
+    { key: 'SSH_USER', label: 'Utilisateur sudo sur le VPS', def: '' },
+    { key: 'ADMIN_EMAIL', label: 'E-mail du premier admin MeetStudent', def: '' },
+    { key: 'MAIL_PROVIDER', label: 'Fournisseur d’e-mails', def: 'brevo', options: [['brevo', 'Brevo (recommandé)'], ['ses', 'AWS SES'], ['gmail', 'Gmail (démo seulement)'], ['custom', 'Autre SMTP (custom)']] },
+    { key: 'MAIL_FROM', label: 'Expéditeur des e-mails', def: '', hint: 'ex. no-reply@meetstudent.me' },
+    { key: 'CONTACT_RECIPIENT', label: 'Boîte qui reçoit le formulaire de contact', def: '', hint: 'ex. contact@meetstudent.me' },
+    { key: 'MAIL_SES_REGION', label: 'Région SES (si SES)', def: 'eu-west-1' },
+    { key: 'SMTP_HOST', label: 'Hôte SMTP (si custom)', def: '' },
+    { key: 'SMTP_PORT', label: 'Port SMTP (si custom)', def: '587' },
+    { key: 'R2_ACCOUNT_ID', label: 'ID de compte Cloudflare (R2)', def: '' },
+    { key: 'R2_BUCKET', label: 'Nom du bucket R2', def: '', hint: 'ex. meetstudent-backups' },
+    { key: 'GH_REPO', label: 'Dépôt GitHub', def: 'ibrahima-isi/meetstudent' },
+    { key: 'BACKUP_CRON', label: 'Heure de la sauvegarde (cron, UTC)', def: '15 3 * * *' }
+  ];
+
+  var mailProviderHost = { brevo: 'smtp-relay.brevo.com', gmail: 'smtp.gmail.com' };
+
+  // Each step: id (stable, for saved progress), title, who, html (trusted, may hold {{VAR}}), code (array of
+  // shell/text blocks, escaped then filled), when (optional predicate on values).
+  var PHASES = [
+    {
+      title: 'Prérequis dans le code',
+      intro: 'Ce qui doit exister dans le dépôt avant de toucher au serveur.',
+      steps: [
+        { id: 'p0-ticket', who: 'agent / toi', title: 'La spec coolify-deploy est implémentée et fusionnée dans dev',
+          html: '<p>La spec <code>.scratch/coolify-deploy/spec.md</code> doit être livrée : <code>compose.coolify.yml</code> (images GHCR, sans service Traefik), la configuration dynamique Traefik versionnée, le service <code>backup</code> (pg_dump + volumes → rclone crypt → R2), le job <code>deploy</code> dans <code>.github/workflows/ci.yml</code> et la section Coolify de <code>docs/DEPLOY.md</code>.</p><div class="note">Tant que ce n’est pas fait, les phases 9 et 10 ne peuvent pas aboutir. Les noms de variables de sauvegarde ci-dessous (<code>R2_*</code>, <code>BACKUP_CRYPT_*</code>) et le chemin de la configuration dynamique sont ceux proposés ici : <strong>prends ceux que le ticket a réellement choisis</strong>.</div>' },
+        { id: 'p0-main', who: 'toi', title: 'main est à jour avec dev et la CI est verte',
+          html: '<p>Rien n’est déployé tant que <code>main</code> ne bouge pas. On fera la promotion à la phase 10, une fois le serveur prêt.</p>' }
+      ]
+    },
+    {
+      title: 'Comptes et décisions',
+      intro: 'Les choix qui t’appartiennent, et les comptes à ouvrir.',
+      steps: [
+        { id: 'p1-domains', who: 'toi', title: 'Choisir les noms d’hôtes',
+          html: '<p>Deux noms publics : <code>{{DOMAIN}}</code> (site + API, même origine) et <code>{{BO_DOMAIN}}</code> (back-office). Optionnel : <code>{{COOLIFY_DOMAIN}}</code> pour le dashboard, et une redirection <code>www</code>. Renseigne-les en haut de la page.</p>' },
+        { id: 'p1-dashboard', who: 'toi', title: 'Choisir l’accès au dashboard Coolify',
+          html: '<p>Soit un sous-domaine en HTTPS avec 2FA (port 8000 refermé ensuite), soit un tunnel SSH uniquement (port 8000 jamais exposé). Sélectionne le mode en haut : les étapes suivantes s’adaptent.</p>' },
+        { id: 'p1-accounts', who: 'toi', title: 'Ouvrir ou vérifier les comptes',
+          html: '<ul><li>Hetzner Cloud (projet dédié MeetStudent).</li><li>Cloudflare (pour R2 ; le DNS peut rester chez ton registrar).</li><li>Le fournisseur d’e-mails choisi (Brevo recommandé).</li><li>GitHub, avec les droits admin sur <code>{{GH_REPO}}</code>.</li><li>Un gestionnaire de mots de passe avec un coffre « MeetStudent prod ».</li></ul>' }
+      ]
+    },
+    {
+      title: 'VPS Hetzner',
+      intro: 'Créer et durcir la machine.',
+      steps: [
+        { id: 'p2-create', who: 'console Hetzner', title: 'Créer le serveur',
+          html: '<ul><li>Ubuntu 24.04 LTS, <strong>x86</strong>, 4 vCPU / 8 Go (gamme CX ou CPX), Falkenstein ou Nuremberg.</li><li>IPv4 + IPv6, ta clé SSH, <strong>aucun mot de passe</strong>.</li><li>Optionnel : les sauvegardes Hetzner du disque (elles complètent, elles ne remplacent pas la phase 6).</li></ul><p>Note l’IPv4 et l’IPv6 dans les champs en haut.</p>' },
+        { id: 'p2-firewall', who: 'console Hetzner', title: 'Attacher un Cloud Firewall',
+          html: '<p>Il filtre avant la machine, donc Docker ne peut pas le contourner (contrairement à <code>ufw</code>). Règles entrantes :</p><ul><li><code>22/tcp</code>, <code>80/tcp</code>, <code>443/tcp</code> depuis partout.</li><li>Temporaire, pour l’installation de Coolify : <code>8000</code>, <code>6001</code>, <code>6002</code> en TCP <strong>depuis <code>{{MY_IP}}/32</code> seulement</strong>.</li></ul>' },
+        { id: 'p2-harden', who: 'SSH root', title: 'Créer l’utilisateur sudo et durcir SSH',
+          html: '<p>Coolify garde besoin d’un accès root par clé vers localhost : on interdit seulement les mots de passe.</p>',
+          code: ['ssh root@{{VPS_IPV4}}\nadduser {{SSH_USER}} && usermod -aG sudo {{SSH_USER}}\nrsync --archive --chown={{SSH_USER}}:{{SSH_USER}} ~/.ssh /home/{{SSH_USER}}\nsed -i \'s/^#\\?PasswordAuthentication.*/PasswordAuthentication no/; s/^#\\?PermitRootLogin.*/PermitRootLogin prohibit-password/\' /etc/ssh/sshd_config\nsystemctl restart ssh\napt update && apt -y upgrade && apt -y install unattended-upgrades\ndpkg-reconfigure -plow unattended-upgrades'] },
+        { id: 'p2-smtp', who: 'SSH', title: 'Vérifier que le port SMTP 587 sort bien',
+          html: '<p>Hetzner bloque par défaut les ports sortants 25 et 465 sur les nouveaux comptes : on utilise 587 (STARTTLS). Si ce test échoue, demande le déblocage au support Hetzner ou change de port.</p>',
+          code: ['nc -vz {{SMTP_TEST_HOST}} 587'] }
+      ]
+    },
+    {
+      title: 'DNS',
+      intro: 'Faire pointer les noms vers le VPS (chez ton registrar ou chez Cloudflare).',
+      steps: [
+        { id: 'p3-records', who: 'DNS', title: 'Créer les enregistrements A et AAAA',
+          html: '<p>Si le DNS est chez Cloudflare, mets ces enregistrements en <strong>DNS only</strong> (nuage gris) : Let’s Encrypt doit joindre Traefik directement.</p>',
+          code: ['{{DOMAIN}}          A     {{VPS_IPV4}}\n{{DOMAIN}}          AAAA  {{VPS_IPV6}}\n{{BO_DOMAIN}}       A     {{VPS_IPV4}}\n{{BO_DOMAIN}}       AAAA  {{VPS_IPV6}}{{DASHBOARD_DNS}}'] },
+        { id: 'p3-check', who: 'ton poste', title: 'Vérifier la propagation',
+          code: ['dig +short {{DOMAIN}} A\ndig +short {{BO_DOMAIN}} A\ndig +short {{DOMAIN}} AAAA'] }
+      ]
+    },
+    {
+      title: 'Installer Coolify',
+      intro: 'Le premier visiteur du dashboard en devient l’admin : enchaîne les étapes 1 et 2 sans pause.',
+      steps: [
+        { id: 'p4-install', who: 'SSH', title: 'Lancer le script d’installation',
+          code: ['curl -fsSL https://cdn.coollabs.io/coolify/install.sh | sudo bash'] },
+        { id: 'p4-admin', who: 'navigateur', title: 'Créer tout de suite le compte admin Coolify',
+          html: '<p>Ouvre <code>http://{{VPS_IPV4}}:8000</code>, crée le compte, puis active la <strong>2FA</strong> dans ton profil. Range le mot de passe et les codes de secours dans le coffre.</p>' },
+        { id: 'p4-proxy', who: 'Coolify', title: 'Démarrer le proxy Traefik',
+          html: '<p>Servers → localhost → Proxy : garde <strong>Traefik</strong> et démarre-le. C’est lui qui portera nos routes, nos middlewares et les certificats Let’s Encrypt.</p>' },
+        { id: 'p4-settings', who: 'Coolify', title: 'Réglages de l’instance',
+          html: '<ul><li>Settings → Configuration : désactive la mise à jour automatique de Coolify (tu la feras à la main, après une sauvegarde).</li><li>Settings → Configuration → Advanced : active <strong>API Access</strong>.</li><li>Keys &amp; Tokens → API tokens : crée un jeton avec la permission <strong>deploy</strong>, copie-le dans le coffre (il ne sera plus affiché). Il servira à GitHub (phase 8).</li></ul><p class="small">Les libellés peuvent varier selon la version de Coolify.</p>' },
+        { id: 'p4-dash-domain', who: 'Coolify + Hetzner', title: 'Servir le dashboard sur son domaine, puis fermer 8000',
+          when: function (v) { return v.DASHBOARD_MODE === 'domain'; },
+          html: '<ol><li>Settings → Instance domain : <code>https://{{COOLIFY_DOMAIN}}</code>. Attends le certificat, puis ouvre-le.</li><li>Dans le Cloud Firewall Hetzner, supprime les règles temporaires 8000, 6001 et 6002.</li><li>Vérifie que <code>http://{{VPS_IPV4}}:8000</code> ne répond plus.</li></ol>' },
+        { id: 'p4-dash-tunnel', who: 'ton poste + Hetzner', title: 'Passer au tunnel SSH, puis fermer 8000',
+          when: function (v) { return v.DASHBOARD_MODE !== 'domain'; },
+          html: '<p>Supprime les règles temporaires 8000, 6001 et 6002 du Cloud Firewall, puis accède au dashboard via le tunnel, sur <code>http://localhost:8000</code> :</p>',
+          code: ['ssh -N -L 8000:localhost:8000 -L 6001:localhost:6001 -L 6002:localhost:6002 {{SSH_USER}}@{{VPS_IPV4}}'] }
+      ]
+    },
+    {
+      title: 'Middlewares Traefik (sécurité)',
+      intro: 'Les protections déjà validées en production : en-têtes, limites de débit, limite d’upload, redirection HTTPS.',
+      steps: [
+        { id: 'p5-dynamic', who: 'Coolify', title: 'Ajouter la configuration dynamique MeetStudent',
+          html: '<p>Servers → localhost → Proxy → Dynamic configurations → ajoute un fichier <code>meetstudent.yaml</code>. Si le ticket a versionné ce fichier dans le dépôt, <strong>copie la version du dépôt</strong> ; sinon, voici la référence, dérivée de <code>compose.prod.yml</code>. Les routes de <code>compose.coolify.yml</code> les référencent en <code>&lt;nom&gt;@file</code>.</p>',
+          code: ['http:\n  middlewares:\n    sec:\n      headers:\n        stsSeconds: 31536000\n        stsIncludeSubdomains: true\n        contentTypeNosniff: true\n        frameDeny: true\n        referrerPolicy: strict-origin-when-cross-origin\n        permissionsPolicy: "camera=(), microphone=(), geolocation=()"\n        contentSecurityPolicy: "frame-ancestors \'none\'"\n    strip-forwarded:\n      headers:\n        customRequestHeaders:\n          Forwarded: ""\n    rl-auth:\n      rateLimit:\n        average: 10\n        period: 1m\n        burst: 5\n    rl-api:\n      rateLimit:\n        average: 30\n        period: 1s\n        burst: 100\n    upload-limit:\n      buffering:\n        maxRequestBodyBytes: 10485760\n        memRequestBodyBytes: 1048576\n    meetstudent-to-https:\n      redirectScheme:\n        scheme: https\n        permanent: true\n  routers:\n    meetstudent-http:\n      rule: "Host(`{{DOMAIN}}`) || Host(`{{BO_DOMAIN}}`)"\n      entryPoints: [http]\n      middlewares: [meetstudent-to-https]\n      service: noop@internal'] },
+        { id: 'p5-names', who: 'Coolify', title: 'Vérifier les noms du proxy de cette instance',
+          html: '<p>Dans la configuration du proxy, repère le nom des entrées (<code>http</code>/<code>https</code>), du résolveur de certificats (<code>letsencrypt</code>) et du réseau (<code>coolify</code>). S’ils diffèrent, adapte les labels de <code>compose.coolify.yml</code>, pas cette page.</p>' }
+      ]
+    },
+    {
+      title: 'Sauvegardes : Cloudflare R2',
+      intro: 'Stockage hors de chez Hetzner, juridiction EU, chiffré côté serveur MeetStudent (ADR 0004).',
+      steps: [
+        { id: 'p6-bucket', who: 'Cloudflare', title: 'Créer le bucket en juridiction EU',
+          html: '<p>R2 → Create bucket : <code>{{R2_BUCKET}}</code>, <strong>Jurisdiction : European Union</strong>. Note l’ID de compte (en haut de la page R2) dans le champ <code>R2_ACCOUNT_ID</code>.</p>' },
+        { id: 'p6-lifecycle', who: 'Cloudflare', title: 'Règle de cycle de vie : 30 jours',
+          html: '<p>Bucket → Settings → Object lifecycle rules : supprimer les objets plus vieux que <strong>30 jours</strong>.</p>' },
+        { id: 'p6-token', who: 'Cloudflare', title: 'Jeton API limité à ce bucket',
+          html: '<p>R2 → Manage API tokens → Create : permission <em>Object Read &amp; Write</em>, <strong>uniquement</strong> sur <code>{{R2_BUCKET}}</code>. Range l’Access Key ID et le Secret dans le coffre. Endpoint à utiliser :</p>',
+          code: ['https://{{R2_ACCOUNT_ID}}.eu.r2.cloudflarestorage.com'] },
+        { id: 'p6-crypt', who: 'ton poste', title: 'Générer le mot de passe et le sel de chiffrement',
+          html: '<p><strong>Range les deux valeurs brutes dans le coffre AVANT la première sauvegarde</strong> : sans elles, une sauvegarde est irrécupérable. rclone attend dans ses variables la forme « obscurcie » : génère-la avec la commande du bas et mets-la dans Coolify.</p>',
+          code: ['openssl rand -base64 32   # mot de passe (valeur brute -> coffre)\nopenssl rand -base64 32   # sel (valeur brute -> coffre)', 'docker run --rm rclone/rclone obscure \'<valeur brute>\'   # -> variable Coolify'] }
+      ]
+    },
+    {
+      title: 'E-mails',
+      intro: 'Vérification d’adresse, mot de passe oublié, changement d’e-mail, formulaire de contact, décisions sur les experts. Détails et dépannage : docs/DEPLOY.md §2b.',
+      steps: [
+        { id: 'p7-inbox', who: 'DNS / registrar', title: 'Avoir une vraie boîte pour {{CONTACT_RECIPIENT}}',
+          html: '<p>Le formulaire de contact y est envoyé (avec <code>Reply-To</code> = le visiteur). Sans hébergement mail, le plus simple est un renvoi gratuit vers ta boîte perso, par exemple <em>Cloudflare Email Routing</em> (il ajoute ses propres MX et une entrée SPF) ou le renvoi de ton registrar.</p>' },
+        { id: 'p7-brevo-domain', who: 'Brevo', title: 'Authentifier le domaine d’envoi dans Brevo',
+          when: function (v) { return v.MAIL_PROVIDER === 'brevo'; },
+          html: '<ol><li>Senders, Domains &amp; Dedicated IPs → Domains → ajoute le domaine de <code>{{MAIL_FROM}}</code>.</li><li>Brevo affiche les enregistrements à créer (code de vérification, DKIM, DMARC) : crée-les tels quels dans ton DNS.</li><li>Senders → ajoute et valide <code>{{MAIL_FROM}}</code>.</li><li>SMTP &amp; API → SMTP : note le <strong>login SMTP</strong> et génère une <strong>clé SMTP</strong> (pas la clé API) → coffre.</li></ol>' },
+        { id: 'p7-ses', who: 'AWS', title: 'Préparer SES',
+          when: function (v) { return v.MAIL_PROVIDER === 'ses'; },
+          html: '<ol><li>Dans la région <code>{{MAIL_SES_REGION}}</code> : identité vérifiée pour le domaine de <code>{{MAIL_FROM}}</code> avec Easy DKIM (enregistrements DNS fournis).</li><li>SMTP settings → crée les <strong>identifiants SMTP</strong> (ce ne sont pas les clés IAM) → coffre.</li><li>Demande l’accès production : en sandbox, seules les adresses vérifiées reçoivent.</li></ol>' },
+        { id: 'p7-gmail', who: 'Google', title: 'Préparer Gmail (démo seulement)',
+          when: function (v) { return v.MAIL_PROVIDER === 'gmail'; },
+          html: '<p>Validation en deux étapes active, puis un <strong>mot de passe d’application</strong> (16 lettres) → coffre. Gmail réécrit toujours l’expéditeur et limite le volume quotidien : ne pas utiliser en production.</p>' },
+        { id: 'p7-custom', who: 'fournisseur', title: 'Préparer le SMTP custom',
+          when: function (v) { return v.MAIL_PROVIDER === 'custom'; },
+          html: '<p>Récupère l’hôte <code>{{SMTP_HOST}}</code>, le port (<code>587</code> STARTTLS de préférence ; <code>465</code> TLS implicite est bloqué par défaut chez Hetzner), le login et le mot de passe → coffre. Authentifie le domaine d’envoi selon la doc du fournisseur.</p>' },
+        { id: 'p7-spf', who: 'DNS', title: 'SPF, DKIM et DMARC du domaine d’envoi',
+          html: '<ul><li><strong>Un seul</strong> enregistrement SPF par domaine : fusionne les <code>include:</code> du fournisseur d’envoi et du renvoi de mails (ex. Brevo + Cloudflare Email Routing). Prends les valeurs exactes données par chaque fournisseur.</li><li>DKIM : les enregistrements donnés par le fournisseur.</li><li>DMARC, pour commencer en simple observation :</li></ul>',
+          code: ['_dmarc.<domaine de MAIL_FROM>   TXT   "v=DMARC1; p=none; rua=mailto:{{CONTACT_RECIPIENT}}"'] },
+        { id: 'p7-coolify-notif', who: 'Coolify', title: 'Notifications Coolify par e-mail',
+          html: '<p>Settings → Transactional email (ou Notifications → Email) : réutilise le même SMTP, destinataire = toi. Active les alertes « déploiement échoué » et « tâche planifiée échouée » : c’est ainsi que tu sauras qu’une sauvegarde a raté.</p>' }
+      ]
+    },
+    {
+      title: 'GitHub',
+      intro: 'Laisser la CI publier les images et déclencher Coolify.',
+      steps: [
+        { id: 'p8-env', who: 'GitHub', title: 'Créer l’environnement production',
+          html: '<p>Settings → Environments → New environment <code>production</code> → Deployment branches : <code>main</code> uniquement.</p>' },
+        { id: 'p8-secrets', who: 'GitHub', title: 'Ajouter les secrets de déploiement',
+          html: '<ul><li><code>COOLIFY_TOKEN</code> : le jeton API Coolify (phase 4).</li><li><code>COOLIFY_WEBHOOK</code> : l’URL « Deploy Webhook (auth required) » de la ressource (tu l’obtiens à la phase 9, étape 4 ; reviens cocher ici).</li></ul>' },
+        { id: 'p8-public', who: 'GitHub', title: 'Après le premier push : rendre les images publiques',
+          html: '<p>Les packages GHCR naissent privés. Après le premier run du job <code>deploy</code>, ouvre chaque package (<code>meetstudent-api</code>, <code>meetstudent-web</code>, <code>meetstudent-backoffice</code>) → Package settings → Change visibility → <strong>Public</strong>. Sinon Coolify ne peut pas les tirer.</p>' }
+      ]
+    },
+    {
+      title: 'Ressource Coolify',
+      intro: 'Déclarer la stack MeetStudent dans Coolify.',
+      steps: [
+        { id: 'p9-resource', who: 'Coolify', title: 'Créer le projet et la ressource',
+          html: '<ol><li>Projects → New : <code>MeetStudent</code>, environnement <code>production</code>.</li><li>New resource → Public repository : <code>https://github.com/{{GH_REPO}}</code>, branche <code>main</code>, build pack <strong>Docker Compose</strong>, chemin <code>/compose.coolify.yml</code>.</li><li>Advanced → Docker compose : <strong>Raw</strong> activé. <strong>Auto deploy désactivé</strong> (seul le webhook de la CI déploie, une fois les images poussées).</li></ol>' },
+        { id: 'p9-env', who: 'Coolify', title: 'Renseigner les variables d’environnement',
+          html: '<p>Environment variables → mode édition en bloc (Developer view) : colle le bloc ci-dessous, puis remplace chaque <span class="ph">&lt;…&gt;</span> par la vraie valeur (générée ou tirée du coffre). Marque les secrets comme tels. Pas de <code>$</code> dans les secrets. <code>POSTGRES_PASSWORD</code> n’est appliqué qu’à la création du volume.</p>',
+          code: ['{{ENV_BLOCK}}', '# Générer les secrets :\nopenssl rand -base64 48                  # JWT_SECRET_KEY\nopenssl rand -base64 32 | tr -d \'/+=\\n\'   # POSTGRES_PASSWORD\nopenssl rand -base64 18                  # ADMIN_PASSWORD (12+ caractères)'] },
+        { id: 'p9-backup-task', who: 'Coolify', title: 'Planifier la sauvegarde nocturne',
+          html: '<p>Scheduled Tasks → New : fréquence <code>{{BACKUP_CRON}}</code>, conteneur <code>backup</code>, commande définie par le ticket (proposée : <code>/usr/local/bin/backup.sh</code>).</p>' },
+        { id: 'p9-webhook', who: 'Coolify → GitHub', title: 'Copier le webhook dans GitHub',
+          html: '<p>Configuration → Webhooks : copie « Deploy Webhook (auth required) » dans le secret GitHub <code>COOLIFY_WEBHOOK</code> (environnement <code>production</code>), puis coche la phase 8.</p>' }
+      ]
+    },
+    {
+      title: 'Premier déploiement et vérifications',
+      intro: 'La production est prête quand tout ceci est vert.',
+      steps: [
+        { id: 'p10-promote', who: 'toi', title: 'Promouvoir dev sur main',
+          html: '<p>Selon la règle du dépôt (avance rapide, jamais de merge commit ; nécessite le contournement du ruleset) :</p>',
+          code: ['git fetch origin && git push origin origin/dev:main'] },
+        { id: 'p10-ci', who: 'GitHub', title: 'Suivre la CI jusqu’au job deploy',
+          html: '<p>Actions : les trois jobs de tests passent, puis <code>deploy</code> pousse les images et appelle le webhook. Pense à la phase 8, étape 3 (images publiques) si Coolify n’arrive pas à les tirer.</p>' },
+        { id: 'p10-healthy', who: 'Coolify', title: 'Tous les conteneurs sont healthy',
+          html: '<p>Dans les logs de déploiement : <code>db</code>, <code>api</code> (environ 1 min), <code>web</code>, <code>backoffice</code> et <code>backup</code> démarrés et healthy. Dans les logs de l’API : <code>Email sending is enabled (provider preset: {{MAIL_PROVIDER}})</code> ; une erreur de config e-mail arrête l’API en nommant la variable.</p>' },
+        { id: 'p10-http', who: 'ton poste', title: 'Vérifier HTTPS, routage et en-têtes',
+          code: ['curl -sI http://{{DOMAIN}} | head -3                 # 301/308 vers https\ncurl -sI https://{{DOMAIN}} | grep -iE "^HTTP|strict-transport|x-content-type"\ncurl -s https://{{DOMAIN}}/api/v1/schools | head -c 200\ncurl -sI https://{{BO_DOMAIN}} | head -3\ncurl -s https://{{BO_DOMAIN}}/config.json             # {"apiUrl":"https://{{DOMAIN}}/api/v1", ...}\ncurl -sI https://{{DOMAIN}}/swagger-ui.html | head -1  # PAS 200 (profil prod)'] },
+        { id: 'p10-limits', who: 'ton poste', title: 'Vérifier les limites',
+          html: '<p>Une rafale de connexions finit en 429, et un upload de plus de 10 Mo est refusé (à tester depuis le site, connecté).</p>',
+          code: ['for i in $(seq 1 25); do curl -s -o /dev/null -w "%{http_code} " -X POST https://{{DOMAIN}}/api/v1/auth -H "Content-Type: application/json" -d \'{"username":"nobody@example.com","password":"wrong-password"}\'; done; echo'] },
+        { id: 'p10-mailtest', who: 'ton poste', title: 'Auto-test SMTP de l’admin',
+          html: '<p>Attendu : <code>200 {"status":"SENT"}</code> et un court mail FR + EN dans la boîte de <code>{{ADMIN_EMAIL}}</code>. Sinon le code renvoyé (<code>AUTH_FAILED</code>, <code>CONNECTION_FAILED</code>, <code>TLS_FAILED</code>, <code>REJECTED</code>, <code>FAILED</code>, <code>503 DISABLED</code>) renvoie au tableau de dépannage de <code>docs/DEPLOY.md</code> §2b.</p>',
+          code: ['read -rs ADMIN_PASSWORD   # tape le mot de passe admin, rien ne s\'affiche\nTOKEN=$(curl -s -X POST https://{{DOMAIN}}/api/v1/auth -H "Content-Type: application/json" \\\n  -d "{\\"username\\":\\"{{ADMIN_EMAIL}}\\",\\"password\\":\\"$ADMIN_PASSWORD\\"}" | jq -r .accessToken)\ncurl -s -i -X POST https://{{DOMAIN}}/api/v1/admin/mail/test -H "Authorization: Bearer $TOKEN"\nunset ADMIN_PASSWORD TOKEN'] },
+        { id: 'p10-mailflows', who: 'navigateur', title: 'Tester les e-mails de bout en bout',
+          html: '<ul><li>Inscription avec une vraie boîte : le mail de vérification arrive, le lien commence par <code>https://{{DOMAIN}}</code>.</li><li><code>https://{{DOMAIN}}/fr/forgot-password</code> : le mail de réinitialisation arrive.</li><li><code>https://{{DOMAIN}}/fr/contact</code> : <code>{{CONTACT_RECIPIENT}}</code> reçoit <code>[Contact] &lt;sujet&gt;</code> ; dans le back-office, le message est <code>SENT</code>.</li><li>Inscription « enseignant » : mail « demande reçue » ; approbation depuis le back-office : mail « approuvé ».</li><li>Dans un mail reçu, l’en-tête <code>Authentication-Results</code> montre <code>spf=pass</code>, <code>dkim=pass</code>, <code>dmarc=pass</code>.</li></ul>' },
+        { id: 'p10-smoke', who: 'navigateur', title: 'Smoke test applicatif',
+          html: '<ul><li>Site : page d’accueil en HTTPS, inscription étudiant, profil, upload d’un document (&lt; 10 Mo), réouverture du document, logos d’écoles affichés, déconnexion.</li><li>Back-office <code>https://{{BO_DOMAIN}}</code> : connexion avec <code>{{ADMIN_EMAIL}}</code>, modération du document, aucune erreur CORS dans la console, déconnexion.</li></ul>' },
+        { id: 'p10-backup', who: 'Coolify', title: 'Lancer une sauvegarde à la main, puis la restaurer',
+          html: '<p>Exécute la tâche planifiée maintenant, vérifie l’objet chiffré dans <code>{{R2_BUCKET}}</code>, puis restaure-la dans une stack jetable (commande de restauration du service <code>backup</code>, voir la section Coolify de <code>docs/DEPLOY.md</code>) et ouvre un document uploadé. <strong>Une sauvegarde jamais restaurée n’est pas une sauvegarde.</strong></p>' }
+      ]
+    },
+    {
+      title: 'Exploitation (à rejouer)',
+      intro: 'Les gestes réguliers après la mise en ligne.',
+      steps: [
+        { id: 'p11-rollback', who: 'Coolify', title: 'Savoir revenir en arrière',
+          html: '<p>Fixe <code>IMAGE_TAG=sha-&lt;commit sain&gt;</code> dans les variables, puis Redeploy. Remets <code>latest</code> une fois <code>main</code> corrigé : tant que le tag est fixé, les déploiements restent sur cette version. Une migration Flyway ne s’annule pas : restaure la sauvegarde prise juste avant.</p>' },
+        { id: 'p11-update', who: 'Coolify', title: 'Mettre Coolify à jour (à la main)',
+          html: '<p>Après une sauvegarde manuelle réussie ; puis revérifie la phase 10, étape 4.</p>' },
+        { id: 'p11-restore', who: 'toi', title: 'Test de restauration trimestriel',
+          html: '<p>Rejoue la phase 10, étape 9, au moins une fois par trimestre.</p>' },
+        { id: 'p11-docs', who: 'toi', title: 'Mettre à jour le mémoire',
+          html: '<p>Sections CI/CD et Sécurité : la livraison continue et les sauvegardes hors site deviennent des faits.</p>' }
+      ]
+    }
+  ];
+
+  function load() {
+    try { return JSON.parse(localStorage.getItem(STORE)) || {}; } catch (e) { return {}; }
+  }
+  function save() {
+    try { localStorage.setItem(STORE, JSON.stringify(state)); } catch (e) { /* private window: progress is not kept */ }
+  }
+
+  var state = load();
+  state.values = state.values || {};
+  state.done = state.done || {};
+  FIELDS.forEach(function (f) { if (state.values[f.key] === undefined) state.values[f.key] = f.def; });
+
+  function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function envBlock(v) {
+    var p = v.MAIL_PROVIDER;
+    var lines = [
+      '# --- Application ---',
+      'DOMAIN=' + (v.DOMAIN || '<DOMAIN>'),
+      'BO_DOMAIN=' + (v.BO_DOMAIN || '<BO_DOMAIN>'),
+      'IMAGE_TAG=latest',
+      'CORS_ALLOWED_ORIGINS=https://' + (v.DOMAIN || '<DOMAIN>') + ',https://' + (v.BO_DOMAIN || '<BO_DOMAIN>'),
+      'JWT_SECRET_KEY=<openssl rand -base64 48>',
+      'JWT_ACCESS_TTL_MINUTES=15',
+      'POSTGRES_PASSWORD=<openssl rand -base64 32 | tr -d \'/+=\\n\'>',
+      'ADMIN_EMAIL=' + (v.ADMIN_EMAIL || '<ADMIN_EMAIL>'),
+      'ADMIN_PASSWORD=<12+ caractères, depuis le coffre>',
+      '',
+      '# --- E-mails ---',
+      'MAIL_ENABLED=true',
+      'MAIL_PROVIDER=' + p,
+      'MAIL_FROM=' + (v.MAIL_FROM || '<MAIL_FROM>'),
+      'CONTACT_RECIPIENT=' + (v.CONTACT_RECIPIENT || '<CONTACT_RECIPIENT>'),
+      'FRONTEND_BASE_URL=https://' + (v.DOMAIN || '<DOMAIN>')
+    ];
+    if (p === 'brevo') lines.push('SPRING_MAIL_USERNAME=<login SMTP Brevo>', 'SPRING_MAIL_PASSWORD=<clé SMTP Brevo (pas la clé API)>');
+    if (p === 'ses') lines.push('MAIL_SES_REGION=' + (v.MAIL_SES_REGION || 'eu-west-1'), 'SPRING_MAIL_USERNAME=<SMTP username SES>', 'SPRING_MAIL_PASSWORD=<SMTP password SES>');
+    if (p === 'gmail') lines.push('SPRING_MAIL_USERNAME=<adresse Gmail>', 'SPRING_MAIL_PASSWORD=<mot de passe d\'application Gmail>');
+    if (p === 'custom') lines.push(
+      'SPRING_MAIL_HOST=' + (v.SMTP_HOST || '<SMTP_HOST>'),
+      'SPRING_MAIL_PORT=' + (v.SMTP_PORT || '587'),
+      'SPRING_MAIL_USERNAME=<login SMTP>',
+      'SPRING_MAIL_PASSWORD=<mot de passe SMTP>',
+      'SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=true',
+      'SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=true',
+      'SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED=true');
+    lines.push(
+      '',
+      '# --- Sauvegardes (noms à aligner sur le ticket coolify-deploy) ---',
+      'R2_ACCOUNT_ID=' + (v.R2_ACCOUNT_ID || '<R2_ACCOUNT_ID>'),
+      'R2_BUCKET=' + (v.R2_BUCKET || '<R2_BUCKET>'),
+      'R2_ENDPOINT=https://' + (v.R2_ACCOUNT_ID || '<R2_ACCOUNT_ID>') + '.eu.r2.cloudflarestorage.com',
+      'R2_ACCESS_KEY_ID=<Access Key ID du jeton R2>',
+      'R2_SECRET_ACCESS_KEY=<Secret du jeton R2>',
+      'BACKUP_CRYPT_PASSWORD=<valeur obscurcie par rclone obscure>',
+      'BACKUP_CRYPT_SALT=<valeur obscurcie par rclone obscure>');
+    return lines.join('\n');
+  }
+
+  function computed(v) {
+    var c = {};
+    // A custom host is filled (or shown as a placeholder) by the second pass of fill().
+    c.SMTP_TEST_HOST = mailProviderHost[v.MAIL_PROVIDER]
+      || (v.MAIL_PROVIDER === 'ses' ? 'email-smtp.' + (v.MAIL_SES_REGION || 'eu-west-1') + '.amazonaws.com' : '{{SMTP_HOST}}');
+    c.DASHBOARD_DNS = v.DASHBOARD_MODE === 'domain'
+      ? '\n{{COOLIFY_DOMAIN}}  A     {{VPS_IPV4}}\n{{COOLIFY_DOMAIN}}  AAAA  {{VPS_IPV6}}' : '';
+    c.ENV_BLOCK = envBlock(v);
+    return c;
+  }
+
+  // Fill {{VAR}} in already-escaped text: known values are escaped, missing ones become a visible placeholder.
+  function fill(text, v, c, escaped) {
+    var out = text;
+    for (var pass = 0; pass < 2; pass++) {
+      out = out.replace(/\{\{([A-Z0-9_]+)\}\}/g, function (m, key) {
+        if (c[key] !== undefined) return escaped ? esc(c[key]) : c[key];
+        var val = v[key];
+        return val ? esc(val) : '<span class="ph">&lt;' + key + '&gt;</span>';
+      });
+    }
+    return out;
+  }
+
+  function placeholdersToText(html) {
+    var d = document.createElement('div');
+    d.innerHTML = html;
+    return d.textContent;
+  }
+
+  function renderFields() {
+    var host = document.getElementById('fields');
+    host.innerHTML = '';
+    FIELDS.forEach(function (f) {
+      var label = document.createElement('label');
+      label.className = 'field';
+      label.textContent = f.label;
+      var input;
+      if (f.options) {
+        input = document.createElement('select');
+        f.options.forEach(function (o) {
+          var opt = document.createElement('option');
+          opt.value = o[0]; opt.textContent = o[1];
+          input.appendChild(opt);
+        });
+      } else {
+        input = document.createElement('input');
+        input.type = 'text';
+        input.placeholder = f.hint || '';
+        input.autocomplete = 'off';
+        input.spellcheck = false;
+      }
+      input.value = state.values[f.key] || '';
+      input.addEventListener('input', function () {
+        state.values[f.key] = input.value.trim();
+        save();
+        renderPhases();
+      });
+      label.appendChild(input);
+      host.appendChild(label);
+    });
+  }
+
+  function visibleSteps(phase, v) {
+    return phase.steps.filter(function (s) { return !s.when || s.when(v); });
+  }
+
+  var openPhases = {};
+
+  function renderPhases() {
+    var v = state.values, c = computed(v);
+    var host = document.getElementById('phases');
+    var total = 0, done = 0;
+    host.innerHTML = '';
+    PHASES.forEach(function (phase, i) {
+      var steps = visibleSteps(phase, v);
+      var phaseDone = steps.filter(function (s) { return state.done[s.id]; }).length;
+      total += steps.length; done += phaseDone;
+
+      var det = document.createElement('details');
+      det.className = 'phase' + (phaseDone === steps.length ? ' complete' : '');
+      if (openPhases[i] !== undefined ? openPhases[i] : phaseDone < steps.length && i === firstOpenPhase(v)) det.open = true;
+      det.addEventListener('toggle', function () { openPhases[i] = det.open; });
+
+      var sum = document.createElement('summary');
+      sum.innerHTML = '<span class="phase-num">' + i + '</span><span class="phase-title">' + esc(phase.title) +
+        '</span><span class="phase-count">' + phaseDone + ' / ' + steps.length + '</span>';
+      det.appendChild(sum);
+
+      var body = document.createElement('div');
+      body.className = 'phase-body';
+      if (phase.intro) body.innerHTML = '<p class="phase-intro">' + esc(phase.intro) + '</p>';
+
+      steps.forEach(function (s, j) {
+        var row = document.createElement('div');
+        row.className = 'step' + (state.done[s.id] ? ' done' : '');
+        var cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = !!state.done[s.id];
+        cb.id = 'cb-' + s.id;
+        cb.setAttribute('aria-label', s.title);
+        cb.addEventListener('change', function () {
+          if (cb.checked) state.done[s.id] = new Date().toISOString(); else delete state.done[s.id];
+          save();
+          renderPhases();
+        });
+        var main = document.createElement('div');
+        var html = '<h3>' + (j + 1) + '. ' + fill(esc(s.title), v, c, true) +
+          (s.who ? '<span class="who">' + esc(s.who) + '</span>' : '') + '</h3>';
+        if (s.html) html += fill(s.html, v, c, true);
+        (s.code || []).forEach(function (block) {
+          html += '<div class="pre"><button type="button" class="copy">Copier</button><pre><code>' +
+            fill(esc(block), v, c, true) + '</code></pre></div>';
+        });
+        main.innerHTML = html;
+        main.querySelectorAll('button.copy').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var text = placeholdersToText(btn.nextElementSibling.innerHTML);
+            var ok = function () { btn.textContent = 'Copié'; setTimeout(function () { btn.textContent = 'Copier'; }, 1200); };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(text).then(ok, function () { fallbackCopy(text); ok(); });
+            } else { fallbackCopy(text); ok(); }
+          });
+        });
+        row.appendChild(cb);
+        row.appendChild(main);
+        body.appendChild(row);
+      });
+      det.appendChild(body);
+      host.appendChild(det);
+    });
+    document.getElementById('progress-fill').style.width = (total ? Math.round(done * 100 / total) : 0) + '%';
+    document.getElementById('progress-text').textContent = done + ' / ' + total + ' étapes';
+  }
+
+  function firstOpenPhase(v) {
+    for (var i = 0; i < PHASES.length; i++) {
+      var steps = visibleSteps(PHASES[i], v);
+      if (steps.some(function (s) { return !state.done[s.id]; })) return i;
+    }
+    return -1;
+  }
+
+  function fallbackCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } catch (e) { /* nothing else to try */ }
+    ta.remove();
+  }
+
+  document.getElementById('reset').addEventListener('click', function () {
+    if (!confirm('Décocher toutes les étapes ? Tes valeurs sont gardées.')) return;
+    state.done = {};
+    openPhases = {};
+    save();
+    renderPhases();
+  });
+  document.getElementById('expand-all').addEventListener('click', function () {
+    var all = document.querySelectorAll('details.phase');
+    var open = Array.prototype.some.call(all, function (d) { return !d.open; });
+    all.forEach(function (d, i) { d.open = open; openPhases[i] = open; });
+    this.textContent = open ? 'Tout fermer' : 'Tout ouvrir';
+  });
+  document.getElementById('export').addEventListener('click', function () {
+    var blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'meetstudent-coolify-roadmap-' + new Date().toISOString().slice(0, 10) + '.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+  document.getElementById('import').addEventListener('click', function () { document.getElementById('import-file').click(); });
+  document.getElementById('import-file').addEventListener('change', function () {
+    var file = this.files[0];
+    if (!file) return;
+    file.text().then(function (txt) {
+      try {
+        var data = JSON.parse(txt);
+        state.values = Object.assign({}, state.values, data.values || {});
+        state.done = data.done || {};
+        save(); renderFields(); renderPhases();
+      } catch (e) { alert('Fichier JSON illisible.'); }
+    });
+    this.value = '';
+  });
+  document.getElementById('theme').addEventListener('click', function () {
+    var root = document.documentElement;
+    var dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+    root.dataset.theme = dark ? 'light' : 'dark';
+    try { localStorage.setItem(STORE + '-theme', root.dataset.theme); } catch (e) { /* ignore */ }
+  });
+  try { var t = localStorage.getItem(STORE + '-theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) { /* ignore */ }
+
+  renderFields();
+  renderPhases();
+})();
+</script>
+</body>
+</html>
