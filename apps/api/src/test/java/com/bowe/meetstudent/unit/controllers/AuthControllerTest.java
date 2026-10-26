@@ -80,8 +80,8 @@ class AuthControllerTest {
                 .thenReturn(expectedToken);
         
         // Mock Refresh Token
-        RefreshToken refreshToken = RefreshToken.builder().token(expectedRefreshToken).build();
-        when(refreshTokenService.createRefreshToken(principal.getId(), 0)).thenReturn(refreshToken);
+        var issued = new RefreshTokenService.IssuedSession(RefreshToken.builder().token("stored-hash").build(), expectedRefreshToken);
+        when(refreshTokenService.createRefreshToken(principal.getId(), 0)).thenReturn(issued);
 
         // Act
         LoginResponse response = authController.login(request);
