@@ -149,7 +149,10 @@ class H(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         with open(log, "a") as f:
             f.write("%s %s\n" % (self.path, self.headers.get("Authorization", "")))
-        self.send_response(status); self.end_headers()
+        self.send_response(status)
+        if 300 <= status < 400:
+            self.send_header("Location", "https://127.0.0.1:1/api/v1/deploy")
+        self.end_headers()
         self.wfile.write(b'{"message":"fake coolify"}')
     def log_message(self, *a): pass
 s = http.server.HTTPServer(("127.0.0.1", 0), H)
@@ -202,7 +205,8 @@ test_webhook_step_asks_coolify_once_with_the_bearer_token() {
 
 test_webhook_failure_turns_the_deploy_red() {
   local code
-  for code in 401 404 500; do
+  # A redirect (say http:// to https://) deploys nothing: it must not pass either.
+  for code in 302 401 404 500; do
     run_webhook_step "$code"
     [[ -n "$step_seen" ]] || fail "Coolify was never called (answer $code)"
     [[ "$step_status" -ne 0 ]] || fail "webhook answering $code left the step green"

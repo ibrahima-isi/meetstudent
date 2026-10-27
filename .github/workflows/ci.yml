@@ -172,13 +172,14 @@ jobs:
 
       # The only deploy trigger (Coolify's auto deploy stays off): the resource's
       # "Deploy Webhook (auth required)". Secrets of the `production` environment,
-      # passed by env, never echoed; a non-2xx answer fails the run (--fail).
+      # passed by env, never echoed. Any answer but 2xx fails the run: --fail for
+      # 4xx/5xx, and a redirect (which deploys nothing) is refused, not followed.
       - name: Ask Coolify to deploy
         env:
           COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
           COOLIFY_WEBHOOK: ${{ secrets.COOLIFY_WEBHOOK }}
         run: |
-          curl -fsS -H "Authorization: Bearer $COOLIFY_TOKEN" "$COOLIFY_WEBHOOK"
+          curl -fsS -L --max-redirs 0 -H "Authorization: Bearer $COOLIFY_TOKEN" "$COOLIFY_WEBHOOK"
 
   # Renders compose.coolify.yml with dummy variables and checks what the Coolify
   # stack guarantees (no published port, GHCR images, isolated Postgres...).
