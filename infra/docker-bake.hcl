@@ -33,6 +33,7 @@ target "images" {
       { name = "meetstudent-api", context = "apps/api", args = {} },
       { name = "meetstudent-web", context = "apps/web", args = {} },
       { name = "meetstudent-backoffice", context = "apps/backoffice", args = { DIST_DIR = "dist/backoffice/browser" } },
+      { name = "meetstudent-backup", context = "infra/backup", args = {} },
     ]
   }
   context   = image.context

@@ -34,16 +34,16 @@ bake_print() { GITHUB_SHA="$SHA" docker buildx bake -f "$BAKE_FILE" --print 2>/d
 test_each_production_image_is_tagged_with_its_commit_and_latest() {
   local def
   def="$(bake_print)" || { fail "docker buildx bake --print failed"; return; }
-  assert_eq "meetstudent-api meetstudent-backoffice meetstudent-web" \
+  assert_eq "meetstudent-api meetstudent-backoffice meetstudent-backup meetstudent-web" \
     "$(jq -r '.target | keys | join(" ")' <<<"$def")" "images built"
-  for img in meetstudent-api meetstudent-web meetstudent-backoffice; do
+  for img in meetstudent-api meetstudent-web meetstudent-backoffice meetstudent-backup; do
     assert_eq "$REGISTRY/$img:sha-$SHA $REGISTRY/$img:latest" \
       "$(jq -r --arg t "$img" '.target[$t].tags | join(" ")' <<<"$def")" "$img tags"
     assert_eq "linux/amd64" \
       "$(jq -r --arg t "$img" '.target[$t].platforms | join(" ")' <<<"$def")" "$img platforms"
   done
-  assert_eq "apps/api apps/web apps/backoffice" \
-    "$(jq -r '[.target["meetstudent-api","meetstudent-web","meetstudent-backoffice"].context] | join(" ")' <<<"$def")" \
+  assert_eq "apps/api apps/web apps/backoffice infra/backup" \
+    "$(jq -r '[.target["meetstudent-api","meetstudent-web","meetstudent-backoffice","meetstudent-backup"].context] | join(" ")' <<<"$def")" \
     "build contexts"
   assert_eq "dist/backoffice/browser" \
     "$(jq -r '.target["meetstudent-backoffice"].args.DIST_DIR' <<<"$def")" "back office DIST_DIR"

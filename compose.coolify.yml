@@ -247,6 +247,48 @@ services:
       - traefik.http.routers.backoffice-http.middlewares=https-redirect@file
       - traefik.http.routers.backoffice-http.service=noop@internal
 
+  # Encrypted off-site backup (docs/adr/0004-encrypted-offsite-backups-r2-eu.md).
+  # Idles; a Coolify Scheduled Task runs /usr/local/bin/backup.sh in it every
+  # night. Reads the upload volumes, never writes them: a restore runs the same
+  # image with writable volumes (see infra/backup/restore.sh).
+  backup:
+    image: ghcr.io/ibrahima-isi/meetstudent-backup:${IMAGE_TAG:-latest}
+    pull_policy: always
+    restart: unless-stopped
+    environment:
+      PGHOST: meetstudent-db
+      PGUSER: ${POSTGRES_USER:-meetstudent}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB:-meetstudent}
+      # rclone is configured by environment only. r2: the Cloudflare R2 bucket,
+      # endpoint https://<ACCOUNT_ID>.eu.r2.cloudflarestorage.com (EU jurisdiction),
+      # token scoped to the bucket, hence no bucket check or creation.
+      RCLONE_CONFIG_R2_TYPE: s3
+      RCLONE_CONFIG_R2_PROVIDER: Cloudflare
+      RCLONE_CONFIG_R2_ENDPOINT: ${R2_ENDPOINT:-}
+      RCLONE_CONFIG_R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
+      RCLONE_CONFIG_R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}
+      RCLONE_CONFIG_R2_NO_CHECK_BUCKET: "true"
+      # r2crypt: encrypts names and contents before they leave the VPS. The
+      # password and salt are the originals kept in the password manager (the
+      # scripts obscure them for rclone); without them a backup is unrecoverable.
+      RCLONE_CONFIG_R2CRYPT_TYPE: crypt
+      RCLONE_CONFIG_R2CRYPT_REMOTE: r2:${R2_BUCKET:-}
+      BACKUP_CRYPT_PASSWORD: ${BACKUP_CRYPT_PASSWORD:-}
+      BACKUP_CRYPT_SALT: ${BACKUP_CRYPT_SALT:-}
+    volumes:
+      - api-uploads:/data/uploads:ro
+      - api-private:/data/private:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - backend
+      - egress
+    logging: *default-logging
+
 volumes:
   pgdata:
   api-uploads:
@@ -265,3 +307,5 @@ networks:
   # Server-side rendering: web -> api, nothing else.
   ssr:
     internal: true
+  # The backup service's way out to the off-site storage (backend has none).
+  egress: {}
