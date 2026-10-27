@@ -170,6 +170,17 @@ jobs:
           files: infra/docker-bake.hcl
           push: true
 
+      # The only deploy trigger (Coolify's auto deploy stays off): the resource's
+      # "Deploy Webhook (auth required)". Secrets of the `production` environment,
+      # passed by env, never echoed. Any answer but 2xx fails the run: --fail for
+      # 4xx/5xx, and a redirect (which deploys nothing) is refused, not followed.
+      - name: Ask Coolify to deploy
+        env:
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+          COOLIFY_WEBHOOK: ${{ secrets.COOLIFY_WEBHOOK }}
+        run: |
+          curl -fsS -L --max-redirs 0 -H "Authorization: Bearer $COOLIFY_TOKEN" "$COOLIFY_WEBHOOK"
+
   # Renders compose.coolify.yml with dummy variables and checks what the Coolify
   # stack guarantees (no published port, GHCR images, isolated Postgres...).
   # Not a required check. The live half (the stack behind a replica of Coolify's
@@ -184,3 +195,7 @@ jobs:
 
       - name: Validate compose.coolify.yml
         run: infra/tests/coolify-stack.test.sh static
+
+      # Every variable of the stack and secret of the deploy job is in the guide.
+      - name: Check the Coolify deployment guide
+        run: infra/tests/deploy-docs.test.sh

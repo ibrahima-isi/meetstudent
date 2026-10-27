@@ -37,6 +37,25 @@ the prod profile has no fallbacks for the required ones, so a missing value stop
 passed to the API by `compose.prod.yml` (and, with mail off by default, by `compose.yml`). The step-by-step provider
 setup, test checklist and troubleshooting table are in `docs/DEPLOY.md` (section 2b).
 
+## Backups (Coolify stack)
+
+The API does not read these: the `backup` service of `compose.coolify.yml` does, when the nightly Coolify
+Scheduled Task runs `backup.sh` in it (ADR 0004). rclone is configured by environment only: a remote `r2`
+(S3, provider Cloudflare) wrapped by a `crypt` remote `r2crypt`, so names and contents are encrypted before
+they leave the VPS. The database settings (`POSTGRES_*`) are shared with the stack. Setup, restore and the
+R2 bucket rules (EU jurisdiction, 30-day lifecycle): `docs/DEPLOY.md` section 9.4 and 9.5.
+
+| Variable | Required | Default | Purpose |
+|---|---|---|---|
+| `R2_ENDPOINT` | for backups | none | `https://<ACCOUNT_ID>.eu.r2.cloudflarestorage.com` (EU jurisdiction endpoint). |
+| `R2_BUCKET` | for backups | none | Bucket name; the token is scoped to it, so rclone never checks or creates it. |
+| `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | for backups | none | Keys of the bucket-scoped R2 API token (read + write). Secrets. |
+| `BACKUP_CRYPT_PASSWORD` | for backups | none | `crypt` password, the original in clear (Coolify secret + password manager); the scripts obscure it for rclone. Without it no backup can be read. |
+| `BACKUP_CRYPT_SALT` | for backups | none | `crypt` salt (rclone's `password2`), same handling as the password. |
+
+None of them is needed to render or start the stack. `backup.sh` and `restore.sh` refuse to run without all of
+them and exit `2`, naming the missing ones, so a forgotten variable shows up as a failed scheduled task.
+
 ## Email
 
 Account emails are **off by default** (the email verification and password reset endpoints use this layer, and the web pages for them are live: `/:lang/verify-email`, `/:lang/forgot-password`, `/:lang/reset-password`):

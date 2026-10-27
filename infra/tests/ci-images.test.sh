@@ -134,6 +134,93 @@ test_deploys_queue_instead_of_cancelling_each_other() {
     "$(yq -o=json -I=0 '.concurrency' "$WORKFLOW")" "workflow concurrency"
 }
 
+# --- deploy webhook (coolify-deploy/04) --------------------------------------
+# Once the images are pushed, the deploy job asks Coolify to deploy through the
+# resource's authenticated webhook. Nothing else may trigger a deploy.
+
+# A local stand-in for Coolify's webhook: answers $1 and appends the request's
+# path and Authorization header to $2. Prints its port once listening.
+fake_coolify() {
+  # exec: the background job's pid is the server itself, so kill stops it.
+  exec python3 -u - "$1" "$2" <<'PY'
+import http.server, sys
+status, log = int(sys.argv[1]), sys.argv[2]
+class H(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        with open(log, "a") as f:
+            f.write("%s %s\n" % (self.path, self.headers.get("Authorization", "")))
+        self.send_response(status)
+        if 300 <= status < 400:
+            self.send_header("Location", "https://127.0.0.1:1/api/v1/deploy")
+        self.end_headers()
+        self.wfile.write(b'{"message":"fake coolify"}')
+    def log_message(self, *a): pass
+s = http.server.HTTPServer(("127.0.0.1", 0), H)
+print(s.server_address[1], flush=True)
+s.serve_forever()
+PY
+}
+
+# Runs the deploy job's webhook step as the runner does (bash -eo pipefail)
+# against a fake Coolify answering $1. Sets step_status, step_output, step_seen.
+TOKEN="test-coolify-token-$$"
+run_webhook_step() {
+  local script tmp port pid
+  script="$(job deploy | jq -r '[(.steps // [])[] | select((.env // {}) | has("COOLIFY_TOKEN"))][0].run // "false"')"
+  tmp="$(mktemp -d)"
+  fake_coolify "$1" "$tmp/seen" >"$tmp/port" &
+  pid=$!
+  for _ in $(seq 50); do [[ -s "$tmp/port" ]] && break; sleep 0.1; done
+  port="$(cat "$tmp/port")"
+  step_output="$(COOLIFY_TOKEN="$TOKEN" COOLIFY_WEBHOOK="http://127.0.0.1:$port/api/v1/deploy?uuid=test" \
+    bash --noprofile --norc -eo pipefail -c "$script" 2>&1)"
+  step_status=$?
+  step_seen="$(cat "$tmp/seen" 2>/dev/null)"
+  kill "$pid" 2>/dev/null; wait "$pid" 2>/dev/null
+  rm -rf "$tmp"
+}
+
+test_deploy_ends_by_calling_the_coolify_webhook_with_the_production_secrets() {
+  local j last
+  j="$(job deploy)"
+  last="$(jq -c '.steps[-1]' <<<"$j")"
+  assert_eq '{"COOLIFY_TOKEN":"${{ secrets.COOLIFY_TOKEN }}","COOLIFY_WEBHOOK":"${{ secrets.COOLIFY_WEBHOOK }}"}' \
+    "$(jq -c '.env // null' <<<"$last")" "last deploy step env"
+  assert_eq "true" "$(jq '.steps[-2].uses // "" | startswith("docker/bake-action@")' <<<"$j")" \
+    "the images are pushed right before the webhook"
+  # Secrets reach the script through env only: `${{ }}` inside `run` is pasted
+  # into the script text, where it can leak or be injected.
+  assert_eq "false" "$(jq '.run // "" | contains("${{")' <<<"$last")" "no expression inside run"
+  # Only the deploy job (environment production, main only) may touch them.
+  assert_eq "deploy" \
+    "$(yq -o=json '.jobs' "$WORKFLOW" | jq -r '[to_entries[] | select(tostring | test("COOLIFY_")) | .key] | join(",")')" \
+    "jobs referencing COOLIFY_*"
+}
+
+test_webhook_step_asks_coolify_once_with_the_bearer_token() {
+  run_webhook_step 200
+  assert_eq "0" "$step_status" "exit status on 200 (output: $step_output)"
+  assert_eq "/api/v1/deploy?uuid=test Bearer $TOKEN" "$step_seen" "requests received by Coolify"
+}
+
+test_webhook_failure_turns_the_deploy_red() {
+  local code
+  # A redirect (say http:// to https://) deploys nothing: it must not pass either.
+  for code in 302 401 404 500; do
+    run_webhook_step "$code"
+    [[ -n "$step_seen" ]] || fail "Coolify was never called (answer $code)"
+    [[ "$step_status" -ne 0 ]] || fail "webhook answering $code left the step green"
+  done
+}
+
+test_webhook_step_never_prints_the_token() {
+  local code
+  for code in 200 500; do
+    run_webhook_step "$code"
+    [[ "$step_output" != *"$TOKEN"* ]] || fail "token printed on $code: $step_output"
+  done
+}
+
 # --- runner -----------------------------------------------------------------
 tests=("$@")
 if [[ ${#tests[@]} -eq 0 ]]; then
