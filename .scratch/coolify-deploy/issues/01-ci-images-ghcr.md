@@ -4,17 +4,26 @@
 
 **Blocked by:** aucun
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Worktree:** `coolify-deploy-01` — branche `ci/coolify-images`
 
 Spec : [coolify-deploy](../spec.md), user stories 2, 3, 4, 6, 8, 9 ; [ADR 0003](../../../docs/adr/0003-coolify-raw-compose-ghcr.md).
 
-- [ ] Sur `pull_request` : les trois images se construisent sans être poussées (back-office avec `DIST_DIR=dist/backoffice/browser`)
-- [ ] Job `deploy` dans `.github/workflows/ci.yml` : `needs: [api, web, backoffice]`, seulement sur push vers `main`, `environment: production`, permissions limitées à `packages: write` (+ `contents: read`)
-- [ ] Push GHCR avec `GITHUB_TOKEN` : `ghcr.io/ibrahima-isi/meetstudent-{api,web,backoffice}`, tags `sha-<commit>` et `latest`, en `linux/amd64` seulement
-- [ ] Les `name:` des trois jobs de tests restent inchangés (checks requis par les rulesets) ; le job `deploy` et le build sur PR ne deviennent pas des checks requis
-- [ ] Aucun secret dans les images : vérifier que les Dockerfiles ne copient ni `.env` ni fichier de secrets (les images seront publiques)
+- [x] Sur `pull_request` : les trois images se construisent sans être poussées (back-office avec `DIST_DIR=dist/backoffice/browser`)
+- [x] Job `deploy` dans `.github/workflows/ci.yml` : `needs: [api, web, backoffice]`, seulement sur push vers `main`, `environment: production`, permissions limitées à `packages: write` (+ `contents: read`)
+- [x] Push GHCR avec `GITHUB_TOKEN` : `ghcr.io/ibrahima-isi/meetstudent-{api,web,backoffice}`, tags `sha-<commit>` et `latest`, en `linux/amd64` seulement
+- [x] Les `name:` des trois jobs de tests restent inchangés (checks requis par les rulesets) ; le job `deploy` et le build sur PR ne deviennent pas des checks requis
+- [x] Aucun secret dans les images : vérifier que les Dockerfiles ne copient ni `.env` ni fichier de secrets (les images seront publiques)
 - [ ] Preuve : run CI vert sur la PR avec les trois builds d'images ; le push GHCR ne se vérifie qu'au premier push sur `main` ([coolify-deploy/05](05-first-production-deploy.md))
 
 ## Comments
+
+### 2026-10-27 — implémentation (branche `ci/coolify-images`, commit `e69797b`)
+
+- `docker-bake.hcl` (racine) : liste unique des images, en matrice (`meetstudent-api|web|backoffice`, contexte, build args). Tags `ghcr.io/ibrahima-isi/<image>:sha-${GITHUB_SHA}` et `:latest`, `linux/amd64`. Une validation refuse tout `GITHUB_SHA` qui n'est pas un SHA complet de 40 caractères (sinon un tag `sha-` vide partirait). Ticket 03 ajoute `meetstudent-backup` en une ligne de matrice (`{ name = "meetstudent-backup", context = "infra/backup", args = {} }`) et une ligne dans le test.
+- `.github/workflows/ci.yml` : job `images / build` (PR seulement, `contents: read`, bake sans push) et job `deploy / production` (`needs: [api, web, backoffice]`, push sur `main` seulement, `environment: production`, `contents: read` + `packages: write`, login GHCR avec `GITHUB_TOKEN`, bake avec push). Le webhook Coolify s'ajoutera en dernière étape de `deploy` (ticket 04). Toujours appeler bake avec `-f docker-bake.hcl` : par défaut il fusionne aussi `compose.yml`.
+- `infra/tests/ci-images.test.sh` : harnais bash (docker buildx, jq, yq, git ; image `rhysd/actionlint:1.7.12`). 7 tests : tags/plateforme/contextes/DIST_DIR résolus par `bake --print`, refus d'un SHA incomplet, contrat du job PR, contrat du job `deploy`, noms des checks requis inchangés, actionlint, aucun fichier secret suivi dans un contexte de build.
+- Preuves locales : rouge → vert pour chaque test (sauf les gardes noms/actionlint/secrets, verts dès l'écriture ; le test secrets a été vu rouge en plantant `apps/web/.env` et `apps/backoffice/server.key` en intent-to-add). `GITHUB_SHA=<HEAD> docker buildx bake -f docker-bake.hcl` construit les trois images en local (exit 0) ; aucun `.env`, clé ou keystore dans les images finales (`find /` : seuls les bundles CA publics).
+- Non vérifié : le run CI vert sur la PR (case restante), le push GHCR et `environment: production` réels (premier push sur `main`, ticket 05). L'environnement GitHub `production` doit exister (le créer, restreint à `main`, avant la promotion).
+
