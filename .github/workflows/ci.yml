@@ -194,3 +194,7 @@ jobs:
 
       - name: Validate compose.coolify.yml
         run: infra/tests/coolify-stack.test.sh static
+
+      # Every variable of the stack and secret of the deploy job is in the guide.
+      - name: Check the Coolify deployment guide
+        run: infra/tests/deploy-docs.test.sh

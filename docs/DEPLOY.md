@@ -3,6 +3,10 @@
 Files: `compose.prod.yml`, `.env.production.example`, `apps/backoffice/Dockerfile`,
 `scripts/backup.sh`, `scripts/restore.sh`.
 
+Sections 1 to 8 deploy with `compose.prod.yml` and its own Traefik. The production on the
+Hetzner VPS runs under Coolify instead, with images built by the CI: see
+[section 9](#9-coolify-production-on-the-hetzner-vps).
+
 ## Architecture
 
 ```
@@ -389,6 +393,171 @@ docker compose -f compose.prod.yml down                     # stop (data volumes
 
 Never run `down -v` in production: it deletes the database and the uploads.
 Keep the host patched (`unattended-upgrades`) and the Traefik image current.
+
+## 9. Coolify (production on the Hetzner VPS)
+
+Files: `compose.coolify.yml`, `infra/coolify/proxy/dynamic/meetstudent.yaml`, `infra/backup/`,
+`infra/docker-bake.hcl`, the `deploy / production` job of `.github/workflows/ci.yml`.
+Decisions: [ADR 0003](adr/0003-coolify-raw-compose-ghcr.md) (Raw compose, images from GHCR) and
+[ADR 0004](adr/0004-encrypted-offsite-backups-r2-eu.md) (encrypted off-site backups). The VPS, the
+Coolify install, the DNS and the R2 bucket are the owner's phases 1, 2, 4 and 5 of the
+[plan](plans/2026-10-26-deploy-hetzner-coolify.md); this section is what the repository expects from them.
+
+```
+git push origin dev:main
+  -> CI: api, web, backoffice tests green
+  -> deploy / production: push ghcr.io/ibrahima-isi/meetstudent-{api,web,backoffice,backup}
+                          (sha-<40-char commit> and latest), then call the Coolify deploy webhook
+  -> Coolify pulls the images (never builds) and restarts the stack behind its own Traefik
+```
+
+Nothing else deploys: not a pull request, not `dev`, not a push to the repository (Coolify's auto
+deploy stays off).
+
+### 9.1 Proxy configuration (once per server)
+
+The shared middlewares (`sec`, `strip-forwarded`, `rl-auth`, `rl-api`, `upload-limit`) and the HTTP to
+HTTPS redirect (`https-redirect`) are not labels of the stack: they would vanish whenever an app container
+restarts. Copy `infra/coolify/proxy/dynamic/meetstudent.yaml` to the server as
+`/data/coolify/proxy/dynamic/meetstudent.yaml` (or paste it in Servers -> Proxy -> Dynamic configurations);
+Traefik reloads it live. Copy it again whenever the file changes in the repository: the deploy does not.
+Without it every route of the stack is disabled (404 everywhere). Its values match the labels of
+`compose.prod.yml`'s `traefik` service: change both together.
+
+The stack's labels use Coolify v4's names by default. Check them on the instance (Servers -> Proxy, the
+Traefik command line) and set the variable only if a name differs:
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `PROXY_NETWORK` | `coolify` | Docker network shared by Coolify's Traefik and the stack's `api`, `web`, `backoffice` |
+| `PROXY_HTTP_ENTRYPOINT` | `http` | Traefik entry point on port 80 (the redirect routers) |
+| `PROXY_HTTPS_ENTRYPOINT` | `https` | Traefik entry point on port 443 |
+| `PROXY_CERT_RESOLVER` | `letsencrypt` | Traefik certificate resolver (Let's Encrypt HTTP-01) |
+
+The proxy network is shared with every Coolify resource, so a plain `api` or `db` there can resolve to
+another stack's container. The stack never uses those names: the API reaches Postgres as `meetstudent-db`
+(internal `backend` network) and the SSR reaches the API as `meetstudent-api` (internal `ssr` network).
+Keep these aliases if you edit the file.
+
+### 9.2 The Coolify resource
+
+1. Projects -> `MeetStudent` -> environment `production` -> New resource -> Public repository
+   `https://github.com/ibrahima-isi/meetstudent`, branch `main`, build pack **Docker Compose**, compose file
+   `/compose.coolify.yml`.
+2. Advanced -> Docker Compose -> **Raw** on (ADR 0003: Coolify's generated labels cannot express the rate
+   limits, the upload cap or the headers). **Auto deploy off**: only the CI webhook deploys, once the images
+   exist. Do not set domains in the Coolify UI: the routes are the stack's labels.
+3. Environment variables, marking the secrets as secret. Coolify passes them to compose for interpolation.
+
+| Variable | Required | Meaning |
+|---|---|---|
+| `DOMAIN`, `BO_DOMAIN` | yes | public site (web + API, single origin) and back office hosts, no scheme |
+| `CORS_ALLOWED_ORIGINS` | yes | `https://${DOMAIN},https://${BO_DOMAIN}` |
+| `JWT_SECRET_KEY` | yes, secret | `openssl rand -base64 48` |
+| `POSTGRES_PASSWORD` | yes, secret | `openssl rand -base64 32 \| tr -d '/+=\n'`; applied only when the database volume is created |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD` | yes (password secret) | first admin account, password at least 12 characters (section 4) |
+| `IMAGE_TAG` | no, default `latest` | image tag of the four services; `sha-<40-char commit>` to roll back (9.6) |
+| `PROXY_NETWORK`, `PROXY_HTTP_ENTRYPOINT`, `PROXY_HTTPS_ENTRYPOINT`, `PROXY_CERT_RESOLVER` | no | see 9.1 |
+| `JWT_ACCESS_TTL_MINUTES` | no, default `15` | access token lifetime |
+| `POSTGRES_DB`, `POSTGRES_USER` | no, default `meetstudent` | database name and user |
+| `BO_API_URL` | no, default `https://${DOMAIN}/api/v1` | API base URL of the back office |
+| `MAIL_ENABLED`, `MAIL_PROVIDER`, `MAIL_SES_REGION`, `MAIL_FROM`, `CONTACT_RECIPIENT`, `FRONTEND_BASE_URL` | no | mail, as in section 2 and 2b (off by default) |
+| `SPRING_MAIL_*`, `SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE`, `SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED`, `APP_CONTACT_MAIL_*`, `APP_MAIL_TEST_COOLDOWN_SECONDS` | no | SMTP settings and mail tuning, as in section 2 |
+| `R2_ENDPOINT`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | for backups, keys secret | the R2 bucket (9.4) |
+| `BACKUP_CRYPT_PASSWORD`, `BACKUP_CRYPT_SALT` | for backups, secret | the backup encryption key (9.4) |
+
+`ACME_EMAIL`, `ACME_CA_SERVER`, `BACKUP_DIR` and `BACKUP_KEEP_DAYS` belong to `compose.prod.yml` only:
+Coolify's Traefik issues the certificates and the `backup` service replaces `scripts/backup.sh`.
+Do not use `$` in a value: compose would interpolate it.
+
+### 9.3 GitHub `production` environment and the deploy webhook
+
+1. Coolify: Settings -> Advanced -> **API Access** on; Keys & Tokens -> an API token with the **deploy**
+   permission.
+2. GitHub -> Settings -> Environments -> **`production`**, deployment branches restricted to **`main`**.
+   Its two secrets, readable only by a job of that environment on `main`:
+   - `COOLIFY_WEBHOOK`: the resource's Webhooks -> "Deploy Webhook (auth required)" URL.
+   - `COOLIFY_TOKEN`: the token of step 1.
+3. The webhook URL must be reachable from GitHub's runners. With the "SSH tunnel only" dashboard option it
+   is not, and every deploy job fails at its last step: the dashboard then needs its HTTPS hostname.
+
+The `deploy / production` job runs only on a push to `main`, after `api / build-and-test`,
+`web / build-and-test` and `backoffice / build-and-test` pass. It builds and pushes the four images, then
+calls `curl -fsS -H "Authorization: Bearer $COOLIFY_TOKEN" "$COOLIFY_WEBHOOK"` (secrets passed by
+environment, never printed): any answer other than 2xx turns the run red, and the images are already on
+GHCR, so a redeploy from Coolify (or a re-run of the job) finishes the job. Deploys queue one after the other
+(concurrency group `deploy-production`, never cancelled), and a newer push never cancels a run on `main`. The
+job is not a required check: it only exists on `main`.
+
+After the very first run, set each package to **public** (GitHub -> Packages -> `meetstudent-api`,
+`meetstudent-web`, `meetstudent-backoffice`, `meetstudent-backup` -> Package settings -> Change visibility):
+packages start private, and Coolify pulls without credentials. The images hold no secret.
+
+### 9.4 Nightly encrypted backups
+
+The `backup` service idles (`sleep infinity`); a Coolify **Scheduled Task** runs the backup in it:
+resource -> Scheduled Tasks -> name `backup`, command `/usr/local/bin/backup.sh`, frequency `15 3 * * *`,
+container `backup`. Coolify notifies a failed task (Notifications, plan phase 2): `backup.sh` exits non-zero
+on any error, and with `2` when a variable below is missing.
+
+A backup is a folder named after its UTC time (`20261027T031500Z`) holding the custom-format database dump,
+an archive of each upload volume and their checksums. It goes to the R2 bucket through an rclone `crypt`
+remote: names and contents are encrypted on the VPS, and no local copy is kept.
+
+- R2 (plan phase 5): bucket with **Jurisdiction: EU**, lifecycle rule deleting objects after 30 days (the
+  retention lives there, not in the script), API token scoped to that bucket, read and write.
+  `R2_ENDPOINT` is `https://<ACCOUNT_ID>.eu.r2.cloudflarestorage.com`, `R2_BUCKET` the bucket name,
+  `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` the token's keys.
+- `BACKUP_CRYPT_PASSWORD` and `BACKUP_CRYPT_SALT`: two long random strings
+  (`openssl rand -base64 32 | tr -d '/+=\n'`). Store them **in clear**, both in the Coolify secrets and in the
+  password manager, before the first backup; the scripts obscure them for rclone. Without both, no backup
+  can ever be read again; changing them makes the older backups unreadable with the new ones.
+- `backup` is the only service on the `egress` network (with outbound access): `backend`, where Postgres
+  lives, is internal and has no route to R2. It mounts the upload volumes read-only.
+
+Run the task once by hand after the first deploy (from the task's page, or `backup.sh` in the `backup`
+container's terminal) and check its log ends with `backup complete`. `restore.sh --list`, run in the same
+container, lists the backups.
+
+### 9.5 Restore
+
+DESTRUCTIVE: the database and both upload volumes are replaced. Nothing is touched until the backup is
+downloaded and its checksums match. The `backup` service mounts the volumes read-only, so a restore is a
+one-off run of that service with the volumes mounted writable at `/restore`, the api stopped:
+
+```bash
+ssh <vps>
+docker compose ls                                # the stack's project: the resource UUID
+cd /data/coolify/applications/<uuid>             # Coolify's copy of the compose file and its .env
+docker volume ls | grep -E 'api-(uploads|private)'   # the real volume names under this project
+docker compose -p <uuid> -f docker-compose.yaml stop api
+docker compose -p <uuid> -f docker-compose.yaml run --rm \
+  -v <uploads volume>:/restore/uploads -v <private volume>:/restore/private \
+  backup restore.sh latest --yes                 # or a folder name from restore.sh --list
+docker compose -p <uuid> -f docker-compose.yaml start api
+```
+
+The project, the directory and the volume names are Coolify's; check them on the instance (Coolify may prefix
+the volumes with the resource UUID). This is the same command as the comment of `infra/backup/restore.sh`,
+which a local test runs against MinIO. Then repeat the smoke test of section 5 and open an uploaded
+document. Rehearse it in a throwaway stack before launch and every quarter: a backup never restored is not
+a backup.
+
+### 9.6 Rollback
+
+Set `IMAGE_TAG=sha-<full 40-character commit>` of a good commit in the resource's variables, then
+**Redeploy** in Coolify: the four images of that commit are pulled from GHCR, nothing is rebuilt. While
+`IMAGE_TAG` is pinned, every following deploy (webhook included) stays on that version: set it back to
+`latest` once `main` is fixed. Flyway migrations only go forward: to undo one, restore (9.5) the backup taken
+before it.
+
+### 9.7 Routine
+
+- Logs, restarts and the container terminal are in the Coolify UI. `compose.prod.yml` stays the path without
+  Coolify (sections 1 to 8); never run both stacks on one server.
+- Update Coolify by hand, after a backup, then check the certificates and the HTTP to HTTPS redirect again.
+- From outside after each deploy that touches the proxy: HSTS and `X-Content-Type-Options` present, a burst
+  of about twenty logins ends in 429, an 11 MB upload is refused (section 5).
 
 ## Design notes
 
