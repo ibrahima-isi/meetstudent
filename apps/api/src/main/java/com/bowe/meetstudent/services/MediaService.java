@@ -240,6 +240,16 @@ public class MediaService {
                 && found.get().getVisibility() == com.bowe.meetstudent.entities.enums.MediaVisibility.PUBLIC) {
             return found.get();
         }
+        return requireOwnerOrAdmin(found, principal);
+    }
+
+    /**
+     * Owner-or-admin gate shared by reads of private media and by every write, whatever the
+     * visibility. Media without an owner (school, course and program images) is admin-only.
+     * Same existence-hiding as {@link #getAccessibleMedia}: anonymous gets 401, a non-admin gets
+     * 403 for someone else's media and for an unknown id alike, an admin gets 404 for unknown.
+     */
+    private Media requireOwnerOrAdmin(Optional<Media> found, UserPrincipal principal) {
         if (principal == null) {
             throw new org.springframework.security.authentication.InsufficientAuthenticationException(
                     "Authentication required.");
@@ -293,7 +303,7 @@ public class MediaService {
 
     @Transactional
     public void delete(Integer mediaId, UserPrincipal principal) throws IOException {
-        Media media = getAccessibleMedia(mediaId, principal);
+        Media media = requireOwnerOrAdmin(mediaRepository.findById(mediaId), principal);
         storageService.delete(media.getStorageKey());
         mediaRepository.delete(media);
     }
