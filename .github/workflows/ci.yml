@@ -108,7 +108,7 @@ jobs:
         run: npm test -- --no-watch --browsers=ChromeHeadless
 
   # Production images (coolify-deploy/01, ADR 0003): the list of images, their
-  # tags and platform live in docker-bake.hcl. Neither job below is a required
+  # tags and platform live in infra/docker-bake.hcl. Neither job below is a required
   # check; keep their names distinct from the build-and-test ones.
   images:
     name: images / build
@@ -128,7 +128,7 @@ jobs:
         uses: docker/bake-action@v6
         with:
           source: .
-          files: docker-bake.hcl
+          files: infra/docker-bake.hcl
           push: false
 
   # Runs only when dev is promoted to main, once the three test jobs are green.
@@ -157,12 +157,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Tags sha-<full commit SHA> and latest (docker-bake.hcl reads GITHUB_SHA).
+      # Tags sha-<full commit SHA> and latest (infra/docker-bake.hcl reads GITHUB_SHA).
       - name: Build and push the production images
         uses: docker/bake-action@v6
         with:
           source: .
-          files: docker-bake.hcl
+          files: infra/docker-bake.hcl
           push: true
 
   # Renders compose.coolify.yml with dummy variables and checks what the Coolify

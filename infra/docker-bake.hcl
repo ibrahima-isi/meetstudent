@@ -2,9 +2,10 @@
 # (ADR 0003, coolify-deploy/01). The VPS never builds: Coolify pulls these.
 #
 # One entry per image in the matrix below; the CI builds them all on a pull
-# request and pushes them all on `main`. Always pass the file explicitly
-# (`docker buildx bake -f docker-bake.hcl`): by default bake also merges
-# compose.yml. Tests: infra/tests/ci-images.test.sh.
+# request and pushes them all on `main`. Run it from the repository root, as
+# the CI does (`docker buildx bake -f infra/docker-bake.hcl`): build contexts
+# are resolved from the working directory, not from this file's folder.
+# Tests: infra/tests/ci-images.test.sh.
 
 variable "REGISTRY" {
   default = "ghcr.io/ibrahima-isi"
