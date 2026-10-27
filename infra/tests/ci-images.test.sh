@@ -221,6 +221,43 @@ test_webhook_step_never_prints_the_token() {
   done
 }
 
+# --- hardening of the workflow ------------------------------------------------
+
+# A tag can be moved to other code; a full commit SHA cannot. The comment keeps
+# the version readable and is what Dependabot updates along with the SHA.
+test_every_action_is_pinned_to_a_full_commit_sha() {
+  local bad
+  bad="$(yq '.jobs[].steps[] | select(has("uses")) | .uses + " " + (.uses | line_comment)' "$WORKFLOW" \
+    | grep -vE '^[a-z0-9-]+/[a-z0-9-]+@[0-9a-f]{40} v[0-9]+\.[0-9]+\.[0-9]+$')"
+  assert_eq "" "$bad" "actions not pinned to <sha> # vX.Y.Z"
+}
+
+test_dependabot_keeps_the_pinned_actions_up_to_date_on_dev() {
+  local f=.github/dependabot.yml
+  [[ -f "$f" ]] || { fail "$f missing"; return; }
+  assert_eq "2" "$(yq '.version' "$f")" "dependabot version"
+  assert_eq '{"package-ecosystem":"github-actions","directory":"/","interval":"weekly","target-branch":"dev"}' \
+    "$(yq -o=json -I=0 '.updates[] | select(.package-ecosystem == "github-actions")
+      | {"package-ecosystem": .package-ecosystem, "directory": .directory, "interval": .schedule.interval, "target-branch": .target-branch}' "$f")" \
+    "github-actions updates"
+}
+
+# Every job gets a read-only token unless it says otherwise (only deploy does).
+test_the_token_is_read_only_by_default() {
+  assert_eq '{"contents":"read"}' "$(yq -o=json -I=0 '.permissions' "$WORKFLOW")" "workflow permissions"
+  assert_eq "deploy" "$(yq '[.jobs | to_entries[] | select(.value.permissions.packages == "write") | .key] | join(",")' "$WORKFLOW")" \
+    "jobs allowed to write packages"
+}
+
+# A hung push or webhook must not hold the deploy queue for the 6-hour default.
+test_a_hung_deploy_is_stopped() {
+  assert_eq "30" "$(job deploy | jq -r '."timeout-minutes"')" "deploy timeout-minutes"
+  local run
+  run="$(job deploy | jq -r '.steps[-1].run')"
+  [[ "$run" == *"--max-time 60"* ]] || fail "webhook curl has no --max-time 60: $run"
+  [[ "$run" == *"-fsS -L --max-redirs 0"* ]] || fail "webhook curl lost -fsS -L --max-redirs 0: $run"
+}
+
 # --- runner -----------------------------------------------------------------
 tests=("$@")
 if [[ ${#tests[@]} -eq 0 ]]; then

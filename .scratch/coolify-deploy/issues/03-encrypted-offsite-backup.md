@@ -12,7 +12,7 @@ Spec : [coolify-deploy](../spec.md), user stories 22 à 29 ; [ADR 0004](../../..
 
 - [x] `infra/backup/` : Dockerfile (`postgres:18-alpine` + `rclone`), `backup.sh`, `restore.sh`
 - [x] Image construite et publiée par la CI comme les trois autres (`meetstudent-backup`, mêmes tags), pour que le VPS ne compile rien (user story 3) ; ajout au build sur PR et au push du job `deploy` de [coolify-deploy/01](01-ci-images-ghcr.md)
-- [x] Service `backup` dans `compose.coolify.yml` : réseau `backend` seulement, volumes `api-uploads` et `api-private` en lecture seule, `sleep infinity` pour la tâche planifiée Coolify
+- [x] Service `backup` dans `compose.coolify.yml` : réseau `backend` pour la base, plus un réseau `egress` (non interne) réservé à `backup` pour joindre R2, accordé par le propriétaire le 2026-10-27 (voir Comments) ; volumes `api-uploads` et `api-private` en lecture seule, `sleep infinity` pour la tâche planifiée Coolify
 - [x] `backup.sh` : `pg_dump` format custom + archive de chaque volume → `rclone copy` vers un remote `crypt` qui enveloppe un remote S3 → suppression de la copie locale ; code de sortie non nul à la moindre erreur
 - [x] rclone configuré uniquement par variables d'environnement (S3 R2 juridiction EU, mot de passe et sel `crypt`) ; rétention 30 jours = règle de cycle de vie du bucket, pas de logique dans le script
 - [x] `scripts/backup.sh` et `restore.sh` restent dédiés à `compose.prod.yml`

@@ -14,11 +14,13 @@ apps/
   backoffice/   ADMIN-only back office (Angular 20 SPA, static build served by nginx);
                 a vanilla TypeScript + Vite rewrite is planned, see docs/plans/2026-10-10-backoffice-vite-rewrite.md
 docs/           cross-cutting documentation (this file)
-infra/          placeholder
+infra/          production under Coolify: docker-bake.hcl (CI images), coolify/proxy/dynamic/
+                (Traefik middlewares), backup/ (backup image), tests/ (their shell tests)
 shared/         placeholder
 compose.yml       full local stack: Postgres 18 + api + web
 compose.dev.yml   dev override: hot-reloading api
 compose.prod.yml  production stack for one VPS (Traefik + TLS); see docs/DEPLOY.md
+compose.coolify.yml  production stack under Coolify (GHCR images); see docs/DEPLOY.md section 9
 .github/workflows/ci.yml   the only CI entry point
 ```
 
@@ -177,14 +179,16 @@ Tickets are tracked in `docs/completion/<spec-folder>.md`, one file per spec (ma
 
 ## CI and branch protection
 
-A single workflow, `.github/workflows/ci.yml`, runs three jobs — the published
+A single workflow, `.github/workflows/ci.yml`, runs six jobs — the published
 check names are what branch protection matches. Two are **required**:
 
 - `api / build-and-test`
 - `web / build-and-test`
 
 and `backoffice / build-and-test` runs on every PR but is not a required check
-(add it to the `required-ci` ruleset if it should gate merges).
+(add it to the `required-ci` ruleset if it should gate merges). Three more jobs
+are not required checks either: `images / build` (pull requests),
+`deploy / production` (push to `main` only) and `compose / validate-coolify`.
 
 Protection is enforced through **rulesets**, not legacy branch protection rules:
 

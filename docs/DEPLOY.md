@@ -1,10 +1,11 @@
 # Production deployment (single VPS, Docker Compose, HTTPS)
 
 Files: `compose.prod.yml`, `.env.production.example`, `apps/backoffice/Dockerfile`,
-`scripts/backup.sh`, `scripts/restore.sh`.
+`scripts/backup.sh`, `scripts/restore.sh`; for Coolify, `compose.coolify.yml` and `infra/`.
 
-Sections 1 to 8 deploy with `compose.prod.yml` and its own Traefik. The production on the
-Hetzner VPS runs under Coolify instead, with images built by the CI: see
+Two stacks, one per server, never both: sections 1 to 8 deploy with `compose.prod.yml` and its own
+Traefik. The production on the Hetzner VPS runs `compose.coolify.yml` under Coolify instead, behind
+Coolify's Traefik, with images built by the CI and a `backup` service: see
 [section 9](#9-coolify-production-on-the-hetzner-vps).
 
 ## Architecture
@@ -19,6 +20,10 @@ Internet --80/443--> Traefik v3 (Let's Encrypt, redirect, headers, rate limits)
 
 Only Traefik publishes ports. Postgres sits on an `internal` Docker network with
 no route to the outside. The Traefik dashboard is disabled.
+
+The Coolify stack has the same routes and middlewares, but the Traefik is Coolify's (shared middlewares
+in `infra/coolify/proxy/dynamic/meetstudent.yaml`), the images come from GHCR, and a `backup` service
+sends encrypted nightly backups to Cloudflare R2 (section 9).
 
 ## 1. VPS prerequisites
 
@@ -439,6 +444,21 @@ another stack's container. The stack never uses those names: the API reaches Pos
 (internal `backend` network) and the SSR reaches the API as `meetstudent-api` (internal `ssr` network).
 Keep these aliases if you edit the file.
 
+Risks this setup accepts, to keep in mind:
+
+- **Dedicated server.** The `api` sits on the proxy network so Traefik can reach it, and so does every other
+  container on that network: it can call the API on port 8080 directly, past the rate limits, the upload cap
+  and the removal of `Forwarded`. Run nothing else on this Coolify server, so that Traefik stays the api's
+  only peer on `coolify` (Coolify's own containers aside).
+- **Cloudflare DNS only (grey cloud), for good.** The rate limits count requests per client IP as Traefik
+  sees it. Behind Cloudflare's proxy (orange cloud) every visitor arrives from a few Cloudflare addresses
+  and shares one budget: 10 sign-ins a minute for the whole site. Turn the proxy on only after setting
+  Traefik's `forwardedHeaders.trustedIPs` on the entry points to Cloudflare's published ranges.
+- **`forwardedHeaders.insecure` (check in coolify-deploy/05).** If Coolify's Traefik command line sets
+  `--entrypoints.<name>.forwardedHeaders.insecure=true`, Traefik trusts any `X-Forwarded-For` a client
+  sends: a client can then pick its own address, which defeats the per-IP limits and lies in the API logs.
+  Check the proxy's command line (Servers -> Proxy) on the first deploy, and remove the flag if present.
+
 ### 9.2 The Coolify resource
 
 1. Projects -> `MeetStudent` -> environment `production` -> New resource -> Public repository
@@ -483,12 +503,15 @@ Do not use `$` in a value: compose would interpolate it.
 
 The `deploy / production` job runs only on a push to `main`, after `api / build-and-test`,
 `web / build-and-test` and `backoffice / build-and-test` pass. It builds and pushes the four images, then
-calls `curl -fsS -L --max-redirs 0 -H "Authorization: Bearer $COOLIFY_TOKEN" "$COOLIFY_WEBHOOK"` (secrets
+calls `curl -fsS -L --max-redirs 0 --max-time 60 -H "Authorization: Bearer $COOLIFY_TOKEN" "$COOLIFY_WEBHOOK"` (secrets
 passed by environment, never printed): any answer other than 2xx, a redirect included (use the exact `https://`
 URL Coolify shows), turns the run red, and the images are already on
-GHCR, so a redeploy from Coolify (or a re-run of the job) finishes the job. Deploys queue one after the other
-(concurrency group `deploy-production`, never cancelled), and a newer push never cancels a run on `main`. The
-job is not a required check: it only exists on `main`.
+GHCR, so a redeploy from Coolify (or a re-run of the job) finishes the job. A hung push or webhook stops the
+job after 30 minutes (the call itself after 60 seconds). Deploys run one at a time (concurrency group
+`deploy-production`): a running deploy is never cancelled, and a newer push never cancels a run on `main`.
+GitHub keeps only one pending run per group, though: if two pushes land while a deploy runs, the older
+pending one is cancelled and only the newest deploys, which is the one wanted. The job is not a required
+check: it only exists on `main`.
 
 After the very first run, set each package to **public** (GitHub -> Packages -> `meetstudent-api`,
 `meetstudent-web`, `meetstudent-backoffice`, `meetstudent-backup` -> Package settings -> Change visibility):
@@ -507,8 +530,12 @@ remote: names and contents are encrypted on the VPS, and no local copy is kept.
 
 - R2 (plan phase 5): bucket with **Jurisdiction: EU**, lifecycle rule deleting objects after 30 days (the
   retention lives there, not in the script), API token scoped to that bucket, read and write.
-  `R2_ENDPOINT` is `https://<ACCOUNT_ID>.eu.r2.cloudflarestorage.com`, `R2_BUCKET` the bucket name,
-  `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` the token's keys.
+  That token sits on the VPS and can delete objects: whoever takes the server can erase the backups too.
+  Add a **bucket lock** rule (R2 -> bucket -> Settings -> Bucket lock) with a retention of at least 30 days,
+  so no object can be deleted or overwritten before then, by the token or anyone else.
+  `R2_ENDPOINT` is `https://<ACCOUNT_ID>.eu.r2.cloudflarestorage.com` (the scripts refuse, with exit `2`, an
+  endpoint without `.eu.`), `R2_BUCKET` the bucket name, `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` the
+  token's keys.
 - `BACKUP_CRYPT_PASSWORD` and `BACKUP_CRYPT_SALT`: two long random strings
   (`openssl rand -base64 32 | tr -d '/+=\n'`). Store them **in clear**, both in the Coolify secrets and in the
   password manager, before the first backup; the scripts obscure them for rclone. Without both, no backup
@@ -518,7 +545,9 @@ remote: names and contents are encrypted on the VPS, and no local copy is kept.
 
 Run the task once by hand after the first deploy (from the task's page, or `backup.sh` in the `backup`
 container's terminal) and check its log ends with `backup complete`. `restore.sh --list`, run in the same
-container, lists the backups.
+container, lists the complete backups: `SHA256SUMS` is sent last, so a folder without it (an upload cut off
+halfway) is never listed nor taken as `latest`. A run killed hard leaves its local copy in `/tmp`; the next
+run removes it.
 
 ### 9.5 Restore
 
@@ -565,7 +594,8 @@ before it.
 - **Rate limiting** (Traefik, per client IP): `/api/v1/auth*` and
   `POST /api/v1/users` allow 10 requests/minute with a burst of 5; the rest of
   `/api` allows 30/s with a burst of 100. Login, refresh and registration share one budget per IP. Students sharing one school NAT address
-  share the same budget; raise `rl-auth` in `compose.prod.yml` if that bites.
+  share the same budget; raise `rl-auth` if that bites: in `compose.prod.yml`, and for Coolify in
+  `infra/coolify/proxy/dynamic/meetstudent.yaml` (copied to the server again, section 9.1).
   Per-IP limiting relies on Docker preserving the real client IP, which it does
   for IPv4. If you enable IPv6 and Docker's userland proxy hides the source
   address, use IPv4 only.
