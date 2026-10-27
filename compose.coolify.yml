@@ -1,0 +1,267 @@
+# COOLIFY stack: the production stack run by Coolify (Docker Compose resource,
+# "Raw" mode, see docs/adr/0003-coolify-raw-compose-ghcr.md). Derived from
+# compose.prod.yml, which stays the deployment path without Coolify.
+#
+# Differences with compose.prod.yml, and only these:
+#   - No traefik service and no `ports:`: Coolify's own Traefik is the proxy.
+#   - Images come from GHCR (built by the CI), never built on the VPS.
+#     IMAGE_TAG=latest by default; a rollback sets IMAGE_TAG=sha-<40-char commit>.
+#   - The entry network is Coolify's external proxy network.
+#   - The shared middlewares and the HTTP -> HTTPS redirect live in Coolify's
+#     dynamic proxy configuration, versioned as
+#     infra/coolify/proxy/dynamic/meetstudent.yaml (copy it to the server's
+#     /data/coolify/proxy/dynamic/), and are referenced as <name>@file. As labels
+#     on an app container they would vanish whenever that container restarts.
+#   - Service-to-service traffic uses aliases on the stack's own internal
+#     networks (meetstudent-db, meetstudent-api). The proxy network is shared by
+#     every Coolify resource and by Coolify itself: a plain `api` or `db` there
+#     can resolve to another stack's container.
+#
+#   https://${DOMAIN}/api/*, /uploads/public/*  -> api
+#   https://${DOMAIN}/*                          -> web (Angular SSR)
+#   https://${BO_DOMAIN}/*                       -> backoffice (nginx, static SPA)
+#
+# Proxy parameters, to check against the real Coolify instance (defaults are
+# Coolify v4's): PROXY_NETWORK (coolify), PROXY_HTTP_ENTRYPOINT (http),
+# PROXY_HTTPS_ENTRYPOINT (https), PROXY_CERT_RESOLVER (letsencrypt).
+#
+# Validate:  infra/tests/coolify-stack.test.sh static
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+services:
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-meetstudent}
+      POSTGRES_USER: ${POSTGRES_USER:-meetstudent}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes:
+      # Postgres 18+ must be mounted at /var/lib/postgresql, not .../data.
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      backend:
+        aliases:
+          - meetstudent-db
+    logging: *default-logging
+
+  api:
+    image: ghcr.io/ibrahima-isi/meetstudent-api:${IMAGE_TAG:-latest}
+    pull_policy: always
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:postgresql://meetstudent-db:5432/${POSTGRES_DB:-meetstudent}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-meetstudent}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?set JWT_SECRET_KEY}
+      JWT_ACCESS_TTL_MINUTES: ${JWT_ACCESS_TTL_MINUTES:-15}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:?set CORS_ALLOWED_ORIGINS}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?set ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD}
+      FILE_UPLOAD_DIR: /data/uploads
+      FILE_PRIVATE_DIR: /data/private
+      # Account emails. Off unless MAIL_ENABLED=true; none of these is required, see docs/DEPLOY.md.
+      MAIL_ENABLED: ${MAIL_ENABLED:-false}
+      # brevo | gmail | ses | custom (default). A preset only supplies DEFAULTS for the SMTP connection (host, port 587,
+      # auth, mandatory STARTTLS); any SPRING_MAIL_* variable below still wins. See docs/DEPLOY.md.
+      MAIL_PROVIDER: ${MAIL_PROVIDER:-custom}
+      # AWS region of the SES SMTP endpoint (MAIL_PROVIDER=ses only).
+      MAIL_SES_REGION: ${MAIL_SES_REGION:-eu-west-1}
+      MAIL_FROM: ${MAIL_FROM:-}
+      # Mailbox that receives the contact-form messages (stored either way, mailed only with MAIL_ENABLED=true).
+      CONTACT_RECIPIENT: ${CONTACT_RECIPIENT:-contact@meetstudent.com}
+      # Origin used for the links in emails (https is enforced in prod when mail is on).
+      FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-https://${DOMAIN}}
+      # Unset values are not passed to the container; set them to enable SMTP.
+      SPRING_MAIL_HOST:
+      SPRING_MAIL_PORT:
+      SPRING_MAIL_USERNAME:
+      SPRING_MAIL_PASSWORD:
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH:
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE:
+      # Implicit TLS (port 465): SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_ENABLE=true, STARTTLS left unset.
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_ENABLE:
+      # Defaults to the STARTTLS_ENABLE value, so enabling STARTTLS also makes it mandatory (no silent downgrade).
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED:-${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE:-}}
+      # Retries of the contact mail on a transient SMTP failure (defaults: 3 attempts, 2 s then 10 s). Unset = default.
+      APP_CONTACT_MAIL_RETRY_MAX_ATTEMPTS:
+      APP_CONTACT_MAIL_RETRY_INITIAL_DELAY:
+      APP_CONTACT_MAIL_RETRY_BACKOFF_MULTIPLIER:
+      # A contact message PENDING for longer than this can be resent again (default 15m); before that a resend is 409.
+      APP_CONTACT_MAIL_PENDING_TIMEOUT:
+      # Seconds between two SMTP self-tests of the same admin (POST /api/v1/admin/mail/test); 0 = no limit.
+      APP_MAIL_TEST_COOLDOWN_SECONDS: ${APP_MAIL_TEST_COOLDOWN_SECONDS:-10}
+      # Cap the heap relative to the container/VPS memory.
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=65
+    volumes:
+      # The api image has no USER directive: the JVM runs as root, so the
+      # named volumes are writable without any chown step. If the image is ever
+      # changed to run unprivileged, chown these two paths to its uid first.
+      - api-uploads:/data/uploads
+      - api-private:/data/private
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      # /actuator/health is not permitAll; this public endpoint goes through the DB.
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:8080/api/v1/schools || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      backend: {}
+      ssr:
+        aliases:
+          - meetstudent-api
+      edge: {}
+    logging: *default-logging
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=${PROXY_NETWORK:-coolify}
+      - traefik.http.services.api.loadbalancer.server.port=8080
+      # Auth endpoints and registration: strict rate limit. /auth/capabilities is excluded: the web
+      # calls it on page loads and it must not eat the login/refresh budget (it falls to the api router).
+      - traefik.http.routers.api-auth.rule=Host(`${DOMAIN:?set DOMAIN}`) && (PathPrefix(`/api/v1/auth`) || (Path(`/api/v1/users`) && Method(`POST`))) && !Path(`/api/v1/auth/capabilities`)
+      - traefik.http.routers.api-auth.priority=30
+      - traefik.http.routers.api-auth.entrypoints=${PROXY_HTTPS_ENTRYPOINT:-https}
+      - traefik.http.routers.api-auth.tls=true
+      - traefik.http.routers.api-auth.tls.certresolver=${PROXY_CERT_RESOLVER:-letsencrypt}
+      - traefik.http.routers.api-auth.middlewares=strip-forwarded@file,rl-auth@file,sec@file
+      - traefik.http.routers.api-auth.service=api
+      # Uploads: 10 MB body cap.
+      - traefik.http.routers.api-upload.rule=Host(`${DOMAIN}`) && Method(`POST`) && PathPrefix(`/api/v1/media`)
+      - traefik.http.routers.api-upload.priority=25
+      - traefik.http.routers.api-upload.entrypoints=${PROXY_HTTPS_ENTRYPOINT:-https}
+      - traefik.http.routers.api-upload.tls=true
+      - traefik.http.routers.api-upload.tls.certresolver=${PROXY_CERT_RESOLVER:-letsencrypt}
+      - traefik.http.routers.api-upload.middlewares=strip-forwarded@file,upload-limit@file,rl-api@file,sec@file
+      - traefik.http.routers.api-upload.service=api
+      # Everything else under /api.
+      - traefik.http.routers.api.rule=Host(`${DOMAIN}`) && PathPrefix(`/api`)
+      - traefik.http.routers.api.priority=20
+      - traefik.http.routers.api.entrypoints=${PROXY_HTTPS_ENTRYPOINT:-https}
+      - traefik.http.routers.api.tls=true
+      - traefik.http.routers.api.tls.certresolver=${PROXY_CERT_RESOLVER:-letsencrypt}
+      - traefik.http.routers.api.middlewares=strip-forwarded@file,rl-api@file,sec@file
+      - traefik.http.routers.api.service=api
+      # Public media served statically by the API.
+      - traefik.http.routers.uploads.rule=Host(`${DOMAIN}`) && PathPrefix(`/uploads/public`)
+      - traefik.http.routers.uploads.priority=20
+      - traefik.http.routers.uploads.entrypoints=${PROXY_HTTPS_ENTRYPOINT:-https}
+      - traefik.http.routers.uploads.tls=true
+      - traefik.http.routers.uploads.tls.certresolver=${PROXY_CERT_RESOLVER:-letsencrypt}
+      - traefik.http.routers.uploads.middlewares=strip-forwarded@file,sec@file
+      - traefik.http.routers.uploads.service=api
+
+  web:
+    image: ghcr.io/ibrahima-isi/meetstudent-web:${IMAGE_TAG:-latest}
+    pull_policy: always
+    restart: unless-stopped
+    environment:
+      PORT: 4200
+      # Server-side rendering reaches the API over the stack's internal ssr network.
+      API_URL: http://meetstudent-api:8080/api/v1
+      SERVER_URL: http://meetstudent-api:8080
+      # SSR renders only for these Host headers; localhost serves the healthcheck.
+      ALLOWED_HOSTS: ${DOMAIN},localhost,127.0.0.1
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:4200/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - ssr
+      - edge
+    logging: *default-logging
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=${PROXY_NETWORK:-coolify}
+      - traefik.http.services.web.loadbalancer.server.port=4200
+      - traefik.http.routers.web.rule=Host(`${DOMAIN}`)
+      - traefik.http.routers.web.priority=1
+      - traefik.http.routers.web.entrypoints=${PROXY_HTTPS_ENTRYPOINT:-https}
+      - traefik.http.routers.web.tls=true
+      - traefik.http.routers.web.tls.certresolver=${PROXY_CERT_RESOLVER:-letsencrypt}
+      - traefik.http.routers.web.middlewares=sec@file
+      - traefik.http.routers.web.service=web
+      # Plain HTTP on DOMAIN (every path, /api included) -> HTTPS.
+      - traefik.http.routers.web-http.rule=Host(`${DOMAIN}`)
+      - traefik.http.routers.web-http.entrypoints=${PROXY_HTTP_ENTRYPOINT:-http}
+      - traefik.http.routers.web-http.middlewares=https-redirect@file
+      - traefik.http.routers.web-http.service=noop@internal
+
+  backoffice:
+    image: ghcr.io/ibrahima-isi/meetstudent-backoffice:${IMAGE_TAG:-latest}
+    pull_policy: always
+    restart: unless-stopped
+    environment:
+      # Rendered into /config.json at container start.
+      BO_API_URL: ${BO_API_URL:-https://${DOMAIN}/api/v1}
+      BO_WEB_URL: https://${DOMAIN}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:8080/config.json || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - edge
+    logging: *default-logging
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=${PROXY_NETWORK:-coolify}
+      - traefik.http.services.backoffice.loadbalancer.server.port=8080
+      - traefik.http.routers.backoffice.rule=Host(`${BO_DOMAIN:?set BO_DOMAIN}`)
+      - traefik.http.routers.backoffice.entrypoints=${PROXY_HTTPS_ENTRYPOINT:-https}
+      - traefik.http.routers.backoffice.tls=true
+      - traefik.http.routers.backoffice.tls.certresolver=${PROXY_CERT_RESOLVER:-letsencrypt}
+      - traefik.http.routers.backoffice.middlewares=sec@file
+      - traefik.http.routers.backoffice.service=backoffice
+      - traefik.http.routers.backoffice-http.rule=Host(`${BO_DOMAIN}`)
+      - traefik.http.routers.backoffice-http.entrypoints=${PROXY_HTTP_ENTRYPOINT:-http}
+      - traefik.http.routers.backoffice-http.middlewares=https-redirect@file
+      - traefik.http.routers.backoffice-http.service=noop@internal
+
+volumes:
+  pgdata:
+  api-uploads:
+  api-private:
+
+networks:
+  # Coolify's proxy network: Traefik reaches api, web and backoffice here. Shared
+  # with every other Coolify resource, so nothing in this stack resolves a peer
+  # by name on it.
+  edge:
+    name: ${PROXY_NETWORK:-coolify}
+    external: true
+  # Postgres lives here only (with the api), with no route to the outside world.
+  backend:
+    internal: true
+  # Server-side rendering: web -> api, nothing else.
+  ssr:
+    internal: true
