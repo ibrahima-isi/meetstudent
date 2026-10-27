@@ -56,9 +56,9 @@ static_tests() {
       q ".services.$app.image == \"ghcr.io/ibrahima-isi/meetstudent-$app:latest\" and .services.$app.pull_policy == \"always\""
   done
   local sha=0123456789abcdef0123456789abcdef01234567
-  check "IMAGE_TAG=sha-<commit> pins the three images (rollback)" \
-    jq -e --arg t "sha-$sha" '[.services.api.image, .services.web.image, .services.backoffice.image]
-      | all(endswith(":" + $t))' <<<"$(IMAGE_TAG=sha-$sha rendered)"
+  check "IMAGE_TAG=sha-<commit> pins the four images, backup included (rollback)" \
+    jq -e --arg t "sha-$sha" '[.services.api.image, .services.web.image, .services.backoffice.image, .services.backup.image]
+      | all(. != null and endswith(":" + $t))' <<<"$(IMAGE_TAG=sha-$sha rendered)"
   check "the entry network is Coolify's external proxy network (coolify by default)" \
     q '[.networks[] | select(.external == true)] | map(.name) == ["coolify"]'
   check "PROXY_NETWORK renames the entry network" \
