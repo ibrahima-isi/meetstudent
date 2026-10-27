@@ -15,7 +15,7 @@ Spec : [coolify-deploy](../spec.md), user stories 2, 3, 4, 6, 8, 9 ; [ADR 0003](
 - [x] Push GHCR avec `GITHUB_TOKEN` : `ghcr.io/ibrahima-isi/meetstudent-{api,web,backoffice}`, tags `sha-<commit>` et `latest`, en `linux/amd64` seulement
 - [x] Les `name:` des trois jobs de tests restent inchangés (checks requis par les rulesets) ; le job `deploy` et le build sur PR ne deviennent pas des checks requis
 - [x] Aucun secret dans les images : vérifier que les Dockerfiles ne copient ni `.env` ni fichier de secrets (les images seront publiques)
-- [ ] Preuve : run CI vert sur la PR avec les trois builds d'images ; le push GHCR ne se vérifie qu'au premier push sur `main` ([coolify-deploy/05](05-first-production-deploy.md))
+- [x] Preuve : run CI vert sur la PR avec les trois builds d'images ; le push GHCR ne se vérifie qu'au premier push sur `main` ([coolify-deploy/05](05-first-production-deploy.md)) — fait : [run](https://github.com/ibrahima-isi/meetstudent/actions/runs/40594615837) sur la PR #225.
 
 ## Comments
 
