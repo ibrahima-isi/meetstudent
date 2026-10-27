@@ -4,7 +4,7 @@
 
 **Blocked by:** [coolify-deploy/01](01-ci-images-ghcr.md), [coolify-deploy/02](02-coolify-stack-and-proxy.md), [coolify-deploy/03](03-encrypted-offsite-backup.md)
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 **Worktree:** `coolify-deploy-04` — branche `ci/coolify-deploy-webhook`
 
