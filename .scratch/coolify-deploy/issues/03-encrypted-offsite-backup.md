@@ -4,7 +4,7 @@
 
 **Blocked by:** [coolify-deploy/01](01-ci-images-ghcr.md), [coolify-deploy/02](02-coolify-stack-and-proxy.md)
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 **Worktree:** `coolify-deploy-03` — branche `feat/coolify-backup`
 
