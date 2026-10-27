@@ -124,6 +124,15 @@ test_no_secret_file_reaches_an_image_build_context() {
   assert_eq "" "$leaked" "secret files in a build context"
 }
 
+# Deploys queue one after another instead of cancelling each other; the
+# superseded-run cancellation of the workflow header stays as it is.
+test_deploys_queue_instead_of_cancelling_each_other() {
+  assert_eq '{"group":"deploy-production","cancel-in-progress":false}' \
+    "$(job deploy | jq -c '.concurrency')" "deploy concurrency"
+  assert_eq '{"group":"${{ github.workflow }}-${{ github.ref }}","cancel-in-progress":true}' \
+    "$(yq -o=json -I=0 '.concurrency' "$WORKFLOW")" "workflow concurrency"
+}
+
 # --- runner -----------------------------------------------------------------
 tests=("$@")
 if [[ ${#tests[@]} -eq 0 ]]; then
