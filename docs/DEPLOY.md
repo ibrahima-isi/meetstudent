@@ -507,8 +507,9 @@ remote: names and contents are encrypted on the VPS, and no local copy is kept.
 
 - R2 (plan phase 5): bucket with **Jurisdiction: EU**, lifecycle rule deleting objects after 30 days (the
   retention lives there, not in the script), API token scoped to that bucket, read and write.
-  `R2_ENDPOINT` is `https://<ACCOUNT_ID>.eu.r2.cloudflarestorage.com`, `R2_BUCKET` the bucket name,
-  `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` the token's keys.
+  `R2_ENDPOINT` is `https://<ACCOUNT_ID>.eu.r2.cloudflarestorage.com` (the scripts refuse, with exit `2`, an
+  endpoint without `.eu.`), `R2_BUCKET` the bucket name, `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` the
+  token's keys.
 - `BACKUP_CRYPT_PASSWORD` and `BACKUP_CRYPT_SALT`: two long random strings
   (`openssl rand -base64 32 | tr -d '/+=\n'`). Store them **in clear**, both in the Coolify secrets and in the
   password manager, before the first backup; the scripts obscure them for rclone. Without both, no backup
@@ -518,7 +519,9 @@ remote: names and contents are encrypted on the VPS, and no local copy is kept.
 
 Run the task once by hand after the first deploy (from the task's page, or `backup.sh` in the `backup`
 container's terminal) and check its log ends with `backup complete`. `restore.sh --list`, run in the same
-container, lists the backups.
+container, lists the complete backups: `SHA256SUMS` is sent last, so a folder without it (an upload cut off
+halfway) is never listed nor taken as `latest`. A run killed hard leaves its local copy in `/tmp`; the next
+run removes it.
 
 ### 9.5 Restore
 

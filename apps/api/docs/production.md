@@ -47,14 +47,15 @@ R2 bucket rules (EU jurisdiction, 30-day lifecycle): `docs/DEPLOY.md` section 9.
 
 | Variable | Required | Default | Purpose |
 |---|---|---|---|
-| `R2_ENDPOINT` | for backups | none | `https://<ACCOUNT_ID>.eu.r2.cloudflarestorage.com` (EU jurisdiction endpoint). |
+| `R2_ENDPOINT` | for backups | none | `https://<ACCOUNT_ID>.eu.r2.cloudflarestorage.com` (EU jurisdiction endpoint). The scripts refuse an endpoint without `.eu.` (exit `2`). |
 | `R2_BUCKET` | for backups | none | Bucket name; the token is scoped to it, so rclone never checks or creates it. |
 | `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | for backups | none | Keys of the bucket-scoped R2 API token (read + write). Secrets. |
 | `BACKUP_CRYPT_PASSWORD` | for backups | none | `crypt` password, the original in clear (Coolify secret + password manager); the scripts obscure it for rclone. Without it no backup can be read. |
 | `BACKUP_CRYPT_SALT` | for backups | none | `crypt` salt (rclone's `password2`), same handling as the password. |
 
 None of them is needed to render or start the stack. `backup.sh` and `restore.sh` refuse to run without all of
-them and exit `2`, naming the missing ones, so a forgotten variable shows up as a failed scheduled task.
+them and exit `2`, naming the missing ones, so a forgotten variable shows up as a failed scheduled task. The
+check lives in `infra/backup/backup-env.sh`, sourced by both scripts.
 
 ## Email
 

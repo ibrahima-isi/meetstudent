@@ -2,7 +2,7 @@
 # Restore a backup made by backup.sh (ADR 0004, coolify-deploy/03).
 # DESTRUCTIVE: replaces the database and the content of both upload volumes.
 #
-#   restore.sh --list                 # backups available off site, oldest first
+#   restore.sh --list                 # complete backups available off site, oldest first
 #   restore.sh <20261027T031500Z|latest> --yes
 #
 # The `backup` service mounts the upload volumes read-only at /data. A restore
@@ -28,19 +28,16 @@ PRIVATE_DIR=${RESTORE_PRIVATE_DIR:-/restore/private}
 
 usage() { echo "usage: restore.sh --list | restore.sh <backup|latest> --yes" >&2; exit 2; }
 
-missing=
-for var in PGHOST PGUSER PGPASSWORD PGDATABASE RCLONE_CONFIG_R2_ENDPOINT RCLONE_CONFIG_R2_ACCESS_KEY_ID \
-  RCLONE_CONFIG_R2_SECRET_ACCESS_KEY RCLONE_CONFIG_R2CRYPT_REMOTE BACKUP_CRYPT_PASSWORD BACKUP_CRYPT_SALT; do
-  eval "[ -n \"\${$var:-}\" ]" || missing="$missing $var"
-done
-case ${RCLONE_CONFIG_R2CRYPT_REMOTE:-} in *:) missing="$missing R2_BUCKET" ;; esac
-[ -z "$missing" ] || { echo "restore: not configured, missing:$missing" >&2; exit 2; }
+# Configuration check (exit 2) and crypt password for rclone, shared with the other script.
+. "$(dirname "$0")/backup-env.sh"
 
-RCLONE_CONFIG_R2CRYPT_PASSWORD=$(printf '%s' "$BACKUP_CRYPT_PASSWORD" | rclone obscure -)
-RCLONE_CONFIG_R2CRYPT_PASSWORD2=$(printf '%s' "$BACKUP_CRYPT_SALT" | rclone obscure -)
-export RCLONE_CONFIG_R2CRYPT_PASSWORD RCLONE_CONFIG_R2CRYPT_PASSWORD2
-
-backups() { rclone lsf --dirs-only "$REMOTE" | sed 's#/$##' | grep -E '^[0-9]{8}T[0-9]{6}Z$' | sort; }
+# Complete backups only: backup.sh sends SHA256SUMS last, so a folder without
+# it is an interrupted backup. sed -n, not grep: with pipefail a grep matching
+# nothing would kill the caller before it can say "no backup found".
+backups() {
+  rclone lsf -R --files-only --include '/*/SHA256SUMS' "$REMOTE" \
+    | sed -n 's#^\([0-9]\{8\}T[0-9]\{6\}Z\)/SHA256SUMS$#\1#p' | sort
+}
 
 case ${1:-} in
   --list) backups; exit 0 ;;
