@@ -4,7 +4,7 @@
 
 **Blocked by:** aucun (les images GHCR peuvent être remplacées par des images construites en local pour le test)
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 **Worktree:** `coolify-deploy-02` — branche `ci/coolify-stack`
 
