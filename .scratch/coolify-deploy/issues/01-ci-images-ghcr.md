@@ -4,7 +4,7 @@
 
 **Blocked by:** aucun
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 **Worktree:** `coolify-deploy-01` — branche `ci/coolify-images`
 
