@@ -27,3 +27,11 @@ Spec : [coolify-deploy](../spec.md), user stories 2, 3, 4, 6, 8, 9 ; [ADR 0003](
 - Preuves locales : rouge → vert pour chaque test (sauf les gardes noms/actionlint/secrets, verts dès l'écriture ; le test secrets a été vu rouge en plantant `apps/web/.env` et `apps/backoffice/server.key` en intent-to-add). `GITHUB_SHA=<HEAD> docker buildx bake -f docker-bake.hcl` construit les trois images en local (exit 0) ; aucun `.env`, clé ou keystore dans les images finales (`find /` : seuls les bundles CA publics).
 - Non vérifié : le run CI vert sur la PR (case restante), le push GHCR et `environment: production` réels (premier push sur `main`, ticket 05). L'environnement GitHub `production` doit exister (le créer, restreint à `main`, avant la promotion).
 
+### 2026-10-27 — suivi après revue du propriétaire (branche `ci/coolify-images-followup`, commits `bb690d6`, `94b7798`)
+
+- La définition des images passe de la racine à `infra/docker-bake.hcl` (décision du propriétaire). La CI et les tests lancent bake depuis la racine du dépôt (`docker buildx bake -f infra/docker-bake.hcl`), donc les contextes restent `apps/*`. Les mentions de `docker-bake.hcl` à la racine plus haut sont historiques.
+- Le job `deploy / production` a son propre groupe de concurrence (`deploy-production`, `cancel-in-progress: false`) : les déploiements passent l'un après l'autre. L'en-tête du workflow (`cancel-in-progress: true` par branche) est inchangé et un test le protège. Limite : cet en-tête annule toujours tout le run précédent sur `main` quand un nouveau push arrive, `deploy` compris ; le groupe du job n'empêche pas cela.
+- Le test du SHA complet exige maintenant le message de la validation : avant, un fichier bake absent le faisait passer quand même.
+- Preuves : rouge → vert. Après le changement de chemin dans les tests : 4 tests en échec, puis le test du SHA durci en échec (`open infra/docker-bake.hcl: no such file or directory`) ; après `git mv` : 7/7 ok. Nouveau test `test_deploys_queue_instead_of_cancelling_each_other` en échec (`deploy concurrency` : `null`), puis vert. `infra/tests/ci-images.test.sh` → 8/8 ok, exit 0 ; `infra/tests/coolify-stack.test.sh static` → all passed, exit 0.
+- L'environnement GitHub `production` (restreint à `main`) est créé par le propriétaire ; sa vérification appartient à coolify-deploy/05.
+
