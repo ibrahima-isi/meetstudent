@@ -18,6 +18,8 @@ cd "$ROOT" || exit 2
 # A fixed, full commit SHA: the tags must carry all 40 characters.
 SHA="0123456789abcdef0123456789abcdef01234567"
 REGISTRY="ghcr.io/ibrahima-isi"
+# The image definition. Bake runs from the repository root, as in the CI.
+BAKE_FILE="infra/docker-bake.hcl"
 
 failures=0
 fail() { echo "    FAIL: $*"; failures=$((failures + 1)); }
@@ -27,7 +29,7 @@ assert_eq() { # expected actual message
 
 # The resolved image definition, as the CI would build it for $SHA. The file is
 # named explicitly: by default bake would also merge compose.yml into it.
-bake_print() { GITHUB_SHA="$SHA" docker buildx bake -f docker-bake.hcl --print 2>/dev/null; }
+bake_print() { GITHUB_SHA="$SHA" docker buildx bake -f "$BAKE_FILE" --print 2>/dev/null; }
 
 test_each_production_image_is_tagged_with_its_commit_and_latest() {
   local def
@@ -48,10 +50,12 @@ test_each_production_image_is_tagged_with_its_commit_and_latest() {
 }
 
 test_no_image_is_tagged_without_a_full_commit_sha() {
-  local bad
+  local bad out
   for bad in "" "0123456" "${SHA}0" "not-a-sha-not-a-sha-not-a-sha-not-a-sha!"; do
-    if GITHUB_SHA="$bad" docker buildx bake -f docker-bake.hcl --print >/dev/null 2>&1; then
+    if out="$(GITHUB_SHA="$bad" docker buildx bake -f "$BAKE_FILE" --print 2>&1)"; then
       fail "accepted GITHUB_SHA='$bad'"
+    elif [[ "$out" != *"GITHUB_SHA must be the full 40-character commit SHA"* ]]; then
+      fail "GITHUB_SHA='$bad' refused for another reason: $(tail -1 <<<"$out")"
     fi
   done
 }
@@ -82,7 +86,7 @@ test_pull_request_builds_every_image_without_pushing() {
   local bake
   bake="$(jq -c '[(.steps // [])[] | select(.uses // "" | startswith("docker/bake-action@"))]' <<<"$j")"
   assert_eq "1" "$(jq 'length' <<<"$bake")" "one bake step"
-  assert_eq "docker-bake.hcl|.|false" \
+  assert_eq "$BAKE_FILE|.|false" \
     "$(jq -r '.[0].with | "\(.files)|\(.source)|\(.push)"' <<<"$bake")" "bake files|source|push"
 }
 
@@ -102,7 +106,7 @@ test_promotion_to_main_publishes_every_image_to_ghcr_after_the_tests() {
   local bake
   bake="$(jq -c '[(.steps // [])[] | select(.uses // "" | startswith("docker/bake-action@"))]' <<<"$j")"
   assert_eq "1" "$(jq 'length' <<<"$bake")" "one bake step"
-  assert_eq "docker-bake.hcl|.|true" \
+  assert_eq "$BAKE_FILE|.|true" \
     "$(jq -r '.[0].with | "\(.files)|\(.source)|\(.push)"' <<<"$bake")" "bake files|source|push"
 }
 
@@ -118,6 +122,15 @@ test_no_secret_file_reaches_an_image_build_context() {
     | grep -Ei '(^|/)\.env($|\.)|\.(pem|key|p12|pfx|jks|keystore)$|(^|/)id_(rsa|ed25519|ecdsa)($|[^/]*$)' \
     | grep -Ev '\.example$')"
   assert_eq "" "$leaked" "secret files in a build context"
+}
+
+# Deploys queue one after another instead of cancelling each other; the
+# superseded-run cancellation of the workflow header stays as it is.
+test_deploys_queue_instead_of_cancelling_each_other() {
+  assert_eq '{"group":"deploy-production","cancel-in-progress":false}' \
+    "$(job deploy | jq -c '.concurrency')" "deploy concurrency"
+  assert_eq '{"group":"${{ github.workflow }}-${{ github.ref }}","cancel-in-progress":true}' \
+    "$(yq -o=json -I=0 '.concurrency' "$WORKFLOW")" "workflow concurrency"
 }
 
 # --- runner -----------------------------------------------------------------
