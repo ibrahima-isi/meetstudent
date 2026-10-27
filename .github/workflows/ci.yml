@@ -170,6 +170,16 @@ jobs:
           files: infra/docker-bake.hcl
           push: true
 
+      # The only deploy trigger (Coolify's auto deploy stays off): the resource's
+      # "Deploy Webhook (auth required)". Secrets of the `production` environment,
+      # passed by env, never echoed; a non-2xx answer fails the run (--fail).
+      - name: Ask Coolify to deploy
+        env:
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+          COOLIFY_WEBHOOK: ${{ secrets.COOLIFY_WEBHOOK }}
+        run: |
+          curl -fsS -H "Authorization: Bearer $COOLIFY_TOKEN" "$COOLIFY_WEBHOOK"
+
   # Renders compose.coolify.yml with dummy variables and checks what the Coolify
   # stack guarantees (no published port, GHCR images, isolated Postgres...).
   # Not a required check. The live half (the stack behind a replica of Coolify's
