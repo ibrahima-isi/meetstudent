@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
 import org.springframework.data.repository.query.Param;
@@ -17,6 +18,11 @@ import org.springframework.data.repository.query.Param;
 public interface SchoolRepository extends JpaRepository<School, Integer> {
 
     Optional<School> findByNameIgnoreCase(String name);
+
+    /** Wishlist links are owned by the user side, so the school side must clear them itself (the FK has no cascade). */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(value = "DELETE FROM user_wishlist WHERE school_id = :schoolId", nativeQuery = true)
+    void deleteWishlistLinks(@Param("schoolId") Integer schoolId);
 
     Page<School> findSchoolByNameContainingIgnoreCase(String name, Pageable pageable);
 

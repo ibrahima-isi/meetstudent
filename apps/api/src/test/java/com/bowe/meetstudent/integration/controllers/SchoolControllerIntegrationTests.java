@@ -141,6 +141,66 @@ class SchoolControllerIntegrationTests {
         org.junit.jupiter.api.Assertions.assertTrue(schoolService.getSchoolById(school.getId()).isEmpty());
     }
 
+    @Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbc;
+
+    private void addToWishlist(int userId, int schoolId) throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/users/" + userId + "/wishlist/" + schoolId)
+                        .with(TestDataUtil.mockUser(userId, "ROLE_STUDENT")))
+                .andExpect(MockMvcResultMatchers.status().is2xxSuccessful());
+    }
+
+    @Test
+    void deleteSchoolPresentInAWishlistRemovesTheLinkAndSucceeds() throws Exception {
+        int studentId = saveStudent();
+        int doomed = saveSchool("Doomed school", "DOO");
+        int kept = saveSchool("Kept school", "KEP");
+        addToWishlist(studentId, doomed);
+        addToWishlist(studentId, kept);
+
+        mockMvc.perform(MockMvcRequestBuilders.delete("/api/v1/schools/" + doomed)
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.id").value(doomed));
+
+        org.junit.jupiter.api.Assertions.assertTrue(schoolService.getSchoolById(doomed).isEmpty());
+        org.junit.jupiter.api.Assertions.assertEquals(1,
+                jdbc.queryForObject("select count(*) from user_wishlist", Integer.class));
+        org.junit.jupiter.api.Assertions.assertEquals(kept,
+                jdbc.queryForObject("select school_id from user_wishlist where user_id = ?", Integer.class, studentId));
+    }
+
+    @Test
+    void deleteSchoolInAWishlistKeepsOtherSchoolsAndRemovesLogoMedia() throws Exception {
+        int studentId = saveStudent();
+        var media = persistedLogo();
+        School saved = schoolMapper.toEntity(TestDataUtil.createSchoolDto());
+        saved.setLogoMediaId(media.getId());
+        int schoolId = schoolService.save(saved).getId();
+        addToWishlist(studentId, schoolId);
+
+        mockMvc.perform(MockMvcRequestBuilders.delete("/api/v1/schools/" + schoolId)
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isOk());
+
+        org.junit.jupiter.api.Assertions.assertTrue(mediaRepository.findById(media.getId()).isEmpty());
+    }
+
+    @Test
+    void deleteSchoolAsStudentIsForbiddenAndKeepsTheSchoolAndItsWishlistLink() throws Exception {
+        int studentId = saveStudent();
+        int schoolId = saveSchool("Protected school", "PRO");
+        addToWishlist(studentId, schoolId);
+
+        mockMvc.perform(MockMvcRequestBuilders.delete("/api/v1/schools/" + schoolId)
+                        .with(TestDataUtil.mockUser(studentId, "ROLE_STUDENT")))
+                .andExpect(MockMvcResultMatchers.status().isForbidden());
+
+        org.junit.jupiter.api.Assertions.assertTrue(schoolService.getSchoolById(schoolId).isPresent());
+        org.junit.jupiter.api.Assertions.assertEquals(1,
+                jdbc.queryForObject("select count(*) from user_wishlist", Integer.class));
+    }
+
     @Test
     void testThatCreateSchoolReturnsHttpStatus201Created() throws Exception {
         SchoolDTO schoolDTO = TestDataUtil.createSchoolDto();
