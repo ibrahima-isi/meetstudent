@@ -20,3 +20,19 @@ Spec : [coolify-deploy](../spec.md), user stories 22 à 29 ; [ADR 0004](../../..
 - [ ] `docker compose down -v` après le test
 
 ## Comments
+
+### 2026-10-27 — avancement (branche `feat/coolify-backup`, commit `eda7066`), en attente d'accord
+
+Fait (5 fichiers) : `infra/backup/{Dockerfile,backup.sh,restore.sh}`, service `backup` dans `compose.coolify.yml`, test `infra/tests/backup.test.sh`.
+
+- Écart avec le ticket : le service `backup` est sur `backend` **et** sur un nouveau réseau `egress` (non interne). `backend` est `internal: true`, donc sans sortie : sur `backend` seul, R2 serait injoignable (sonde : un conteneur sur un réseau interne n'atteint pas `https://cloudflare.com`, code `000` ; sur un réseau normal, `301`). Postgres reste seul sur `backend` avec l'API et la sauvegarde ; `egress` ne porte que `backup`.
+- rclone par variables d'environnement : remote `r2` (s3, provider Cloudflare, `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `no_check_bucket`) enveloppé par `r2crypt` (crypt sur `r2:${R2_BUCKET}`). `BACKUP_CRYPT_PASSWORD` et `BACKUP_CRYPT_SALT` portent les originaux (ceux du gestionnaire de mots de passe) ; les scripts les passent à rclone obscurcis (`rclone obscure -`, par l'entrée standard). Variables non exigées au rendu du compose (sinon le test statique et la CI de 02 casseraient) : les scripts refusent de tourner sans elles (code 2).
+- Restauration : les volumes sont `:ro` sur `/data` ; `restore.sh` écrit dans `/restore/{uploads,private}`, montés par un `docker compose run --rm -v api-uploads:/restore/uploads -v api-private:/restore/private backup restore.sh latest --yes` (un `-v` sur la même cible `/data/...` ne lève pas le `:ro`, vérifié). Rien n'est effacé avant téléchargement et vérification des sommes.
+
+Preuves (Docker 29.6.1, Compose v5.3.0 ; MinIO réel `bitnamilegacy/minio:2025.5.24` à la place de R2, `minio/minio` et `quay.io/minio/minio` refusés au pull ; image API locale `sha-c57b8c3…` retaguée `backup-test`) :
+- Rouge : sans `infra/backup` → `FAIL the backup image builds` ; sans service → `FAIL the stack with its backup service starts` ; sans `restore.sh` → `exec: restore.sh: not found` + 4 échecs.
+- Mutations vues rouges : remote non chiffré (`r2:` au lieu de `r2crypt:`) → `FAIL no object name gives away…` et `FAIL no object is readable in clear (4 readable)` ; `rclone copy … || true` sans nettoyage → `FAIL an unreachable S3 fails the backup (exit 0)` + copies locales restantes.
+- Vert : `IMAGE_TAG=backup-test infra/tests/backup.test.sh` → 20 ok, `all passed`, exit 0 : sauvegarde exit 0, aucune copie locale, 4 objets aux noms chiffrés, aucun lisible en clair (ni gzip, ni `PGDMP`, ni somme), restauration dans une stack vide → connexion de l'étudiante, école présente, document privé identique (SHA-256), mauvaise clé → échec, configuration incomplète → exit 2, S3 arrêté → exit 1 sans copie locale ; écriture refusée sur les volumes. `infra/tests/coolify-stack.test.sh static` → all passed ; `infra/tests/ci-images.test.sh` → all passed.
+- Nettoyage : `down -v` des deux stacks, MinIO et réseau de test retirés par le `trap`.
+
+Reste (2 fichiers de plus, accord du propriétaire demandé) : ligne `meetstudent-backup` dans `infra/docker-bake.hcl` et dans `infra/tests/ci-images.test.sh` (qui exige aujourd'hui exactement trois images).
