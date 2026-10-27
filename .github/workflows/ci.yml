@@ -106,3 +106,18 @@ jobs:
 
       - name: Run unit tests
         run: npm test -- --no-watch --browsers=ChromeHeadless
+
+  # Renders compose.coolify.yml with dummy variables and checks what the Coolify
+  # stack guarantees (no published port, GHCR images, isolated Postgres...).
+  # Not a required check. The live half (the stack behind a replica of Coolify's
+  # Traefik) needs the images locally: infra/tests/coolify-stack.test.sh live.
+  compose:
+    name: compose / validate-coolify
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate compose.coolify.yml
+        run: infra/tests/coolify-stack.test.sh static
