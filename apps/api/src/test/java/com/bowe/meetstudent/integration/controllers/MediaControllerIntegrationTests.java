@@ -155,6 +155,78 @@ class MediaControllerIntegrationTests {
                 .andExpect(status().isForbidden());
     }
 
+    private int uploadPublicAs(String category, int userId, String role, String filename) throws Exception {
+        String body = mockMvc.perform(multipart("/api/v1/media")
+                        .file(new MockMultipartFile("file", filename, "image/png", PNG))
+                        .param("category", category)
+                        .with(TestDataUtil.mockUser(userId, role)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        return objectMapper.readTree(body).get("id").asInt();
+    }
+
+    @Test
+    void studentCannotDeleteAnotherUsersPublicPhoto() throws Exception {
+        int id = uploadPublicAs("USER_PHOTO", 7, "ROLE_STUDENT", "me.png");
+
+        mockMvc.perform(delete("/api/v1/media/" + id).with(TestDataUtil.mockUser(8, "ROLE_STUDENT")))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/v1/media/" + id)).andExpect(status().isOk());
+    }
+
+    @Test
+    void studentCannotDeleteOwnerlessSchoolLogo() throws Exception {
+        int id = uploadPublicAs("SCHOOL_LOGO", 99, "ROLE_ADMIN", "logo.png");
+
+        mockMvc.perform(delete("/api/v1/media/" + id).with(TestDataUtil.mockUser(8, "ROLE_STUDENT")))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/v1/media/" + id)).andExpect(status().isOk());
+    }
+
+    @Test
+    void ownerCanDeleteOwnPublicPhoto() throws Exception {
+        int id = uploadPublicAs("USER_PHOTO", 7, "ROLE_STUDENT", "me.png");
+
+        mockMvc.perform(delete("/api/v1/media/" + id).with(TestDataUtil.mockUser(7, "ROLE_STUDENT")))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void adminCanDeleteAnyPublicMedia() throws Exception {
+        int id = uploadPublicAs("USER_PHOTO", 7, "ROLE_STUDENT", "me.png");
+
+        mockMvc.perform(delete("/api/v1/media/" + id).with(TestDataUtil.mockUser(99, "ROLE_ADMIN")))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void otherUserCannotDeletePrivateDocumentButOwnerCan() throws Exception {
+        int id = uploadDiplomaAs(7);
+
+        mockMvc.perform(delete("/api/v1/media/" + id).with(TestDataUtil.mockUser(8, "ROLE_STUDENT")))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(delete("/api/v1/media/" + id).with(TestDataUtil.mockUser(7, "ROLE_STUDENT")))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void deleteUnknownMediaIs403ForStudent404ForAdminAnd401Anonymous() throws Exception {
+        mockMvc.perform(delete("/api/v1/media/987654").with(TestDataUtil.mockUser(8, "ROLE_STUDENT")))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(delete("/api/v1/media/987654").with(TestDataUtil.mockUser(99, "ROLE_ADMIN")))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(delete("/api/v1/media/987654")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void anonymousCannotDeletePublicMedia() throws Exception {
+        int id = uploadPublicAs("USER_PHOTO", 7, "ROLE_STUDENT", "me.png");
+
+        mockMvc.perform(delete("/api/v1/media/" + id)).andExpect(status().isUnauthorized());
+    }
+
     @Test
     void mineReturnsOnlyCallersMedia() throws Exception {
         uploadDiplomaAs(7);

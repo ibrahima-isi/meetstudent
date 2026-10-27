@@ -252,6 +252,90 @@ class MediaServiceTest {
                 () -> mediaService.delete(5, principal(8, "ROLE_STUDENT")));
     }
 
+    private Media publicMedia(MediaCategory category, Integer ownerId) {
+        Media m = Media.builder().visibility(MediaVisibility.PUBLIC)
+                .category(category).ownerId(ownerId).storageKey("public/x.png").build();
+        ReflectionTestUtils.setField(m, "id", 5);
+        when(mediaRepository.findById(5)).thenReturn(Optional.of(m));
+        return m;
+    }
+
+    @Test
+    void deletePublicMediaByOtherUserIsForbidden() throws IOException {
+        publicMedia(MediaCategory.USER_PHOTO, 7);
+
+        assertThrows(AccessDeniedException.class,
+                () -> mediaService.delete(5, principal(8, "ROLE_STUDENT")));
+
+        verify(storageService, never()).delete(any());
+        verify(mediaRepository, never()).delete(any());
+    }
+
+    @Test
+    void deleteOwnerlessPublicMediaByStudentIsForbidden() throws IOException {
+        publicMedia(MediaCategory.SCHOOL_LOGO, null);
+
+        assertThrows(AccessDeniedException.class,
+                () -> mediaService.delete(5, principal(8, "ROLE_STUDENT")));
+
+        verify(storageService, never()).delete(any());
+        verify(mediaRepository, never()).delete(any());
+    }
+
+    @Test
+    void deleteOwnPublicMediaIsAllowed() throws IOException {
+        Media m = publicMedia(MediaCategory.USER_PHOTO, 7);
+
+        mediaService.delete(5, principal(7, "ROLE_STUDENT"));
+
+        verify(storageService).delete("public/x.png");
+        verify(mediaRepository).delete(m);
+    }
+
+    @Test
+    void deleteAnyPublicMediaByAdminIsAllowed() throws IOException {
+        Media m = publicMedia(MediaCategory.SCHOOL_LOGO, null);
+
+        mediaService.delete(5, principal(99, "ROLE_ADMIN"));
+
+        verify(storageService).delete("public/x.png");
+        verify(mediaRepository).delete(m);
+    }
+
+    @Test
+    void deletePrivateMediaByAdminIsAllowed() throws IOException {
+        Media m = Media.builder().visibility(MediaVisibility.PRIVATE)
+                .category(MediaCategory.DIPLOMA).ownerId(7).storageKey("private/x.pdf").build();
+        when(mediaRepository.findById(5)).thenReturn(Optional.of(m));
+
+        mediaService.delete(5, principal(99, "ROLE_ADMIN"));
+
+        verify(storageService).delete("private/x.pdf");
+        verify(mediaRepository).delete(m);
+    }
+
+    @Test
+    void deleteUnknownMediaIsForbiddenForNonAdminAndNotFoundForAdmin() {
+        when(mediaRepository.findById(404)).thenReturn(Optional.empty());
+
+        assertThrows(AccessDeniedException.class,
+                () -> mediaService.delete(404, principal(8, "ROLE_STUDENT")));
+        assertThrows(com.bowe.meetstudent.exceptions.ResourceNotFoundException.class,
+                () -> mediaService.delete(404, principal(99, "ROLE_ADMIN")));
+    }
+
+    @Test
+    void deleteAnonymouslyIsUnauthenticatedForPublicPrivateAndUnknown() {
+        Media pub = publicMedia(MediaCategory.USER_PHOTO, 7);
+        when(mediaRepository.findById(404)).thenReturn(Optional.empty());
+
+        assertThrows(org.springframework.security.authentication.InsufficientAuthenticationException.class,
+                () -> mediaService.delete(5, null));
+        assertThrows(org.springframework.security.authentication.InsufficientAuthenticationException.class,
+                () -> mediaService.delete(404, null));
+        assertNotNull(pub);
+    }
+
     // --- deleteById / findById ---
 
     @Test
