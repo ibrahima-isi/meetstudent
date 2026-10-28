@@ -2,12 +2,15 @@ package com.bowe.meetstudent.integration.controllers.forum;
 
 import com.bowe.meetstudent.entities.UserEntity;
 import com.bowe.meetstudent.mail.EmailSender;
+import com.bowe.meetstudent.mail.MailProperties;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.TestPropertySource;
 
-import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -15,12 +18,21 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Writing on the forum needs a verified email only while mail is enabled (otherwise nobody could verify). The rule is
- * the same for students and approved experts; administrators, pending and rejected experts stay refused anyway.
+ * Writing on the forum needs a verified email only while {@code MAIL_ENABLED=true} ({@code app.mail.enabled}), never
+ * because of the local dev-log sender, which this context turns on. The rule is the same for students and approved
+ * experts; administrators, pending and rejected experts stay refused anyway. {@code app.mail.enabled} is flipped on the
+ * bound properties (read live) because a real {@code true} would need an SMTP server at boot.
  */
+@TestPropertySource(properties = "app.mail.dev-log=true")
 class ForumEmailVerificationIntegrationTests extends ForumTestSupport {
 
-    @MockitoBean EmailSender emailSender;
+    @Autowired MailProperties mailProperties;
+    @Autowired EmailSender emailSender;
+
+    @AfterEach
+    void mailBackOff() {
+        mailProperties.getMail().setEnabled(false);
+    }
 
     @BeforeEach
     void clean() {
@@ -30,7 +42,7 @@ class ForumEmailVerificationIntegrationTests extends ForumTestSupport {
     }
 
     private void mail(boolean enabled) {
-        when(emailSender.isEnabled()).thenReturn(enabled);
+        mailProperties.getMail().setEnabled(enabled);
     }
 
     private UserEntity verified(UserEntity user) {
@@ -69,8 +81,9 @@ class ForumEmailVerificationIntegrationTests extends ForumTestSupport {
     }
 
     @Test
-    void mailDisabledKeepsAcceptingUnverifiedAccounts() throws Exception {
+    void mailDisabledKeepsAcceptingUnverifiedAccountsEvenWithTheDevLogSender() throws Exception {
         mail(false);
+        assertThat(emailSender.isEnabled()).as("the dev-log sender reports mail as available").isTrue();
         var t = thread(student(), "open");
         postThread(student(), 201);
         postThread(approvedExpert(), 201);

@@ -167,6 +167,35 @@ class CredentialAttemptLimitIntegrationTests {
         loginOk(other.getEmail());
     }
 
+    /** Postgres (and H2) compare with upper(): 'ſ' (long s) finds 's', 'ı' (dotless i) finds 'i'. */
+    @Test
+    void unicodeSpellingsThatFindTheAccountShareItsLock() throws Exception {
+        var user = account("ROLE_STUDENT");
+        user.setEmail("student-" + UUID.randomUUID() + "@example.com");
+        user = users.save(user);
+        var longS = user.getEmail().replaceFirst("s", "ſ");
+        assertThat(login(longS, PASSWORD).getResponse().getStatus()).as("the database finds the account").isEqualTo(200);
+        wrongLogins(longS, 3);
+        wrongLogins(user.getEmail().replace("s", "ſ"), 2);
+        assertThat(login(user.getEmail(), PASSWORD).getResponse().getStatus()).isEqualTo(429);
+
+        var other = account("ROLE_STUDENT");
+        other.setEmail("id-" + UUID.randomUUID() + "@example.com");
+        other = users.save(other);
+        wrongLogins(other.getEmail().replaceFirst("i", "ı"), 4);
+        wrongLogins(other.getEmail().toUpperCase(), 1);
+        assertThat(login(other.getEmail(), PASSWORD).getResponse().getStatus()).isEqualTo(429);
+    }
+
+    @Test
+    void unicodeSpellingsOfAnUnknownEmailShareItsLockToo() throws Exception {
+        var unknown = "student-" + UUID.randomUUID() + "@example.com";
+        wrongLogins(unknown.replaceFirst("s", "ſ"), 2);
+        wrongLogins(unknown.replace("i", "ı"), 2);
+        wrongLogins(unknown, 1);
+        assertThat(login(unknown.toUpperCase(), PASSWORD).getResponse().getStatus()).isEqualTo(429);
+    }
+
     @Test
     void adminsAreLockedTheSameWay() throws Exception {
         var admin = account("ROLE_ADMIN");

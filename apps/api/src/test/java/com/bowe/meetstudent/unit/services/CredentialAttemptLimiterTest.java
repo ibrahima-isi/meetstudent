@@ -227,15 +227,94 @@ class CredentialAttemptLimiterTest {
         assertThat(limiter.matchesCurrentPassword(8, () -> true)).isTrue();
     }
 
+    // ---- keys that match what the database compares -------------------------------------------
+
     @Test
-    void wrapsAnAuthenticationManager() {
+    void unknownEmailsAreNormalisedLikeTheDatabaseUpperComparison() {
+        // Postgres upper(): 'ſ' (long s) -> 'S', 'ı' (dotless i) -> 'I'. The variants must not multiply the budget.
+        wrong("ſtudent@x.com", 2);
+        wrong("STUDENT@x.com", 2);
+        wrong("student@x.com", 1);
+        lockedFor("Student@X.com", 60);
+        wrong("ıd@x.com", 3);
+        wrong("id@x.com", 2);
+        lockedFor("ID@x.com", 60);
+    }
+
+    @Test
+    void aKnownAccountIsKeyedByItsIdWhateverSpellingFindsIt() {
         var manager = limiter.guard(authentication -> {
             throw new BadCredentialsException("Bad credentials");
-        });
-        for (int i = 0; i < 5; i++) {
-            assertThatThrownBy(() -> manager.authenticate(new UsernamePasswordAuthenticationToken("A@x.com", "pw")))
+        }, email -> java.util.Optional.of(42));
+        var spellings = java.util.List.of("ſtudent@x.com", "STUDENT@x.com", "ştudent@x.com", "student@x.com", "x");
+        for (var spelling : spellings) {
+            assertThatThrownBy(() -> manager.authenticate(new UsernamePasswordAuthenticationToken(spelling, "pw")))
                     .isInstanceOf(BadCredentialsException.class);
         }
-        lockedFor("a@x.com", 60);
+        assertThatThrownBy(() -> manager.authenticate(new UsernamePasswordAuthenticationToken("anything", "pw")))
+                .isInstanceOfSatisfying(TooManyRequestsException.class, ex -> assertThat(ex.getRetryAfterSeconds()).isEqualTo(60));
+        // Another account, and the email namespace of unknown addresses, are untouched.
+        assertThat(limiter.authenticateAccount(43, () -> OK)).isSameAs(OK);
+        assertThat(right("student@x.com")).isSameAs(OK);
+    }
+
+    @Test
+    void anUnknownEmailGoesThroughTheEmailKey() {
+        var manager = limiter.guard(authentication -> {
+            throw new BadCredentialsException("Bad credentials");
+        }, email -> java.util.Optional.empty());
+        for (int i = 0; i < 5; i++) {
+            assertThatThrownBy(() -> manager.authenticate(new UsernamePasswordAuthenticationToken("ſomeone@x.com", "pw")))
+                    .isInstanceOf(BadCredentialsException.class);
+        }
+        lockedFor("someone@x.com", 60);
+    }
+
+    // ---- eviction never frees a locked or escalated key ----------------------------------------
+
+    @Test
+    void floodingNewKeysDoesNotEvictALockOrItsEscalation() {
+        var small = new CredentialAttemptLimiter(clock, 50);
+        for (int i = 0; i < 5; i++) {
+            assertThatThrownBy(() -> small.authenticate("victim@x.com", () -> {
+                throw new BadCredentialsException("Bad credentials");
+            })).isInstanceOf(BadCredentialsException.class);
+        }
+        for (int i = 0; i < 500; i++) {
+            var email = "flood" + i + "@x.com";
+            assertThatThrownBy(() -> small.authenticate(email, () -> {
+                throw new BadCredentialsException("Bad credentials");
+            })).isInstanceOf(BadCredentialsException.class);
+        }
+        assertThatThrownBy(() -> small.authenticate("victim@x.com", () -> OK)).isInstanceOf(TooManyRequestsException.class);
+        // Once the lock is over the escalation is still remembered: the next streak locks for 5 minutes.
+        clock.advance(Duration.ofMinutes(1));
+        for (int i = 0; i < 500; i++) {
+            var email = "flood-again" + i + "@x.com";
+            assertThatThrownBy(() -> small.authenticate(email, () -> {
+                throw new BadCredentialsException("Bad credentials");
+            })).isInstanceOf(BadCredentialsException.class);
+        }
+        for (int i = 0; i < 5; i++) {
+            assertThatThrownBy(() -> small.authenticate("victim@x.com", () -> {
+                throw new BadCredentialsException("Bad credentials");
+            })).isInstanceOf(BadCredentialsException.class);
+        }
+        assertThatThrownBy(() -> small.authenticate("victim@x.com", () -> OK))
+                .isInstanceOfSatisfying(TooManyRequestsException.class, ex -> assertThat(ex.getRetryAfterSeconds()).isEqualTo(300));
+    }
+
+    @Test
+    void escalatedKeysHaveTheirOwnHardCap() {
+        var small = new CredentialAttemptLimiter(clock, 50);
+        for (int k = 0; k < 1000; k++) {
+            var email = "locked" + k + "@x.com";
+            for (int i = 0; i < 5; i++) {
+                assertThatThrownBy(() -> small.authenticate(email, () -> {
+                    throw new BadCredentialsException("Bad credentials");
+                })).isInstanceOf(BadCredentialsException.class);
+            }
+        }
+        assertThat(small.trackedKeys()).isLessThanOrEqualTo(50 + 50 * CredentialAttemptLimiter.ESCALATED_CAP_FACTOR);
     }
 }

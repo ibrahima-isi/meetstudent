@@ -1,27 +1,27 @@
 package com.bowe.meetstudent.security;
 
 import com.bowe.meetstudent.entities.UserEntity;
-import com.bowe.meetstudent.mail.EmailSender;
+import com.bowe.meetstudent.mail.MailProperties;
 import com.bowe.meetstudent.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
 /**
- * The email rule of {@link RequiresForumWriter}: while mail is enabled ({@link EmailSender#isEnabled()}, the value
- * {@code GET /api/v1/auth/capabilities} reports as {@code emailEnabled}), only an account with a verified email may
- * write, so throwaway addresses cannot spam; while it is disabled nobody could verify, and nothing changes. Read from
- * the database on every call, like {@link ExpertAccess}, so a verification applies to the next request.
+ * The email rule of {@link RequiresForumWriter}: while {@code MAIL_ENABLED=true} ({@code app.mail.enabled}, and only
+ * that setting: the local dev-log sender does not turn it on), only an account with a verified email may write, so
+ * throwaway addresses cannot spam; while it is false nobody could receive a link, and nothing changes. Read from the
+ * database on every call, like {@link ExpertAccess}, so a verification applies to the next request.
  */
 @Component("forumWriterAccess")
 @RequiredArgsConstructor
 public class ForumWriterAccess {
 
-    private final EmailSender emailSender;
+    private final MailProperties mailProperties;
     private final UserRepository userRepository;
 
     public boolean hasVerifiedEmailIfRequired(Authentication authentication) {
-        if (!emailSender.isEnabled()) {
+        if (!mailProperties.getMail().isEnabled()) {
             return true;
         }
         if (authentication == null || !(authentication.getPrincipal() instanceof UserPrincipal principal)
