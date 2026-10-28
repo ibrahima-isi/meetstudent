@@ -47,6 +47,9 @@ file:
   upload-dir: ${FILE_UPLOAD_DIR:uploads}
   private-dir: ${FILE_PRIVATE_DIR:storage/private}
   max-upload-bytes: 10485760
+  # Per-owner caps on personal documents (diplomas, certificates, bulletins, videos); ADMIN is not limited.
+  max-personal-docs: ${MEDIA_MAX_PERSONAL_DOCS:20}
+  max-personal-bytes: ${MEDIA_MAX_PERSONAL_BYTES:104857600}
 
 app:
   # Consumed by AdminBootstrapRunner: mandatory under prod (password >= 12 chars), optional under
