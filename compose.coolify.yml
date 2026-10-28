@@ -176,7 +176,7 @@ services:
       - traefik.http.routers.uploads.entrypoints=${PROXY_HTTPS_ENTRYPOINT:-https}
       - traefik.http.routers.uploads.tls=true
       - traefik.http.routers.uploads.tls.certresolver=${PROXY_CERT_RESOLVER:-letsencrypt}
-      - traefik.http.routers.uploads.middlewares=strip-forwarded@file,sec@file
+      - traefik.http.routers.uploads.middlewares=strip-forwarded@file,sec-uploads@file
       - traefik.http.routers.uploads.service=api
 
   web:

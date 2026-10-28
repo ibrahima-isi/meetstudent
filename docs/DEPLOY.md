@@ -421,7 +421,7 @@ deploy stays off).
 
 ### 9.1 Proxy configuration (once per server)
 
-The shared middlewares (`sec`, `sec-web`, `sec-bo`, `strip-forwarded`, `rl-auth`, `rl-api`, `upload-limit`) and the HTTP to
+The shared middlewares (`sec`, `sec-web`, `sec-bo`, `sec-uploads`, `strip-forwarded`, `rl-auth`, `rl-api`, `upload-limit`) and the HTTP to
 HTTPS redirect (`https-redirect`) are not labels of the stack: they would vanish whenever an app container
 restarts. Copy `infra/coolify/proxy/dynamic/meetstudent.yaml` to the server as
 `/data/coolify/proxy/dynamic/meetstudent.yaml` (or paste it in Servers -> Proxy -> Dynamic configurations);
@@ -696,6 +696,11 @@ before it.
     deployed first, those two routers reference middlewares Traefik does not know yet and answer
     404 until the file is copied. (With the old `sec@file` on both, only `frame-ancestors` was sent
     and Traefik overwrote the back office CSP.)
+- **Uploaded public files** (`/uploads/public/**`): the API sends `Content-Security-Policy: sandbox;
+  default-src 'none'` and `nosniff` with them. The `uploads` router uses the `sec-uploads` middleware
+  (`sec` plus that same policy and `frame-ancestors 'none'`) because Traefik's headers middleware
+  overwrites an upstream CSP. Same ordering rule as above: copy the dynamic file (9.1) before
+  deploying a stack that references `sec-uploads@file`.
 - **Docker socket**: Traefik mounts it read-only. That limits writes through the
   socket but it still exposes container metadata; a socket proxy is the next
   hardening step.
