@@ -24,13 +24,6 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Inte
     @Query("select r.user.id from RefreshToken r where r.token = :token")
     Optional<Integer> findUserIdByToken(@Param("token") String token);
 
-    /** The session whose last rotation replaced this secret hash (reuse detection). */
-    Optional<RefreshToken> findByPreviousToken(String previousToken);
-
-    /** Owner of a rotated-away secret, read before the user row is locked like {@link #findUserIdByToken}. */
-    @Query("select r.user.id from RefreshToken r where r.previousToken = :token")
-    Optional<Integer> findUserIdByPreviousToken(@Param("token") String token);
-
     /** Bulk delete of one session, whatever its current secret: a rotation may have replaced it meanwhile. */
     @Modifying
     @Query("delete from RefreshToken r where r.sessionId = :sessionId and r.user.id = :userId")

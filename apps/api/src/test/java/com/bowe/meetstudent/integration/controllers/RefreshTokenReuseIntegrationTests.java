@@ -20,10 +20,16 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -35,8 +41,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * Refresh-token reuse detection, through real HTTP requests whose transactions COMMIT (deliberately not
  * {@code @Transactional}): a revocation that the failing request rolled back would look fine in a test transaction.
- * Only the immediately previous secret of a session is recognised; replaying it ends that session (all its
- * credentials), except during a short grace window after the rotation (benign concurrent refreshes).
+ * Every secret a session rotated away (kept 7 days) is recognised; replaying one ends that session (all its
+ * credentials), except the latest one during a short grace window after its rotation (benign concurrent refreshes).
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -77,7 +83,26 @@ class RefreshTokenReuseIntegrationTests {
     }
 
     @Test
-    void replayingThePreviousSecretAfterTheGraceWindowEndsThatSessionOnlyAndLooksLikeAnUnknownToken() throws Exception {
+    void replayingAnOlderSecretEndsTheSessionEvenAfterTheThiefRotatedTwice() throws Exception {
+        var victim = login();
+        var phone = login();
+        // The thief refreshes twice with the stolen secret: T1 -> T2 -> T3.
+        var second = refreshOk(victim);
+        now.set(start.plusSeconds(1));
+        var third = refreshOk(second);
+
+        now.set(start.plusSeconds(2));
+        var replay = refresh(victim.get("refreshToken").asText());
+        assertThat(replay.getResponse().getStatus()).isEqualTo(401);
+        assertSameRefusal(replay, refresh("does-not-exist"));
+
+        assertThat(refresh(third.get("refreshToken").asText()).getResponse().getStatus()).isEqualTo(401);
+        accessRefused(third);
+        accessAllowed(refreshOk(phone));
+    }
+
+    @Test
+    void replayingTheLatestSecretAfterTheGraceWindowEndsThatSessionOnlyAndLooksLikeAnUnknownToken() throws Exception {
         var laptop = login();
         var phone = login();
         var rotated = refreshOk(laptop);
@@ -97,7 +122,7 @@ class RefreshTokenReuseIntegrationTests {
     }
 
     @Test
-    void replayingThePreviousSecretInsideTheGraceWindowIsRefusedWithoutEndingTheSession() throws Exception {
+    void replayingTheLatestSecretInsideTheGraceWindowIsRefusedWithoutEndingTheSession() throws Exception {
         var tokens = login();
         var rotated = refreshOk(tokens);
 
@@ -122,16 +147,48 @@ class RefreshTokenReuseIntegrationTests {
     }
 
     @Test
-    void onlyTheImmediatelyPreviousSecretIsRecognisedOlderOnesAreUnknown() throws Exception {
+    void historyOlderThanTheSevenDayWindowIsPurgedOnRotationNewerEntriesStillRevoke() throws Exception {
         var first = login();
-        var second = refreshOk(first);
-        now.set(start.plusSeconds(60));
-        var third = refreshOk(second);
+        var second = refreshOk(first);                         // T1 rotated away at start
+        now.set(start.plus(Duration.ofDays(6)));
+        var third = refreshOk(second);                         // T2 rotated away at +6 d
+        activity(third);                                       // keeps the session alive past +7 d
+        now.set(start.plus(Duration.ofDays(7)).plusSeconds(1));
+        var fourth = refreshOk(third);                         // purges T1 (older than 7 days)
 
-        now.set(start.plusSeconds(120));
+        now.set(start.plus(Duration.ofDays(7)).plusSeconds(30));
         assertThat(refresh(first.get("refreshToken").asText()).getResponse().getStatus()).isEqualTo(401);
+        accessAllowed(fourth);                                 // T1 is forgotten: nothing revoked
 
-        accessAllowed(refreshOk(third));
+        assertThat(refresh(second.get("refreshToken").asText()).getResponse().getStatus()).isEqualTo(401);
+        accessRefused(fourth);                                 // T2 (6 days old) is still known: revoked
+    }
+
+    @Test
+    void twoConcurrentRefreshesOfTheSameSecretLetOneThroughAndRevokeNothing() throws Exception {
+        var tokens = login();
+        var secret = tokens.get("refreshToken").asText();
+        var go = new CountDownLatch(1);
+        var results = new ArrayList<Future<MvcResult>>();
+        try (var pool = Executors.newFixedThreadPool(2)) {
+            for (int i = 0; i < 2; i++) {
+                results.add(pool.submit(() -> {
+                    go.await();
+                    return refresh(secret);
+                }));
+            }
+            go.countDown();
+            var statuses = new ArrayList<Integer>();
+            JsonNode winner = null;
+            for (var result : results) {
+                var response = result.get(20, TimeUnit.SECONDS).getResponse();
+                statuses.add(response.getStatus());
+                if (response.getStatus() == 200) winner = json.readTree(response.getContentAsString());
+            }
+            assertThat(statuses).containsExactlyInAnyOrder(200, 401);
+            accessAllowed(winner);
+            accessAllowed(refreshOk(winner));
+        }
     }
 
     @Test
@@ -169,6 +226,12 @@ class RefreshTokenReuseIntegrationTests {
 
     private String body(String secret) throws Exception {
         return json.writeValueAsString(Map.of("refreshToken", secret));
+    }
+
+    private void activity(JsonNode tokens) throws Exception {
+        http.perform(get("/api/v1/users/id/" + user.getId())
+                .header("Authorization", "Bearer " + tokens.get("accessToken").asText())
+                .header("X-Session-Activity", "true")).andExpect(status().isOk());
     }
 
     private void accessAllowed(JsonNode tokens) throws Exception {

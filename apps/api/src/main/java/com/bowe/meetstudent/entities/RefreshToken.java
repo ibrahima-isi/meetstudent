@@ -23,14 +23,6 @@ public class RefreshToken extends AbstractEntity {
     @Column(nullable = false, unique = true)
     private String token;
 
-    /** SHA-256 of the secret this session's last rotation replaced: a replay of it reveals a stolen token (V37). */
-    @Column(name = "previous_token")
-    private String previousToken;
-
-    /** When {@link #previousToken} was rotated away; starts the grace window for benign concurrent refreshes. */
-    @Column(name = "rotated_at")
-    private Instant rotatedAt;
-
     @Column(nullable = false)
     private Instant expiryDate;
 
