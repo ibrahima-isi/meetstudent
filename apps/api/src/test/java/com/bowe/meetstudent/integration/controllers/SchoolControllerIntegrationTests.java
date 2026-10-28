@@ -170,6 +170,29 @@ class SchoolControllerIntegrationTests {
                 jdbc.queryForObject("select school_id from user_wishlist where user_id = ?", Integer.class, studentId));
     }
 
+    @Autowired
+    private com.bowe.meetstudent.repositories.ProgramRepository programRepository;
+
+    @Test
+    void deleteSchoolWhoseProgramIsInAProgramWishlistRemovesTheLinkAndSucceeds() throws Exception {
+        int studentId = saveStudent();
+        School school = schoolService.save(schoolMapper.toEntity(TestDataUtil.createSchoolDto()));
+        var program = programRepository.save(
+                com.bowe.meetstudent.entities.Program.builder().name("Wished program").school(school).build());
+        mockMvc.perform(MockMvcRequestBuilders.post(
+                                "/api/v1/users/" + studentId + "/wishlist/programs/" + program.getId())
+                        .with(TestDataUtil.mockUser(studentId, "ROLE_STUDENT")))
+                .andExpect(MockMvcResultMatchers.status().isOk());
+
+        mockMvc.perform(MockMvcRequestBuilders.delete("/api/v1/schools/" + school.getId())
+                        .with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                .andExpect(MockMvcResultMatchers.status().isOk());
+
+        org.junit.jupiter.api.Assertions.assertTrue(schoolService.getSchoolById(school.getId()).isEmpty());
+        org.junit.jupiter.api.Assertions.assertEquals(0,
+                jdbc.queryForObject("select count(*) from user_program_wishlist", Integer.class));
+    }
+
     @Test
     void deleteSchoolInAWishlistKeepsOtherSchoolsAndRemovesLogoMedia() throws Exception {
         int studentId = saveStudent();

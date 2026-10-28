@@ -2,27 +2,20 @@ package com.bowe.meetstudent.services;
 
 import com.bowe.meetstudent.entities.School;
 import com.bowe.meetstudent.exceptions.FieldValidationException;
-import com.bowe.meetstudent.entities.Media;
-import com.bowe.meetstudent.repositories.MediaRepository;
+import com.bowe.meetstudent.entities.Program;
+import com.bowe.meetstudent.repositories.ProgramRepository;
 import com.bowe.meetstudent.repositories.TagRepository;
 import com.bowe.meetstudent.repositories.SchoolRepository;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
-import java.io.IOException;
-
+import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
-import java.util.stream.Stream;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class SchoolService {
@@ -30,8 +23,7 @@ public class SchoolService {
     private final SchoolRepository schoolRepository;
     private final MediaService mediaService;
     private final TagRepository tagRepository;
-    private final MediaRepository mediaRepository;
-    private final MediaStorageService storageService;
+    private final ProgramRepository programRepository;
 
     public School save(School school) {
         requireExistingTags(school);
@@ -51,48 +43,22 @@ public class SchoolService {
     }
 
     /**
-     * Wishlist links are cleared first (the FK has no cascade). The media rows go with the school,
-     * but the stored files only after the transaction commits, so a failed delete never leaves the
-     * school pointing at images that are already gone.
+     * Wishlist links (school and program) are cleared first, the FKs have no cascade on every
+     * database. The media rows go with the school, the stored files only after the transaction
+     * commits, so a failed delete never leaves the school pointing at images that are gone.
      */
     @Transactional
     public void delete(int id){
         this.schoolRepository.findById(id).ifPresent(school -> {
-            List<Media> media = Stream.of(school.getLogoMediaId(), school.getCoverMediaId())
-                    .filter(Objects::nonNull)
-                    .map(mediaRepository::findById)
-                    .flatMap(Optional::stream)
-                    .toList();
+            List<Integer> mediaIds = Arrays.asList(school.getLogoMediaId(), school.getCoverMediaId());
+            List<Integer> programIds = school.getPrograms() == null ? List.of()
+                    : school.getPrograms().stream().map(Program::getId).toList();
+            programIds.forEach(this.programRepository::deleteWishlistLinks);
             this.schoolRepository.deleteWishlistLinks(id);
             this.schoolRepository.deleteById(id);
             this.schoolRepository.flush();
-            media.forEach(mediaRepository::delete);
-            deleteFilesAfterCommit(media.stream().map(Media::getStorageKey).toList());
+            mediaService.deleteByIdsAfterCommit(mediaIds);
         });
-    }
-
-    private void deleteFilesAfterCommit(List<String> keys) {
-        if (keys.isEmpty()) return;
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    deleteFilesQuietly(keys);
-                }
-            });
-        } else {
-            deleteFilesQuietly(keys);
-        }
-    }
-
-    private void deleteFilesQuietly(List<String> keys) {
-        for (String key : keys) {
-            try {
-                storageService.delete(key);
-            } catch (IOException | RuntimeException e) {
-                log.warn("Could not delete stored file for media key {}: {}", key, e.toString());
-            }
-        }
     }
 
     public Boolean exists(int id){

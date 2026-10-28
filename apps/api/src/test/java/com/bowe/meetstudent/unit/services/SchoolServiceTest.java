@@ -1,12 +1,9 @@
 package com.bowe.meetstudent.unit.services;
 
 import com.bowe.meetstudent.entities.School;
-import com.bowe.meetstudent.entities.Media;
-import com.bowe.meetstudent.repositories.MediaRepository;
+import com.bowe.meetstudent.entities.Program;
+import com.bowe.meetstudent.repositories.ProgramRepository;
 import com.bowe.meetstudent.repositories.SchoolRepository;
-import com.bowe.meetstudent.services.MediaStorageService;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 import com.bowe.meetstudent.repositories.TagRepository;
 import com.bowe.meetstudent.services.MediaService;
 import com.bowe.meetstudent.services.SchoolService;
@@ -36,10 +33,7 @@ class SchoolServiceTest {
     private TagRepository tagRepository;
 
     @Mock
-    private MediaRepository mediaRepository;
-
-    @Mock
-    private MediaStorageService storageService;
+    private ProgramRepository programRepository;
 
     @InjectMocks
     private SchoolService schoolService;
@@ -55,68 +49,32 @@ class SchoolServiceTest {
         school.setCoverMediaId(11);
     }
 
-    private Media media(int id, String key) {
-        return Media.builder().id(id).storageKey(key).build();
-    }
-
-    private final Media logo = media(10, "public/logo.png");
-    private final Media cover = media(11, "public/cover.png");
-
-    private void stubMedia() {
-        Mockito.when(mediaRepository.findById(10)).thenReturn(Optional.of(logo));
-        Mockito.when(mediaRepository.findById(11)).thenReturn(Optional.of(cover));
-    }
-
     @Test
     void testDeleteClearsWishlistLinksBeforeDeletingTheSchool() {
+        Program program = Program.builder().name("P").build();
+        program.setId(7);
+        school.setPrograms(new java.util.ArrayList<>(java.util.List.of(program)));
         Mockito.when(schoolRepository.findById(1)).thenReturn(Optional.of(school));
-        stubMedia();
 
         schoolService.delete(1);
 
-        var order = Mockito.inOrder(schoolRepository);
+        var order = Mockito.inOrder(programRepository, schoolRepository, mediaService);
+        order.verify(programRepository).deleteWishlistLinks(7);
         order.verify(schoolRepository).deleteWishlistLinks(1);
         order.verify(schoolRepository).deleteById(1);
-        Mockito.verify(mediaRepository).delete(logo);
-        Mockito.verify(mediaRepository).delete(cover);
+        order.verify(mediaService).deleteByIdsAfterCommit(java.util.Arrays.asList(10, 11));
     }
 
     @Test
-    void testDeleteKeepsTheFilesUntilTheTransactionCommits() throws Exception {
-        Mockito.when(schoolRepository.findById(1)).thenReturn(Optional.of(school));
-        stubMedia();
-        TransactionSynchronizationManager.initSynchronization();
-        try {
-            schoolService.delete(1);
-
-            Mockito.verify(storageService, Mockito.never()).delete(any());
-
-            TransactionSynchronizationManager.getSynchronizations()
-                    .forEach(TransactionSynchronization::afterCommit);
-            Mockito.verify(storageService).delete("public/logo.png");
-            Mockito.verify(storageService).delete("public/cover.png");
-        } finally {
-            TransactionSynchronizationManager.clearSynchronization();
-        }
-    }
-
-    @Test
-    void testDeleteNeverDeletesFilesWhenTheDeleteFailsAndRollsBack() throws Exception {
+    void testDeleteNeverTouchesMediaWhenTheDeleteFails() {
         Mockito.when(schoolRepository.findById(1)).thenReturn(Optional.of(school));
         Mockito.doThrow(new org.springframework.dao.DataIntegrityViolationException("fk"))
                 .when(schoolRepository).deleteById(1);
-        TransactionSynchronizationManager.initSynchronization();
-        try {
-            assertThrows(org.springframework.dao.DataIntegrityViolationException.class,
-                    () -> schoolService.delete(1));
 
-            TransactionSynchronizationManager.getSynchronizations()
-                    .forEach(s -> s.afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK));
-            Mockito.verify(storageService, Mockito.never()).delete(any());
-            Mockito.verify(mediaRepository, Mockito.never()).delete(any());
-        } finally {
-            TransactionSynchronizationManager.clearSynchronization();
-        }
+        assertThrows(org.springframework.dao.DataIntegrityViolationException.class,
+                () -> schoolService.delete(1));
+
+        Mockito.verify(mediaService, Mockito.never()).deleteByIdsAfterCommit(any());
     }
 
     @Test

@@ -444,4 +444,64 @@ class MediaServiceTest {
             TransactionSynchronizationManager.clearSynchronization();
         }
     }
+
+    // --- deleteByIdsAfterCommit: rows now, files after commit ---
+
+    private Media row(int id, String key) {
+        return Media.builder().id(id).storageKey(key).build();
+    }
+
+    @Test
+    void deleteByIdsAfterCommitKeepsFilesUntilCommit() throws IOException {
+        var logo = row(10, "public/logo.png");
+        var cover = row(11, "public/cover.png");
+        when(mediaRepository.findById(10)).thenReturn(Optional.of(logo));
+        when(mediaRepository.findById(11)).thenReturn(Optional.of(cover));
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            mediaService.deleteByIdsAfterCommit(java.util.Arrays.asList(10, null, 11, 10, 99));
+
+            verify(mediaRepository).deleteAll(List.of(logo, cover));
+            verify(storageService, never()).delete(any());
+
+            TransactionSynchronizationManager.getSynchronizations().forEach(TransactionSynchronization::afterCommit);
+
+            verify(storageService).delete("public/logo.png");
+            verify(storageService).delete("public/cover.png");
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+    }
+
+    @Test
+    void deleteByIdsAfterCommitNeverTouchesFilesOnRollback() throws IOException {
+        when(mediaRepository.findById(10)).thenReturn(Optional.of(row(10, "public/logo.png")));
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            mediaService.deleteByIdsAfterCommit(List.of(10));
+
+            TransactionSynchronizationManager.getSynchronizations()
+                    .forEach(s -> s.afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK));
+
+            verify(storageService, never()).delete(any());
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+    }
+
+    @Test
+    void deleteByIdsAfterCommitDeletesImmediatelyWithoutATransaction() throws IOException {
+        when(mediaRepository.findById(10)).thenReturn(Optional.of(row(10, "public/logo.png")));
+
+        mediaService.deleteByIdsAfterCommit(List.of(10));
+
+        verify(storageService).delete("public/logo.png");
+    }
+
+    @Test
+    void deleteByIdsAfterCommitIgnoresNullsAndUnknownIds() throws IOException {
+        mediaService.deleteByIdsAfterCommit(java.util.Arrays.asList(null, 99));
+
+        verify(storageService, never()).delete(any());
+    }
 }
