@@ -1,6 +1,8 @@
 package com.bowe.meetstudent.unit.services;
 
 import com.bowe.meetstudent.entities.School;
+import com.bowe.meetstudent.entities.Program;
+import com.bowe.meetstudent.repositories.ProgramRepository;
 import com.bowe.meetstudent.repositories.SchoolRepository;
 import com.bowe.meetstudent.repositories.TagRepository;
 import com.bowe.meetstudent.services.MediaService;
@@ -30,6 +32,9 @@ class SchoolServiceTest {
     @Mock
     private TagRepository tagRepository;
 
+    @Mock
+    private ProgramRepository programRepository;
+
     @InjectMocks
     private SchoolService schoolService;
 
@@ -45,15 +50,31 @@ class SchoolServiceTest {
     }
 
     @Test
-    void testDeleteRemovesReferencedMedia() {
+    void testDeleteClearsWishlistLinksBeforeDeletingTheSchool() {
+        Program program = Program.builder().name("P").build();
+        program.setId(7);
+        school.setPrograms(new java.util.ArrayList<>(java.util.List.of(program)));
         Mockito.when(schoolRepository.findById(1)).thenReturn(Optional.of(school));
-        Mockito.doNothing().when(schoolRepository).deleteById(1);
 
         schoolService.delete(1);
 
-        Mockito.verify(mediaService).deleteById(10);
-        Mockito.verify(mediaService).deleteById(11);
-        Mockito.verify(schoolRepository).deleteById(1);
+        var order = Mockito.inOrder(programRepository, schoolRepository, mediaService);
+        order.verify(programRepository).deleteWishlistLinks(7);
+        order.verify(schoolRepository).deleteWishlistLinks(1);
+        order.verify(schoolRepository).deleteById(1);
+        order.verify(mediaService).deleteByIdsAfterCommit(java.util.Arrays.asList(10, 11));
+    }
+
+    @Test
+    void testDeleteNeverTouchesMediaWhenTheDeleteFails() {
+        Mockito.when(schoolRepository.findById(1)).thenReturn(Optional.of(school));
+        Mockito.doThrow(new org.springframework.dao.DataIntegrityViolationException("fk"))
+                .when(schoolRepository).deleteById(1);
+
+        assertThrows(org.springframework.dao.DataIntegrityViolationException.class,
+                () -> schoolService.delete(1));
+
+        Mockito.verify(mediaService, Mockito.never()).deleteByIdsAfterCommit(any());
     }
 
     @Test

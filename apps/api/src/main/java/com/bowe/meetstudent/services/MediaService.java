@@ -26,8 +26,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -338,9 +340,27 @@ public class MediaService {
      */
     @Transactional
     public void deleteAllOwnedBy(Integer ownerId) {
-        List<Media> owned = mediaRepository.findByOwnerId(ownerId);
-        List<String> keys = owned.stream().map(Media::getStorageKey).toList();
-        mediaRepository.deleteAll(owned);
+        deleteRowsNowFilesAfterCommit(mediaRepository.findByOwnerId(ownerId));
+    }
+
+    /**
+     * Same contract as {@link #deleteAllOwnedBy}, for explicit media ids (school logo/cover, ...):
+     * rows now, stored files only after the transaction commits. Null and unknown ids are skipped.
+     */
+    @Transactional
+    public void deleteByIdsAfterCommit(Collection<Integer> ids) {
+        List<Media> rows = ids.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .map(mediaRepository::findById)
+                .flatMap(Optional::stream)
+                .toList();
+        deleteRowsNowFilesAfterCommit(rows);
+    }
+
+    private void deleteRowsNowFilesAfterCommit(List<Media> rows) {
+        List<String> keys = rows.stream().map(Media::getStorageKey).toList();
+        mediaRepository.deleteAll(rows);
         if (keys.isEmpty()) return;
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {

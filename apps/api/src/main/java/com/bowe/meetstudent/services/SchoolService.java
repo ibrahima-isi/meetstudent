@@ -2,6 +2,8 @@ package com.bowe.meetstudent.services;
 
 import com.bowe.meetstudent.entities.School;
 import com.bowe.meetstudent.exceptions.FieldValidationException;
+import com.bowe.meetstudent.entities.Program;
+import com.bowe.meetstudent.repositories.ProgramRepository;
 import com.bowe.meetstudent.repositories.TagRepository;
 import com.bowe.meetstudent.repositories.SchoolRepository;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +12,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,7 +23,7 @@ public class SchoolService {
     private final SchoolRepository schoolRepository;
     private final MediaService mediaService;
     private final TagRepository tagRepository;
-
+    private final ProgramRepository programRepository;
 
     public School save(School school) {
         requireExistingTags(school);
@@ -39,12 +42,22 @@ public class SchoolService {
         return this.schoolRepository.findById(id);
     }
 
+    /**
+     * Wishlist links (school and program) are cleared first, the FKs have no cascade on every
+     * database. The media rows go with the school, the stored files only after the transaction
+     * commits, so a failed delete never leaves the school pointing at images that are gone.
+     */
     @Transactional
     public void delete(int id){
         this.schoolRepository.findById(id).ifPresent(school -> {
-            mediaService.deleteById(school.getLogoMediaId());
-            mediaService.deleteById(school.getCoverMediaId());
+            List<Integer> mediaIds = Arrays.asList(school.getLogoMediaId(), school.getCoverMediaId());
+            List<Integer> programIds = school.getPrograms() == null ? List.of()
+                    : school.getPrograms().stream().map(Program::getId).toList();
+            programIds.forEach(this.programRepository::deleteWishlistLinks);
+            this.schoolRepository.deleteWishlistLinks(id);
             this.schoolRepository.deleteById(id);
+            this.schoolRepository.flush();
+            mediaService.deleteByIdsAfterCommit(mediaIds);
         });
     }
 
