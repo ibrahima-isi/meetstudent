@@ -59,10 +59,39 @@ static_tests() {
   check "IMAGE_TAG=sha-<commit> pins the four images, backup included (rollback)" \
     jq -e --arg t "sha-$sha" '[.services.api.image, .services.web.image, .services.backoffice.image, .services.backup.image]
       | all(. != null and endswith(":" + $t))' <<<"$(IMAGE_TAG=sha-$sha rendered)"
-  check "the entry network is Coolify's external proxy network (coolify by default)" \
-    q '[.networks[] | select(.external == true)] | map(.name) == ["coolify"]'
+  check "the entry network is Coolify's external proxy network (coolify by default), plus the api's own (meetstudent-api-edge)" \
+    q '[.networks[] | select(.external == true)] | map(.name) | sort == ["coolify", "meetstudent-api-edge"]'
   check "PROXY_NETWORK renames the entry network" \
-    jq -e '[.networks[] | select(.external == true)] | map(.name) == ["other-proxy"]' <<<"$(PROXY_NETWORK=other-proxy rendered)"
+    jq -e '[.networks[] | select(.external == true)] | map(.name) | sort == ["meetstudent-api-edge", "other-proxy"]' <<<"$(PROXY_NETWORK=other-proxy rendered)"
+  check "API_EDGE_NETWORK renames the api's network, label included" \
+    jq -e '.networks["api-edge"].name == "other-api-edge"
+      and .services.api.labels["traefik.docker.network"] == "other-api-edge"' <<<"$(API_EDGE_NETWORK=other-api-edge rendered)"
+  # The api must be reachable by Traefik only: never on the network shared with every Coolify resource.
+  check "the api is not on the shared proxy network" \
+    q '. as $s | [.services.api.networks | keys[] | $s.networks[.].name] | index("coolify") == null'
+  check "the api is not on the shared proxy network, whatever PROXY_NETWORK is" \
+    jq -e '. as $s | [.services.api.networks | keys[] | $s.networks[.].name] | index("other-proxy") == null' <<<"$(PROXY_NETWORK=other-proxy rendered)"
+  check "the api reaches Traefik on its dedicated external network, and says so in its traefik.docker.network label" \
+    q '. as $s | .services.api.networks | keys | map($s.networks[.]) | any(.external == true and .name == "meetstudent-api-edge")
+       and $s.services.api.labels["traefik.docker.network"] == "meetstudent-api-edge"'
+  check "only the api is on the dedicated api network" \
+    q '[.services | to_entries[] | select(.value.networks | has("api-edge")) | .key] == ["api"]'
+  check "web and backoffice are still routed on the shared proxy network" \
+    q '[.services.web, .services.backoffice | .networks | has("edge")] == [true, true]
+       and .services.web.labels["traefik.docker.network"] == "coolify"
+       and .services.backoffice.labels["traefik.docker.network"] == "coolify"'
+  # Spring honours X-Forwarded-* only from the peers matching this regex: the dedicated network's subnet.
+  local proxies
+  proxies=$(q '.services.api.environment.TRUSTED_PROXIES' <<<"$json" | jq -r .) || proxies=
+  check "the api trusts forwarded headers from a narrow proxy regex (TRUSTED_PROXIES), not the private ranges" \
+    test -n "$proxies"
+  check "TRUSTED_PROXIES matches Traefik's network (10.250.77.x)" \
+    bash -c '[[ "$1" =~ ^($0)$ ]]' "$proxies" "10.250.77.2"
+  local neighbour
+  for neighbour in 10.250.78.2 10.0.0.5 172.18.0.3 192.168.1.5 127.0.0.1 203.0.113.9; do
+    check "TRUSTED_PROXIES refuses $neighbour" \
+      bash -c '! [[ "$1" =~ ^($0)$ ]]' "$proxies" "$neighbour"
+  done
   check "Postgres sits on internal networks only" \
     q '. as $stack | .services.db.networks | keys | all(. as $n | $stack.networks[$n].internal == true)'
   check "no container label declares a middleware (they live in the proxy's dynamic file)" \
@@ -75,6 +104,9 @@ static_tests() {
 
 PROJECT=${PROJECT:-meetstudent-coolify-test}
 TEST_PROXY_NETWORK=${TEST_PROXY_NETWORK:-meetstudent-test-coolify}
+# The api's dedicated network (owner-created on the real server): its subnet must match TRUSTED_PROXIES' default.
+TEST_API_NETWORK=${TEST_API_NETWORK:-meetstudent-test-api-edge}
+TEST_API_SUBNET=${TEST_API_SUBNET:-10.250.77.0/24}
 HTTP_PORT=${HTTP_PORT:-18080}
 HTTPS_PORT=${HTTPS_PORT:-18443}
 DYNAMIC_DIR="$ROOT/infra/coolify/proxy/dynamic"
@@ -87,7 +119,7 @@ teardown() {
   echo "teardown"
   stack down -v --remove-orphans >/dev/null 2>&1 || true
   docker rm -f "$PROXY_NAME" "$DECOY_NAME" >/dev/null 2>&1 || true
-  docker network rm "$PROXY_NETWORK" >/dev/null 2>&1 || true
+  docker network rm "$PROXY_NETWORK" "$API_EDGE_NETWORK" >/dev/null 2>&1 || true
 }
 
 # Entrypoints, providers and resolver named like the default proxy of Coolify v4
@@ -96,6 +128,7 @@ teardown() {
 # Traefik's self-signed default certificate (the "local certificate").
 start_proxy() {
   docker network create "$PROXY_NETWORK" >/dev/null
+  docker network create --subnet "$TEST_API_SUBNET" "$API_EDGE_NETWORK" >/dev/null
   docker run -d --name "$PROXY_NAME" --network "$PROXY_NETWORK" \
     -p "127.0.0.1:$HTTP_PORT:80" -p "127.0.0.1:$HTTPS_PORT:443" \
     -v /var/run/docker.sock:/var/run/docker.sock:ro \
@@ -112,6 +145,8 @@ start_proxy() {
     --certificatesresolvers.letsencrypt.acme.storage=/tmp/acme.json \
     --certificatesresolvers.letsencrypt.acme.caserver=https://127.0.0.1:9/directory \
     --global.checknewversion=false --global.sendanonymoususage=false >/dev/null
+  # Like the owner step on the real server: Traefik joins the api's dedicated network too.
+  docker network connect "$API_EDGE_NETWORK" "$PROXY_NAME"
   # Another resource on the shared proxy network answering to the names `api` and `db`.
   docker run -d --name "$DECOY_NAME" --network "$PROXY_NETWORK" \
     --network-alias api --network-alias db alpine:latest sleep infinity >/dev/null
@@ -133,6 +168,7 @@ resolved_in() { # resolved_in <service> <hostname>: every IPv4 the service's con
 
 live_tests() {
   export PROXY_NETWORK=$TEST_PROXY_NETWORK
+  export API_EDGE_NETWORK=$TEST_API_NETWORK
   for app in api web backoffice; do
     docker image inspect "ghcr.io/ibrahima-isi/meetstudent-$app:${IMAGE_TAG:-latest}" >/dev/null 2>&1 || {
       echo "missing local image ghcr.io/ibrahima-isi/meetstudent-$app:${IMAGE_TAG:-latest} (live never pulls nor builds)" >&2
@@ -216,6 +252,15 @@ live_tests() {
     docker run --rm --network "${PROJECT}_backend" alpine:latest nc -z -w 3 "$db_ip" 5432
   check "Postgres is unreachable from the proxy network" \
     bash -c '! docker exec "$0" nc -z -w 3 "$1" 5432' "$DECOY_NAME" "$db_ip"
+  local api_ip
+  api_ip=$(ip_on "$(stack ps -q api)" "$API_EDGE_NETWORK")
+  check "control: the api answers on its dedicated network" \
+    docker run --rm --network "$API_EDGE_NETWORK" alpine:latest nc -z -w 3 "$api_ip" 8080
+  check "the api is unreachable from the proxy network (a neighbour cannot bypass Traefik's limits)" \
+    bash -c '! docker exec "$0" nc -z -w 3 "$1" 8080' "$DECOY_NAME" "$api_ip"
+  check "the api container is not attached to the proxy network" \
+    bash -c '! docker inspect -f "{{json .NetworkSettings.Networks}}" "$0" | jq -e --arg n "$1" "has(\$n)"' \
+      "$(stack ps -q api)" "$PROXY_NETWORK"
   check "no container of the stack publishes a port on the host" \
     bash -c '! docker ps --filter "label=com.docker.compose.project=$0" --format "{{.Ports}}" | grep -q -- "->"' "$PROJECT"
 
