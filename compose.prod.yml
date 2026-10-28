@@ -78,8 +78,26 @@ services:
       - traefik.http.middlewares.sec.headers.frameDeny=true
       - traefik.http.middlewares.sec.headers.referrerPolicy=strict-origin-when-cross-origin
       - traefik.http.middlewares.sec.headers.permissionsPolicy=camera=(), microphone=(), geolocation=()
-      # frame-ancestors only: a full CSP is deliberately omitted, see docs/DEPLOY.md.
+      # frame-ancestors only: the api answers JSON and files, a page policy means nothing there.
       - traefik.http.middlewares.sec.headers.contentSecurityPolicy=frame-ancestors 'none'
+      # sec-web: sec plus a Report-Only page policy for the web router (Angular SSR). Same value as
+      # infra/coolify/proxy/dynamic/meetstudent.yaml (see the comment there): change both together.
+      - traefik.http.middlewares.sec-web.headers.stsSeconds=31536000
+      - traefik.http.middlewares.sec-web.headers.stsIncludeSubdomains=true
+      - traefik.http.middlewares.sec-web.headers.contentTypeNosniff=true
+      - traefik.http.middlewares.sec-web.headers.frameDeny=true
+      - traefik.http.middlewares.sec-web.headers.referrerPolicy=strict-origin-when-cross-origin
+      - traefik.http.middlewares.sec-web.headers.permissionsPolicy=camera=(), microphone=(), geolocation=()
+      - traefik.http.middlewares.sec-web.headers.contentSecurityPolicy=frame-ancestors 'none'
+      - "traefik.http.middlewares.sec-web.headers.customresponseheaders.Content-Security-Policy-Report-Only=default-src 'self'; script-src 'self' 'sha256-NEG1tnWqc501snI8MB3TOqvwZovStm53QzW/I51Z8es=' 'sha256-MCc6vC5mfuXJ3DCPWWh/xyOHuDIAMlEGgCJuqJMsoqY=' 'sha256-VM2mZqyEQZoLzoTrp5EigFvzQ0+f1wSeBuoOn95WHCg='; script-src-attr 'unsafe-hashes' 'sha256-MhtPZXr7+LpJUY5qtMutB+qWfQtMaPccfe7QXtCcEYc='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; media-src 'self' blob:; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'"
+      # sec-bo: sec without a CSP of its own, so the enforcing one nginx sends (built at container
+      # start from BO_API_URL, see apps/backoffice/docker/40-write-config.sh) is not overwritten.
+      - traefik.http.middlewares.sec-bo.headers.stsSeconds=31536000
+      - traefik.http.middlewares.sec-bo.headers.stsIncludeSubdomains=true
+      - traefik.http.middlewares.sec-bo.headers.contentTypeNosniff=true
+      - traefik.http.middlewares.sec-bo.headers.frameDeny=true
+      - traefik.http.middlewares.sec-bo.headers.referrerPolicy=strict-origin-when-cross-origin
+      - traefik.http.middlewares.sec-bo.headers.permissionsPolicy=camera=(), microphone=(), geolocation=()
       # Drops the RFC 7239 Forwarded request header (an empty value removes a header). Traefik sets
       # X-Forwarded-* itself but would pass a client-sent Forwarded through, and Spring's forwarded-header
       # filter would then take the client address from it. Attached to every router that reaches the api.
@@ -259,7 +277,7 @@ services:
       - traefik.http.routers.web.priority=1
       - traefik.http.routers.web.entrypoints=websecure
       - traefik.http.routers.web.tls=true
-      - traefik.http.routers.web.middlewares=sec@docker
+      - traefik.http.routers.web.middlewares=sec-web@docker
       - traefik.http.routers.web.service=web
 
   backoffice:
@@ -291,7 +309,7 @@ services:
       - traefik.http.routers.backoffice.rule=Host(`${BO_DOMAIN:?set BO_DOMAIN in .env}`)
       - traefik.http.routers.backoffice.entrypoints=websecure
       - traefik.http.routers.backoffice.tls=true
-      - traefik.http.routers.backoffice.middlewares=sec@docker
+      - traefik.http.routers.backoffice.middlewares=sec-bo@docker
       - traefik.http.routers.backoffice.service=backoffice
 
 volumes:

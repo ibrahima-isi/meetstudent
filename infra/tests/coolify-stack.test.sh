@@ -23,6 +23,7 @@ export JWT_SECRET_KEY=${JWT_SECRET_KEY:-dGVzdC1qd3Qtc2VjcmV0LWtleS10aGF0LWlzLWxv
 export CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-https://$DOMAIN,https://$BO_DOMAIN}
 export ADMIN_EMAIL=${ADMIN_EMAIL:-admin@meetstudent.test}
 export ADMIN_PASSWORD=${ADMIN_PASSWORD:-test-admin-password-123}
+export ACME_EMAIL=${ACME_EMAIL:-ops@meetstudent.test}  # compose.prod.yml, for the CSP checks
 
 failures=0
 pass() { printf '  ok    %s\n' "$1"; }
@@ -98,6 +99,133 @@ static_tests() {
     q '[.services[].labels // {} | keys[] | select(startswith("traefik.http.middlewares."))] | length == 0'
   check "the stack refuses to render without DOMAIN" \
     bash -c '! DOMAIN= docker compose -f "$0" config -q' "$STACK_FILE"
+}
+
+# --- static: Content-Security-Policy -------------------------------------------
+#
+# Back office: enforcing, rendered at container start by apps/backoffice/docker/40-write-config.sh
+# from BO_API_URL and the inline scripts of its index.html. Web SSR: Report-Only, written in the
+# proxy files (hashes of the inline scripts of apps/web/src/index.html). Both proxy variants, the
+# Coolify dynamic file and the labels of compose.prod.yml, must carry the same values.
+
+DYNAMIC_FILE="$ROOT/infra/coolify/proxy/dynamic/meetstudent.yaml"
+PROD_FILE="$ROOT/compose.prod.yml"
+BO_SCRIPT="$ROOT/apps/backoffice/docker/40-write-config.sh"
+
+# 'sha256-<base64>' of each inline <script> (no src) of an HTML file, one per line. Independent of
+# the shell implementation under test: Python's hashlib.
+inline_script_hashes() {
+  python3 -I - "$1" <<'PY'
+import base64, hashlib, re, sys
+html = open(sys.argv[1], encoding="utf-8").read()
+for m in re.finditer(r'<script(?![^>]*\ssrc=)[^>]*>(.*?)</script>', html, re.S):
+    print("'sha256-" + base64.b64encode(hashlib.sha256(m.group(1).encode()).digest()).decode() + "'")
+PY
+}
+
+# Runs the back office entrypoint script on a copy of index.html $1 with BO_API_URL=$2; prints the
+# CSP line it wrote (empty and non-zero when the script refuses the URL).
+bo_policy() {
+  local work
+  work=$(mktemp -d)
+  cp "$1" "$work/index.html"
+  BO_HTML_DIR=$work BO_CSP_CONF=$work/csp.conf BO_API_URL=$2 sh "$BO_SCRIPT" >/dev/null 2>&1 || { rm -rf "$work"; return 1; }
+  cat "$work/csp.conf"
+  rm -rf "$work"
+}
+
+bo_refuses() { ! bo_policy "$1" "$2" >/dev/null; }
+
+csp_tests() {
+  echo "static: Content-Security-Policy"
+  local bo_index="$ROOT/apps/backoffice/src/index.html" web_index="$ROOT/apps/web/src/index.html"
+  local dyn prod
+  dyn() { yq -r "$1" "$DYNAMIC_FILE"; }
+  prod() { docker compose -f "$PROD_FILE" config --format json 2>/dev/null | jq -r "$1"; }
+
+  # -- back office: enforcing, built at start
+  local theme_hash policy
+  theme_hash=$(inline_script_hashes "$bo_index" | head -1)
+  policy=$(bo_policy "$bo_index" https://api.meetstudent.test/api/v1 || true)
+  check "back office: the inline theme script of index.html has exactly one hash (a second inline script must be reviewed)" \
+    test "$(inline_script_hashes "$bo_index" | wc -l | tr -d ' ')" = 1
+  check "back office: the policy is enforcing, in an add_header nginx includes" \
+    grep -q '^add_header Content-Security-Policy "default-src '"'"'self'"'"';' <<<"$policy"
+  check "back office: script-src is 'self' plus the hash of the theme script, nothing else" \
+    grep -qF "script-src 'self' $theme_hash;" <<<"$policy"
+  check "back office: no 'unsafe-inline' and no 'unsafe-eval' anywhere" \
+    bash -c '! grep -q -e unsafe-inline -e unsafe-eval <<<"$0"' "$policy"
+  check "back office: style-src is 'self' only" grep -qF "style-src 'self';" <<<"$policy"
+  check "back office: the API origin (not its path) is allowed for connect-src and img-src" \
+    bash -c 'grep -qF "connect-src '"'"'self'"'"' https://api.meetstudent.test;" <<<"$0" && grep -qF "img-src '"'"'self'"'"' data: blob: https://api.meetstudent.test;" <<<"$0" && ! grep -q "api.meetstudent.test/" <<<"$0"' "$policy"
+  check "back office: blob: is allowed for images and media (private documents are fetched as blobs)" \
+    bash -c 'grep -qF "media-src '"'"'self'"'"' blob:;" <<<"$0"' "$policy"
+  check "back office: object-src allows blob: (a private PDF opens in a blob: tab that inherits the policy) and nothing else" \
+    bash -c 'grep -qF "object-src blob:;" <<<"$0" && ! grep -E "object-src [^;]*(self|https?:|data:|\*|none)" <<<"$0"' "$policy"
+  check "back office: no iframe source is opened (frame-src is not set: the code has no iframe)" \
+    bash -c '! grep -q "frame-src" <<<"$0"' "$policy"
+  check "back office: base, forms and framing are locked" \
+    bash -c 'for d in "base-uri '"'"'self'"'"'" "form-action '"'"'self'"'"'" "frame-ancestors '"'"'none'"'"'"; do grep -qF "$d" <<<"$0" || exit 1; done' "$policy"
+  check "back office: a relative BO_API_URL (same origin) adds no external source" \
+    bash -c '! grep -q "https\?://" <<<"$0"' "$(bo_policy "$bo_index" /api/v1 || echo http://FAILED)"
+  check "back office: a port in BO_API_URL is kept" \
+    grep -qF "connect-src 'self' http://localhost:8080;" <<<"$(bo_policy "$bo_index" http://localhost:8080/api/v1 || true)"
+
+  local evil
+  for evil in "https://x.test'; script-src * ;/api" "https://x.test;y.test/api" 'ftp://x.test/api' 'api.x.test/api'; do
+    check "back office: the script refuses BO_API_URL=$evil (it would end up inside a header)" \
+      bo_refuses "$bo_index" "$evil"
+  done
+
+  local changed
+  changed=$(mktemp -d)
+  sed 's#var dark = false;#var dark = true;#' "$bo_index" >"$changed/index.html"
+  check "back office: editing the inline script changes the hash the script computes (no stale hash)" \
+    grep -qF "script-src 'self' $(inline_script_hashes "$changed/index.html" | head -1);" <<<"$(bo_policy "$changed/index.html" /api/v1 || true)"
+  sed 's#</head>#<script src="/extra.js"></script><script>alert(1)</script></head>#' "$bo_index" >"$changed/index.html"
+  check "back office: every inline script gets its hash, an external one gets none" \
+    test "$(bo_policy "$changed/index.html" /api/v1 | grep -o 'sha256-' | wc -l | tr -d ' ')" = 2
+  rm -rf "$changed"
+
+  if [ -f "$ROOT/apps/backoffice/dist/backoffice/browser/index.html" ]; then
+    local built="$ROOT/apps/backoffice/dist/backoffice/browser/index.html"
+    check "back office (built output): only the theme script is inline, no inline <style>, no on* handler" \
+      bash -c '[ "$(grep -c "<style" "$0")" = 0 ] && ! grep -qE "[[:space:]]on[a-z]+=" "$0"' "$built"
+    check "back office (built output): the policy covers the built index.html" \
+      grep -qF "script-src 'self' $(inline_script_hashes "$built" | head -1);" <<<"$(bo_policy "$built" /api/v1 || true)"
+  fi
+
+  # -- web SSR: Report-Only, hashes written in the proxy files
+  local web_hashes web_policy
+  web_hashes=$(inline_script_hashes "$web_index")
+  web_policy=$(dyn '.http.middlewares."sec-web".headers.customResponseHeaders."Content-Security-Policy-Report-Only"')
+  check "web: the proxy sends Content-Security-Policy-Report-Only on the web router" \
+    grep -q "^default-src 'self'; script-src 'self' " <<<"$web_policy"
+  check "web: both inline scripts of index.html (theme, session marker) are hashed in the policy" \
+    bash -c 'while read -r h; do grep -qF "$h" <<<"$0" || exit 1; done <<<"$1"; [ "$(wc -l <<<"$1" | tr -d " ")" = 2 ]' "$web_policy" "$web_hashes"
+  check "web: the inline onload handler Angular adds to its stylesheet link is allowed by hash, not by 'unsafe-inline' in script-src" \
+    bash -c 'grep -qF "script-src-attr '"'"'unsafe-hashes'"'"' '"'"'sha256-MhtPZXr7+LpJUY5qtMutB+qWfQtMaPccfe7QXtCcEYc='"'"'" <<<"$0" && ! grep -qE "script-src [^;]*unsafe-inline" <<<"$0"' "$web_policy"
+  check "web: it stays Report-Only, nothing enforced beyond frame-ancestors" \
+    test "$(dyn '.http.middlewares."sec-web".headers.contentSecurityPolicy')" = "frame-ancestors 'none'"
+  check "web: same origin only (connect-src 'self'), object-src 'none'" \
+    bash -c 'grep -qF "connect-src '"'"'self'"'"';" <<<"$0" && grep -qF "object-src '"'"'none'"'"'" <<<"$0"' "$web_policy"
+
+  # -- the proxy files
+  check "proxy: the API middleware sec keeps frame-ancestors only (JSON needs no page policy)" \
+    bash -c '[ "$(yq -r ".http.middlewares.sec.headers.contentSecurityPolicy" "$0")" = "frame-ancestors '"'"'none'"'"'" ] && [ "$(yq -r ".http.middlewares.sec.headers.customResponseHeaders" "$0")" = null ]' "$DYNAMIC_FILE"
+  check "proxy: sec-bo sets no CSP of its own (a Traefik one would overwrite the back office's)" \
+    bash -c '[ "$(yq -r ".http.middlewares.\"sec-bo\".headers.contentSecurityPolicy" "$0")" = null ] && [ "$(yq -r ".http.middlewares.\"sec-bo\".headers.stsSeconds" "$0")" = 31536000 ]' "$DYNAMIC_FILE"
+  local prod_labels='.services | map(.labels // {}) | add'
+  check "compose.prod.yml: the web router uses sec-web" \
+    test "$(prod "$prod_labels | .\"traefik.http.routers.web.middlewares\"")" = sec-web@docker
+  check "compose.prod.yml: the back office router uses sec-bo" \
+    test "$(prod "$prod_labels | .\"traefik.http.routers.backoffice.middlewares\"")" = sec-bo@docker
+  check "compose.prod.yml: the api routers keep sec" \
+    test "$(prod "$prod_labels | [.\"traefik.http.routers.api-auth.middlewares\", .\"traefik.http.routers.api-upload.middlewares\", .\"traefik.http.routers.api.middlewares\", .\"traefik.http.routers.uploads.middlewares\"] | map(endswith(\",sec@docker\")) | all")" = true
+  check "compose.prod.yml: the web Report-Only policy is the Coolify file's, byte for byte (and not empty)" \
+    test -n "$web_policy" -a "$(prod '.services | map(.labels // {}) | add | ."traefik.http.middlewares.sec-web.headers.customresponseheaders.Content-Security-Policy-Report-Only"')" = "$web_policy"
+  check "compose.prod.yml: sec-bo carries no CSP label" \
+    test "$(prod '.services | map(.labels // {}) | add | keys | map(select(startswith("traefik.http.middlewares.sec-bo.headers.contentsecuritypolicy"))) | length')" = 0
 }
 
 # --- live: the stack behind a replica of Coolify's Traefik ---------------------
@@ -274,8 +402,8 @@ live_tests() {
 }
 
 case ${1:-static} in
-  static) static_tests ;;
-  live) static_tests; live_tests ;;
+  static) static_tests; csp_tests ;;
+  live) static_tests; csp_tests; live_tests ;;
   *) echo "usage: $0 [static|live]" >&2; exit 2 ;;
 esac
 
