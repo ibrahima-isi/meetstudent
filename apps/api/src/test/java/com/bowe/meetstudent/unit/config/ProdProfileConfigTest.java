@@ -12,6 +12,7 @@ import org.springframework.core.io.ClassPathResource;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -50,7 +51,39 @@ class ProdProfileConfigTest {
 
     @Test
     void trustsForwardedHeadersFromTheTlsTerminatingProxy() {
-        assertEquals("framework", prod.getProperty("server.forward-headers-strategy"));
+        // native (Tomcat's RemoteIpValve), not framework: only the valve honours internal-proxies.
+        assertEquals("native", prod.getProperty("server.forward-headers-strategy"));
+    }
+
+    @Test
+    void theContactResolverDoesNotReadXForwardedForItself() {
+        // The valve has already put the client address in getRemoteAddr() when the peer is a trusted proxy;
+        // reading the raw header too would let any other peer choose its key.
+        assertEquals("false", prod.getProperty("app.contact.trust-forwarded-for"));
+    }
+
+    @Test
+    void trustedProxiesDefaultToPrivateAndLoopbackRanges() {
+        var trusted = Pattern.compile(prod.getProperty("server.tomcat.remoteip.internal-proxies"));
+
+        for (var proxy : List.of("10.1.2.3", "172.16.0.9", "172.31.255.1", "192.168.1.1", "127.0.0.1", "::1")) {
+            assertTrue(trusted.matcher(proxy).matches(), proxy);
+        }
+        for (var other : List.of("8.8.8.8", "172.32.0.1", "172.15.0.1", "203.0.113.7", "11.0.0.1")) {
+            assertFalse(trusted.matcher(other).matches(), other);
+        }
+    }
+
+    @Test
+    void trustedProxiesCanBeNarrowedToTheProxyNetworkWithAnEnvVariable() throws IOException {
+        var env = new java.util.HashMap<>(FULL_ENV);
+        env.put("TRUSTED_PROXIES", "10\\.250\\.77\\.\\d{1,3}");
+
+        var trusted = Pattern.compile(resolver(env).getProperty("server.tomcat.remoteip.internal-proxies"));
+
+        assertTrue(trusted.matcher("10.250.77.2").matches());
+        assertFalse(trusted.matcher("10.250.78.2").matches());
+        assertFalse(trusted.matcher("172.20.0.2").matches());
     }
 
     @Test
