@@ -38,6 +38,7 @@ public class EmailChangeService {
     private final UserTokenService userTokenService;
     private final RefreshTokenService refreshTokenService;
     private final PasswordEncoder passwordEncoder;
+    private final CredentialAttemptLimiter credentialAttemptLimiter;
     private final EmailSender emailSender;
     private final MailProperties properties;
     private final ApplicationEventPublisher events;
@@ -48,11 +49,13 @@ public class EmailChangeService {
      *
      * @throws FieldValidationException    wrong password ({@code currentPassword}) or not a change ({@code newEmail})
      * @throws ServiceUnavailableException email delivery is disabled, so the link could never arrive
+     * @throws com.bowe.meetstudent.exceptions.TooManyRequestsException too many wrong current passwords ({@link CredentialAttemptLimiter})
      */
     @Transactional
     public void request(Integer userId, String newEmail, String currentPassword, String lang) {
         var user = load(userId);
-        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+        if (!credentialAttemptLimiter.matchesCurrentPassword(userId,
+                () -> passwordEncoder.matches(currentPassword, user.getPassword()))) {
             throw new FieldValidationException("currentPassword", "Mot de passe incorrect");
         }
         var address = newEmail.strip();

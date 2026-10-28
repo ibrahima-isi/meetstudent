@@ -1,5 +1,6 @@
 package com.bowe.meetstudent.security;
 
+import com.bowe.meetstudent.services.CredentialAttemptLimiter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -138,13 +139,14 @@ public class WebSecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
+    /** Sign-in goes through the per-account progressive lockout ({@link CredentialAttemptLimiter}). */
     @Bean
-    public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
+    public AuthenticationManager authenticationManager(HttpSecurity http, CredentialAttemptLimiter limiter) throws Exception {
         var authBuilder = http.getSharedObject(AuthenticationManagerBuilder.class);
         authBuilder
                 .userDetailsService(customUserDetailsService)
                 .passwordEncoder(passwordEncoder());
 
-        return authBuilder.build();
+        return limiter.guard(authBuilder.build());
     }
 }
