@@ -1,5 +1,6 @@
 package com.bowe.meetstudent.unit.services;
 
+import com.bowe.meetstudent.entities.Course;
 import com.bowe.meetstudent.entities.School;
 import com.bowe.meetstudent.entities.Program;
 import com.bowe.meetstudent.repositories.ProgramRepository;
@@ -51,18 +52,25 @@ class SchoolServiceTest {
 
     @Test
     void testDeleteClearsWishlistLinksBeforeDeletingTheSchool() {
-        Program program = Program.builder().name("P").build();
+        Program program = Program.builder().name("P").photoMediaId(20).build();
         program.setId(7);
-        school.setPrograms(new java.util.ArrayList<>(java.util.List.of(program)));
+        program.setCourses(new java.util.ArrayList<>(java.util.List.of(
+                Course.builder().name("C1").photoMediaId(30).build(),
+                Course.builder().name("C2").build(),
+                Course.builder().name("C3").photoMediaId(31).build())));
+        Program bare = Program.builder().name("B").build();
+        bare.setId(8);
+        school.setPrograms(new java.util.ArrayList<>(java.util.List.of(program, bare)));
         Mockito.when(schoolRepository.findById(1)).thenReturn(Optional.of(school));
 
         schoolService.delete(1);
 
         var order = Mockito.inOrder(programRepository, schoolRepository, mediaService);
         order.verify(programRepository).deleteWishlistLinks(7);
+        order.verify(programRepository).deleteWishlistLinks(8);
         order.verify(schoolRepository).deleteWishlistLinks(1);
         order.verify(schoolRepository).deleteById(1);
-        order.verify(mediaService).deleteByIdsAfterCommit(java.util.Arrays.asList(10, 11));
+        order.verify(mediaService).deleteByIdsAfterCommit(java.util.Arrays.asList(10, 11, 20, 30, null, 31, null));
     }
 
     @Test

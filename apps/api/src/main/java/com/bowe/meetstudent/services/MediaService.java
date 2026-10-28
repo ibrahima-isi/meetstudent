@@ -316,21 +316,16 @@ public class MediaService {
     }
 
     /**
-     * Server-side delete of a media row and its file, without a principal check.
-     * For orchestration by ROLE_ADMIN-gated entity endpoints (school/course/program
-     * image replace + delete). No-op when the id is null or the row is gone.
+     * Server-side delete of a media row without a principal check, for orchestration by
+     * ROLE_ADMIN-gated entity endpoints (school/course/program image replace + delete). Same
+     * contract as {@link #deleteByIdsAfterCommit}: the row goes now, the stored file only after
+     * the surrounding transaction commits, so a rollback never leaves an entity pointing at a
+     * missing file. No-op when the id is null or the row is gone.
      */
     @Transactional
     public void deleteById(Integer mediaId) {
         if (mediaId == null) return;
-        mediaRepository.findById(mediaId).ifPresent(media -> {
-            try {
-                storageService.delete(media.getStorageKey());
-            } catch (IOException e) {
-                // best-effort file cleanup; the row is still removed
-            }
-            mediaRepository.delete(media);
-        });
+        deleteByIdsAfterCommit(List.of(mediaId));
     }
 
     /**
