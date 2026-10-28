@@ -434,7 +434,8 @@ Traefik command line) and set the variable only if a name differs:
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `PROXY_NETWORK` | `coolify` | Docker network shared by Coolify's Traefik and the stack's `api`, `web`, `backoffice` |
+| `PROXY_NETWORK` | `coolify` | Docker network shared by Coolify's Traefik and the stack's `web` and `backoffice` |
+| `API_EDGE_NETWORK` | `meetstudent-api-edge` | Dedicated Docker network shared by Coolify's Traefik and the stack's `api` only (see below) |
 | `PROXY_HTTP_ENTRYPOINT` | `http` | Traefik entry point on port 80 (the redirect routers) |
 | `PROXY_HTTPS_ENTRYPOINT` | `https` | Traefik entry point on port 443 |
 | `PROXY_CERT_RESOLVER` | `letsencrypt` | Traefik certificate resolver (Let's Encrypt HTTP-01) |
@@ -444,12 +445,72 @@ another stack's container. The stack never uses those names: the API reaches Pos
 (internal `backend` network) and the SSR reaches the API as `meetstudent-api` (internal `ssr` network).
 Keep these aliases if you edit the file.
 
+#### The API's dedicated network (once per server, before the first deploy)
+
+The `api` is deliberately **not** on `coolify`: that network is shared by every Coolify resource, and a
+neighbour container there could call `api:8080` directly, past `rl-auth`/`rl-api`, the upload cap and
+`strip-forwarded`, and forge `X-Forwarded-For` (the contact form's per-IP limit). The `api` is on its own
+network, `meetstudent-api-edge`, that only Traefik and the `api` join. Two layers:
+
+1. **Network**: nothing else is on `meetstudent-api-edge`, so nothing else can reach the API.
+2. **Trusted proxies** (`TRUSTED_PROXIES`, a regex, default `10[.]250[.]77[.][0-9]+` = the subnet below): the API honours
+   `X-Forwarded-*` only from a peer in that subnet (Tomcat's `RemoteIpValve`); from any other peer the headers are
+   ignored and the socket address is the client. Keep the regex and the subnet in step.
+
+Owner steps (the stack cannot do them: Coolify's proxy must join the network before it exists in the stack,
+and an external network that is missing makes the deploy fail loudly instead of silently falling back):
+
+```bash
+# 1. On the server, create the network (not `--internal`: the api needs the internet for SMTP).
+docker network create --subnet 10.250.77.0/24 meetstudent-api-edge
+```
+
+2. In Coolify: Servers -> the server -> Proxy -> Configuration, add the network to Traefik's service **and**
+   declare it at the bottom, next to `coolify`, then restart the proxy:
+
+```yaml
+services:
+  traefik:
+    networks:
+      - coolify
+      - meetstudent-api-edge      # added
+networks:
+  coolify:
+    external: true
+  meetstudent-api-edge:           # added
+    external: true
+```
+
+3. Deploy, then check from the server (all four must hold):
+
+```bash
+docker inspect -f '{{json .NetworkSettings.Networks}}' <api container> | jq 'keys'   # exactly backend, ssr, api-edge (real names: <project>_backend, <project>_ssr, meetstudent-api-edge)
+docker inspect -f '{{json .NetworkSettings.Networks}}' coolify-proxy | jq 'keys'     # contains coolify and meetstudent-api-edge
+docker run --rm --network coolify alpine nc -z -w 3 <api ip on meetstudent-api-edge> 8080   # fails (timeout)
+curl -s -o /dev/null -w '%{http_code}\n' https://$DOMAIN/api/v1/schools              # 200
+```
+
+The first check is the one that matters: if `coolify` appears among the API container's networks, Coolify attached
+it anyway. Turn off the resource's "Connect to Predefined Network" option (Coolify, resource -> Advanced), redeploy and
+check again; until it lists exactly those three networks the isolation is not in place.
+
+If the subnet clashes with something on the server (`docker network create` says "Pool overlaps"), pick another
+`10.x.y.0/24`, create the network with it and set `TRUSTED_PROXIES` to match (for example `10[.]250[.]99[.][0-9]+`,
+written without backslashes so that Coolify's variable form keeps it intact). If `meetstudent-api-edge` was created with another
+subnet than `TRUSTED_PROXIES` says, the API ignores Traefik's headers (fail closed): the contact form's per-IP limit
+then counts all visitors as one address (5 messages per hour for the whole site) and `https` redirects built by the API
+may use `http`. A Coolify upgrade or a proxy reset that drops the network from the proxy configuration shows as a 502/504
+on `/api` only; re-add step 2. If the owner cannot make the proxy join the network, the accepted fallback is
+`API_EDGE_NETWORK=coolify` plus `TRUSTED_PROXIES` left to the private ranges, which restores the old exposure: see the
+first risk below.
+
 Risks this setup accepts, to keep in mind:
 
-- **Dedicated server.** The `api` sits on the proxy network so Traefik can reach it, and so does every other
-  container on that network: it can call the API on port 8080 directly, past the rate limits, the upload cap
-  and the removal of `Forwarded`. Run nothing else on this Coolify server, so that Traefik stays the api's
-  only peer on `coolify` (Coolify's own containers aside).
+- **Nothing but Traefik on `meetstudent-api-edge`.** Do not attach other containers to it: every peer of that
+  network can call the API directly, past the limits, and is trusted to set the client address. The `web` and
+  `backoffice` stay on `coolify`: a compromised neighbour there can still call them directly, which exposes
+  nothing the public site does not (static files and the server-rendered pages, no secret, no rate limit
+  of theirs to dodge). Still, run nothing on this Coolify server that you do not trust.
 - **Cloudflare DNS only (grey cloud), for good.** The rate limits count requests per client IP as Traefik
   sees it. Behind Cloudflare's proxy (orange cloud) every visitor arrives from a few Cloudflare addresses
   and shares one budget: 10 sign-ins a minute for the whole site. Turn the proxy on only after setting
@@ -478,6 +539,7 @@ Risks this setup accepts, to keep in mind:
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | yes (password secret) | first admin account, password at least 12 characters (section 4) |
 | `IMAGE_TAG` | no, default `latest` | image tag of the four services; `sha-<40-char commit>` to roll back (9.6) |
 | `PROXY_NETWORK`, `PROXY_HTTP_ENTRYPOINT`, `PROXY_HTTPS_ENTRYPOINT`, `PROXY_CERT_RESOLVER` | no | see 9.1 |
+| `API_EDGE_NETWORK`, `TRUSTED_PROXIES` | no, default `meetstudent-api-edge` and `10[.]250[.]77[.][0-9]+` | the API's dedicated network and the regex of the peers it trusts for `X-Forwarded-*` (9.1); change both together with the subnet |
 | `JWT_ACCESS_TTL_MINUTES` | no, default `15` | access token lifetime |
 | `POSTGRES_DB`, `POSTGRES_USER` | no, default `meetstudent` | database name and user |
 | `BO_API_URL` | no, default `https://${DOMAIN}/api/v1` | API base URL of the back office |

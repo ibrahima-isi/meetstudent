@@ -19,12 +19,14 @@ import java.util.Enumeration;
 import java.util.stream.Collectors;
 
 /**
- * With {@code server.forward-headers-strategy=framework} (prod) Spring's {@link ForwardedHeaderFilter} prefers the
+ * Only active with {@code server.forward-headers-strategy=framework}, which prod no longer uses (it runs
+ * {@code native}, Tomcat's RemoteIpValve, restricted to {@code server.tomcat.remoteip.internal-proxies}); kept as a
+ * guard for anyone switching back. Under {@code framework} Spring's {@link ForwardedHeaderFilter} prefers the
  * RFC 7239 {@code Forwarded} header over {@code X-Forwarded-For} and copies its {@code for=} value, unvalidated,
- * into {@code getRemoteAddr()}. Traefik sets {@code X-Forwarded-*} but passes a client-sent {@code Forwarded}
- * through, so any visitor could pick the address the API sees. This registration replaces Spring Boot's own
- * (which backs off) with the same filter minus that header: {@code Forwarded} is hidden before the filter reads it,
- * so only {@code X-Forwarded-*} counts. Traefik also strips it (compose.prod.yml); this is the second lock.
+ * into {@code getRemoteAddr()}, and it checks no trusted peer. Traefik sets {@code X-Forwarded-*} but passes a
+ * client-sent {@code Forwarded} through, so any visitor could pick the address the API sees. This registration
+ * replaces Spring Boot's own (which backs off) with the same filter minus that header: {@code Forwarded} is hidden
+ * before the filter reads it, so only {@code X-Forwarded-*} counts. Traefik also strips it (compose files).
  */
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnProperty(name = "server.forward-headers-strategy", havingValue = "framework")
