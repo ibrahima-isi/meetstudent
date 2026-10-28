@@ -614,7 +614,7 @@ before it.
     built `index.html` (today the theme script only). Nothing to recompute by hand: restart the
     container. `script-src 'self'` + hashes, `style-src 'self'` (the build no longer inlines
     critical CSS: `inlineCritical: false` in `apps/backoffice/angular.json`, which is also what
-    removes the inline `onload` handler), `object-src 'none'`, `base-uri`/`form-action 'self'`,
+    removes the inline `onload` handler), `object-src blob:` (the PDF viewer of the blob: tab), `base-uri`/`form-action 'self'`,
     `frame-ancestors 'none'`. If a new feature loads something from another origin (fonts, a
     CDN, an iframe), the browser console shows the violation: extend the script, not the proxy.
   - **Web SSR: `Content-Security-Policy-Report-Only`**, on the `sec-web` middleware

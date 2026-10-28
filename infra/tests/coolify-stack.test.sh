@@ -131,8 +131,12 @@ csp_tests() {
     bash -c 'grep -qF "connect-src '"'"'self'"'"' https://api.meetstudent.test;" <<<"$0" && grep -qF "img-src '"'"'self'"'"' data: blob: https://api.meetstudent.test;" <<<"$0" && ! grep -q "api.meetstudent.test/" <<<"$0"' "$policy"
   check "back office: blob: is allowed for images and media (private documents are fetched as blobs)" \
     bash -c 'grep -qF "media-src '"'"'self'"'"' blob:;" <<<"$0"' "$policy"
-  check "back office: plugins, base, forms and framing are locked" \
-    bash -c 'for d in "object-src '"'"'none'"'"'" "base-uri '"'"'self'"'"'" "form-action '"'"'self'"'"'" "frame-ancestors '"'"'none'"'"'"; do grep -qF "$d" <<<"$0" || exit 1; done' "$policy"
+  check "back office: object-src allows blob: (a private PDF opens in a blob: tab that inherits the policy) and nothing else" \
+    bash -c 'grep -qF "object-src blob:;" <<<"$0" && ! grep -E "object-src [^;]*(self|https?:|data:|\*|none)" <<<"$0"' "$policy"
+  check "back office: no iframe source is opened (frame-src is not set: the code has no iframe)" \
+    bash -c '! grep -q "frame-src" <<<"$0"' "$policy"
+  check "back office: base, forms and framing are locked" \
+    bash -c 'for d in "base-uri '"'"'self'"'"'" "form-action '"'"'self'"'"'" "frame-ancestors '"'"'none'"'"'"; do grep -qF "$d" <<<"$0" || exit 1; done' "$policy"
   check "back office: a relative BO_API_URL (same origin) adds no external source" \
     bash -c '! grep -q "https\?://" <<<"$0"' "$(bo_policy "$bo_index" /api/v1 || echo http://FAILED)"
   check "back office: a port in BO_API_URL is kept" \

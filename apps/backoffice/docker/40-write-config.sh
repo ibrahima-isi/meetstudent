@@ -89,9 +89,10 @@ hashes=$(script_hashes)
 
 # connect-src: XHR to the API. img-src: school logos live under the API's /uploads/public, and
 # blob:/data: serve upload previews. media-src: blob: for private documents, which are fetched
-# with the bearer token and opened in a new tab. object-src 'none' rules out plugins;
-# frame-ancestors 'none' repeats the proxy's frame protection for any other way of serving.
-policy="default-src 'self'; script-src 'self' ${hashes}; style-src 'self'; img-src 'self' data: blob: ${api_origin}; connect-src 'self' ${api_origin}; media-src 'self' blob:; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+# with the bearer token and opened in a new tab. That blob: tab inherits this policy and Chrome's
+# PDF viewer is an embedded object, so object-src allows blob: (and no other source: no remote
+# plugin content); there is no iframe, hence no frame-src. frame-ancestors 'none' repeats the proxy's frame protection for any other way of serving.
+policy="default-src 'self'; script-src 'self' ${hashes}; style-src 'self'; img-src 'self' data: blob: ${api_origin}; connect-src 'self' ${api_origin}; media-src 'self' blob:; font-src 'self'; object-src blob:; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 policy=$(printf '%s' "$policy" | tr -s ' ' | sed -e 's/ ;/;/g')
 printf 'add_header Content-Security-Policy "%s" always;\n' "$policy" > "$csp_conf"
 echo "40-write-config.sh: wrote Content-Security-Policy (api origin: ${api_origin:-same origin})"
