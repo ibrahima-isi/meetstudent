@@ -54,12 +54,24 @@ public class ProgramService {
         return this.programRepository.existsById(id);
     }
 
+    /** Photo ids of a program and of its courses (null entries are skipped by the media service). */
+    static List<Integer> photoIdsOf(Program program) {
+        List<Integer> ids = new java.util.ArrayList<>();
+        ids.add(program.getPhotoMediaId());
+        if (program.getCourses() != null) {
+            program.getCourses().forEach(course -> ids.add(course.getPhotoMediaId()));
+        }
+        return ids;
+    }
+
     @Transactional
     public void delete(int id) {
         this.programRepository.findById(id).ifPresent(program -> {
-            mediaService.deleteById(program.getPhotoMediaId());
+            List<Integer> mediaIds = photoIdsOf(program);
             this.programRepository.deleteWishlistLinks(id);
             this.programRepository.deleteById(id);
+            // Files go only after the commit; the courses (JPA cascade) take their photos with them.
+            mediaService.deleteByIdsAfterCommit(mediaIds);
         });
     }
 
