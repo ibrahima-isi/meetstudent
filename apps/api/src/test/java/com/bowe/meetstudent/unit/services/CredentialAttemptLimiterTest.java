@@ -254,8 +254,52 @@ class CredentialAttemptLimiterTest {
         assertThatThrownBy(() -> manager.authenticate(new UsernamePasswordAuthenticationToken("anything", "pw")))
                 .isInstanceOfSatisfying(TooManyRequestsException.class, ex -> assertThat(ex.getRetryAfterSeconds()).isEqualTo(60));
         // Another account, and the email namespace of unknown addresses, are untouched.
-        assertThat(limiter.authenticateAccount(43, () -> OK)).isSameAs(OK);
+        assertThat(limiter.authenticateAccount(43, "other@x.com", () -> OK)).isSameAs(OK);
         assertThat(right("student@x.com")).isSameAs(OK);
+    }
+
+    /**
+     * NFKC folds more than the database (fullwidth 'ａ' does not find "alice"): failures under such a spelling lock its
+     * email key, so a known account must check and count that key too, or the lock would reveal which accounts exist.
+     */
+    @Test
+    void aKnownAccountAlsoUsesTheEmailKeySoTheLockRevealsNothing() {
+        java.util.function.Function<String, java.util.Optional<Integer>> db =
+                email -> email.equalsIgnoreCase("alice@x.com") ? java.util.Optional.of(42) : java.util.Optional.empty();
+        java.util.function.Function<String, Integer> outcome = name -> {
+            var manager = limiter.guard(authentication -> OK, db);
+            try {
+                manager.authenticate(new UsernamePasswordAuthenticationToken(name, "pw"));
+                return 200;
+            } catch (TooManyRequestsException ex) {
+                return 429;
+            }
+        };
+        var failing = limiter.guard(authentication -> {
+            throw new BadCredentialsException("Bad credentials");
+        }, db);
+        for (var target : java.util.List.of("ａlice@x.com", "ａnyone@x.com")) {
+            for (int i = 0; i < 5; i++) {
+                assertThatThrownBy(() -> failing.authenticate(new UsernamePasswordAuthenticationToken(target, "pw")))
+                        .isInstanceOf(BadCredentialsException.class);
+            }
+        }
+        assertThat(outcome.apply("alice@x.com")).as("known").isEqualTo(429);
+        assertThat(outcome.apply("anyone@x.com")).as("unknown").isEqualTo(429);
+    }
+
+    @Test
+    void aKnownAccountCountsEachFailureOnBothKeys() {
+        var failing = limiter.guard(authentication -> {
+            throw new BadCredentialsException("Bad credentials");
+        }, email -> java.util.Optional.of(42));
+        for (int i = 0; i < 5; i++) {
+            assertThatThrownBy(() -> failing.authenticate(new UsernamePasswordAuthenticationToken("bob@x.com", "pw")))
+                    .isInstanceOf(BadCredentialsException.class);
+        }
+        // The email key is locked as well: the address keeps its lock even if the lookup stops finding the account.
+        lockedFor("bob@x.com", 60);
+        assertThatThrownBy(() -> limiter.authenticateAccount(42, "elsewhere@x.com", () -> OK)).isInstanceOf(TooManyRequestsException.class);
     }
 
     @Test

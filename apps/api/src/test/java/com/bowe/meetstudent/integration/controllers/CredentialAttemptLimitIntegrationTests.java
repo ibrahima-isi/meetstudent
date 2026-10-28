@@ -187,6 +187,23 @@ class CredentialAttemptLimitIntegrationTests {
         assertThat(login(other.getEmail(), PASSWORD).getResponse().getStatus()).isEqualTo(429);
     }
 
+    /** Fullwidth 'ａ' does not find the account but folds to 'A' under NFKC: the lock must not tell known from unknown. */
+    @Test
+    void aSpellingTheDatabaseDoesNotFoldLocksKnownAndUnknownAddressesAlike() throws Exception {
+        var user = account("ROLE_STUDENT");
+        user.setEmail("alice-" + UUID.randomUUID() + "@example.com");
+        user = users.save(user);
+        var unknown = "alice-" + UUID.randomUUID() + "@example.com";
+        assertThat(login(user.getEmail().replaceFirst("a", "ａ"), PASSWORD).getResponse().getStatus())
+                .as("the database does not find the fullwidth spelling").isEqualTo(401);
+        wrongLogins(user.getEmail().replaceFirst("a", "ａ"), 4);
+        wrongLogins(unknown.replaceFirst("a", "ａ"), 5);
+        var known = login(user.getEmail(), PASSWORD);
+        var other = login(unknown, PASSWORD);
+        assertThat(known.getResponse().getStatus()).isEqualTo(429);
+        assertThat(visible(known).replace(user.getEmail(), "")).isEqualTo(visible(other).replace(unknown, ""));
+    }
+
     @Test
     void unicodeSpellingsOfAnUnknownEmailShareItsLockToo() throws Exception {
         var unknown = "student-" + UUID.randomUUID() + "@example.com";

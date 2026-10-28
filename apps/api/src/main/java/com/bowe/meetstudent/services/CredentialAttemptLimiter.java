@@ -30,11 +30,12 @@ import java.util.function.Supplier;
  * {@link ForumRateLimiter}). Two separate namespaces: <b>sign-in</b> and <b>current password</b> checks (email
  * change, account deletion, password change, keyed by user id).
  * <p>
- * A sign-in is keyed by the <b>id of the account</b> the address finds ({@link #guard}), so every spelling the
- * database accepts for it (case, and the Unicode letters its {@code upper()} folds, such as 'ſ' -> 'S' or
- * 'ı' -> 'I') shares one budget. An address that finds no account is keyed by its NFKC upper-cased form (at least
- * as coarse as the database comparison), stored as a SHA-256, so the size of a key is fixed and no address is kept.
- * Both paths do the same work, so an unknown address is limited, answered and timed like a known one.
+ * Every sign-in is keyed by the NFKC upper-cased address (at least as coarse as the database comparison), stored as
+ * a SHA-256, so the size of a key is fixed and no address is kept. When the address finds an account ({@link #guard})
+ * the <b>id of the account</b> is checked and counted too, so every spelling the database accepts for it (case, and
+ * the Unicode letters its {@code upper()} folds, such as 'ſ' -> 'S' or 'ı' -> 'I') shares one budget; and since
+ * the address key is used either way, a spelling NFKC folds but the database does not (fullwidth 'ａ') locks a known
+ * and an unknown address alike. Both paths do the same query, so the lock never tells whether an account exists.
  * <p>
  * After {@value #MAX_FAILURES} consecutive failures the key is locked for 1 minute, after the next streak 5 minutes,
  * then 15 minutes (cap); a success resets everything, and a key with no failure for a day is forgotten. While locked
@@ -76,12 +77,15 @@ public class CredentialAttemptLimiter {
      * @throws TooManyRequestsException the key is locked (the attempt is not run)
      */
     public Authentication authenticate(String email, Supplier<Authentication> attempt) {
-        return signIn(emailKey(email), attempt);
+        return signIn(List.of(emailKey(email)), attempt);
     }
 
-    /** {@link #authenticate} for an address that finds the account {@code userId}: keyed by the id. */
-    public Authentication authenticateAccount(int userId, Supplier<Authentication> attempt) {
-        return signIn("id:" + userId, attempt);
+    /**
+     * {@link #authenticate} for an address that finds the account {@code userId}: the address key and the id key are
+     * both checked (locked if either is) and both counted.
+     */
+    public Authentication authenticateAccount(int userId, String email, Supplier<Authentication> attempt) {
+        return signIn(List.of(emailKey(email), "id:" + userId), attempt);
     }
 
     /**
@@ -94,7 +98,7 @@ public class CredentialAttemptLimiter {
             var name = authentication.getName();
             Supplier<Authentication> attempt = () -> delegate.authenticate(authentication);
             var accountId = name == null || name.isEmpty() ? Optional.<Integer>empty() : accountIdByEmail.apply(name);
-            return accountId.isPresent() ? authenticateAccount(accountId.get(), attempt) : authenticate(name, attempt);
+            return accountId.isPresent() ? authenticateAccount(accountId.get(), name, attempt) : authenticate(name, attempt);
         };
     }
 
@@ -119,8 +123,8 @@ public class CredentialAttemptLimiter {
         return logins.size() + currentPasswords.size();
     }
 
-    private Authentication signIn(String key, Supplier<Authentication> attempt) {
-        logins.acquire(key);
+    private Authentication signIn(List<String> keys, Supplier<Authentication> attempt) {
+        logins.acquireAll(keys);
         var outcome = Outcome.OTHER;
         try {
             var authentication = attempt.get();
@@ -130,7 +134,9 @@ public class CredentialAttemptLimiter {
             outcome = Outcome.FAILURE;
             throw ex;
         } finally {
-            logins.finish(key, outcome);
+            for (var key : keys) {
+                logins.finish(key, outcome);
+            }
         }
     }
 
@@ -236,6 +242,22 @@ public class CredentialAttemptLimiter {
                 throw new TooManyRequestsException(MESSAGE, 1);
             }
             entry.inFlight++;
+        }
+
+        /** Acquires every key or none: when one is refused, those already acquired are released uncounted. */
+        synchronized void acquireAll(List<K> keys) {
+            var acquired = new java.util.ArrayList<K>(keys.size());
+            try {
+                for (var key : keys) {
+                    acquire(key);
+                    acquired.add(key);
+                }
+            } catch (TooManyRequestsException ex) {
+                for (var key : acquired) {
+                    finish(key, Outcome.OTHER);
+                }
+                throw ex;
+            }
         }
 
         synchronized void finish(K key, Outcome outcome) {
