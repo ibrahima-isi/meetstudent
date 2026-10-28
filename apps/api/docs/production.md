@@ -5,7 +5,7 @@ the prod profile has no fallbacks for the required ones, so a missing value stop
 
 | Variable | Required | Default | Purpose |
 |---|---|---|---|
-| `JWT_SECRET_KEY` | yes | none | HMAC secret for access tokens. Use 32+ random characters. |
+| `JWT_SECRET_KEY` | yes | none | HMAC secret for access tokens. At least 32 bytes (UTF-8), generated with `openssl rand -base64 48`; startup is refused otherwise (see below). |
 | `SPRING_DATASOURCE_URL` | yes | none | e.g. `jdbc:postgresql://db:5432/meetstudent` |
 | `SPRING_DATASOURCE_USERNAME` | yes | none | Database user. |
 | `SPRING_DATASOURCE_PASSWORD` | yes | none | Database password. |
@@ -36,6 +36,13 @@ the prod profile has no fallbacks for the required ones, so a missing value stop
 `CONTACT_RECIPIENT`, `MAIL_PROVIDER`, `MAIL_SES_REGION`, the `SPRING_MAIL_*` variables and the retry variables are all
 passed to the API by `compose.prod.yml` (and, with mail off by default, by `compose.yml`). The step-by-step provider
 setup, test checklist and troubleshooting table are in `docs/DEPLOY.md` (section 2b).
+
+## JWT secret check
+
+Under `prod`, `JwtSecretStartupCheck` aborts startup when `JWT_SECRET_KEY` is blank, shorter than 32 bytes (UTF-8),
+or equal (case-insensitive, trimmed) to a value published in the repository: the placeholders of the `.env` examples,
+the `dev` default and the `test` profile secret. Generate a real one with `openssl rand -base64 48` (64 characters).
+`dev`, `docker` and `test` are not checked. Changing the secret signs everyone out.
 
 ## Backups (Coolify stack)
 
