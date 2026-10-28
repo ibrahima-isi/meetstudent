@@ -278,6 +278,21 @@ class ProgramRateControllerIntegrationTests {
     }
 
     @Test
+    void testThatARatingWithoutProgramIdIsRejectedWith400AndCreatesNoRow() throws Exception {
+        setupUser("ROLE_EXPERT");
+        var auth = TestDataUtil.mockUser(testUser.getId(), "ROLE_EXPERT");
+        for (int attempt = 0; attempt < 2; attempt++) {
+            mockMvc.perform(
+                    MockMvcRequestBuilders.post("/api/v1/program-rates").contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"note\":5}").with(auth)
+            ).andExpect(MockMvcResultMatchers.status().isBadRequest())
+             .andExpect(MockMvcResultMatchers.jsonPath("$.programId").value("Program ID is required"));
+        }
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/program-rates").with(auth))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.totalElements").value(0));
+    }
+
+    @Test
     void testThatACommentLongerThanTheColumnIsRejectedWith400() throws Exception {
         setupUser("ROLE_EXPERT");
         var target = programService.save(programMapper.toEntity(TestDataUtil.createProgramDto()));
