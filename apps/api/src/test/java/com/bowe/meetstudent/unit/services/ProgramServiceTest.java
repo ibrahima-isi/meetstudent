@@ -1,5 +1,6 @@
 package com.bowe.meetstudent.unit.services;
 
+import com.bowe.meetstudent.entities.Course;
 import com.bowe.meetstudent.entities.Program;
 import com.bowe.meetstudent.repositories.ProgramRepository;
 import com.bowe.meetstudent.services.MediaService;
@@ -105,7 +106,36 @@ class ProgramServiceTest {
         
         Mockito.verify(programRepository, Mockito.times(1)).findById(1);
         Mockito.verify(programRepository, Mockito.times(1)).deleteById(1);
-        Mockito.verify(mediaService, Mockito.times(1)).deleteById(10);
+        Mockito.verify(mediaService, Mockito.times(1)).deleteByIdsAfterCommit(List.of(10));
+        Mockito.verify(mediaService, Mockito.never()).deleteById(any());
+    }
+
+    @Test
+    void testDeleteAlsoRemovesTheCoursesPhotosAfterTheProgramRow() {
+        program.setCourses(new java.util.ArrayList<>(List.of(
+                Course.builder().name("C1").photoMediaId(30).build(),
+                Course.builder().name("C2").build(),
+                Course.builder().name("C3").photoMediaId(31).build())));
+        Mockito.when(programRepository.findById(1)).thenReturn(Optional.of(program));
+
+        programService.delete(1);
+
+        var order = Mockito.inOrder(programRepository, mediaService);
+        order.verify(programRepository).deleteWishlistLinks(1);
+        order.verify(programRepository).deleteById(1);
+        order.verify(mediaService).deleteByIdsAfterCommit(java.util.Arrays.asList(10, 30, null, 31));
+    }
+
+    @Test
+    void testDeleteNeverTouchesMediaWhenTheDeleteFails() {
+        Mockito.when(programRepository.findById(1)).thenReturn(Optional.of(program));
+        Mockito.doThrow(new org.springframework.dao.DataIntegrityViolationException("fk"))
+                .when(programRepository).deleteById(1);
+
+        assertThrows(org.springframework.dao.DataIntegrityViolationException.class,
+                () -> programService.delete(1));
+
+        Mockito.verify(mediaService, Mockito.never()).deleteByIdsAfterCommit(any());
     }
 
     @Test

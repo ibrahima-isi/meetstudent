@@ -12,6 +12,12 @@
 #     infra/coolify/proxy/dynamic/meetstudent.yaml (copy it to the server's
 #     /data/coolify/proxy/dynamic/), and are referenced as <name>@file. As labels
 #     on an app container they would vanish whenever that container restarts.
+#   - The api is NOT on the shared proxy network. It sits on a dedicated external
+#     network, `meetstudent-api-edge`, that only Traefik and the api join, so a
+#     neighbour container on `coolify` cannot call api:8080 past the rate limits
+#     (rl-auth, rl-api), the upload cap and strip-forwarded, nor forge
+#     X-Forwarded-For. The api trusts X-Forwarded-* only from that network's subnet
+#     (TRUSTED_PROXIES). Owner step, once per server: docs/DEPLOY.md section 9.1.
 #   - Service-to-service traffic uses aliases on the stack's own internal
 #     networks (meetstudent-db, meetstudent-api). The proxy network is shared by
 #     every Coolify resource and by Coolify itself: a plain `api` or `db` there
@@ -64,6 +70,9 @@ services:
     restart: unless-stopped
     environment:
       SPRING_PROFILES_ACTIVE: prod
+      # Regex of the peers whose X-Forwarded-* the api honours: the subnet of the dedicated api network, i.e.
+      # Traefik. Keep it in step with the subnet the network was created with (docs/DEPLOY.md 9.1).
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-10[.]250[.]77[.][0-9]+}
       SPRING_DATASOURCE_URL: jdbc:postgresql://meetstudent-db:5432/${POSTGRES_DB:-meetstudent}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-meetstudent}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
@@ -130,11 +139,11 @@ services:
       ssr:
         aliases:
           - meetstudent-api
-      edge: {}
+      api-edge: {}
     logging: *default-logging
     labels:
       - traefik.enable=true
-      - traefik.docker.network=${PROXY_NETWORK:-coolify}
+      - traefik.docker.network=${API_EDGE_NETWORK:-meetstudent-api-edge}
       - traefik.http.services.api.loadbalancer.server.port=8080
       # Auth endpoints and registration: strict rate limit. /auth/capabilities is excluded: the web
       # calls it on page loads and it must not eat the login/refresh budget (it falls to the api router).
@@ -295,11 +304,18 @@ volumes:
   api-private:
 
 networks:
-  # Coolify's proxy network: Traefik reaches api, web and backoffice here. Shared
+  # Coolify's proxy network: Traefik reaches web and backoffice here. Shared
   # with every other Coolify resource, so nothing in this stack resolves a peer
-  # by name on it.
+  # by name on it, and the api is not on it.
   edge:
     name: ${PROXY_NETWORK:-coolify}
+    external: true
+  # Only Traefik and the api. Created by the owner (not by this file: Coolify's proxy
+  # must be able to join it before the first deploy), docs/DEPLOY.md section 9.1:
+  #   docker network create --subnet 10.250.77.0/24 meetstudent-api-edge
+  # Not `internal`: the api needs the internet for SMTP.
+  api-edge:
+    name: ${API_EDGE_NETWORK:-meetstudent-api-edge}
     external: true
   # Postgres lives here only (with the api), with no route to the outside world.
   backend:
