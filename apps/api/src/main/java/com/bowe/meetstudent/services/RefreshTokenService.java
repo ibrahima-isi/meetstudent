@@ -6,6 +6,7 @@ import com.bowe.meetstudent.exceptions.InvalidRefreshTokenException;
 import com.bowe.meetstudent.repositories.RefreshTokenRepository;
 import com.bowe.meetstudent.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,16 +24,30 @@ import java.util.UUID;
  * Only the SHA-256 of a refresh secret is stored (same hashing as {@link UserTokenService}); the clear value leaves
  * the service once, in {@link IssuedSession} or {@link Rotation}, for the response.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RefreshTokenService {
     private static final Duration INACTIVITY_TIMEOUT = Duration.ofDays(7);
+    /** How long after a rotation a replay of the previous secret is refused without ending the session. */
+    static final Duration REUSE_GRACE = Duration.ofSeconds(10);
+    private static final String UNKNOWN_TOKEN = "Refresh token is not in database!";
 
     /** A new session and its refresh secret in clear, never stored. */
     public record IssuedSession(RefreshToken session, String token) {}
 
     /** The outcome of a rotation: the (locked, current) user, the session and its replacement secret in clear. */
     public record Rotation(UserEntity user, RefreshToken refreshToken, String token) {}
+
+    /**
+     * A rotated-away secret was presented again and its session has been ended. Answered exactly like an unknown
+     * token; the transactions around {@link #rotate} must not roll back for it, or the revocation is lost.
+     */
+    public static class RefreshTokenReuseException extends InvalidRefreshTokenException {
+        public RefreshTokenReuseException() {
+            super(UNKNOWN_TOKEN);
+        }
+    }
 
     private final Clock clock;
 
@@ -70,26 +85,61 @@ public class RefreshTokenService {
     /**
      * Validates a refresh token and replaces it, under the owner's row lock. Unknown, expired, deleted by a
      * concurrent credential change, or created under an older password version: all the same 401.
+     * <p>
+     * Reuse detection: the session remembers the hash of the secret its last rotation replaced. Presenting that
+     * previous secret again means two parties hold copies of the token (the legitimate client and a thief, in either
+     * order), so the whole session is ended (its access tokens die with it) and the answer is the same 401 as an
+     * unknown token, through {@link RefreshTokenReuseException} so the revocation commits. Within
+     * {@link #REUSE_GRACE} of the rotation the replay is only refused: two tabs or a retry racing the same refresh
+     * is not a theft. Only the immediately previous secret is known; older ones are plain unknown tokens.
      */
-    @Transactional
+    @Transactional(noRollbackFor = RefreshTokenReuseException.class)
     public Rotation rotate(String tokenValue) {
         var hash = UserTokenService.hash(tokenValue);
         Integer userId = refreshTokenRepository.findUserIdByToken(hash)
-                .orElseThrow(() -> new InvalidRefreshTokenException("Refresh token is not in database!"));
-        UserEntity user = userRepository.findByIdForUpdate(userId)
-                .orElseThrow(() -> new InvalidRefreshTokenException("Refresh token is not in database!"));
+                .or(() -> refreshTokenRepository.findUserIdByPreviousToken(hash))
+                .orElseThrow(RefreshTokenService::unknownToken);
+        UserEntity user = userRepository.findByIdForUpdate(userId).orElseThrow(RefreshTokenService::unknownToken);
         entityManager.refresh(user);
-        // Re-read under the lock: a change that committed while we waited has deleted the row.
-        RefreshToken token = refreshTokenRepository.findByToken(hash)
-                .orElseThrow(() -> new InvalidRefreshTokenException("Refresh token is not in database!"));
+        // Re-read under the lock: a change that committed while we waited has deleted or rotated the row.
+        var current = refreshTokenRepository.findByToken(hash);
+        if (current.isEmpty()) {
+            throw refuseReplayedSecret(hash, userId);
+        }
+        RefreshToken token = current.get();
         verifyExpiration(token);
         if (token.getPasswordVersion() != user.getPasswordVersion()) {
             refreshTokenRepository.deleteAllByUserId(userId);
             throw new InvalidRefreshTokenException("Refresh token predates a credential change");
         }
         var secret = UUID.randomUUID().toString();
+        token.setPreviousToken(hash);
+        token.setRotatedAt(clock.instant());
         token.setToken(UserTokenService.hash(secret));
         return new Rotation(user, refreshTokenRepository.save(token), secret);
+    }
+
+    /**
+     * The refusal for a hash that is not a current secret (called under the owner's lock). When it is a session's
+     * previous secret and the grace window is over, that session is ended first.
+     */
+    private InvalidRefreshTokenException refuseReplayedSecret(String hash, Integer userId) {
+        var replayed = refreshTokenRepository.findByPreviousToken(hash);
+        if (replayed.isEmpty()) {
+            return unknownToken();
+        }
+        var session = replayed.get();
+        var rotatedAt = session.getRotatedAt();
+        if (rotatedAt != null && clock.instant().isBefore(rotatedAt.plus(REUSE_GRACE))) {
+            return unknownToken();
+        }
+        refreshTokenRepository.deleteBySessionIdAndUserId(session.getSessionId(), userId);
+        log.warn("Refresh token reuse detected: session {} of user {} ended", session.getSessionId(), userId);
+        return new RefreshTokenReuseException();
+    }
+
+    private static InvalidRefreshTokenException unknownToken() {
+        return new InvalidRefreshTokenException(UNKNOWN_TOKEN);
     }
 
     public RefreshToken verifyExpiration(RefreshToken token) {
