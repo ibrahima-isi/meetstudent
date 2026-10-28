@@ -15,12 +15,15 @@ import java.util.regex.Pattern;
  * Turns a request into a rate-limit key: always a short, normalised, literal IP, or the fixed {@link #UNKNOWN}.
  *
  * <p>Sources, in order: the first {@code X-Forwarded-For} hop when {@code app.contact.trust-forwarded-for} is on
- * (prod: Traefik is the only way in and replaces any client-supplied value), then {@code getRemoteAddr()}. Under
- * {@code server.forward-headers-strategy=framework} Spring's ForwardedHeaderFilter hides {@code X-Forwarded-For}
- * and itself puts its first hop into {@code getRemoteAddr()}, so in prod the value really comes from that second
- * source; the RFC 7239 {@code Forwarded} header is dropped before the filter sees it (see
- * {@code ForwardedHeaderConfig}). Both sources go through the same literal-IP check: anything else, a
- * client-chosen string included, becomes {@link #UNKNOWN}.
+ * (off in prod, on only where every request comes through a proxy that rewrites the header), then
+ * {@code getRemoteAddr()}. In prod ({@code server.forward-headers-strategy=native}) Tomcat's RemoteIpValve has already
+ * put the client address from {@code X-Forwarded-For} in {@code getRemoteAddr()} when, and only when, the socket peer
+ * matches {@code server.tomcat.remoteip.internal-proxies} ({@code TRUSTED_PROXIES}); from any other peer the header is
+ * ignored and the socket address is the key. Under the {@code framework} strategy Spring's ForwardedHeaderFilter
+ * would hide the header and put its first hop there instead, with no trusted-peer check; the RFC 7239
+ * {@code Forwarded} header is then dropped before the filter sees it (see {@code ForwardedHeaderConfig}). Every
+ * source goes through the same literal-IP check: anything else, a client-chosen string included, becomes
+ * {@link #UNKNOWN}.
  *
  * <p>IPv4-mapped IPv6 ({@code ::ffff:a.b.c.d}) is the IPv4 address; any other IPv6 address is keyed by its /64
  * prefix, because one subscriber usually owns a whole /64 and could otherwise rotate through billions of keys.

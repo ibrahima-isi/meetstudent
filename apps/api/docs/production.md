@@ -10,6 +10,7 @@ the prod profile has no fallbacks for the required ones, so a missing value stop
 | `SPRING_DATASOURCE_USERNAME` | yes | none | Database user. |
 | `SPRING_DATASOURCE_PASSWORD` | yes | none | Database password. |
 | `CORS_ALLOWED_ORIGINS` | yes | none | Comma-separated front origins, e.g. `https://app.example.com`. |
+| `TRUSTED_PROXIES` | no | loopback + private ranges (10/8, 172.16/12, 192.168/16, 169.254/16, 127/8, `::1`) | Java regex of the socket peers whose `X-Forwarded-*` headers are honoured (`server.tomcat.remoteip.internal-proxies`). Narrow it to the reverse proxy's own network when other containers can reach the API: `compose.coolify.yml` sets it. Passed through `compose.coolify.yml` only. |
 | `ADMIN_EMAIL` | yes | none | Email of the platform admin account. |
 | `ADMIN_PASSWORD` | yes | none | Initial admin password, at least 12 characters; does not rotate an existing password. |
 | `JWT_ACCESS_TTL_MINUTES` | no | `60` | Access token lifetime in minutes (must be >= 1). The web client refreshes on 401. |
@@ -144,17 +145,20 @@ header value). It answers `202 {"status":"accepted"}`, or `400 {field: message}`
   reset by a restart; the 6th answers `429` with `Retry-After`. Tunable with `app.contact.rate-limit.*`.
   Traefik's own per-IP limit still applies in front of it.
 - **Client address (limiter key)**: always a short literal IP, or the fixed key `unknown`. Under `prod` the API runs with
-  `server.forward-headers-strategy: framework`: Spring's `ForwardedHeaderFilter` then hides `X-Forwarded-For` from the
-  application and writes its first hop into `getRemoteAddr()`, so the resolver (`ClientIpResolver`) ends up trusting the
-  **first `X-Forwarded-For` hop, read through `getRemoteAddr()`** (its own `X-Forwarded-For` read, enabled by
-  `app.contact.trust-forwarded-for: true`, only matters without the framework strategy). Both values pass the same
-  literal-IP check; anything else (a client-chosen string, a bracketed or over-long value) collapses to `unknown`, so
-  junk can neither pick a key nor fill the limiter's memory. `::ffff:a.b.c.d` counts as the IPv4 address and every other
-  IPv6 address is counted per /64 prefix. Anywhere else the socket address is used. This is safe only because Traefik is
-  the sole entry point and replaces `X-Forwarded-For` with the real peer address. If the API is ever exposed without such
-  a proxy, set `APP_CONTACT_TRUST_FORWARDED_FOR=false`, or a client could forge the header to dodge the limit.
-- **Why `Forwarded` is stripped**: the RFC 7239 `Forwarded` header takes precedence over `X-Forwarded-For` in Spring's
-  filter and its `for=` value lands unvalidated in `getRemoteAddr()`. Traefik v3 does not remove a client-sent
+  `server.forward-headers-strategy: native` (Tomcat's `RemoteIpValve`): when, and only when, the socket peer matches
+  `server.tomcat.remoteip.internal-proxies` (env `TRUSTED_PROXIES`, a regex), the valve takes the client address from
+  `X-Forwarded-For` and puts it in `getRemoteAddr()`; from any other peer the headers are ignored and the socket
+  address is the key. `app.contact.trust-forwarded-for` is `false` in prod, so `ClientIpResolver` reads only
+  `getRemoteAddr()`. The value passes a literal-IP check; anything else (a bracketed or over-long value) collapses to
+  `unknown`. `::ffff:a.b.c.d` counts as the IPv4 address and every other IPv6 address is counted per /64 prefix.
+  The default of `TRUSTED_PROXIES` is loopback plus the private ranges (right when the proxy is the only other container
+  on the API's network, as in `compose.prod.yml`). When other containers can reach the API, set it to the proxy's own
+  network only: `compose.coolify.yml` puts the API on a dedicated network shared with Traefik and sets it to that
+  subnet (docs/DEPLOY.md section 9.1). Without a trusted proxy in front, nothing to configure: no peer is trusted.
+  Tested on a real Tomcat by `ContactTrustedProxyIntegrationTests` (trusted peer vs forging peer).
+- **Why `Forwarded` is stripped**: only relevant to the `framework` strategy (not used in prod since the switch to
+  `native`, whose valve ignores RFC 7239 `Forwarded` altogether; the strip stays as a second lock): the header takes
+  precedence over `X-Forwarded-For` in Spring's filter and its `for=` value lands unvalidated in `getRemoteAddr()`. Traefik v3 does not remove a client-sent
   `Forwarded`, so `curl -H 'Forwarded: for=1.2.3.4'` would pick the limiter key at will. Two locks: the `strip-forwarded`
   Traefik middleware (`customrequestheaders.Forwarded=` with an empty value) on every router that reaches the API in
   `compose.prod.yml`, and `ForwardedHeaderConfig` in the API, which hides `Forwarded` from Spring's filter when the
@@ -224,8 +228,10 @@ the same safe initialization and seed neutralization, while setting only one abo
 
 ## Behind a TLS proxy
 
-`server.forward-headers-strategy: framework` is set, so the proxy must send `X-Forwarded-For`,
-`X-Forwarded-Proto` and `X-Forwarded-Host`, and the API port must not be reachable except through it.
+`server.forward-headers-strategy: native` is set, so the proxy must send `X-Forwarded-For`,
+`X-Forwarded-Proto` and `X-Forwarded-Host`, and its address must match `TRUSTED_PROXIES` (default: loopback and
+private ranges; a regex, see the client-address note under the contact form). Headers from any other peer are ignored.
+The API port should still not be reachable except through the proxy.
 
 ## Disabled in prod
 
