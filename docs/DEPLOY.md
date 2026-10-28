@@ -484,11 +484,15 @@ networks:
 3. Deploy, then check from the server (all four must hold):
 
 ```bash
-docker inspect -f '{{json .NetworkSettings.Networks}}' <api container> | jq 'keys'   # no "coolify": backend, ssr, api-edge
+docker inspect -f '{{json .NetworkSettings.Networks}}' <api container> | jq 'keys'   # exactly backend, ssr, api-edge (real names: <project>_backend, <project>_ssr, meetstudent-api-edge)
 docker inspect -f '{{json .NetworkSettings.Networks}}' coolify-proxy | jq 'keys'     # contains coolify and meetstudent-api-edge
 docker run --rm --network coolify alpine nc -z -w 3 <api ip on meetstudent-api-edge> 8080   # fails (timeout)
 curl -s -o /dev/null -w '%{http_code}\n' https://$DOMAIN/api/v1/schools              # 200
 ```
+
+The first check is the one that matters: if `coolify` appears among the API container's networks, Coolify attached
+it anyway. Turn off the resource's "Connect to Predefined Network" option (Coolify, resource -> Advanced), redeploy and
+check again; until it lists exactly those three networks the isolation is not in place.
 
 If the subnet clashes with something on the server (`docker network create` says "Pool overlaps"), pick another
 `10.x.y.0/24`, create the network with it and set `TRUSTED_PROXIES` to match (for example `10[.]250[.]99[.][0-9]+`,
