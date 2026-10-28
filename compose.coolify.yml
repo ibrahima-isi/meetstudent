@@ -214,7 +214,7 @@ services:
       - traefik.http.routers.web.entrypoints=${PROXY_HTTPS_ENTRYPOINT:-https}
       - traefik.http.routers.web.tls=true
       - traefik.http.routers.web.tls.certresolver=${PROXY_CERT_RESOLVER:-letsencrypt}
-      - traefik.http.routers.web.middlewares=sec@file
+      - traefik.http.routers.web.middlewares=sec-web@file
       - traefik.http.routers.web.service=web
       # Plain HTTP on DOMAIN (every path, /api included) -> HTTPS.
       - traefik.http.routers.web-http.rule=Host(`${DOMAIN}`)
@@ -249,7 +249,7 @@ services:
       - traefik.http.routers.backoffice.entrypoints=${PROXY_HTTPS_ENTRYPOINT:-https}
       - traefik.http.routers.backoffice.tls=true
       - traefik.http.routers.backoffice.tls.certresolver=${PROXY_CERT_RESOLVER:-letsencrypt}
-      - traefik.http.routers.backoffice.middlewares=sec@file
+      - traefik.http.routers.backoffice.middlewares=sec-bo@file
       - traefik.http.routers.backoffice.service=backoffice
       - traefik.http.routers.backoffice-http.rule=Host(`${BO_DOMAIN}`)
       - traefik.http.routers.backoffice-http.entrypoints=${PROXY_HTTP_ENTRYPOINT:-http}

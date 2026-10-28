@@ -421,7 +421,7 @@ deploy stays off).
 
 ### 9.1 Proxy configuration (once per server)
 
-The shared middlewares (`sec`, `strip-forwarded`, `rl-auth`, `rl-api`, `upload-limit`) and the HTTP to
+The shared middlewares (`sec`, `sec-web`, `sec-bo`, `strip-forwarded`, `rl-auth`, `rl-api`, `upload-limit`) and the HTTP to
 HTTPS redirect (`https-redirect`) are not labels of the stack: they would vanish whenever an app container
 restarts. Copy `infra/coolify/proxy/dynamic/meetstudent.yaml` to the server as
 `/data/coolify/proxy/dynamic/meetstudent.yaml` (or paste it in Servers -> Proxy -> Dynamic configurations);
@@ -690,10 +690,12 @@ before it.
     `'unsafe-inline'`). Follow-up before enforcing: a per-response nonce (`CSP_NONCE` / `ngCspNonce`
     in `server.ts`) set by the SSR server instead of the proxy. Nothing reports the violations
     yet (no `report-uri`): watch the browser console on a staging deploy.
-  - Coolify: `compose.coolify.yml` must reference `sec-web@file` on the `web` router and
-    `sec-bo@file` on the `backoffice` router, and the dynamic file must be copied again (9.1).
-    While they still say `sec@file`, only `frame-ancestors` is sent, as before (the back office
-    CSP is then overwritten by Traefik).
+  - Coolify: `compose.coolify.yml` references `sec-web@file` on the `web` router and `sec-bo@file`
+    on the `backoffice` router (the API routers keep `sec@file`). **Order matters**: copy the dynamic
+    file to the server again (9.1) *before* deploying this version of the stack. If the stack is
+    deployed first, those two routers reference middlewares Traefik does not know yet and answer
+    404 until the file is copied. (With the old `sec@file` on both, only `frame-ancestors` was sent
+    and Traefik overwrote the back office CSP.)
 - **Docker socket**: Traefik mounts it read-only. That limits writes through the
   socket but it still exposes container metadata; a socket proxy is the next
   hardening step.

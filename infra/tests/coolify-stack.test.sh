@@ -222,6 +222,24 @@ csp_tests() {
     test "$(prod "$prod_labels | .\"traefik.http.routers.backoffice.middlewares\"")" = sec-bo@docker
   check "compose.prod.yml: the api routers keep sec" \
     test "$(prod "$prod_labels | [.\"traefik.http.routers.api-auth.middlewares\", .\"traefik.http.routers.api-upload.middlewares\", .\"traefik.http.routers.api.middlewares\", .\"traefik.http.routers.uploads.middlewares\"] | map(endswith(\",sec@docker\")) | all")" = true
+  # -- compose.coolify.yml: which router gets which middleware (same split as compose.prod.yml)
+  local coolify_labels='.services | map(.labels // {}) | add'
+  coolify() { rendered | jq -r "$coolify_labels | $1"; }
+  check "compose.coolify.yml: the web router uses sec-web@file" \
+    test "$(coolify '."traefik.http.routers.web.middlewares"')" = sec-web@file
+  check "compose.coolify.yml: the back office router uses sec-bo@file" \
+    test "$(coolify '."traefik.http.routers.backoffice.middlewares"')" = sec-bo@file
+  check "compose.coolify.yml: the api routers keep sec@file" \
+    test "$(coolify '[."traefik.http.routers.api-auth.middlewares", ."traefik.http.routers.api-upload.middlewares", ."traefik.http.routers.api.middlewares", ."traefik.http.routers.uploads.middlewares"] | map(endswith(",sec@file")) | all')" = true
+  check "compose.coolify.yml: the web and back office routers do not use the bare sec@file" \
+    test "$(coolify '[."traefik.http.routers.web.middlewares", ."traefik.http.routers.backoffice.middlewares"] | map(split(",") | index("sec@file") != null) | any')" = false
+  local referenced missing=""
+  referenced=$(coolify 'to_entries | map(select(.key | test("^traefik\\.http\\.routers\\..*\\.middlewares$"))) | .[].value' | tr ',' '\n' | grep '@file$' | sed 's/@file$//' | sort -u)
+  for m in $referenced; do
+    [ "$(dyn ".http.middlewares.\"$m\" | type")" = '!!map' ] || missing="$missing $m"
+  done
+  check "compose.coolify.yml: every @file middleware it references exists in the dynamic file${missing:+ (missing:$missing)}" \
+    test -n "$referenced" -a -z "$missing"
   check "compose.prod.yml: the web Report-Only policy is the Coolify file's, byte for byte (and not empty)" \
     test -n "$web_policy" -a "$(prod '.services | map(.labels // {}) | add | ."traefik.http.middlewares.sec-web.headers.customresponseheaders.Content-Security-Policy-Report-Only"')" = "$web_policy"
   check "compose.prod.yml: sec-bo carries no CSP label" \
