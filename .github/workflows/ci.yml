@@ -24,6 +24,24 @@ jobs:
     name: api / build-and-test
     runs-on: ubuntu-latest
 
+    # Throwaway PostgreSQL for the *MigrationPostgresIntegrationTests classes: they replay every Flyway
+    # migration on the real engine (they wipe the schema) and are skipped when MIGRATION_PG_URL is absent.
+    # Same major version as compose.yml. Published on 55432, not 5432: the tests refuse to wipe port 5432.
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mig
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d mig"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
     defaults:
       run:
         working-directory: apps/api
@@ -45,6 +63,10 @@ jobs:
 
       - name: Run unit and integration tests
         run: ./mvnw --batch-mode verify
+        env:
+          MIGRATION_PG_URL: jdbc:postgresql://127.0.0.1:55432/mig
+          MIGRATION_PG_USER: postgres
+          MIGRATION_PG_PASSWORD: postgres
 
       - name: Upload test reports on failure
         if: failure()
