@@ -3,6 +3,7 @@ package com.bowe.meetstudent.unit.services;
 import com.bowe.meetstudent.entities.Course;
 import com.bowe.meetstudent.repositories.CourseRepository;
 import com.bowe.meetstudent.services.CourseService;
+import com.bowe.meetstudent.services.EntityImageValidator;
 import com.bowe.meetstudent.services.MediaService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,9 @@ class CourseServiceTest {
 
     @Mock
     private MediaService mediaService;
+
+    @Mock
+    private EntityImageValidator imageValidator;
 
     @InjectMocks
     private CourseService courseService;
@@ -118,6 +122,31 @@ class CourseServiceTest {
         assertEquals("New Java", course.getName());
         assertEquals(20, course.getPhotoMediaId());
         Mockito.verify(mediaService).deleteById(10);
+    }
+
+    @Test
+    void testPatchWithARefusedPhotoKeepsEverythingAndDeletesNothing() {
+        Course updates = Course.builder().photoMediaId(20).build();
+        Mockito.when(courseRepository.findById(1)).thenReturn(Optional.of(course));
+        Mockito.doThrow(new com.bowe.meetstudent.exceptions.FieldValidationException("photoMediaId", "no"))
+                .when(imageValidator).requireCoursePhoto(20, 10, 1);
+
+        assertThrows(com.bowe.meetstudent.exceptions.FieldValidationException.class, () -> courseService.patch(1, updates));
+
+        assertEquals(10, course.getPhotoMediaId());
+        Mockito.verify(mediaService, Mockito.never()).deleteById(any());
+        Mockito.verify(courseRepository, Mockito.never()).save(any());
+    }
+
+    @Test
+    void testSaveRefusedPhotoDoesNotSave() {
+        Course created = Course.builder().name("C").photoMediaId(2).build();
+        Mockito.doThrow(new com.bowe.meetstudent.exceptions.FieldValidationException("photoMediaId", "no"))
+                .when(imageValidator).requireCoursePhoto(2, null, null);
+
+        assertThrows(com.bowe.meetstudent.exceptions.FieldValidationException.class, () -> courseService.save(created));
+
+        Mockito.verify(courseRepository, Mockito.never()).save(any());
     }
 
     @Test

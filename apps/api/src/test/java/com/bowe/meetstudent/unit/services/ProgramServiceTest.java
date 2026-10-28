@@ -3,6 +3,7 @@ package com.bowe.meetstudent.unit.services;
 import com.bowe.meetstudent.entities.Course;
 import com.bowe.meetstudent.entities.Program;
 import com.bowe.meetstudent.repositories.ProgramRepository;
+import com.bowe.meetstudent.services.EntityImageValidator;
 import com.bowe.meetstudent.services.MediaService;
 import com.bowe.meetstudent.services.ProgramService;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,6 +31,9 @@ class ProgramServiceTest {
 
     @Mock
     private MediaService mediaService;
+
+    @Mock
+    private EntityImageValidator imageValidator;
 
     @InjectMocks
     private ProgramService programService;
@@ -149,6 +153,31 @@ class ProgramServiceTest {
         assertEquals("New Name", program.getName());
         assertEquals(20, program.getPhotoMediaId());
         Mockito.verify(mediaService).deleteById(10);
+    }
+
+    @Test
+    void testPatchWithARefusedPhotoKeepsEverythingAndDeletesNothing() {
+        Program updates = Program.builder().photoMediaId(20).build();
+        Mockito.when(programRepository.findById(1)).thenReturn(Optional.of(program));
+        Mockito.doThrow(new com.bowe.meetstudent.exceptions.FieldValidationException("photoMediaId", "no"))
+                .when(imageValidator).requireProgramPhoto(20, 10, 1);
+
+        assertThrows(com.bowe.meetstudent.exceptions.FieldValidationException.class, () -> programService.patch(1, updates));
+
+        assertEquals(10, program.getPhotoMediaId());
+        Mockito.verify(mediaService, Mockito.never()).deleteById(any());
+        Mockito.verify(programRepository, Mockito.never()).save(any());
+    }
+
+    @Test
+    void testSaveRefusedPhotoDoesNotSave() {
+        Program created = Program.builder().name("P").photoMediaId(2).build();
+        Mockito.doThrow(new com.bowe.meetstudent.exceptions.FieldValidationException("photoMediaId", "no"))
+                .when(imageValidator).requireProgramPhoto(2, null, null);
+
+        assertThrows(com.bowe.meetstudent.exceptions.FieldValidationException.class, () -> programService.save(created));
+
+        Mockito.verify(programRepository, Mockito.never()).save(any());
     }
 
     @Test

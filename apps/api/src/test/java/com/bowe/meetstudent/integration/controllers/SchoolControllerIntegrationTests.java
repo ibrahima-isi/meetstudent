@@ -67,10 +67,14 @@ class SchoolControllerIntegrationTests {
     private com.bowe.meetstudent.repositories.MediaRepository mediaRepository;
 
     private com.bowe.meetstudent.entities.Media persistedLogo() {
+        return persisted(com.bowe.meetstudent.entities.enums.MediaCategory.SCHOOL_LOGO);
+    }
+
+    private com.bowe.meetstudent.entities.Media persisted(com.bowe.meetstudent.entities.enums.MediaCategory category) {
         var media = com.bowe.meetstudent.entities.Media.builder()
                 .storageKey("public/logo-it.png")
                 .originalFilename("logo.png").contentType("image/png").sizeBytes(10L)
-                .category(com.bowe.meetstudent.entities.enums.MediaCategory.SCHOOL_LOGO)
+                .category(category)
                 .visibility(com.bowe.meetstudent.entities.enums.MediaVisibility.PUBLIC)
                 .build();
         return mediaRepository.save(media);
@@ -96,8 +100,8 @@ class SchoolControllerIntegrationTests {
 
     @Test
     void getSchoolFullyMapsNestedProgramAndCoursePhotos() throws Exception {
-        var programPhoto = persistedLogo();
-        var coursePhoto = persistedLogo();
+        var programPhoto = persisted(com.bowe.meetstudent.entities.enums.MediaCategory.PROGRAM_PHOTO);
+        var coursePhoto = persisted(com.bowe.meetstudent.entities.enums.MediaCategory.COURSE_PHOTO);
         var courseDto = TestDataUtil.createCourseDto();
         courseDto.setPhotoMediaId(coursePhoto.getId());
         var programDto = TestDataUtil.createProgramDto();
@@ -111,9 +115,9 @@ class SchoolControllerIntegrationTests {
                 .andExpect(MockMvcResultMatchers.status().isOk())
                 .andExpect(MockMvcResultMatchers.jsonPath("$.programs[0].photo.id").value(programPhoto.getId()))
                 .andExpect(MockMvcResultMatchers.jsonPath("$.programs[0].photo.publicUrl").value("/uploads/public/logo-it.png"))
-                .andExpect(MockMvcResultMatchers.jsonPath("$.programs[0].photo.category").value("SCHOOL_LOGO"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.programs[0].photo.category").value("PROGRAM_PHOTO"))
                 .andExpect(MockMvcResultMatchers.jsonPath("$.programs[0].courses[0].photo.publicUrl").value("/uploads/public/logo-it.png"))
-                .andExpect(MockMvcResultMatchers.jsonPath("$.programs[0].courses[0].photo.category").value("SCHOOL_LOGO"));
+                .andExpect(MockMvcResultMatchers.jsonPath("$.programs[0].courses[0].photo.category").value("COURSE_PHOTO"));
     }
 
     @Test

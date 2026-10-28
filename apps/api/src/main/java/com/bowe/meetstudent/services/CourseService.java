@@ -17,9 +17,11 @@ public class CourseService {
 
     private final CourseRepository courseRepository;
     private final MediaService mediaService;
+    private final EntityImageValidator imageValidator;
 
     @Transactional
     public Course save(Course course) {
+        imageValidator.requireCoursePhoto(course.getPhotoMediaId(), null, course.getId());
         if (course.getCode() != null && (course.getId() == null
                 ? courseRepository.existsByCodeIgnoreCase(course.getCode())
                 : courseRepository.existsByCodeIgnoreCaseAndIdNot(course.getCode(), course.getId()))) {
@@ -73,8 +75,9 @@ public class CourseService {
             if (updates.getCode() != null && courseRepository.existsByCodeIgnoreCaseAndIdNot(updates.getCode(), id)) {
                 throw new ConflictException("A course with this code already exists");
             }
+            imageValidator.requireCoursePhoto(updates.getPhotoMediaId(), existing.getPhotoMediaId(), id);
             if (updates.getPhotoMediaId() != null
-                    && !updates.getPhotoMediaId().equals(existing.getPhotoMediaId())) {
+                    &&!updates.getPhotoMediaId().equals(existing.getPhotoMediaId())) {
                 mediaService.deleteById(existing.getPhotoMediaId());
             }
 

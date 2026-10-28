@@ -25,9 +25,11 @@ public class SchoolService {
     private final MediaService mediaService;
     private final TagRepository tagRepository;
     private final ProgramRepository programRepository;
+    private final EntityImageValidator imageValidator;
 
     public School save(School school) {
         requireExistingTags(school);
+        requireValidImages(school);
         return this.schoolRepository.save(school);
     }
 
@@ -105,6 +107,8 @@ public class SchoolService {
     public School patch(Integer id, School updates) {
         return schoolRepository.findById(id).map(existing -> {
             requireExistingTags(updates);
+            imageValidator.requireSchoolLogo(updates.getLogoMediaId(), existing.getLogoMediaId(), id);
+            imageValidator.requireSchoolCover(updates.getCoverMediaId(), existing.getCoverMediaId(), id);
             // Check for media changes before updating
             if (updates.getLogoMediaId() != null
                     && !updates.getLogoMediaId().equals(existing.getLogoMediaId())) {
@@ -126,6 +130,20 @@ public class SchoolService {
             
             return schoolRepository.save(existing);
         }).orElseThrow(() -> new com.bowe.meetstudent.exceptions.ResourceNotFoundException("School not found"));
+    }
+
+    /** Logo, cover and, because programs and courses cascade with the school, their photos. */
+    private void requireValidImages(School school) {
+        imageValidator.requireSchoolLogo(school.getLogoMediaId(), null, school.getId());
+        imageValidator.requireSchoolCover(school.getCoverMediaId(), null, school.getId());
+        if (school.getPrograms() == null) return;
+        for (var program : school.getPrograms()) {
+            imageValidator.requireProgramPhoto(program.getPhotoMediaId(), null, program.getId());
+            if (program.getCourses() == null) continue;
+            for (var course : program.getCourses()) {
+                imageValidator.requireCoursePhoto(course.getPhotoMediaId(), null, course.getId());
+            }
+        }
     }
 
     /** An unknown tag id in the body is a client error, not a foreign-key failure at flush time. */
