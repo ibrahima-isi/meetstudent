@@ -345,16 +345,43 @@ class MediaServiceTest {
     }
 
     @Test
-    void deleteByIdDeletesFileAndRow() throws IOException {
+    void deleteByIdRemovesTheRowNowAndTheFileOnlyAfterCommit() throws IOException {
         Media media = Media.builder().storageKey("public/x.png")
                 .visibility(MediaVisibility.PUBLIC).category(MediaCategory.SCHOOL_LOGO).build();
         ReflectionTestUtils.setField(media, "id", 9);
         when(mediaRepository.findById(9)).thenReturn(Optional.of(media));
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            mediaService.deleteById(9);
 
-        mediaService.deleteById(9);
+            verify(mediaRepository).deleteAll(List.of(media));
+            verify(storageService, never()).delete(any());
 
-        verify(storageService).delete("public/x.png");
-        verify(mediaRepository).delete(media);
+            TransactionSynchronizationManager.getSynchronizations().forEach(TransactionSynchronization::afterCommit);
+
+            verify(storageService).delete("public/x.png");
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+    }
+
+    @Test
+    void deleteByIdNeverTouchesTheFileOnRollback() throws IOException {
+        Media media = Media.builder().storageKey("public/x.png")
+                .visibility(MediaVisibility.PUBLIC).category(MediaCategory.SCHOOL_LOGO).build();
+        ReflectionTestUtils.setField(media, "id", 9);
+        when(mediaRepository.findById(9)).thenReturn(Optional.of(media));
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            mediaService.deleteById(9);
+
+            TransactionSynchronizationManager.getSynchronizations()
+                    .forEach(s -> s.afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK));
+
+            verify(storageService, never()).delete(any());
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
     }
 
     @Test
