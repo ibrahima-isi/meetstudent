@@ -12,6 +12,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -50,7 +51,11 @@ public class SchoolService {
     @Transactional
     public void delete(int id){
         this.schoolRepository.findById(id).ifPresent(school -> {
-            List<Integer> mediaIds = Arrays.asList(school.getLogoMediaId(), school.getCoverMediaId());
+            // Programs and courses go with the school (JPA cascade): so must their photos.
+            List<Integer> mediaIds = new ArrayList<>(Arrays.asList(school.getLogoMediaId(), school.getCoverMediaId()));
+            if (school.getPrograms() != null) {
+                school.getPrograms().forEach(program -> mediaIds.addAll(ProgramService.photoIdsOf(program)));
+            }
             List<Integer> programIds = school.getPrograms() == null ? List.of()
                     : school.getPrograms().stream().map(Program::getId).toList();
             programIds.forEach(this.programRepository::deleteWishlistLinks);
