@@ -603,11 +603,35 @@ before it.
   enforces the same 10 MB). Other request bodies are not capped at the proxy.
 - **Security headers**: HSTS (1 year, subdomains), `X-Content-Type-Options`,
   `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy`, and
-  `Content-Security-Policy: frame-ancestors 'none'`. A full CSP is
-  **deliberately not set**: Angular SSR injects inline state/style blocks and the
-  policy could not be verified against the real app in a browser here, and a wrong
-  CSP blanks the site. Add one after testing in report-only mode.
-  HSTS preload is not enabled.
+  `Content-Security-Policy: frame-ancestors 'none'`. HSTS preload is not enabled.
+- **Content-Security-Policy** (tokens live in `localStorage`, so an XSS would steal the refresh
+  token; on the back office that is a persistent admin takeover):
+  - **Back office: enforcing**, sent by its nginx (not by Traefik, which cannot know the API
+    origin and would overwrite it: the back office router uses the `sec-bo` middleware, which
+    sets no CSP). `apps/backoffice/docker/40-write-config.sh` builds it at every container start
+    from `BO_API_URL` (the API origin goes into `connect-src` and `img-src`; it refuses a value
+    that is not an `http(s)` URL or a path) and from the SHA-256 of the inline scripts of the
+    built `index.html` (today the theme script only). Nothing to recompute by hand: restart the
+    container. `script-src 'self'` + hashes, `style-src 'self'` (the build no longer inlines
+    critical CSS: `inlineCritical: false` in `apps/backoffice/angular.json`, which is also what
+    removes the inline `onload` handler), `object-src 'none'`, `base-uri`/`form-action 'self'`,
+    `frame-ancestors 'none'`. If a new feature loads something from another origin (fonts, a
+    CDN, an iframe), the browser console shows the violation: extend the script, not the proxy.
+  - **Web SSR: `Content-Security-Policy-Report-Only`**, on the `sec-web` middleware
+    (`infra/coolify/proxy/dynamic/meetstudent.yaml` and the labels of `compose.prod.yml`, same
+    value). It hashes the two inline scripts of `apps/web/src/index.html` and Angular's static
+    event-replay contract. If you edit those inline scripts, recompute the hashes
+    (`printf '%s' "$script" | openssl dgst -sha256 -binary | base64`, the text between the tags) in
+    both files; `infra/tests/coolify-stack.test.sh static` fails until they match. Remaining
+    violations, expected and only logged: the per-route `__jsaction_bootstrap` inline script
+    (a different hash on each page) and the inline `<style>` blocks (`style-src` keeps
+    `'unsafe-inline'`). Follow-up before enforcing: a per-response nonce (`CSP_NONCE` / `ngCspNonce`
+    in `server.ts`) set by the SSR server instead of the proxy. Nothing reports the violations
+    yet (no `report-uri`): watch the browser console on a staging deploy.
+  - Coolify: `compose.coolify.yml` must reference `sec-web@file` on the `web` router and
+    `sec-bo@file` on the `backoffice` router, and the dynamic file must be copied again (9.1).
+    While they still say `sec@file`, only `frame-ancestors` is sent, as before (the back office
+    CSP is then overwritten by Traefik).
 - **Docker socket**: Traefik mounts it read-only. That limits writes through the
   socket but it still exposes container metadata; a socket proxy is the next
   hardening step.

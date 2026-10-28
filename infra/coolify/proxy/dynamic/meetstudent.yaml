@@ -16,8 +16,43 @@ http:
         frameDeny: true
         referrerPolicy: strict-origin-when-cross-origin
         permissionsPolicy: "camera=(), microphone=(), geolocation=()"
-        # frame-ancestors only: a full CSP is deliberately omitted, see docs/DEPLOY.md.
+        # frame-ancestors only: the api answers JSON and files, a page policy means nothing there.
+        # The page policies are sec-web (Report-Only) and sec-bo (the back office's own, enforcing).
         contentSecurityPolicy: "frame-ancestors 'none'"
+
+    # sec for the web router (Angular SSR): the same headers plus a Report-Only page policy, to
+    # watch what an enforcing one would block before turning it on (docs/DEPLOY.md). script-src
+    # holds the hashes of the three STATIC inline scripts: the theme and session-marker scripts of
+    # apps/web/src/index.html and Angular's event-replay contract (tied to the @angular/core
+    # version; hash it again from the served page after an upgrade). The per-route
+    # __jsaction_bootstrap script and the inline <style> blocks are dynamic, hence the reported
+    # violations and 'unsafe-inline' on style-src; the fix is a per-response nonce (follow-up).
+    # infra/tests/coolify-stack.test.sh recomputes the index.html hashes. Same value as the labels
+    # of compose.prod.yml's traefik service: change both together.
+    sec-web:
+      headers:
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        contentTypeNosniff: true
+        frameDeny: true
+        referrerPolicy: strict-origin-when-cross-origin
+        permissionsPolicy: "camera=(), microphone=(), geolocation=()"
+        contentSecurityPolicy: "frame-ancestors 'none'"
+        customResponseHeaders:
+          Content-Security-Policy-Report-Only: "default-src 'self'; script-src 'self' 'sha256-NEG1tnWqc501snI8MB3TOqvwZovStm53QzW/I51Z8es=' 'sha256-MCc6vC5mfuXJ3DCPWWh/xyOHuDIAMlEGgCJuqJMsoqY=' 'sha256-VM2mZqyEQZoLzoTrp5EigFvzQ0+f1wSeBuoOn95WHCg='; script-src-attr 'unsafe-hashes' 'sha256-MhtPZXr7+LpJUY5qtMutB+qWfQtMaPccfe7QXtCcEYc='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; media-src 'self' blob:; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'"
+
+    # sec for the back office router. No contentSecurityPolicy on purpose: Traefik would
+    # overwrite the one nginx sends, which is built at container start from BO_API_URL (the API is
+    # another origin) and from the hashes of index.html's inline scripts
+    # (apps/backoffice/docker/40-write-config.sh) and which includes frame-ancestors 'none'.
+    sec-bo:
+      headers:
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        contentTypeNosniff: true
+        frameDeny: true
+        referrerPolicy: strict-origin-when-cross-origin
+        permissionsPolicy: "camera=(), microphone=(), geolocation=()"
 
     # Drops the RFC 7239 Forwarded request header (an empty value removes a header). Traefik sets
     # X-Forwarded-* itself but would pass a client-sent Forwarded through, and Spring's forwarded-header
