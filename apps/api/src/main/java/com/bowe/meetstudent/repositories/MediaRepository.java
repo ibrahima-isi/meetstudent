@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,6 +23,12 @@ public interface MediaRepository extends JpaRepository<Media, Integer> {
     List<Media> findByOwnerId(Integer ownerId);
 
     List<Media> findByOwnerIdAndCategory(Integer ownerId, MediaCategory category);
+
+    long countByOwnerIdAndCategoryIn(Integer ownerId, Collection<MediaCategory> categories);
+
+    @Query("SELECT COALESCE(SUM(m.sizeBytes), 0L) FROM Media m WHERE m.ownerId = :ownerId AND m.category IN :categories")
+    long sumSizeBytesByOwnerIdAndCategoryIn(@Param("ownerId") Integer ownerId,
+                                            @Param("categories") Collection<MediaCategory> categories);
 
     Page<Media> findByVerificationStatus(VerificationStatus status, Pageable pageable);
 

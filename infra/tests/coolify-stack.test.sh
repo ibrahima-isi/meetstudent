@@ -215,13 +215,44 @@ csp_tests() {
     bash -c '[ "$(yq -r ".http.middlewares.sec.headers.contentSecurityPolicy" "$0")" = "frame-ancestors '"'"'none'"'"'" ] && [ "$(yq -r ".http.middlewares.sec.headers.customResponseHeaders" "$0")" = null ]' "$DYNAMIC_FILE"
   check "proxy: sec-bo sets no CSP of its own (a Traefik one would overwrite the back office's)" \
     bash -c '[ "$(yq -r ".http.middlewares.\"sec-bo\".headers.contentSecurityPolicy" "$0")" = null ] && [ "$(yq -r ".http.middlewares.\"sec-bo\".headers.stsSeconds" "$0")" = 31536000 ]' "$DYNAMIC_FILE"
+  local uploads_policy="sandbox; default-src 'none'; frame-ancestors 'none'"
+  check "proxy: sec-uploads enforces the sandbox policy of the API's public files (a middleware CSP would overwrite the API's)" \
+    test "$(dyn '.http.middlewares."sec-uploads".headers.contentSecurityPolicy')" = "$uploads_policy"
+  check "proxy: sec-uploads keeps the same security headers as sec (only the CSP differs)" \
+    bash -c '[ "$(yq -o=json -I=0 ".http.middlewares.\"sec-uploads\".headers | del(.contentSecurityPolicy)" "$0")" = "$(yq -o=json -I=0 ".http.middlewares.sec.headers | del(.contentSecurityPolicy)" "$0")" ]' "$DYNAMIC_FILE"
   local prod_labels='.services | map(.labels // {}) | add'
   check "compose.prod.yml: the web router uses sec-web" \
     test "$(prod "$prod_labels | .\"traefik.http.routers.web.middlewares\"")" = sec-web@docker
   check "compose.prod.yml: the back office router uses sec-bo" \
     test "$(prod "$prod_labels | .\"traefik.http.routers.backoffice.middlewares\"")" = sec-bo@docker
   check "compose.prod.yml: the api routers keep sec" \
-    test "$(prod "$prod_labels | [.\"traefik.http.routers.api-auth.middlewares\", .\"traefik.http.routers.api-upload.middlewares\", .\"traefik.http.routers.api.middlewares\", .\"traefik.http.routers.uploads.middlewares\"] | map(endswith(\",sec@docker\")) | all")" = true
+    test "$(prod "$prod_labels | [.\"traefik.http.routers.api-auth.middlewares\", .\"traefik.http.routers.api-upload.middlewares\", .\"traefik.http.routers.api.middlewares\"] | map(endswith(\",sec@docker\")) | all")" = true
+  check "compose.prod.yml: the uploads router uses sec-uploads (after strip-forwarded)" \
+    test "$(prod "$prod_labels | .\"traefik.http.routers.uploads.middlewares\"")" = strip-forwarded@docker,sec-uploads@docker
+  # -- compose.coolify.yml: which router gets which middleware (same split as compose.prod.yml)
+  local coolify_labels='.services | map(.labels // {}) | add'
+  coolify() { rendered | jq -r "$coolify_labels | $1"; }
+  check "compose.coolify.yml: the web router uses sec-web@file" \
+    test "$(coolify '."traefik.http.routers.web.middlewares"')" = sec-web@file
+  check "compose.coolify.yml: the back office router uses sec-bo@file" \
+    test "$(coolify '."traefik.http.routers.backoffice.middlewares"')" = sec-bo@file
+  check "compose.coolify.yml: the api routers keep sec@file" \
+    test "$(coolify '[."traefik.http.routers.api-auth.middlewares", ."traefik.http.routers.api-upload.middlewares", ."traefik.http.routers.api.middlewares"] | map(endswith(",sec@file")) | all')" = true
+  check "compose.coolify.yml: the uploads router uses sec-uploads@file (after strip-forwarded)" \
+    test "$(coolify '."traefik.http.routers.uploads.middlewares"')" = strip-forwarded@file,sec-uploads@file
+  check "compose.coolify.yml: the web and back office routers do not use the bare sec@file" \
+    test "$(coolify '[."traefik.http.routers.web.middlewares", ."traefik.http.routers.backoffice.middlewares"] | map(split(",") | index("sec@file") != null) | any')" = false
+  local referenced missing=""
+  referenced=$(coolify 'to_entries | map(select(.key | test("^traefik\\.http\\.routers\\..*\\.middlewares$"))) | .[].value' | tr ',' '\n' | grep '@file$' | sed 's/@file$//' | sort -u)
+  for m in $referenced; do
+    [ "$(dyn ".http.middlewares.\"$m\" | type")" = '!!map' ] || missing="$missing $m"
+  done
+  check "compose.coolify.yml: every @file middleware it references exists in the dynamic file${missing:+ (missing:$missing)}" \
+    test -n "$referenced" -a -z "$missing"
+  check "compose.prod.yml: sec-uploads carries the same CSP as the Coolify file (and not empty)" \
+    test "$(prod '.services | map(.labels // {}) | add | ."traefik.http.middlewares.sec-uploads.headers.contentSecurityPolicy"')" = "$uploads_policy"
+  check "compose.prod.yml: sec-uploads carries the same security headers as sec" \
+    test "$(prod '.services | map(.labels // {}) | add | to_entries | map(select(.key | startswith("traefik.http.middlewares.sec-uploads.headers.")) | select(.key | endswith("contentSecurityPolicy") | not) | {k: (.key | split(".")[-1]), v: .value}) | sort_by(.k)')" = "$(prod '.services | map(.labels // {}) | add | to_entries | map(select(.key | startswith("traefik.http.middlewares.sec.headers.")) | select(.key | endswith("contentSecurityPolicy") | not) | {k: (.key | split(".")[-1]), v: .value}) | sort_by(.k)')"
   check "compose.prod.yml: the web Report-Only policy is the Coolify file's, byte for byte (and not empty)" \
     test -n "$web_policy" -a "$(prod '.services | map(.labels // {}) | add | ."traefik.http.middlewares.sec-web.headers.customresponseheaders.Content-Security-Policy-Report-Only"')" = "$web_policy"
   check "compose.prod.yml: sec-bo carries no CSP label" \
