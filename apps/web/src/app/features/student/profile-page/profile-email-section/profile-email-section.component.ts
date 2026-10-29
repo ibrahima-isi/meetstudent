@@ -7,8 +7,9 @@ import { AuthService } from '@services/auth.service';
 import { LocaleService } from '@services/locale.service';
 import { TokenService } from '@services/token.service';
 import { UserService } from '@services/user.service';
+import { retryAfterMinutes } from '@shared/retry-after';
 
-type Feedback = 'requested' | 'sent' | 'limited' | 'failed' | 'unavailable' | 'cancelled' | 'alreadyVerified';
+type Feedback = 'requested' | 'sent' | 'limited' | 'locked' | 'failed' | 'unavailable' | 'cancelled' | 'alreadyVerified';
 type Field = 'newEmail' | 'currentPassword';
 
 /**
@@ -102,7 +103,7 @@ type Field = 'newEmail' | 'currentPassword';
 
       <p role="status" class="font-medium text-foreground">
         @if (feedback(); as key) {
-          {{ t('profile.emailSection.feedback.' + key) }}
+          {{ t('profile.emailSection.feedback.' + key, { minutes: waitMinutes() }) }}
         }
       </p>
     </section>
@@ -125,6 +126,8 @@ export class ProfileEmailSectionComponent {
   protected readonly changing = signal(false);
   protected readonly submitting = signal(false);
   protected readonly feedback = signal<Feedback | null>(null);
+  /** The wait of a lock-out, in minutes, for the `locked` feedback. */
+  protected readonly waitMinutes = signal(0);
   /** Messages from the API's 400 body, by field. */
   private readonly serverErrors = signal<Partial<Record<Field, string>>>({});
   private readonly resending = signal(false);
@@ -206,6 +209,13 @@ export class ProfileEmailSectionComponent {
         this.submitting.set(false);
         const status = err instanceof HttpErrorResponse ? err.status : 0;
         if (status === 400 && this.applyFieldErrors((err as HttpErrorResponse).error)) {
+          return;
+        }
+        const minutes = status === 429 ? retryAfterMinutes(err) : null;
+        if (minutes !== null) {
+          // Too many wrong current passwords: the API says for how long.
+          this.waitMinutes.set(minutes);
+          this.feedback.set('locked');
           return;
         }
         this.feedback.set(status === 429 ? 'limited' : status === 503 ? 'unavailable' : 'failed');

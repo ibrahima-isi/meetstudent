@@ -6,6 +6,7 @@ import com.bowe.meetstudent.entities.Program;
 import com.bowe.meetstudent.repositories.ProgramRepository;
 import com.bowe.meetstudent.repositories.SchoolRepository;
 import com.bowe.meetstudent.repositories.TagRepository;
+import com.bowe.meetstudent.services.EntityImageValidator;
 import com.bowe.meetstudent.services.MediaService;
 import com.bowe.meetstudent.services.SchoolService;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,6 +30,9 @@ class SchoolServiceTest {
 
     @Mock
     private MediaService mediaService;
+
+    @Mock
+    private EntityImageValidator imageValidator;
 
     @Mock
     private TagRepository tagRepository;
@@ -98,6 +102,32 @@ class SchoolServiceTest {
         assertEquals(20, school.getLogoMediaId());
         Mockito.verify(mediaService).deleteById(10); // old logo removed
         Mockito.verify(mediaService, Mockito.never()).deleteById(11); // cover unchanged
+    }
+
+    @Test
+    void testPatchWithARefusedLogoKeepsEverythingAndDeletesNothing() {
+        School updates = School.builder().logoMediaId(20).build();
+        Mockito.when(schoolRepository.findById(1)).thenReturn(Optional.of(school));
+        Mockito.doThrow(new com.bowe.meetstudent.exceptions.FieldValidationException("logoMediaId", "no"))
+                .when(imageValidator).requireSchoolLogo(20, 10, 1);
+
+        assertThrows(com.bowe.meetstudent.exceptions.FieldValidationException.class, () -> schoolService.patch(1, updates));
+
+        assertEquals(10, school.getLogoMediaId());
+        Mockito.verify(mediaService, Mockito.never()).deleteById(any());
+        Mockito.verify(schoolRepository, Mockito.never()).save(any());
+    }
+
+    @Test
+    void testSaveValidatesTheWholeImageTree() {
+        Course course = Course.builder().name("C").photoMediaId(3).build();
+        Program program = Program.builder().name("P").photoMediaId(2).courses(java.util.List.of(course)).build();
+        School created = School.builder().name("S").logoMediaId(1).coverMediaId(4).programs(java.util.List.of(program)).build();
+        Mockito.when(schoolRepository.save(created)).thenReturn(created);
+
+        schoolService.save(created);
+
+        Mockito.verify(imageValidator).requireSchoolTree(created);
     }
 
     @Test

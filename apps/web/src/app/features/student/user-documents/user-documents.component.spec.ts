@@ -312,6 +312,7 @@ describe('UserDocumentsComponent', () => {
     const cases: [number, string][] = [
       [413, 'documents.errors.tooLarge'],
       [415, 'documents.errors.typeNotAllowed'],
+      [409, 'documents.errors.quotaReached'],
       [400, 'documents.errors.rejectedByServer'],
       [422, 'documents.errors.rejectedByServer'],
       [403, 'documents.errors.forbidden'],

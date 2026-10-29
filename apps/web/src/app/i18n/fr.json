@@ -280,6 +280,8 @@
       "success": "Connexion réussie ! Bon retour parmi nous.",
       "registered": "Compte créé ! Connectez-vous pour continuer.",
       "failed": "La connexion a échoué. Veuillez réessayer.",
+      "tooManyAttempts": "Trop de tentatives. Réessayez dans {{ minutes }} min.",
+      "tooManyAttemptsNoDelay": "Trop de tentatives. Patientez quelques minutes avant de réessayer.",
       "invalidCredentials": "E-mail ou mot de passe incorrect.",
       "passwordChanged": "Mot de passe modifié. Toutes vos sessions ont été déconnectées. Connectez-vous avec votre nouveau mot de passe.",
       "reset": "Mot de passe réinitialisé ! Connectez-vous avec votre nouveau mot de passe.",
@@ -677,6 +679,8 @@
     "saving": "Enregistrement...",
     "saved": "Profil mis à jour.",
     "saveFailed": "Impossible d'enregistrer votre profil. Veuillez réessayer.",
+    "tooManyAttempts": "Trop de tentatives. Réessayez dans {{ minutes }} min.",
+    "tooManyAttemptsNoDelay": "Trop de tentatives. Patientez quelques minutes avant de réessayer.",
     "fieldErrors": "Veuillez corriger les champs signalés.",
     "currentPassword": "Mot de passe actuel",
     "newPassword": "Nouveau mot de passe",
@@ -703,6 +707,7 @@
         "requested": "Lien envoyé. Ouvrez-le depuis la boîte de réception de votre nouvelle adresse pour confirmer.",
         "sent": "E-mail envoyé.",
         "limited": "Trop de tentatives. Réessayez plus tard.",
+        "locked": "Trop de tentatives. Réessayez dans {{ minutes }} min.",
         "failed": "Une erreur est survenue. Veuillez réessayer.",
         "unavailable": "L'envoi d'e-mails n'est pas disponible pour le moment.",
         "cancelled": "Changement annulé.",
@@ -750,6 +755,7 @@
       "openFailed": "Impossible d'ouvrir ce document. Veuillez réessayer.",
       "tooLarge": "Le fichier dépasse la taille maximale autorisée de 10 Mo.",
       "typeNotAllowed": "Ce type de fichier n'est pas autorisé.",
+      "quotaReached": "Vous avez atteint la limite de vos documents (nombre ou espace total). Supprimez-en un pour en ajouter un nouveau.",
       "uploadFailed": "Impossible d'envoyer ce document. Veuillez réessayer.",
       "deleteFailed": "Impossible de supprimer ce document. Veuillez réessayer."
     }
