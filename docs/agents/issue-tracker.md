@@ -6,6 +6,7 @@ New issues and specs for MeetStudent live as versioned Markdown files under `.sc
 
 - One feature directory: `.scratch/<feature-slug>/`.
 - Spec: `.scratch/<feature-slug>/spec.md`.
+- Tracking: `.scratch/<feature-slug>/completion.md`, in the same folder as its spec (one tracking file per spec).
 - One file per ticket: `.scratch/<feature-slug>/issues/<NN>-<slug>.md`, numbered in dependency order.
 - Canonical ticket identity: `<feature-slug>/<NN>`; numbers alone may repeat between features.
 - Record `Status:` near the top using the configured triage vocabulary. During execution, record `claimed` or `resolved` where appropriate.
@@ -15,12 +16,12 @@ New issues and specs for MeetStudent live as versioned Markdown files under `.sc
 
 ## Mandatory completion tracking
 
-Completion tracking is **per spec**, not one shared file. Every spec has its own file `docs/completion/<spec-folder>.md` (same name as its `.scratch/<spec-folder>/` directory, e.g. `docs/completion/forum.md`). This applies to any ticket-creating skill or manual workflow in this project, including `to-tickets`, `triage` and wayfinding.
+Completion tracking is **per spec**, not one shared file. Every spec has its own tracking file stored **in the spec's own folder**: `.scratch/<spec-folder>/completion.md`, next to its `spec.md` and `issues/` (e.g. `.scratch/forum/completion.md`). Several specs in progress means several tracking files, one per spec folder; never put a tracking file anywhere else. This applies to any ticket-creating skill or manual workflow in this project, including `to-tickets`, `triage` and wayfinding.
 
 When tickets are created for a spec, create that spec's completion file **immediately**, in the same step, and add the entry of each ticket right after writing its ticket file:
 
 1. Write the ticket file.
-2. Create `docs/completion/<spec-folder>.md` if absent (title, link to the spec), or preserve and update it if present.
+2. Create `.scratch/<spec-folder>/completion.md` if absent (title, relative link to `spec.md`), or preserve and update it if present. Link ticket entries relatively (`issues/<NN>-<slug>.md`).
 3. Add exactly one unchecked Markdown checklist entry with the canonical ticket identity, title, link and initial state. Save it before creating another ticket or reporting creation complete.
 
 A ticket without its saved completion entry is incompletely created. If either write fails, report the failure and reconcile that ticket before proceeding; never defer tracking until implementation begins or until the end of a batch.
