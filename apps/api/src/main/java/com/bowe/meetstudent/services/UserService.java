@@ -48,6 +48,7 @@ public class UserService {
     private final SchoolRateRepository schoolRateRepository;
     private final ProgramRateRepository programRateRepository;
     private final CourseRateRepository courseRateRepository;
+    private final CredentialAttemptLimiter credentialAttemptLimiter;
 
     public UserEntity saveUser(UserEntity userEntity, PasswordEncoder passwordEncoder ) {
         userEntity.setPassword(
@@ -137,10 +138,16 @@ public class UserService {
         var user = userRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         if (!administratorDeletingAnotherUser
-                && (currentPassword == null || !encoder.matches(currentPassword, user.getPassword()))) {
+                && (currentPassword == null || !currentPasswordMatches(user, currentPassword, encoder))) {
             throw new FieldValidationException("currentPassword", "Mot de passe actuel incorrect ou manquant");
         }
         deleteAccountData(user);
+    }
+
+    /** Wrong guesses are counted per user; too many lock the check for a while (429, {@link CredentialAttemptLimiter}). */
+    private boolean currentPasswordMatches(UserEntity user, String currentPassword, PasswordEncoder encoder) {
+        return credentialAttemptLimiter.matchesCurrentPassword(user.getId(),
+                () -> encoder.matches(currentPassword, user.getPassword()));
     }
 
     private void deleteAccountData(UserEntity user) {
@@ -189,7 +196,7 @@ public class UserService {
         return userRepository.findByIdForUpdate(id).map(existing -> {
             if (updates.getPassword() != null && !updates.getPassword().isEmpty()
                     && !administratorEditingAnotherUser
-                    && (currentPassword == null || !encoder.matches(currentPassword, existing.getPassword()))) {
+                    && (currentPassword == null || !currentPasswordMatches(existing, currentPassword, encoder))) {
                 throw new FieldValidationException("currentPassword", "Mot de passe actuel incorrect ou manquant");
             }
             // The address changes only through EmailChangeService (current password + a link to the new address).

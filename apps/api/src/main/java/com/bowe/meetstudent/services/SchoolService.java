@@ -25,9 +25,11 @@ public class SchoolService {
     private final MediaService mediaService;
     private final TagRepository tagRepository;
     private final ProgramRepository programRepository;
+    private final EntityImageValidator imageValidator;
 
     public School save(School school) {
         requireExistingTags(school);
+        imageValidator.requireSchoolTree(school);
         return this.schoolRepository.save(school);
     }
 
@@ -105,6 +107,8 @@ public class SchoolService {
     public School patch(Integer id, School updates) {
         return schoolRepository.findById(id).map(existing -> {
             requireExistingTags(updates);
+            imageValidator.requireSchoolLogo(updates.getLogoMediaId(), existing.getLogoMediaId(), id);
+            imageValidator.requireSchoolCover(updates.getCoverMediaId(), existing.getCoverMediaId(), id);
             // Check for media changes before updating
             if (updates.getLogoMediaId() != null
                     && !updates.getLogoMediaId().equals(existing.getLogoMediaId())) {

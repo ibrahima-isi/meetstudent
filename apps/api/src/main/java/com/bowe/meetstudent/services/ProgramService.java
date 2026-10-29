@@ -18,6 +18,7 @@ public class ProgramService {
 
     private final ProgramRepository programRepository;
     private final MediaService mediaService;
+    private final EntityImageValidator imageValidator;
 
     /** Blank means "no description" (stored null); otherwise the text is stripped. */
     private static String normalizeDescription(String description) {
@@ -29,6 +30,7 @@ public class ProgramService {
     @Transactional
     public Program save(Program program) {
         program.setDescription(normalizeDescription(program.getDescription()));
+        imageValidator.requireProgramTree(program);
         if (program.getCode() != null && (program.getId() == null
                 ? programRepository.existsByCodeIgnoreCase(program.getCode())
                 : programRepository.existsByCodeIgnoreCaseAndIdNot(program.getCode(), program.getId()))) {
@@ -94,6 +96,7 @@ public class ProgramService {
             if (updates.getCode() != null && programRepository.existsByCodeIgnoreCaseAndIdNot(updates.getCode(), id)) {
                 throw new ConflictException("A program with this code already exists");
             }
+            imageValidator.requireProgramPhoto(updates.getPhotoMediaId(), existing.getPhotoMediaId(), id);
             if (updates.getPhotoMediaId() != null
                     && !updates.getPhotoMediaId().equals(existing.getPhotoMediaId())) {
                 mediaService.deleteById(existing.getPhotoMediaId());
