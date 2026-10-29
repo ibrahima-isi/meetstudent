@@ -62,8 +62,9 @@ public class AuthController {
     }
 
     @PostMapping("/refresh")
-    @Operation(summary = "Refresh access token", description = "Uses a valid refresh token to issue a new access token and a new refresh token (rotation).")
-    @org.springframework.transaction.annotation.Transactional
+    @Operation(summary = "Refresh access token", description = "Uses a valid refresh token to issue a new access token and a new refresh token (rotation). Presenting a refresh token that was already rotated away (more than a few seconds earlier) ends that session; the answer is the same 401 as for an unknown token.")
+    // A detected reuse has just deleted the session: commit that, even though the request fails with 401.
+    @org.springframework.transaction.annotation.Transactional(noRollbackFor = RefreshTokenService.RefreshTokenReuseException.class)
     public LoginResponse refreshToken(@RequestBody @Validated TokenRefreshRequest request) {
         var rotation = refreshTokenService.rotate(request.getRefreshToken());
         var user = rotation.user();

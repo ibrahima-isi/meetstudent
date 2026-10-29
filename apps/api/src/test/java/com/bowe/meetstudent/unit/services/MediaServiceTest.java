@@ -8,6 +8,7 @@ import com.bowe.meetstudent.repositories.MediaRepository;
 import com.bowe.meetstudent.security.UserPrincipal;
 import com.bowe.meetstudent.services.MediaService;
 import com.bowe.meetstudent.services.MediaStorageService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -21,7 +22,11 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import com.bowe.meetstudent.exceptions.MediaValidationException;
+import org.springframework.http.HttpStatus;
+
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -37,6 +42,11 @@ class MediaServiceTest {
     @Mock MediaStorageService storageService;
     @Mock MediaRepository mediaRepository;
     @InjectMocks MediaService mediaService;
+
+    @BeforeEach
+    void defaultUploadLimit() {
+        ReflectionTestUtils.setField(mediaService, "maxUploadBytes", 10_485_760L);
+    }
 
     private UserPrincipal principal(Integer id, String role) {
         return UserPrincipal.builder().id(id).username("u@x.com")
@@ -239,7 +249,7 @@ class MediaServiceTest {
         mediaService.delete(5, principal(7, "ROLE_STUDENT"));
 
         verify(storageService).delete("private/x.pdf");
-        verify(mediaRepository).delete(m);
+        verify(mediaRepository).deleteAll(List.of(m));
     }
 
     @Test
@@ -268,7 +278,7 @@ class MediaServiceTest {
                 () -> mediaService.delete(5, principal(8, "ROLE_STUDENT")));
 
         verify(storageService, never()).delete(any());
-        verify(mediaRepository, never()).delete(any());
+        verify(mediaRepository, never()).deleteAll(any());
     }
 
     @Test
@@ -279,7 +289,7 @@ class MediaServiceTest {
                 () -> mediaService.delete(5, principal(8, "ROLE_STUDENT")));
 
         verify(storageService, never()).delete(any());
-        verify(mediaRepository, never()).delete(any());
+        verify(mediaRepository, never()).deleteAll(any());
     }
 
     @Test
@@ -289,7 +299,7 @@ class MediaServiceTest {
         mediaService.delete(5, principal(7, "ROLE_STUDENT"));
 
         verify(storageService).delete("public/x.png");
-        verify(mediaRepository).delete(m);
+        verify(mediaRepository).deleteAll(List.of(m));
     }
 
     @Test
@@ -299,7 +309,7 @@ class MediaServiceTest {
         mediaService.delete(5, principal(99, "ROLE_ADMIN"));
 
         verify(storageService).delete("public/x.png");
-        verify(mediaRepository).delete(m);
+        verify(mediaRepository).deleteAll(List.of(m));
     }
 
     @Test
@@ -311,7 +321,7 @@ class MediaServiceTest {
         mediaService.delete(5, principal(99, "ROLE_ADMIN"));
 
         verify(storageService).delete("private/x.pdf");
-        verify(mediaRepository).delete(m);
+        verify(mediaRepository).deleteAll(List.of(m));
     }
 
     @Test
@@ -391,7 +401,7 @@ class MediaServiceTest {
         mediaService.deleteById(404);
 
         verify(storageService, never()).delete(any());
-        verify(mediaRepository, never()).delete(any());
+        verify(mediaRepository, never()).deleteAll(any());
     }
 
     @Test
@@ -530,5 +540,320 @@ class MediaServiceTest {
         mediaService.deleteByIdsAfterCommit(java.util.Arrays.asList(null, 99));
 
         verify(storageService, never()).delete(any());
+    }
+
+    // --- Upload quotas, per-category types, orphan files, delete after commit ---
+
+    private static final byte[] PNG = {(byte) 0x89, 0x50, 0x4E, 0x47, 0, 0, 0, 0, 0, 0};
+    private static final byte[] PDF = {'%', 'P', 'D', 'F', '-', '1', '.', '4', '\n', ' '};
+    private static final byte[] MP4 = {0, 0, 0, 0x18, 'f', 't', 'y', 'p', 'm', 'p', '4', '2'};
+
+    private static final Collection<MediaCategory> PERSONAL = List.of(
+            MediaCategory.DIPLOMA, MediaCategory.CERTIFICATE,
+            MediaCategory.BULLETIN, MediaCategory.PRESENTATION_VIDEO);
+
+    private void quota(int ownerId, long count, long bytes) {
+        lenient().when(mediaRepository.countByOwnerIdAndCategoryIn(eq(ownerId), anyCollection())).thenReturn(count);
+        lenient().when(mediaRepository.sumSizeBytesByOwnerIdAndCategoryIn(eq(ownerId), anyCollection())).thenReturn(bytes);
+    }
+
+    private MediaValidationException refusedWith(MockMultipartFile file, MediaCategory category, UserPrincipal who) {
+        return assertThrows(MediaValidationException.class, () -> mediaService.upload(file, category, who, null));
+    }
+
+    private MockMultipartFile png(String name) {
+        return new MockMultipartFile("file", name, "image/png", PNG);
+    }
+
+    @Test
+    void twentiethPersonalDocumentIsAccepted() throws IOException {
+        wireStorageAndSave();
+        quota(7, 19, 0);
+
+        assertNotNull(mediaService.upload(jpeg(), MediaCategory.DIPLOMA, principal(7, "ROLE_STUDENT"), null));
+    }
+
+    @Test
+    void twentyFirstPersonalDocumentIsRefusedWith409AndNothingIsStored() {
+        quota(7, 20, 0);
+
+        MediaValidationException ex = refusedWith(jpeg(), MediaCategory.DIPLOMA, principal(7, "ROLE_STUDENT"));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatus());
+        verifyNoInteractions(storageService);
+        verify(mediaRepository, never()).save(any());
+    }
+
+    @Test
+    void countLimitComesFromTheConfiguration() throws IOException {
+        wireStorageAndSave();
+        ReflectionTestUtils.setField(mediaService, "maxPersonalDocs", 2);
+        quota(7, 1, 0);
+        assertNotNull(mediaService.upload(jpeg(), MediaCategory.BULLETIN, principal(7, "ROLE_STUDENT"), null));
+
+        quota(8, 2, 0);
+        assertEquals(HttpStatus.CONFLICT,
+                refusedWith(jpeg(), MediaCategory.BULLETIN, principal(8, "ROLE_EXPERT")).getStatus());
+    }
+
+    @Test
+    void personalDocumentsOverTheCumulativeByteCapAreRefused() {
+        quota(7, 3, 100L * 1024 * 1024 - 9);
+
+        MediaValidationException ex = refusedWith(jpeg(), MediaCategory.CERTIFICATE, principal(7, "ROLE_STUDENT"));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatus());
+        verifyNoInteractions(storageService);
+    }
+
+    @Test
+    void personalDocumentReachingExactlyTheByteCapIsAccepted() throws IOException {
+        wireStorageAndSave();
+        quota(7, 3, 100L * 1024 * 1024 - 10);
+
+        assertNotNull(mediaService.upload(jpeg(), MediaCategory.CERTIFICATE, principal(7, "ROLE_STUDENT"), null));
+    }
+
+    @Test
+    void byteCapComesFromTheConfiguration() {
+        ReflectionTestUtils.setField(mediaService, "maxPersonalBytes", 15L);
+        quota(7, 1, 6);
+
+        assertEquals(HttpStatus.CONFLICT,
+                refusedWith(jpeg(), MediaCategory.DIPLOMA, principal(7, "ROLE_STUDENT")).getStatus());
+    }
+
+    @Test
+    void quotaIsPerOwner() throws IOException {
+        wireStorageAndSave();
+        quota(8, 0, 0);
+
+        assertNotNull(mediaService.upload(jpeg(), MediaCategory.DIPLOMA, principal(8, "ROLE_STUDENT"), null));
+
+        verify(mediaRepository, never()).countByOwnerIdAndCategoryIn(eq(7), any());
+    }
+
+    @Test
+    void adminIsNotLimited() throws IOException {
+        wireStorageAndSave();
+
+        assertNotNull(mediaService.upload(jpeg(), MediaCategory.DIPLOMA, principal(99, "ROLE_ADMIN"), null));
+
+        verify(mediaRepository, never()).countByOwnerIdAndCategoryIn(any(), any());
+        verify(mediaRepository, never()).sumSizeBytesByOwnerIdAndCategoryIn(any(), any());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void quotaCountsPersonalDocumentCategoriesOnly() throws IOException {
+        wireStorageAndSave();
+        quota(7, 0, 0);
+
+        mediaService.upload(jpeg(), MediaCategory.DIPLOMA, principal(7, "ROLE_STUDENT"), null);
+
+        ArgumentCaptor<Collection<MediaCategory>> categories = ArgumentCaptor.forClass(Collection.class);
+        verify(mediaRepository).countByOwnerIdAndCategoryIn(eq(7), categories.capture());
+        assertEquals(java.util.Set.copyOf(PERSONAL), java.util.Set.copyOf(categories.getValue()));
+    }
+
+    @Test
+    void retryWithTheSameIdempotencyKeyIsNotCountedAgainEvenAtTheLimit() throws IOException {
+        Media existing = Media.builder().storageKey("private/old.jpg")
+                .category(MediaCategory.DIPLOMA).visibility(MediaVisibility.PRIVATE)
+                .ownerId(7).idempotencyKey("key-1").build();
+        when(mediaRepository.findByOwnerIdAndIdempotencyKey(7, "key-1")).thenReturn(Optional.of(existing));
+
+        assertSame(existing,
+                mediaService.upload(jpeg(), MediaCategory.DIPLOMA, principal(7, "ROLE_STUDENT"), "key-1"));
+
+        verify(mediaRepository, never()).countByOwnerIdAndCategoryIn(any(), any());
+        verifyNoInteractions(storageService);
+    }
+
+    @Test
+    void secondUserPhotoReplacesTheFirstAndItsFileGoesOnlyAfterCommit() throws IOException {
+        wireStorageAndSave();
+        when(storageService.store(any(), any(), any())).thenReturn("public/new.png");
+        Media old = Media.builder().id(3).storageKey("public/old.png").category(MediaCategory.USER_PHOTO)
+                .visibility(MediaVisibility.PUBLIC).ownerId(7).build();
+        when(mediaRepository.findByOwnerIdAndCategory(7, MediaCategory.USER_PHOTO)).thenReturn(List.of(old));
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            Media saved = mediaService.upload(png("me.png"), MediaCategory.USER_PHOTO, principal(7, "ROLE_STUDENT"), null);
+
+            assertEquals("public/new.png", saved.getStorageKey());
+            verify(mediaRepository).deleteAll(List.of(old));
+            verify(storageService, never()).delete("public/old.png");
+
+            TransactionSynchronizationManager.getSynchronizations().forEach(TransactionSynchronization::afterCommit);
+
+            verify(storageService).delete("public/old.png");
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+    }
+
+    @Test
+    void replacedUserPhotoFileSurvivesARollback() throws IOException {
+        wireStorageAndSave();
+        Media old = Media.builder().id(3).storageKey("public/old.png").category(MediaCategory.USER_PHOTO)
+                .visibility(MediaVisibility.PUBLIC).ownerId(7).build();
+        when(mediaRepository.findByOwnerIdAndCategory(7, MediaCategory.USER_PHOTO)).thenReturn(List.of(old));
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            mediaService.upload(png("me.png"), MediaCategory.USER_PHOTO, principal(7, "ROLE_STUDENT"), null);
+
+            TransactionSynchronizationManager.getSynchronizations()
+                    .forEach(s -> s.afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK));
+
+            verify(storageService, never()).delete("public/old.png");
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+    }
+
+    @Test
+    void firstUserPhotoDeletesNothing() throws IOException {
+        wireStorageAndSave();
+        when(mediaRepository.findByOwnerIdAndCategory(7, MediaCategory.USER_PHOTO)).thenReturn(List.of());
+
+        mediaService.upload(png("me.png"), MediaCategory.USER_PHOTO, principal(7, "ROLE_STUDENT"), null);
+
+        verify(mediaRepository, never()).deleteAll(any());
+        verify(storageService, never()).delete(any());
+    }
+
+    @Test
+    void userPhotoHasNoDocumentQuota() throws IOException {
+        wireStorageAndSave();
+
+        mediaService.upload(png("me.png"), MediaCategory.USER_PHOTO, principal(7, "ROLE_STUDENT"), null);
+
+        verify(mediaRepository, never()).countByOwnerIdAndCategoryIn(any(), any());
+    }
+
+    @Test
+    void pdfAsUserPhotoIsRefusedWith415() {
+        MockMultipartFile pdf = new MockMultipartFile("file", "me.pdf", "application/pdf", PDF);
+
+        assertEquals(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+                refusedWith(pdf, MediaCategory.USER_PHOTO, principal(7, "ROLE_STUDENT")).getStatus());
+        verifyNoInteractions(storageService);
+    }
+
+    @Test
+    void videoAsUserPhotoIsRefused() {
+        MockMultipartFile mp4 = new MockMultipartFile("file", "me.mp4", "video/mp4", MP4);
+
+        assertEquals(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+                refusedWith(mp4, MediaCategory.USER_PHOTO, principal(7, "ROLE_STUDENT")).getStatus());
+    }
+
+    @Test
+    void pdfAsSchoolLogoIsRefusedEvenForAdmin() {
+        MockMultipartFile pdf = new MockMultipartFile("file", "logo.pdf", "application/pdf", PDF);
+
+        assertEquals(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+                refusedWith(pdf, MediaCategory.SCHOOL_LOGO, principal(99, "ROLE_ADMIN")).getStatus());
+    }
+
+    @Test
+    void pngAsUserPhotoIsAccepted() throws IOException {
+        wireStorageAndSave();
+
+        assertNotNull(mediaService.upload(png("me.png"), MediaCategory.USER_PHOTO, principal(7, "ROLE_STUDENT"), null));
+    }
+
+    @Test
+    void pdfAndVideoAsPersonalDocumentsAreStillAccepted() throws IOException {
+        wireStorageAndSave();
+
+        assertNotNull(mediaService.upload(new MockMultipartFile("file", "d.pdf", "application/pdf", PDF),
+                MediaCategory.DIPLOMA, principal(99, "ROLE_ADMIN"), null));
+        assertNotNull(mediaService.upload(new MockMultipartFile("file", "v.mp4", "video/mp4", MP4),
+                MediaCategory.PRESENTATION_VIDEO, principal(99, "ROLE_ADMIN"), null));
+    }
+
+    @Test
+    void failedInsertDeletesTheJustWrittenFile() throws IOException {
+        ReflectionTestUtils.setField(mediaService, "maxUploadBytes", 10_485_760L);
+        when(storageService.store(any(), any(), any())).thenReturn("private/orphan.jpg");
+        when(mediaRepository.save(any(Media.class))).thenThrow(new IllegalStateException("insert failed"));
+
+        assertThrows(IllegalStateException.class,
+                () -> mediaService.upload(jpeg(), MediaCategory.DIPLOMA, principal(99, "ROLE_ADMIN"), null));
+
+        verify(storageService).delete("private/orphan.jpg");
+    }
+
+    @Test
+    void newFileIsDeletedWhenTheTransactionRollsBackAfterTheInsert() throws IOException {
+        wireStorageAndSave();
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            mediaService.upload(jpeg(), MediaCategory.DIPLOMA, principal(99, "ROLE_ADMIN"), null);
+            verify(storageService, never()).delete(any());
+
+            TransactionSynchronizationManager.getSynchronizations()
+                    .forEach(s -> s.afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK));
+
+            verify(storageService).delete("private/uuid.jpg");
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+    }
+
+    @Test
+    void newFileIsKeptWhenTheTransactionCommits() throws IOException {
+        wireStorageAndSave();
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            mediaService.upload(jpeg(), MediaCategory.DIPLOMA, principal(99, "ROLE_ADMIN"), null);
+
+            TransactionSynchronizationManager.getSynchronizations()
+                    .forEach(s -> s.afterCompletion(TransactionSynchronization.STATUS_COMMITTED));
+
+            verify(storageService, never()).delete(any());
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+    }
+
+    @Test
+    void userDeleteRemovesTheRowNowAndTheFileOnlyAfterCommit() throws IOException {
+        Media m = Media.builder().visibility(MediaVisibility.PRIVATE)
+                .category(MediaCategory.DIPLOMA).ownerId(7).storageKey("private/x.pdf").build();
+        when(mediaRepository.findById(5)).thenReturn(Optional.of(m));
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            mediaService.delete(5, principal(7, "ROLE_STUDENT"));
+
+            verify(mediaRepository).deleteAll(List.of(m));
+            verify(storageService, never()).delete(any());
+
+            TransactionSynchronizationManager.getSynchronizations().forEach(TransactionSynchronization::afterCommit);
+
+            verify(storageService).delete("private/x.pdf");
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+    }
+
+    @Test
+    void userDeleteKeepsTheFileOnRollback() throws IOException {
+        Media m = Media.builder().visibility(MediaVisibility.PRIVATE)
+                .category(MediaCategory.DIPLOMA).ownerId(7).storageKey("private/x.pdf").build();
+        when(mediaRepository.findById(5)).thenReturn(Optional.of(m));
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            mediaService.delete(5, principal(7, "ROLE_STUDENT"));
+
+            TransactionSynchronizationManager.getSynchronizations()
+                    .forEach(s -> s.afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK));
+
+            verify(storageService, never()).delete(any());
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
     }
 }
