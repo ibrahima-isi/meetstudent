@@ -86,10 +86,16 @@ describe('ForumThreadPageComponent', () => {
       replies?: ReturnType<typeof replyPage> | { status: number };
       role?: string;
       status?: string;
+      /** Stored flag of the signed-in user; with `unverified` mail is on and the server still says not confirmed. */
+      emailVerified?: boolean;
       lang?: 'fr' | 'en';
     } = {},
   ) {
     const signedIn = opts.role !== undefined;
+    const tokenUser = signal<unknown>(
+      signedIn ? { id: 1, firstname: 'Me', role: { name: opts.role }, expertStatus: opts.status, emailVerified: opts.emailVerified } : null,
+    );
+    const tokenStub = { isAuthenticated: () => signedIn, user: tokenUser, setUser: (u: unknown) => tokenUser.set(u) };
     responseInit = { status: 200 };
     TestBed.configureTestingModule({
       providers: [
@@ -111,10 +117,7 @@ describe('ForumThreadPageComponent', () => {
         { provide: RESPONSE_INIT, useValue: responseInit },
         {
           provide: TokenService,
-          useValue: {
-            isAuthenticated: () => signedIn,
-            user: signal(signedIn ? { id: 1, firstname: 'Me', role: { name: opts.role }, expertStatus: opts.status } : null),
-          },
+          useValue: tokenStub,
         },
       ],
     });
@@ -136,6 +139,11 @@ describe('ForumThreadPageComponent', () => {
       }
     }
     await navigation;
+    await settle();
+    // An unconfirmed account makes the page read the server's capabilities, then the user once more.
+    http.match('/api/v1/auth/capabilities').forEach((req) => req.flush({ emailEnabled: true }));
+    await settle();
+    http.match('/api/v1/users/id/1').forEach((req) => req.flush({ id: 1, firstname: 'Me', role: { name: opts.role }, emailVerified: false }));
     await settle();
   }
 
@@ -620,6 +628,13 @@ describe('ForumThreadPageComponent', () => {
 
     it('offers it to a rejected expert too', async () => {
       await open('5', { role: 'ROLE_EXPERT', status: 'REJECTED', replies: replyPage([reply(1)]) });
+      expect(buttons().length).toBe(2);
+    });
+
+    it('offers it to an account whose e-mail is not confirmed: the API keeps reporting open to it', async () => {
+      await open('5', { role: 'ROLE_STUDENT', emailVerified: false, replies: replyPage([reply(1)]) });
+      expect(byId('forum-gate')!.textContent).toContain('Confirm your email address');
+      expect(el().querySelector('app-forum-composer')).toBeNull();
       expect(buttons().length).toBe(2);
     });
 

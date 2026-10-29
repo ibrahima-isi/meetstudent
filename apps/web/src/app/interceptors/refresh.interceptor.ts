@@ -2,7 +2,7 @@ import { HttpErrorResponse, HttpEvent, HttpInterceptorFn, HttpRequest } from '@a
 import { isPlatformBrowser } from '@angular/common';
 import { Injector, PLATFORM_ID, inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { Observable, catchError, finalize, shareReplay, switchMap, throwError } from 'rxjs';
+import { Observable, catchError, finalize, of, shareReplay, switchMap, throwError } from 'rxjs';
 import { AuthService } from '@services/auth.service';
 import { LocaleService } from '@services/locale.service';
 import { TokenService } from '@services/token.service';
@@ -86,6 +86,13 @@ export const refreshInterceptor: HttpInterceptorFn = (req, next) => {
       refresh$ ??= auth.refreshToken(stored).pipe(
         switchMap((res) => [res.accessToken]),
         catchError((refreshError: unknown) => {
+          // Two tabs may have refreshed together: the other one won and stored its tokens, and the server refused this
+          // tab's now stale refresh token. Ending the session here would log out with a token we do not hold any more
+          // (deleting the winner's session) and sign the winner tab out too: use the stored tokens instead.
+          tokens.syncFromStorage();
+          const winnerRefresh = tokens.refreshToken();
+          const winnerAccess = tokens.token();
+          if (winnerRefresh && winnerAccess && winnerRefresh !== stored) return of(winnerAccess);
           endSession(auth, injector);
           return throwError(() => refreshError);
         }),

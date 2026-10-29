@@ -31,6 +31,15 @@ export function injectForumWriteState(): Signal<ForumWriteState> {
     auth.getCapabilities().subscribe((capabilities) => emailEnabled.set(capabilities.emailEnabled));
   });
 
+  // The flag comes from localStorage and may be stale (confirmed on another device or browser): ask the server once
+  // before telling the visitor to confirm, and the state recomputes from the refreshed user.
+  let reloaded = false;
+  effect(() => {
+    if (reloaded || !unconfirmed() || !emailEnabled()) return;
+    reloaded = true;
+    auth.refreshCurrentUser().subscribe({ error: () => undefined });
+  });
+
   return computed(() => {
     if (!session.signedIn()) return 'anonymous';
     const user = token.user();

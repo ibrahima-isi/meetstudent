@@ -273,6 +273,92 @@ describe('refreshInterceptor', () => {
     });
   });
 
+  describe('when two tabs refresh at the same time and this one loses', () => {
+    /** The winning tab stores R2/A2; the server then refuses this tab's replay of R1 (outside the strict rotation). */
+    function winnerStores(deliverEvent: boolean): void {
+      localStorage.setItem('auth_token', 'winner-access');
+      localStorage.setItem('refresh_token', 'winner-refresh');
+      if (deliverEvent) {
+        window.dispatchEvent(new StorageEvent('storage', { key: 'refresh_token', newValue: 'winner-refresh', storageArea: localStorage }));
+      }
+    }
+
+    for (const deliverEvent of [false, true]) {
+      it(`retries with the winner's tokens and neither logs out nor clears the session (storage event ${deliverEvent ? 'already' : 'not yet'} delivered)`, () => {
+        let result: unknown;
+        http.get('/api/data').subscribe((r) => (result = r));
+        backend.expectOne('/api/data').flush(null, { status: 401, statusText: 'Unauthorized' });
+        const refresh = backend.expectOne(refreshUrl);
+        expect(refresh.request.body).toEqual({ refreshToken: 'old-refresh' });
+
+        winnerStores(deliverEvent);
+        refresh.flush(null, { status: 401, statusText: 'Unauthorized' });
+
+        backend.expectNone(logoutUrl);
+        const retry = backend.expectOne('/api/data');
+        expect(retry.request.headers.get('Authorization')).toBe('Bearer winner-access');
+        retry.flush({ ok: true });
+
+        expect(result).toEqual({ ok: true });
+        expect(tokens.token()).toBe('winner-access');
+        expect(tokens.refreshToken()).toBe('winner-refresh');
+        expect(localStorage.getItem('refresh_token')).toBe('winner-refresh');
+        expect(navigate).not.toHaveBeenCalled();
+      });
+    }
+
+    it('lets every request waiting on that refresh retry once with the winner\'s tokens', () => {
+      const results: unknown[] = [];
+      http.get('/api/a').subscribe((r) => results.push(r));
+      http.get('/api/b').subscribe((r) => results.push(r));
+      backend.expectOne('/api/a').flush(null, { status: 401, statusText: 'Unauthorized' });
+      backend.expectOne('/api/b').flush(null, { status: 401, statusText: 'Unauthorized' });
+      const refresh = backend.expectOne(refreshUrl);
+      winnerStores(true);
+      refresh.flush(null, { status: 401, statusText: 'Unauthorized' });
+
+      backend.expectNone(logoutUrl);
+      backend.expectOne('/api/a').flush('a');
+      backend.expectOne('/api/b').flush('b');
+      expect(results).toEqual(['a', 'b']);
+    });
+
+    it('still ends the session when the retry with the winner\'s tokens is refused too', () => {
+      http.get('/api/data').subscribe({ error: () => undefined });
+      backend.expectOne('/api/data').flush(null, { status: 401, statusText: 'Unauthorized' });
+      const refresh = backend.expectOne(refreshUrl);
+      winnerStores(true);
+      refresh.flush(null, { status: 401, statusText: 'Unauthorized' });
+      backend.expectOne('/api/data').flush(null, { status: 401, statusText: 'Unauthorized' });
+
+      expect(tokens.token()).toBeNull();
+      expect(navigate).toHaveBeenCalledTimes(1);
+    });
+
+    it('ends the session as before when storage did not change (a genuinely refused refresh token)', () => {
+      let error: unknown;
+      http.get('/api/data').subscribe({ error: (e) => (error = e) });
+      backend.expectOne('/api/data').flush(null, { status: 401, statusText: 'Unauthorized' });
+      backend.expectOne(refreshUrl).flush(null, { status: 401, statusText: 'Unauthorized' });
+
+      expect(backend.expectOne(logoutUrl).request.body).toEqual({ refreshToken: 'old-refresh' });
+      expect(tokens.token()).toBeNull();
+      expect(navigate).toHaveBeenCalledTimes(1);
+      expect(error).toBeTruthy();
+    });
+
+    it('ends the session when the other tab signed out meanwhile', () => {
+      http.get('/api/data').subscribe({ error: () => undefined });
+      backend.expectOne('/api/data').flush(null, { status: 401, statusText: 'Unauthorized' });
+      const refresh = backend.expectOne(refreshUrl);
+      localStorage.clear();
+      refresh.flush(null, { status: 401, statusText: 'Unauthorized' });
+
+      expect(tokens.token()).toBeNull();
+      backend.expectNone('/api/data');
+    });
+  });
+
   describe('after a failed refresh', () => {
     function failRefresh(): void {
       http.get('/api/data').subscribe({ error: () => undefined });

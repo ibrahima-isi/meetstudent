@@ -9,6 +9,9 @@ import { ForumWriteState, injectForumWriteState } from './forum-access';
 describe('injectForumWriteState', () => {
   let http: HttpTestingController;
   let capabilityCalls: number;
+  let userReloads: number;
+  /** What the server says the user is now, when the page asks again; `null` makes that call fail. Default: unchanged. */
+  let fresh: User | null | undefined;
 
   function user(role: string, extra: Partial<User> = {}): User {
     return { id: 1, firstname: 'A', lastname: 'B', email: 'a@b.c', role: { id: 1, name: role }, ...extra } as User;
@@ -17,6 +20,7 @@ describe('injectForumWriteState', () => {
   /** Signs `account` in (or nobody), and answers the capabilities call with `emailEnabled` if one is made. */
   async function stateFor(account: User | null, emailEnabled = true): Promise<ForumWriteState> {
     localStorage.clear();
+    fresh = undefined;
     TestBed.configureTestingModule({
       providers: [provideZonelessChangeDetection(), provideHttpClient(), provideHttpClientTesting()],
     });
@@ -31,6 +35,13 @@ describe('injectForumWriteState', () => {
     TestBed.tick();
     await Promise.resolve();
     capabilityCalls = http.match('/api/v1/auth/capabilities').map((req) => req.flush({ emailEnabled })).length;
+    TestBed.tick();
+    await Promise.resolve();
+    const reloads = http.match('/api/v1/users/id/1');
+    userReloads = reloads.length;
+    reloads.forEach((req) =>
+      fresh === null ? req.flush(null, { status: 500, statusText: 'x' }) : req.flush(fresh ?? account),
+    );
     TestBed.tick();
     return state();
   }
@@ -94,6 +105,71 @@ describe('injectForumWriteState', () => {
       expect(await stateFor(null, true)).toBe('anonymous');
     });
 
+    it('asks the server again once, because the stored flag may be stale (confirmed on another device)', async () => {
+      const stale = user('ROLE_STUDENT', { emailVerified: false });
+      fresh = undefined;
+      // Confirmed meanwhile: the reload says so.
+      const state = await (async () => {
+        localStorage.clear();
+        TestBed.configureTestingModule({
+          providers: [provideZonelessChangeDetection(), provideHttpClient(), provideHttpClientTesting()],
+        });
+        http = TestBed.inject(HttpTestingController);
+        const tokens = TestBed.inject(TokenService);
+        tokens.setTokens('access', 'refresh');
+        tokens.setUser(stale);
+        const s = TestBed.runInInjectionContext(() => injectForumWriteState());
+        TestBed.tick();
+        await Promise.resolve();
+        http.match('/api/v1/auth/capabilities').forEach((req) => req.flush({ emailEnabled: true }));
+        TestBed.tick();
+        await Promise.resolve();
+        const reload = http.expectOne('/api/v1/users/id/1');
+        expect(s()).toBe('unverified');
+        reload.flush({ ...stale, emailVerified: true });
+        TestBed.tick();
+        return s;
+      })();
+
+      expect(state()).toBe('writer');
+      TestBed.tick();
+      http.expectNone('/api/v1/users/id/1');
+    });
+
+    it('reloads the user once when the state is unverified, and stays unverified if the server agrees', async () => {
+      expect(await stateFor(user('ROLE_STUDENT', { emailVerified: false }), true)).toBe('unverified');
+      expect(userReloads).toBe(1);
+    });
+
+    it('stays unverified when the reload fails', async () => {
+      fresh = null;
+      localStorage.clear();
+      TestBed.configureTestingModule({
+        providers: [provideZonelessChangeDetection(), provideHttpClient(), provideHttpClientTesting()],
+      });
+      http = TestBed.inject(HttpTestingController);
+      const tokens = TestBed.inject(TokenService);
+      tokens.setTokens('access', 'refresh');
+      tokens.setUser(user('ROLE_STUDENT', { emailVerified: false }));
+      const state = TestBed.runInInjectionContext(() => injectForumWriteState());
+      TestBed.tick();
+      await Promise.resolve();
+      http.match('/api/v1/auth/capabilities').forEach((req) => req.flush({ emailEnabled: true }));
+      TestBed.tick();
+      await Promise.resolve();
+      http.expectOne('/api/v1/users/id/1').flush(null, { status: 500, statusText: 'x' });
+      TestBed.tick();
+      expect(state()).toBe('unverified');
+    });
+
+    it('does not reload the user when mail is disabled, or when the account is verified', async () => {
+      expect(await stateFor(user('ROLE_STUDENT', { emailVerified: false }), false)).toBe('writer');
+      expect(userReloads).toBe(0);
+      TestBed.resetTestingModule();
+      expect(await stateFor(user('ROLE_STUDENT', { emailVerified: true }))).toBe('writer');
+      expect(userReloads).toBe(0);
+    });
+
     it('becomes a writer as soon as the account is verified', async () => {
       localStorage.clear();
       TestBed.configureTestingModule({
@@ -107,6 +183,9 @@ describe('injectForumWriteState', () => {
       TestBed.tick();
       await Promise.resolve();
       http.match('/api/v1/auth/capabilities').forEach((req) => req.flush({ emailEnabled: true }));
+      TestBed.tick();
+      await Promise.resolve();
+      http.match('/api/v1/users/id/1').forEach((req) => req.flush(user('ROLE_STUDENT', { emailVerified: false })));
       TestBed.tick();
       expect(state()).toBe('unverified');
 
