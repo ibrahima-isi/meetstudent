@@ -202,6 +202,19 @@ describe('ProfileEmailSectionComponent', () => {
       expect(text()).toContain('not available');
     });
 
+    it('says how long to wait when the current password is locked out (429 with Retry-After)', async () => {
+      await render();
+      await openChangeForm();
+      await fillAndSubmit('new@example.com', 'wrong-pass');
+      httpMock.expectOne((r) => r.method === 'POST' && r.url === changeUrl)
+        .flush({}, { status: 429, statusText: 'Too Many Requests', headers: { 'Retry-After': '900' } });
+      await settle();
+
+      expect(text()).toContain('Too many attempts. Try again in 15 min.');
+      expect(text()).not.toContain('went wrong');
+      expect(el().querySelector('[data-testid="email-password"]')).not.toBeNull();
+    });
+
     it('closes the form on cancel without calling the API', async () => {
       await render();
       await openChangeForm();

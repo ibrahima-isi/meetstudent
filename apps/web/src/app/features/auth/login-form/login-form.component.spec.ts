@@ -65,14 +65,14 @@ describe('LoginFormComponent translations', () => {
 
   // Decision 5: ErrorResponse.message is for logs, never for the user.
   describe('when the sign-in is refused', () => {
-    const fail = async (lang: 'fr' | 'en', status: number, body: object = {}) => {
+    const fail = async (lang: 'fr' | 'en', status: number, body: object = {}, headers: Record<string, string> = {}) => {
       await render(lang);
       const component = fixture.componentInstance;
       component.loginForm.setValue({ email: 'awa@example.com', password: 'wrong' });
       component.handleSubmit();
       httpMock
         .expectOne(`${environment.apiUrl}/auth`)
-        .flush(body, { status, statusText: 'Error' });
+        .flush(body, { status, statusText: 'Error', headers });
       fixture.detectChanges();
       await fixture.whenStable();
     };
@@ -95,7 +95,7 @@ describe('LoginFormComponent translations', () => {
       expect(unknownEmail).not.toContain('User not found');
     });
 
-    for (const status of [0, 429, 500, 503]) {
+    for (const status of [0, 500, 503]) {
       it(`keeps the generic text for a ${status}`, async () => {
         await fail('en', status, { message: 'internal detail' });
         expect(text()).toContain('Login failed. Please try again.');
@@ -103,6 +103,35 @@ describe('LoginFormComponent translations', () => {
         expect(text()).not.toContain('internal detail');
       });
     }
+
+    describe('when the account is locked after too many attempts (429)', () => {
+      const lock = (lang: 'fr' | 'en', headers: Record<string, string> = {}) =>
+        fail(lang, 429, { message: 'Trop de tentatives, réessayez plus tard' }, headers);
+
+      it('says how long to wait, in minutes rounded up, in English', async () => {
+        await lock('en', { 'Retry-After': '61' });
+        expect(text()).toContain('Too many attempts. Try again in 2 min.');
+        expect(text()).not.toContain('Login failed');
+        expect(text()).not.toContain('Incorrect email or password.');
+      });
+
+      it('says how long to wait, in French', async () => {
+        await lock('fr', { 'Retry-After': '300' });
+        expect(text()).toContain('Trop de tentatives. Réessayez dans 5 min.');
+        expect(text()).not.toContain('La connexion a échoué');
+      });
+
+      it('shows one minute for a short lock', async () => {
+        await lock('en', { 'Retry-After': '60' });
+        expect(text()).toContain('Try again in 1 min.');
+      });
+
+      it('still says it is a lock-out, without a time, when Retry-After is missing', async () => {
+        await lock('en');
+        expect(text()).toContain('Too many attempts. Please wait a few minutes');
+        expect(text()).not.toContain('Login failed');
+      });
+    });
   });
 
   it('offers no social login: there is no OAuth backend behind it', async () => {

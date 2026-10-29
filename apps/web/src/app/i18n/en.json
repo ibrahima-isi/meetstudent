@@ -277,6 +277,8 @@
       "success": "Login successful! Welcome back.",
       "registered": "Account created! Sign in to continue.",
       "failed": "Login failed. Please try again.",
+      "tooManyAttempts": "Too many attempts. Try again in {{ minutes }} min.",
+      "tooManyAttemptsNoDelay": "Too many attempts. Please wait a few minutes before trying again.",
       "invalidCredentials": "Incorrect email or password.",
       "passwordChanged": "Password changed. All your sessions have been signed out. Sign in with your new password.",
       "reset": "Password reset! Sign in with your new password.",
@@ -674,6 +676,8 @@
     "saving": "Saving...",
     "saved": "Profile updated.",
     "saveFailed": "Could not save your profile. Please try again.",
+    "tooManyAttempts": "Too many attempts. Try again in {{ minutes }} min.",
+    "tooManyAttemptsNoDelay": "Too many attempts. Please wait a few minutes before trying again.",
     "fieldErrors": "Please correct the highlighted fields.",
     "currentPassword": "Current password",
     "newPassword": "New password",
@@ -700,6 +704,7 @@
         "requested": "Link sent. Open it from your new inbox to confirm.",
         "sent": "Email sent.",
         "limited": "Too many attempts. Try again later.",
+        "locked": "Too many attempts. Try again in {{ minutes }} min.",
         "failed": "Something went wrong. Please try again.",
         "unavailable": "Email delivery is not available right now.",
         "cancelled": "Change cancelled.",
@@ -747,6 +752,7 @@
       "openFailed": "This document could not be opened. Please try again.",
       "tooLarge": "The file exceeds the 10 MB size limit.",
       "typeNotAllowed": "This file type is not allowed.",
+      "quotaReached": "You have reached your documents limit (number of files or total space). Delete one to add a new one.",
       "uploadFailed": "This document could not be uploaded. Please try again.",
       "deleteFailed": "This document could not be deleted. Please try again."
     }
