@@ -20,9 +20,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.BooleanSupplier;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
@@ -30,12 +28,11 @@ import java.util.function.Supplier;
  * {@link ForumRateLimiter}). Two separate namespaces: <b>sign-in</b> and <b>current password</b> checks (email
  * change, account deletion, password change, keyed by user id).
  * <p>
- * Every sign-in is keyed by the NFKC upper-cased address (at least as coarse as the database comparison), stored as
- * a SHA-256, so the size of a key is fixed and no address is kept. When the address finds an account ({@link #guard})
- * the <b>id of the account</b> is checked and counted too, so every spelling the database accepts for it (case, and
- * the Unicode letters its {@code upper()} folds, such as 'ſ' -> 'S' or 'ı' -> 'I') shares one budget; and since
- * the address key is used either way, a spelling NFKC folds but the database does not (fullwidth 'ａ') locks a known
- * and an unknown address alike. Both paths do the same query, so the lock never tells whether an account exists.
+ * A sign-in has exactly <b>one key</b>: the NFKC upper-cased address, stored as a SHA-256 (fixed size, no address
+ * kept). It folds at least what the database comparison folds (case, 'ſ' -> 'S', 'ı' -> 'I'), so every spelling that
+ * finds an account shares its budget, plus more (fullwidth 'ａ' -> 'A'). No database lookup is involved, so the
+ * sequence of answers depends only on the submitted address and the clock: it never tells whether an account exists
+ * (a second, per-account counter would: it would lock on a different schedule).
  * <p>
  * After {@value #MAX_FAILURES} consecutive failures the key is locked for 1 minute, after the next streak 5 minutes,
  * then 15 minutes (cap); a success resets everything, and a key with no failure for a day is forgotten. While locked
@@ -71,35 +68,30 @@ public class CredentialAttemptLimiter {
     }
 
     /**
-     * Runs one sign-in attempt keyed by {@code email} (use it for an address that finds no account): an
-     * {@link AuthenticationException} counts as a failure, a returned authentication as a success.
+     * Runs one sign-in attempt for {@code email}: an {@link AuthenticationException} counts as a failure, a returned
+     * authentication as a success.
      *
-     * @throws TooManyRequestsException the key is locked (the attempt is not run)
+     * @throws TooManyRequestsException the address is locked (the attempt is not run)
      */
     public Authentication authenticate(String email, Supplier<Authentication> attempt) {
-        return signIn(List.of(emailKey(email)), attempt);
+        var key = emailKey(email);
+        logins.acquire(key);
+        var outcome = Outcome.OTHER;
+        try {
+            var authentication = attempt.get();
+            outcome = Outcome.SUCCESS;
+            return authentication;
+        } catch (AuthenticationException ex) {
+            outcome = Outcome.FAILURE;
+            throw ex;
+        } finally {
+            logins.finish(key, outcome);
+        }
     }
 
-    /**
-     * {@link #authenticate} for an address that finds the account {@code userId}: the address key and the id key are
-     * both checked (locked if either is) and both counted.
-     */
-    public Authentication authenticateAccount(int userId, String email, Supplier<Authentication> attempt) {
-        return signIn(List.of(emailKey(email), "id:" + userId), attempt);
-    }
-
-    /**
-     * The same {@code delegate}, with every sign-in going through the lockout, keyed by the account
-     * {@code accountIdByEmail} finds for the submitted name (the same case-insensitive lookup as the sign-in itself),
-     * or by the normalised address when it finds none.
-     */
-    public AuthenticationManager guard(AuthenticationManager delegate, Function<String, Optional<Integer>> accountIdByEmail) {
-        return authentication -> {
-            var name = authentication.getName();
-            Supplier<Authentication> attempt = () -> delegate.authenticate(authentication);
-            var accountId = name == null || name.isEmpty() ? Optional.<Integer>empty() : accountIdByEmail.apply(name);
-            return accountId.isPresent() ? authenticateAccount(accountId.get(), name, attempt) : authenticate(name, attempt);
-        };
+    /** The same {@code delegate}, with every sign-in going through {@link #authenticate}. */
+    public AuthenticationManager guard(AuthenticationManager delegate) {
+        return authentication -> authenticate(authentication.getName(), () -> delegate.authenticate(authentication));
     }
 
     /**
@@ -123,28 +115,11 @@ public class CredentialAttemptLimiter {
         return logins.size() + currentPasswords.size();
     }
 
-    private Authentication signIn(List<String> keys, Supplier<Authentication> attempt) {
-        logins.acquireAll(keys);
-        var outcome = Outcome.OTHER;
-        try {
-            var authentication = attempt.get();
-            outcome = Outcome.SUCCESS;
-            return authentication;
-        } catch (AuthenticationException ex) {
-            outcome = Outcome.FAILURE;
-            throw ex;
-        } finally {
-            for (var key : keys) {
-                logins.finish(key, outcome);
-            }
-        }
-    }
-
     private static String emailKey(String email) {
         var normalized = email == null ? "" : Normalizer.normalize(email, Normalizer.Form.NFKC).toUpperCase(Locale.ROOT);
         try {
             var digest = MessageDigest.getInstance("SHA-256").digest(normalized.getBytes(StandardCharsets.UTF_8));
-            return "em:" + HexFormat.of().formatHex(digest);
+            return HexFormat.of().formatHex(digest);
         } catch (NoSuchAlgorithmException ex) {
             throw new IllegalStateException("SHA-256 is not available", ex);
         }
@@ -242,22 +217,6 @@ public class CredentialAttemptLimiter {
                 throw new TooManyRequestsException(MESSAGE, 1);
             }
             entry.inFlight++;
-        }
-
-        /** Acquires every key or none: when one is refused, those already acquired are released uncounted. */
-        synchronized void acquireAll(List<K> keys) {
-            var acquired = new java.util.ArrayList<K>(keys.size());
-            try {
-                for (var key : keys) {
-                    acquire(key);
-                    acquired.add(key);
-                }
-            } catch (TooManyRequestsException ex) {
-                for (var key : acquired) {
-                    finish(key, Outcome.OTHER);
-                }
-                throw ex;
-            }
         }
 
         synchronized void finish(K key, Outcome outcome) {

@@ -204,6 +204,41 @@ class CredentialAttemptLimitIntegrationTests {
         assertThat(visible(known).replace(user.getEmail(), "")).isEqualTo(visible(other).replace(unknown, ""));
     }
 
+    /**
+     * Review scenario: 3 failures with the plain address, 2 with a fullwidth spelling, a minute's wait, then more
+     * failures. With a separate per-account counter a known address locked earlier than an unknown one; a single
+     * normalised key gives both the same sequence of answers, wrong passwords only.
+     */
+    @Test
+    void knownAndUnknownAddressesGiveIdenticalSequencesUnderMixedSpellings() throws Exception {
+        var user = account("ROLE_STUDENT");
+        user.setEmail("alice-" + UUID.randomUUID() + "@example.com");
+        user = users.save(user);
+        var known = user.getEmail();
+        var unknown = "alice-" + UUID.randomUUID() + "@example.com";
+        var knownAnswers = new java.util.ArrayList<String>();
+        var unknownAnswers = new java.util.ArrayList<String>();
+        for (var round : java.util.List.of(0, 1)) {
+            for (int i = 0; i < 3; i++) {
+                knownAnswers.add(visible(login(known, "Wrong-" + i)));
+                unknownAnswers.add(visible(login(unknown, "Wrong-" + i)));
+            }
+            for (int i = 0; i < 2; i++) {
+                knownAnswers.add(visible(login(known.replaceFirst("a", "ａ"), "Wrong-" + i)));
+                unknownAnswers.add(visible(login(unknown.replaceFirst("a", "ａ"), "Wrong-" + i)));
+            }
+            if (round == 0) {
+                advance(Duration.ofSeconds(61));
+            }
+        }
+        knownAnswers.add(visible(login(known, PASSWORD)));
+        unknownAnswers.add(visible(login(unknown, PASSWORD)));
+        assertThat(knownAnswers).isEqualTo(unknownAnswers);
+        assertThat(knownAnswers).extracting(a -> a.substring(0, 3))
+                .containsExactly("401", "401", "401", "401", "401", "401", "401", "401", "401", "401", "429");
+        assertThat(knownAnswers.get(10)).startsWith("429 300 ");
+    }
+
     @Test
     void unicodeSpellingsOfAnUnknownEmailShareItsLockToo() throws Exception {
         var unknown = "student-" + UUID.randomUUID() + "@example.com";

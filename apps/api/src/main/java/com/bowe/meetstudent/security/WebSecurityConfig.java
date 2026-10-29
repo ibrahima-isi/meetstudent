@@ -1,7 +1,5 @@
 package com.bowe.meetstudent.security;
 
-import com.bowe.meetstudent.entities.UserEntity;
-import com.bowe.meetstudent.repositories.UserRepository;
 import com.bowe.meetstudent.services.CredentialAttemptLimiter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -142,19 +140,16 @@ public class WebSecurityConfig {
     }
 
     /**
-     * Sign-in goes through the per-account progressive lockout ({@link CredentialAttemptLimiter}), keyed by the
-     * account the same case-insensitive lookup finds (oldest first, duplicates never throw), so every spelling the
-     * database folds to that address shares one budget. Unknown addresses do the same query.
+     * Sign-in goes through the per-address progressive lockout ({@link CredentialAttemptLimiter}), keyed by the
+     * normalised address only (no lookup), so known and unknown addresses are limited alike.
      */
     @Bean
-    public AuthenticationManager authenticationManager(HttpSecurity http, CredentialAttemptLimiter limiter,
-                                                       UserRepository userRepository) throws Exception {
+    public AuthenticationManager authenticationManager(HttpSecurity http, CredentialAttemptLimiter limiter) throws Exception {
         var authBuilder = http.getSharedObject(AuthenticationManagerBuilder.class);
         authBuilder
                 .userDetailsService(customUserDetailsService)
                 .passwordEncoder(passwordEncoder());
 
-        return limiter.guard(authBuilder.build(), email -> userRepository.findAllByEmailIgnoreCaseOrderByIdAsc(email)
-                .stream().findFirst().map(UserEntity::getId));
+        return limiter.guard(authBuilder.build());
     }
 }
