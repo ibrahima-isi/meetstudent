@@ -167,6 +167,7 @@
       "rateLimitedNoDelay": "Vous écrivez trop vite : patientez une minute, puis réessayez.",
       "locked": "Cette discussion est verrouillée : votre réponse n'a pas été envoyée.",
       "forbidden": "Votre compte n'est pas autorisé à écrire ici.",
+      "unverified": "Confirmez votre adresse e-mail pour écrire dans le forum.",
       "signedOut": "Votre session est terminée. Reconnectez-vous, puis réessayez.",
       "notFound": "Cette discussion n'existe plus.",
       "failed": "Votre message n'a pas pu être envoyé. Veuillez réessayer."
@@ -177,6 +178,8 @@
       "pending": "Votre compte enseignant est en attente d'approbation : vous pouvez lire le forum mais pas encore y écrire.",
       "rejected": "Votre demande de compte enseignant a été rejetée : vous pouvez lire le forum mais pas y écrire.",
       "status": "Voir mon statut",
+      "unverified": "Confirmez votre adresse e-mail pour écrire dans le forum. Un lien vous a été envoyé à l'inscription ; votre profil permet de le renvoyer.",
+      "profile": "Aller à mon profil",
       "readOnly": "Les administrateurs voient le forum en lecture seule."
     },
     "report": {

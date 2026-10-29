@@ -435,7 +435,7 @@ describe('dark mode: no light-only palette classes', () => {
       c.failure.set({ kind: 'rateLimited', seconds: 30 });
       c.form.markAllAsTouched();
     }],
-    ...(['anonymous', 'pending', 'rejected', 'readOnly'] as const).map(
+    ...(['anonymous', 'pending', 'rejected', 'unverified', 'readOnly'] as const).map(
       (state) => [`forum gate (${state})`, ForumGateComponent, (_c: any, f: ComponentFixture<any>) => f.componentRef.setInput('state', state)] as [string, Type<unknown>, ((component: any, fixture: ComponentFixture<any>) => void)?],
     ),
     ['profile (student, wishlist, documents)', ProfilePageComponent, profileAs(student)],

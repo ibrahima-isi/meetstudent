@@ -167,6 +167,7 @@
       "rateLimitedNoDelay": "You are writing too fast: wait a minute, then try again.",
       "locked": "This discussion is locked: your reply was not sent.",
       "forbidden": "Your account is not allowed to write here.",
+      "unverified": "Confirm your email address to write in the forum.",
       "signedOut": "Your session has ended. Sign in again, then retry.",
       "notFound": "This discussion no longer exists.",
       "failed": "Your message could not be sent. Please try again."
@@ -177,6 +178,8 @@
       "pending": "Your teacher account is awaiting approval: you can read the forum but cannot write yet.",
       "rejected": "Your teacher account request was rejected: you can read the forum but cannot write.",
       "status": "See my status",
+      "unverified": "Confirm your email address to write in the forum. A link was sent when you signed up; your profile lets you send it again.",
+      "profile": "Go to my profile",
       "readOnly": "Administrators see the forum read-only."
     },
     "report": {

@@ -8,7 +8,8 @@ import { ForumWriteState } from './forum-access';
 
 /**
  * Says why the visitor cannot write: sign in (coming back here), teacher account pending or rejected
- * (with a link to the status), or administrator (read-only).
+ * (with a link to the status), e-mail not confirmed (with a link to the profile, which can resend the link),
+ * or administrator (read-only).
  */
 @Component({
   selector: 'app-forum-gate',
@@ -32,6 +33,9 @@ import { ForumWriteState } from './forum-access';
         }
         @case ('rejected') {
           <a class="btn btn-secondary shrink-0" [routerLink]="['/', lang(), 'profile']">{{ t('forum.gate.status') }}</a>
+        }
+        @case ('unverified') {
+          <a class="btn btn-secondary shrink-0" [routerLink]="['/', lang(), 'profile']">{{ t('forum.gate.profile') }}</a>
         }
       }
     </div>

@@ -75,7 +75,12 @@
       class="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-900 dark:bg-red-950/40"
     >
       <lucide-icon [img]="AlertCircle" class="mt-0.5 h-5 w-5 shrink-0 text-red-600 dark:text-red-400" aria-hidden="true" />
-      <p class="min-w-0 break-words text-red-800 dark:text-red-200">{{ t(a.key, a.params) }}</p>
+      <p class="min-w-0 break-words text-red-800 dark:text-red-200">
+        {{ t(a.key, a.params) }}
+        @if (unverifiedRefusal()) {
+          <a data-testid="forum-alert-profile" class="font-medium underline" [routerLink]="['/', lang(), 'profile']">{{ t('forum.gate.profile') }}</a>
+        }
+      </p>
     </div>
   }
 

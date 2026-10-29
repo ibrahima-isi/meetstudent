@@ -1,4 +1,4 @@
-import { HttpErrorResponse, HttpInterceptorFn, HttpRequest } from '@angular/common/http';
+import { HttpErrorResponse, HttpEvent, HttpInterceptorFn, HttpRequest } from '@angular/common/http';
 import { isPlatformBrowser } from '@angular/common';
 import { Injector, PLATFORM_ID, inject } from '@angular/core';
 import { Router } from '@angular/router';
@@ -49,7 +49,8 @@ function endSession(auth: AuthService, injector: Injector): void {
 
 /**
  * On a 401, refreshes the access token once (concurrent 401s share that single
- * refresh), retries the original request once with the new token, and ends the
+ * refresh; if another tab already rotated the session, its tokens are used and no
+ * refresh is made), retries the original request once with the new token, and ends the
  * session (logout and redirect to login) if the refresh fails. Must come after
  * `jwtInterceptor` in the chain.
  */
@@ -66,7 +67,16 @@ export const refreshInterceptor: HttpInterceptorFn = (req, next) => {
         return throwError(() => error);
       }
 
+      // A refresh already in flight in this tab is joined as is. Otherwise look at what other tabs left in storage first:
+      // the server treats a replay of an already rotated refresh token as theft and ends the session everywhere.
+      const sentWith = req.headers.get('Authorization');
+      const held = tokens.refreshToken();
+      if (!refresh$) tokens.syncFromStorage();
       const stored = tokens.refreshToken();
+      const current = tokens.token();
+      if (!refresh$ && stored && current && (stored !== held || (sentWith !== null && sentWith !== `Bearer ${current}`))) {
+        return retryWith(current);
+      }
       if (!stored) {
         if (tokens.token()) endSession(auth, injector);
         else auth.logout();
@@ -83,18 +93,19 @@ export const refreshInterceptor: HttpInterceptorFn = (req, next) => {
         shareReplay({ bufferSize: 1, refCount: false }),
       );
 
-      return refresh$.pipe(
-        switchMap((accessToken) =>
-          next(req.clone({ setHeaders: { Authorization: `Bearer ${accessToken}` } })).pipe(
-            catchError((retryError: unknown) => {
-              if (retryError instanceof HttpErrorResponse && retryError.status === 401) {
-                endSession(auth, injector);
-              }
-              return throwError(() => retryError);
-            }),
-          ),
-        ),
-      );
+      return refresh$.pipe(switchMap((accessToken) => retryWith(accessToken)));
     }),
   );
+
+  /** The original request once more, with `accessToken`; a second 401 ends the session. */
+  function retryWith(accessToken: string): Observable<HttpEvent<unknown>> {
+    return next(req.clone({ setHeaders: { Authorization: `Bearer ${accessToken}` } })).pipe(
+      catchError((retryError: unknown) => {
+        if (retryError instanceof HttpErrorResponse && retryError.status === 401) {
+          endSession(auth, injector);
+        }
+        return throwError(() => retryError);
+      }),
+    );
+  }
 };
