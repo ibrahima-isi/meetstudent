@@ -236,4 +236,129 @@ class MediaControllerIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1));
     }
+
+    // --- Upload quotas, per-category types, public headers ---
+
+    private org.springframework.test.web.servlet.ResultActions uploadDiplomaResult(int userId, String role, String key) throws Exception {
+        var request = multipart("/api/v1/media").file(pdf())
+                .param("category", "DIPLOMA").with(TestDataUtil.mockUser(userId, role));
+        if (key != null) {
+            request.header("Idempotency-Key", key);
+        }
+        return mockMvc.perform(request);
+    }
+
+    @Test
+    void twentyPersonalDocumentsAreAcceptedAndTheTwentyFirstIs409() throws Exception {
+        for (int i = 0; i < 20; i++) {
+            uploadDiplomaAs(7);
+        }
+
+        uploadDiplomaResult(7, "ROLE_STUDENT", null)
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").isNotEmpty());
+
+        // another owner is not affected, and refusing wrote nothing
+        uploadDiplomaAs(8);
+        mockMvc.perform(get("/api/v1/media/mine").with(TestDataUtil.mockUser(7, "ROLE_STUDENT")))
+                .andExpect(jsonPath("$.length()").value(20));
+    }
+
+    @Test
+    void deletingADocumentFreesAQuotaSlot() throws Exception {
+        int first = uploadDiplomaAs(7);
+        for (int i = 1; i < 20; i++) {
+            uploadDiplomaAs(7);
+        }
+        uploadDiplomaResult(7, "ROLE_STUDENT", null).andExpect(status().isConflict());
+
+        mockMvc.perform(delete("/api/v1/media/" + first).with(TestDataUtil.mockUser(7, "ROLE_STUDENT")))
+                .andExpect(status().isNoContent());
+
+        uploadDiplomaResult(7, "ROLE_STUDENT", null).andExpect(status().isCreated());
+    }
+
+    @Test
+    void adminIsNotLimitedToTwentyDocuments() throws Exception {
+        for (int i = 0; i < 21; i++) {
+            uploadDiplomaResult(99, "ROLE_ADMIN", null).andExpect(status().isCreated());
+        }
+    }
+
+    @Test
+    void retryWithTheSameKeyAtTheLimitReturnsTheSameMediaInsteadOf409() throws Exception {
+        for (int i = 0; i < 19; i++) {
+            uploadDiplomaAs(7);
+        }
+        String first = uploadDiplomaResult(7, "ROLE_STUDENT", "k-last")
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+
+        String retry = uploadDiplomaResult(7, "ROLE_STUDENT", "k-last")
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+
+        org.junit.jupiter.api.Assertions.assertEquals(
+                objectMapper.readTree(first).get("id").asInt(), objectMapper.readTree(retry).get("id").asInt());
+        mockMvc.perform(get("/api/v1/media/mine").with(TestDataUtil.mockUser(7, "ROLE_STUDENT")))
+                .andExpect(jsonPath("$.length()").value(20));
+    }
+
+    private String publicUrlOf(int userId, String role, String category) throws Exception {
+        String body = mockMvc.perform(multipart("/api/v1/media")
+                        .file(new MockMultipartFile("file", "me.png", "image/png", PNG))
+                        .param("category", category)
+                        .with(TestDataUtil.mockUser(userId, role)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        return objectMapper.readTree(body).get("publicUrl").asText();
+    }
+
+    @Test
+    void secondUserPhotoReplacesTheFirstRowAndFile() throws Exception {
+        String firstUrl = publicUrlOf(7, "ROLE_STUDENT", "USER_PHOTO");
+        mockMvc.perform(get(firstUrl)).andExpect(status().isOk());
+
+        String secondUrl = publicUrlOf(7, "ROLE_STUDENT", "USER_PHOTO");
+
+        mockMvc.perform(get(firstUrl)).andExpect(status().isNotFound());
+        mockMvc.perform(get(secondUrl)).andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/media/mine").with(TestDataUtil.mockUser(7, "ROLE_STUDENT")))
+                .andExpect(jsonPath("$.length()").value(1));
+    }
+
+    @Test
+    void userPhotoOfAnotherOwnerIsLeftAlone() throws Exception {
+        String otherUrl = publicUrlOf(8, "ROLE_STUDENT", "USER_PHOTO");
+
+        publicUrlOf(7, "ROLE_STUDENT", "USER_PHOTO");
+
+        mockMvc.perform(get(otherUrl)).andExpect(status().isOk());
+    }
+
+    @Test
+    void pdfAsUserPhotoIs415ButAsDiplomaIs201AndPngAsUserPhotoIs201() throws Exception {
+        mockMvc.perform(multipart("/api/v1/media").file(pdf())
+                        .param("category", "USER_PHOTO")
+                        .with(TestDataUtil.mockUser(7, "ROLE_STUDENT")))
+                .andExpect(status().isUnsupportedMediaType());
+        uploadDiplomaResult(7, "ROLE_STUDENT", null).andExpect(status().isCreated());
+        publicUrlOf(7, "ROLE_STUDENT", "USER_PHOTO");
+    }
+
+    @Test
+    void pdfAsSchoolLogoIs415EvenForAdmin() throws Exception {
+        mockMvc.perform(multipart("/api/v1/media").file(pdf())
+                        .param("category", "SCHOOL_LOGO")
+                        .with(TestDataUtil.mockUser(99, "ROLE_ADMIN")))
+                .andExpect(status().isUnsupportedMediaType());
+    }
+
+    @Test
+    void staticPublicFilesCarrySandboxCspAndNosniff() throws Exception {
+        String url = publicUrlOf(99, "ROLE_ADMIN", "SCHOOL_LOGO");
+
+        mockMvc.perform(get(url))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Security-Policy", "sandbox; default-src 'none'"))
+                .andExpect(header().string("X-Content-Type-Options", "nosniff"));
+    }
 }

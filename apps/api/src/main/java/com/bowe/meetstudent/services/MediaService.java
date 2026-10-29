@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +41,10 @@ public class MediaService {
 
     private final MediaStorageService storageService;
     private final MediaRepository mediaRepository;
+
+    private static final List<MediaCategory> PERSONAL_DOCUMENT_CATEGORIES = Arrays.stream(MediaCategory.values())
+            .filter(MediaCategory::isPersonalDocument)
+            .toList();
 
     private static final Map<String, Set<String>> ALLOWED_MIME_TYPES_BY_EXTENSION = Map.of(
             "jpg", Set.of("image/jpeg"),
@@ -57,6 +62,14 @@ public class MediaService {
 
     @Value("${file.max-upload-bytes:10485760}")
     private long maxUploadBytes;
+
+    /** Personal documents (diplomas, ...) one non-admin owner may keep; the field default applies without Spring. */
+    @Value("${file.max-personal-docs:20}")
+    private int maxPersonalDocs = 20;
+
+    /** Cumulative size of those documents, in bytes (100 MB by default). */
+    @Value("${file.max-personal-bytes:104857600}")
+    private long maxPersonalBytes = 100L * 1024 * 1024;
 
     /**
      * Delete media file from filesystem
@@ -105,7 +118,7 @@ public class MediaService {
         }
     }
 
-    private String validateFile(MultipartFile file) {
+    private String validateFile(MultipartFile file, MediaCategory category) {
         if (file == null || file.isEmpty()) {
             throw new MediaValidationException(HttpStatus.BAD_REQUEST, "File is required and cannot be empty");
         }
@@ -121,7 +134,7 @@ public class MediaService {
 
         String extension = originalFilename.substring(extensionIndex + 1).toLowerCase();
         Set<String> allowedMimeTypes = ALLOWED_MIME_TYPES_BY_EXTENSION.get(extension);
-        if (allowedMimeTypes == null) {
+        if (allowedMimeTypes == null || !category.getAllowedExtensions().contains(extension)) {
             throw new MediaValidationException(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "File extension is not allowed");
         }
 
@@ -198,11 +211,20 @@ public class MediaService {
             }
         }
 
-        String extension = validateFile(file);
+        String extension = validateFile(file, category);
         byte[] content = file.getBytes();
         validateFileContent(extension, content);
 
+        if (category.isPersonalDocument() && !isAdmin(principal)) {
+            assertWithinPersonalQuota(ownerId, file.getSize());
+        }
+        if (category == MediaCategory.USER_PHOTO) {
+            // One profile photo per owner: the previous row goes now, its file only after commit.
+            deleteRowsNowFilesAfterCommit(mediaRepository.findByOwnerIdAndCategory(ownerId, category));
+        }
+
         String storageKey = storageService.store(content, extension, category.getVisibility());
+        removeFileUnlessCommitted(storageKey);
 
         Media media = Media.builder()
                 .storageKey(storageKey)
@@ -216,7 +238,45 @@ public class MediaService {
                 .idempotencyKey(idempotencyKey)
                 .build();
 
-        return mediaRepository.save(media);
+        try {
+            return mediaRepository.save(media);
+        } catch (RuntimeException e) {
+            // The row never made it: do not leave the just-written file behind.
+            deleteFilesQuietly(List.of(storageKey));
+            throw e;
+        }
+    }
+
+    /**
+     * Refuses with 409 (the request is fine, the owner's current state is not) when this upload would exceed
+     * the personal-document count or cumulative size. Runs after the idempotency lookup, so a retry of an
+     * upload that already counted is never counted twice.
+     */
+    private void assertWithinPersonalQuota(Integer ownerId, long incomingBytes) {
+        long count = mediaRepository.countByOwnerIdAndCategoryIn(ownerId, PERSONAL_DOCUMENT_CATEGORIES);
+        if (count >= maxPersonalDocs) {
+            throw new MediaValidationException(HttpStatus.CONFLICT,
+                    "Document limit reached: at most " + maxPersonalDocs + " documents are allowed. Delete one to upload another.");
+        }
+        long bytes = mediaRepository.sumSizeBytesByOwnerIdAndCategoryIn(ownerId, PERSONAL_DOCUMENT_CATEGORIES);
+        if (bytes + incomingBytes > maxPersonalBytes) {
+            throw new MediaValidationException(HttpStatus.CONFLICT,
+                    "Storage limit reached: documents may use at most " + (maxPersonalBytes / (1024 * 1024))
+                            + " MB in total. Delete one to upload another.");
+        }
+    }
+
+    /** If the surrounding transaction does not commit (rollback, failing commit), the new file is an orphan: remove it. */
+    private void removeFileUnlessCommitted(String storageKey) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) return;
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                if (status != STATUS_COMMITTED) {
+                    deleteFilesQuietly(List.of(storageKey));
+                }
+            }
+        });
     }
 
     public void assertCanUpload(UserPrincipal principal, MediaCategory category) {
@@ -304,10 +364,9 @@ public class MediaService {
     }
 
     @Transactional
-    public void delete(Integer mediaId, UserPrincipal principal) throws IOException {
+    public void delete(Integer mediaId, UserPrincipal principal) {
         Media media = requireOwnerOrAdmin(mediaRepository.findById(mediaId), principal);
-        storageService.delete(media.getStorageKey());
-        mediaRepository.delete(media);
+        deleteRowsNowFilesAfterCommit(List.of(media));
     }
 
     public Optional<Media> findById(Integer mediaId) {
@@ -354,6 +413,7 @@ public class MediaService {
     }
 
     private void deleteRowsNowFilesAfterCommit(List<Media> rows) {
+        if (rows.isEmpty()) return;
         List<String> keys = rows.stream().map(Media::getStorageKey).toList();
         mediaRepository.deleteAll(rows);
         if (keys.isEmpty()) return;
