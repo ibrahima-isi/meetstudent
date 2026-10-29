@@ -173,7 +173,7 @@ class ProgramServiceTest {
     void testSaveRefusedPhotoDoesNotSave() {
         Program created = Program.builder().name("P").photoMediaId(2).build();
         Mockito.doThrow(new com.bowe.meetstudent.exceptions.FieldValidationException("photoMediaId", "no"))
-                .when(imageValidator).requireProgramPhoto(2, null, null);
+                .when(imageValidator).requireProgramTree(created);
 
         assertThrows(com.bowe.meetstudent.exceptions.FieldValidationException.class, () -> programService.save(created));
 

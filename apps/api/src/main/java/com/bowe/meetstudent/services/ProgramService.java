@@ -30,7 +30,7 @@ public class ProgramService {
     @Transactional
     public Program save(Program program) {
         program.setDescription(normalizeDescription(program.getDescription()));
-        imageValidator.requireProgramPhoto(program.getPhotoMediaId(), null, program.getId());
+        imageValidator.requireProgramTree(program);
         if (program.getCode() != null && (program.getId() == null
                 ? programRepository.existsByCodeIgnoreCase(program.getCode())
                 : programRepository.existsByCodeIgnoreCaseAndIdNot(program.getCode(), program.getId()))) {
@@ -98,7 +98,7 @@ public class ProgramService {
             }
             imageValidator.requireProgramPhoto(updates.getPhotoMediaId(), existing.getPhotoMediaId(), id);
             if (updates.getPhotoMediaId() != null
-                    &&!updates.getPhotoMediaId().equals(existing.getPhotoMediaId())) {
+                    && !updates.getPhotoMediaId().equals(existing.getPhotoMediaId())) {
                 mediaService.deleteById(existing.getPhotoMediaId());
             }
 

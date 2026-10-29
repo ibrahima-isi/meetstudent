@@ -77,7 +77,7 @@ public class CourseService {
             }
             imageValidator.requireCoursePhoto(updates.getPhotoMediaId(), existing.getPhotoMediaId(), id);
             if (updates.getPhotoMediaId() != null
-                    &&!updates.getPhotoMediaId().equals(existing.getPhotoMediaId())) {
+                    && !updates.getPhotoMediaId().equals(existing.getPhotoMediaId())) {
                 mediaService.deleteById(existing.getPhotoMediaId());
             }
 

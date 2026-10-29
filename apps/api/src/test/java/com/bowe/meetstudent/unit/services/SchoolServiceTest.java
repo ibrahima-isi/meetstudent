@@ -119,7 +119,7 @@ class SchoolServiceTest {
     }
 
     @Test
-    void testSaveValidatesLogoCoverAndNestedPhotos() {
+    void testSaveValidatesTheWholeImageTree() {
         Course course = Course.builder().name("C").photoMediaId(3).build();
         Program program = Program.builder().name("P").photoMediaId(2).courses(java.util.List.of(course)).build();
         School created = School.builder().name("S").logoMediaId(1).coverMediaId(4).programs(java.util.List.of(program)).build();
@@ -127,10 +127,7 @@ class SchoolServiceTest {
 
         schoolService.save(created);
 
-        Mockito.verify(imageValidator).requireSchoolLogo(1, null, null);
-        Mockito.verify(imageValidator).requireSchoolCover(4, null, null);
-        Mockito.verify(imageValidator).requireProgramPhoto(2, null, null);
-        Mockito.verify(imageValidator).requireCoursePhoto(3, null, null);
+        Mockito.verify(imageValidator).requireSchoolTree(created);
     }
 
     @Test

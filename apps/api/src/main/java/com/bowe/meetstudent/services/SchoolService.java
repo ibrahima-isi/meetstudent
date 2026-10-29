@@ -29,7 +29,7 @@ public class SchoolService {
 
     public School save(School school) {
         requireExistingTags(school);
-        requireValidImages(school);
+        imageValidator.requireSchoolTree(school);
         return this.schoolRepository.save(school);
     }
 
@@ -130,20 +130,6 @@ public class SchoolService {
             
             return schoolRepository.save(existing);
         }).orElseThrow(() -> new com.bowe.meetstudent.exceptions.ResourceNotFoundException("School not found"));
-    }
-
-    /** Logo, cover and, because programs and courses cascade with the school, their photos. */
-    private void requireValidImages(School school) {
-        imageValidator.requireSchoolLogo(school.getLogoMediaId(), null, school.getId());
-        imageValidator.requireSchoolCover(school.getCoverMediaId(), null, school.getId());
-        if (school.getPrograms() == null) return;
-        for (var program : school.getPrograms()) {
-            imageValidator.requireProgramPhoto(program.getPhotoMediaId(), null, program.getId());
-            if (program.getCourses() == null) continue;
-            for (var course : program.getCourses()) {
-                imageValidator.requireCoursePhoto(course.getPhotoMediaId(), null, course.getId());
-            }
-        }
     }
 
     /** An unknown tag id in the body is a client error, not a foreign-key failure at flush time. */

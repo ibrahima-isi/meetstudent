@@ -247,6 +247,82 @@ class EntityImageCategoryIntegrationTests {
         assertUntouched(diploma);
     }
 
+    @Test
+    void creatingASchoolWithTwoNestedProgramsSharingAPhotoIsRefused() throws Exception {
+        Media shared = media(MediaCategory.PROGRAM_PHOTO);
+        var p1 = TestDataUtil.createProgramDto();
+        p1.setPhotoMediaId(shared.getId());
+        var p2 = TestDataUtil.createProgramDto();
+        p2.setPhotoMediaId(shared.getId());
+        var dto = TestDataUtil.createSchoolDto();
+        dto.setPrograms(List.of(p1, p2));
+
+        send(HttpMethod.POST, "/api/v1/schools", objectMapper.writeValueAsString(dto))
+                .andExpect(MockMvcResultMatchers.status().isBadRequest())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.photoMediaId").exists());
+        assertUntouched(shared);
+    }
+
+    @Test
+    void creatingASchoolWithDistinctNestedPhotosIsAccepted() throws Exception {
+        var p1 = TestDataUtil.createProgramDto();
+        p1.setPhotoMediaId(media(MediaCategory.PROGRAM_PHOTO).getId());
+        var c1 = TestDataUtil.createCourseDto();
+        c1.setPhotoMediaId(media(MediaCategory.COURSE_PHOTO).getId());
+        p1.setCourses(List.of(c1));
+        var p2 = TestDataUtil.createProgramDto();
+        p2.setPhotoMediaId(media(MediaCategory.PROGRAM_PHOTO).getId());
+        var dto = TestDataUtil.createSchoolDto();
+        dto.setPrograms(List.of(p1, p2));
+
+        send(HttpMethod.POST, "/api/v1/schools", objectMapper.writeValueAsString(dto))
+                .andExpect(MockMvcResultMatchers.status().isCreated());
+    }
+
+    // --- nested courses of POST /programs ---
+
+    @Test
+    void creatingAProgramWithANestedCoursePhotoThatIsADiplomaIsRefused() throws Exception {
+        Media diploma = media(MediaCategory.DIPLOMA, 42);
+        var courseDto = TestDataUtil.createCourseDto();
+        courseDto.setPhotoMediaId(diploma.getId());
+        var dto = TestDataUtil.createProgramDto();
+        dto.setCourses(List.of(courseDto));
+
+        send(HttpMethod.POST, "/api/v1/programs", objectMapper.writeValueAsString(dto))
+                .andExpect(MockMvcResultMatchers.status().isBadRequest())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.photoMediaId").exists());
+        assertUntouched(diploma);
+    }
+
+    @Test
+    void creatingAProgramWithTwoNestedCoursesSharingAPhotoIsRefused() throws Exception {
+        Media shared = media(MediaCategory.COURSE_PHOTO);
+        var c1 = TestDataUtil.createCourseDto();
+        c1.setPhotoMediaId(shared.getId());
+        var c2 = TestDataUtil.createCourseDto();
+        c2.setPhotoMediaId(shared.getId());
+        var dto = TestDataUtil.createProgramDto();
+        dto.setCourses(List.of(c1, c2));
+
+        send(HttpMethod.POST, "/api/v1/programs", objectMapper.writeValueAsString(dto))
+                .andExpect(MockMvcResultMatchers.status().isBadRequest())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.photoMediaId").exists());
+    }
+
+    @Test
+    void creatingAProgramWithCorrectDistinctNestedCoursePhotosIsAccepted() throws Exception {
+        var c1 = TestDataUtil.createCourseDto();
+        c1.setPhotoMediaId(media(MediaCategory.COURSE_PHOTO).getId());
+        var c2 = TestDataUtil.createCourseDto();
+        c2.setPhotoMediaId(media(MediaCategory.COURSE_PHOTO).getId());
+        var dto = TestDataUtil.createProgramDto();
+        dto.setCourses(List.of(c1, c2));
+
+        send(HttpMethod.POST, "/api/v1/programs", objectMapper.writeValueAsString(dto))
+                .andExpect(MockMvcResultMatchers.status().isCreated());
+    }
+
     // --- school cover ---
 
     @Test
