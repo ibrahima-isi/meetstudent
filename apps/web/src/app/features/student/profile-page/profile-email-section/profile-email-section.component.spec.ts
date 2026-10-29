@@ -215,6 +215,18 @@ describe('ProfileEmailSectionComponent', () => {
       expect(el().querySelector('[data-testid="email-password"]')).not.toBeNull();
     });
 
+    it('keeps the generic rate-limit message, not a wrong "retry in 60 min", for a daily cap (Retry-After beyond an hour)', async () => {
+      await render();
+      await openChangeForm();
+      await fillAndSubmit('new@example.com', 'S3cure-pass');
+      httpMock.expectOne((r) => r.method === 'POST' && r.url === changeUrl)
+        .flush({}, { status: 429, statusText: 'Too Many Requests', headers: { 'Retry-After': '86400' } });
+      await settle();
+
+      expect(text()).toContain('Too many attempts. Try again later.');
+      expect(text()).not.toContain(' min.');
+    });
+
     it('closes the form on cancel without calling the API', async () => {
       await render();
       await openChangeForm();

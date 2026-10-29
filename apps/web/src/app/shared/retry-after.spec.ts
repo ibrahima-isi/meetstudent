@@ -33,7 +33,15 @@ describe('retryAfterMinutes', () => {
     expect(retryAfterMinutes(new Error('x'))).toBeNull();
   });
 
-  it('caps the wait at one hour', () => {
-    expect(retryAfterMinutes(failure(429, { 'Retry-After': '999999' }))).toBe(60);
+  it('keeps a wait of up to one hour', () => {
+    expect(retryAfterMinutes(failure(429, { 'Retry-After': '120' }))).toBe(2);
+    expect(retryAfterMinutes(failure(429, { 'Retry-After': '3600' }))).toBe(60);
+  });
+
+  it('returns null beyond one hour: that is not a password lock-out (e.g. a daily cap), so callers keep their generic message', () => {
+    expect(retryAfterMinutes(failure(429, { 'Retry-After': '3601' }))).toBeNull();
+    expect(retryAfterMinutes(failure(429, { 'Retry-After': '7200' }))).toBeNull();
+    expect(retryAfterMinutes(failure(429, { 'Retry-After': '86400' }))).toBeNull();
+    expect(retryAfterMinutes(failure(429, { 'Retry-After': '999999' }))).toBeNull();
   });
 });
