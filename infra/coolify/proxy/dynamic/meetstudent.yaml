@@ -54,6 +54,21 @@ http:
         referrerPolicy: strict-origin-when-cross-origin
         permissionsPolicy: "camera=(), microphone=(), geolocation=()"
 
+    # sec for the uploads router (/uploads/public/**, served by the api). The api sends
+    # "Content-Security-Policy: sandbox; default-src 'none'" with every public file, so an uploaded
+    # file that gets opened directly cannot run anything; this middleware would overwrite that header
+    # with sec's, hence the same value here. Same value as the labels of compose.prod.yml's traefik
+    # service: change both together.
+    sec-uploads:
+      headers:
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        contentTypeNosniff: true
+        frameDeny: true
+        referrerPolicy: strict-origin-when-cross-origin
+        permissionsPolicy: "camera=(), microphone=(), geolocation=()"
+        contentSecurityPolicy: "sandbox; default-src 'none'; frame-ancestors 'none'"
+
     # Drops the RFC 7239 Forwarded request header (an empty value removes a header). Traefik sets
     # X-Forwarded-* itself but would pass a client-sent Forwarded through, and Spring's forwarded-header
     # filter would then take the client address from it. Attached to every router that reaches the api.
