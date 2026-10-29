@@ -436,6 +436,33 @@ describe('ProfilePageComponent translations', () => {
       expect(fixture.componentInstance.isEditing()).toBeTrue();
     });
 
+    it('says how long to wait on a 429 (too many wrong current passwords) and keeps the session', async () => {
+      await edit();
+      type('[data-testid="profile-password"]', 'n3wpassword');
+      type('[data-testid="profile-current-password"]', 'wrong-password');
+      save();
+      http.expectOne(url).flush({ message: 'Trop de tentatives' }, { status: 429, statusText: 'Too Many Requests', headers: { 'Retry-After': '301' } });
+      await settle();
+      expect(text()).toContain('Too many attempts. Try again in 6 min.');
+      expect(text()).not.toContain('Could not save your profile');
+      expect(clear).not.toHaveBeenCalled();
+      expect(fixture.componentInstance.isEditing()).toBeTrue();
+    });
+
+    it('still reports the lock-out on a 429 without Retry-After, then forgets it on the next save', async () => {
+      await edit();
+      type('[data-testid="profile-password"]', 'n3wpassword');
+      type('[data-testid="profile-current-password"]', 'wrong-password');
+      save();
+      http.expectOne(url).flush({}, { status: 429, statusText: 'Too Many Requests' });
+      await settle();
+      expect(text()).toContain('Too many attempts. Please wait a few minutes');
+      save();
+      http.expectOne(url).flush({ currentPassword: 'Mot de passe incorrect' }, { status: 400, statusText: 'Bad Request' });
+      await settle();
+      expect(text()).not.toContain('Too many attempts');
+    });
+
     it('requires the current password before sending a new password', async () => {
       await edit();
       type('[data-testid="profile-password"]', 'n3wpassword');

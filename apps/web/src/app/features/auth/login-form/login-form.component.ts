@@ -7,6 +7,7 @@ import { LucideAngularModule, Mail, Lock, AlertCircle, CheckCircle } from 'lucid
 import { TranslocoDirective } from '@jsverse/transloco';
 import { AuthService } from '../../../services/auth.service';
 import { LocaleService } from '@services/locale.service';
+import { isTooManyRequests, retryAfterMinutes } from '@shared/retry-after';
 
 /** A translation key. */
 interface Notice {
@@ -29,6 +30,8 @@ export class LoginFormComponent {
   // Both hold translation keys, not sentences, so a language switch re-renders
   // them instead of leaving the language they were set in.
   error = signal('');
+  /** Values for the error's translation (the wait of a lock-out). */
+  errorParams = signal<Record<string, number>>({});
   success = signal<Notice | null>(null);
   isLoading = signal(false);
 
@@ -67,6 +70,7 @@ export class LoginFormComponent {
     }
 
     this.error.set('');
+    this.errorParams.set({});
     this.success.set(null);
     this.isLoading.set(true);
 
@@ -81,7 +85,14 @@ export class LoginFormComponent {
       // The API's message is for logs only; the user reads the front's own text.
       // A 401 is the same sentence whatever the cause, so it never says if the email exists.
       error: (err: unknown) => {
-        this.error.set(err instanceof HttpErrorResponse && err.status === 401 ? 'auth.login.invalidCredentials' : 'auth.login.failed');
+        if (isTooManyRequests(err)) {
+          // The account is locked for a while: say for how long instead of a generic failure.
+          const minutes = retryAfterMinutes(err);
+          this.errorParams.set(minutes === null ? {} : { minutes });
+          this.error.set(minutes === null ? 'auth.login.tooManyAttemptsNoDelay' : 'auth.login.tooManyAttempts');
+        } else {
+          this.error.set(err instanceof HttpErrorResponse && err.status === 401 ? 'auth.login.invalidCredentials' : 'auth.login.failed');
+        }
         this.isLoading.set(false);
       }
     });

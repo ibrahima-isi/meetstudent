@@ -17,13 +17,14 @@ import { MeshBackgroundComponent } from '@shared/components/mesh-background/mesh
 import { WishlistItemComponent } from '@shared/components/wishlist-item/wishlist-item.component';
 import { WishlistProgramItemComponent } from '@shared/components/wishlist-program-item/wishlist-program-item.component';
 import { TranslocoDirective } from '@jsverse/transloco';
+import { isTooManyRequests, retryAfterMinutes } from '@shared/retry-after';
 
 /** The fields of the API's 400 body (`{ field: message }`) this form can show. */
 const FORM_FIELDS = ['firstname', 'lastname', 'qualification', 'password', 'currentPassword'] as const;
 type FormField = (typeof FORM_FIELDS)[number];
 
 /** A translation key, so a language switch re-renders the message. */
-type SaveStatus = 'saved' | 'fieldErrors' | 'failed' | null;
+type SaveStatus = 'saved' | 'fieldErrors' | 'failed' | 'locked' | null;
 
 @Component({
   selector: 'app-profile-page',
@@ -98,6 +99,8 @@ export class ProfilePageComponent implements OnInit {
   isEditing = signal(false);
   protected readonly isSaving = signal(false);
   protected readonly saveStatus = signal<SaveStatus>(null);
+  /** The wait of a lock-out, in minutes; null when the API did not say. */
+  protected readonly waitMinutes = signal<number | null>(null);
   /** Messages from the API's 400 body, by field. */
   protected readonly serverErrors = signal<Partial<Record<FormField, string>>>({});
 
@@ -193,6 +196,12 @@ export class ProfilePageComponent implements OnInit {
       },
       error: (err: unknown) => {
         this.isSaving.set(false);
+        if (isTooManyRequests(err)) {
+          // Too many wrong current passwords: say for how long instead of a generic failure.
+          this.waitMinutes.set(retryAfterMinutes(err));
+          this.saveStatus.set('locked');
+          return;
+        }
         const mapped = err instanceof HttpErrorResponse && err.status === 400 && this.applyFieldErrors(err.error);
         this.saveStatus.set(mapped ? 'fieldErrors' : 'failed');
       },

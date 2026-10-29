@@ -65,6 +65,11 @@
               {{ t('profile.fieldErrors') }}
             </p>
           }
+          @case ('locked') {
+            <p role="alert" data-testid="profile-save-status" class="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
+              {{ waitMinutes() === null ? t('profile.tooManyAttemptsNoDelay') : t('profile.tooManyAttempts', { minutes: waitMinutes() }) }}
+            </p>
+          }
           @case ('failed') {
             <p role="alert" data-testid="profile-save-status" class="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
               {{ t('profile.saveFailed') }}

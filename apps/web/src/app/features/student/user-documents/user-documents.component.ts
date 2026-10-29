@@ -178,6 +178,8 @@ export class UserDocumentsComponent implements OnInit, OnDestroy {
     switch (err instanceof HttpErrorResponse ? err.status : -1) {
       case 413:
         return 'documents.errors.tooLarge';
+      case 409:
+        return 'documents.errors.quotaReached';
       case 415:
         return 'documents.errors.typeNotAllowed';
       case 400:
