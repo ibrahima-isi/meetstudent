@@ -65,8 +65,8 @@ export class ForumThreadPageComponent {
   protected readonly lang = computed(() => this.locale.active());
   protected readonly writeState = injectForumWriteState();
   protected readonly canWrite = computed(() => this.writeState() === 'writer');
-  /** The API lets any signed-in student or expert report, a pending or rejected expert included; not an administrator. */
-  protected readonly canReport = computed(() => ['writer', 'pending', 'rejected'].includes(this.writeState()));
+  /** The API lets any signed-in student or expert report, a pending or rejected expert and an unconfirmed e-mail included; not an administrator. */
+  protected readonly canReport = computed(() => ['writer', 'pending', 'rejected', 'unverified'].includes(this.writeState()));
 
   protected readonly thread = signal<ForumThread | null>(null);
   protected readonly status = signal<'loading' | 'loaded' | 'error' | 'notFound'>('loading');

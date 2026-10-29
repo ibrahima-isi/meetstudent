@@ -3,9 +3,12 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { AbstractControl, NonNullableFormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { AlertCircle, Loader2, LucideAngularModule } from 'lucide-angular';
+import { RouterLink } from '@angular/router';
 import { Observable } from 'rxjs';
 import { FORUM_MAX_BODY, FORUM_MAX_TITLE, ForumReply, ForumThread } from '@models/forum';
 import { ForumService } from '@services/forum.service';
+import { LocaleService } from '@services/locale.service';
+import { TokenService } from '@services/token.service';
 import { ForumField, ForumFailure, classifyForumError } from './forum-errors';
 
 /** Every control character but tab, CR and LF: the server refuses them. */
@@ -36,13 +39,15 @@ let nextId = 0;
  */
 @Component({
   selector: 'app-forum-composer',
-  imports: [ReactiveFormsModule, TranslocoDirective, LucideAngularModule],
+  imports: [ReactiveFormsModule, RouterLink, TranslocoDirective, LucideAngularModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' },
   templateUrl: './forum-composer.component.html',
 })
 export class ForumComposerComponent implements OnInit {
   private readonly forum = inject(ForumService);
+  private readonly tokens = inject(TokenService);
+  private readonly locale = inject(LocaleService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
   private readonly destroyRef = inject(DestroyRef);
@@ -179,8 +184,20 @@ export class ForumComposerComponent implements OnInit {
         ? { key: 'forum.errors.rateLimitedNoDelay', params: {} }
         : { key: 'forum.errors.rateLimited', params: { seconds: failure.seconds } };
     }
+    if (this.unverifiedRefusal()) {
+      return { key: 'forum.errors.unverified', params: {} };
+    }
     return { key: `forum.errors.${failure.kind}`, params: {} };
   });
+
+  /**
+   * A 403 for an account whose e-mail is unconfirmed is almost surely the verification rule (the page may not have known
+   * the server sends mail): say so, and point to the profile where the link can be sent again.
+   */
+  protected readonly unverifiedRefusal = computed(
+    () => this.failure()?.kind === 'forbidden' && this.tokens.user()?.emailVerified === false,
+  );
+  protected readonly lang = computed(() => this.locale.active());
 
   private done(reset: boolean, emit: () => void): void {
     this.sending.set(false);

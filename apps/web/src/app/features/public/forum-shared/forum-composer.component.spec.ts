@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { provideRouter } from '@angular/router';
 import { provideTransloco } from '@jsverse/transloco';
 import { firstValueFrom } from 'rxjs';
 import { translocoOptions } from '@i18n/transloco.config';
@@ -22,7 +23,7 @@ describe('ForumComposerComponent', () => {
 
   async function mount(inputs: Record<string, unknown>, lang: 'fr' | 'en' = 'en') {
     TestBed.configureTestingModule({
-      providers: [provideZonelessChangeDetection(), provideHttpClient(), provideHttpClientTesting(), provideTransloco(translocoOptions)],
+      providers: [provideZonelessChangeDetection(), provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideTransloco(translocoOptions)],
     });
     await firstValueFrom(TestBed.inject(LocaleService).use(lang));
     http = TestBed.inject(HttpTestingController);
@@ -299,6 +300,62 @@ describe('ForumComposerComponent', () => {
       req.flush({ id: 8, body: 'Fixed' });
       await settle();
       expect(savedReplies.map((r) => r.body)).toEqual(['Fixed']);
+    });
+  });
+
+  describe('a 403 on a write', () => {
+    const account = (emailVerified?: boolean) =>
+      localStorage.setItem('auth_user', JSON.stringify({ id: 1, firstname: 'A', lastname: 'B', email: 'a@b.c', role: { id: 1, name: 'ROLE_STUDENT' }, emailVerified }));
+
+    beforeEach(() => localStorage.clear());
+    afterEach(() => localStorage.clear());
+
+    async function refused() {
+      await type('forum-title', 'T');
+      await type('forum-body', 'B');
+      await submit();
+      http.expectOne('/api/v1/forum/threads').flush({ message: 'Forbidden' }, { status: 403, statusText: 'Forbidden' });
+      await settle();
+    }
+
+    it('says the e-mail must be confirmed, with a link to the profile, when the account is unverified', async () => {
+      account(false);
+      await mount({ kind: 'thread', schools: [] });
+      await refused();
+
+      const alert = byId('forum-alert')!;
+      expect(alert.textContent).toContain('Confirm your email address');
+      expect(alert.querySelector('a')!.getAttribute('href')).toBe('/en/profile');
+    });
+
+    it('keeps the generic refusal, without link, for a verified account', async () => {
+      account(true);
+      await mount({ kind: 'thread', schools: [] });
+      await refused();
+
+      const alert = byId('forum-alert')!;
+      expect(alert.textContent).toContain('not allowed to write');
+      expect(alert.querySelector('a')).toBeNull();
+    });
+
+    it('keeps the generic refusal when the session does not say whether the e-mail is verified', async () => {
+      account(undefined);
+      await mount({ kind: 'thread', schools: [] });
+      await refused();
+
+      expect(byId('forum-alert')!.textContent).toContain('not allowed to write');
+    });
+
+    it('does not turn another failure into the verification reason', async () => {
+      account(false);
+      await mount({ kind: 'thread', schools: [] });
+      await type('forum-title', 'T');
+      await type('forum-body', 'B');
+      await submit();
+      http.expectOne('/api/v1/forum/threads').flush(null, { status: 500, statusText: 'Server Error' });
+      await settle();
+
+      expect(byId('forum-alert')!.textContent).not.toContain('Confirm your email address');
     });
   });
 
