@@ -98,6 +98,16 @@ services:
       - traefik.http.middlewares.sec-bo.headers.frameDeny=true
       - traefik.http.middlewares.sec-bo.headers.referrerPolicy=strict-origin-when-cross-origin
       - traefik.http.middlewares.sec-bo.headers.permissionsPolicy=camera=(), microphone=(), geolocation=()
+      # sec-uploads: sec with the policy the api sets on /uploads/public (sandbox, default-src 'none'), which
+      # the headers middleware would otherwise overwrite with frame-ancestors only. Same value as
+      # infra/coolify/proxy/dynamic/meetstudent.yaml: change both together.
+      - traefik.http.middlewares.sec-uploads.headers.stsSeconds=31536000
+      - traefik.http.middlewares.sec-uploads.headers.stsIncludeSubdomains=true
+      - traefik.http.middlewares.sec-uploads.headers.contentTypeNosniff=true
+      - traefik.http.middlewares.sec-uploads.headers.frameDeny=true
+      - traefik.http.middlewares.sec-uploads.headers.referrerPolicy=strict-origin-when-cross-origin
+      - traefik.http.middlewares.sec-uploads.headers.permissionsPolicy=camera=(), microphone=(), geolocation=()
+      - traefik.http.middlewares.sec-uploads.headers.contentSecurityPolicy=sandbox; default-src 'none'; frame-ancestors 'none'
       # Drops the RFC 7239 Forwarded request header (an empty value removes a header). Traefik sets
       # X-Forwarded-* itself but would pass a client-sent Forwarded through, and Spring's forwarded-header
       # filter would then take the client address from it. Attached to every router that reaches the api.
@@ -241,7 +251,7 @@ services:
       - traefik.http.routers.uploads.priority=20
       - traefik.http.routers.uploads.entrypoints=websecure
       - traefik.http.routers.uploads.tls=true
-      - traefik.http.routers.uploads.middlewares=strip-forwarded@docker,sec@docker
+      - traefik.http.routers.uploads.middlewares=strip-forwarded@docker,sec-uploads@docker
       - traefik.http.routers.uploads.service=api
 
   web:
