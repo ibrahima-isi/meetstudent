@@ -50,4 +50,23 @@ class MediaCategoryTest {
             assertEquals(java.util.Set.of("ROLE_ADMIN"), c.getAllowedUploadRoles(), c.name());
         }
     }
+
+    @Test
+    void imageCategoriesAcceptOnlyJpgJpegPngWebp() {
+        for (MediaCategory c : new MediaCategory[]{
+                MediaCategory.USER_PHOTO, MediaCategory.SCHOOL_LOGO, MediaCategory.SCHOOL_COVER,
+                MediaCategory.COURSE_PHOTO, MediaCategory.PROGRAM_PHOTO}) {
+            assertEquals(java.util.Set.of("jpg", "jpeg", "png", "webp"), c.getAllowedExtensions(), c.name());
+        }
+    }
+
+    @Test
+    void personalDocumentsAcceptPdfImagesAndVideos() {
+        for (MediaCategory c : new MediaCategory[]{
+                MediaCategory.DIPLOMA, MediaCategory.CERTIFICATE,
+                MediaCategory.BULLETIN, MediaCategory.PRESENTATION_VIDEO}) {
+            assertEquals(java.util.Set.of("pdf", "jpg", "jpeg", "png", "webp", "mp4", "webm", "mov"),
+                    c.getAllowedExtensions(), c.name());
+        }
+    }
 }
