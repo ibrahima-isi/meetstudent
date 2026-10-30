@@ -4,11 +4,7 @@ You are an expert in TypeScript, Angular, and scalable web application developme
 
 Follow the repo-level branch policy in `../../../CLAUDE.md`: start frontend work from an up-to-date `dev`, create a short-lived working branch, and open its PR against `dev`. Do not open frontend feature, fix, docs, chore, refactor, test, perf or CI PRs directly against `main`; `main` is updated only by a separate `dev` → `main` promotion PR.
 
-This workspace contains two frontend apps:
-- Angular app under `apps/web/`: `angular.json`, `src/`, and `package.json`.
-- Nested React/Vite app under `meetstudent/` with its own `package.json` and `src/`.
-
-Only modify the nested `meetstudent/` app when the task explicitly targets it.
+This workspace is the Angular app under `apps/web/` (`angular.json`, `src/`, `package.json`).
 
 ## Project commands
 
