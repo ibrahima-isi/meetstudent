@@ -18,6 +18,6 @@ Spec : [coolify-deploy](../spec.md), « Testing Decisions », point 3 ; [plan, p
 - [ ] Depuis l'extérieur : HSTS et `X-Content-Type-Options` présents, une rafale d'une vingtaine de connexions finit en 429, un upload de 11 Mo est refusé
 - [ ] Sauvegarde lancée à la main, puis restaurée dans une stack jetable ; un document uploadé s'ouvre
 - [ ] Retour arrière testé une fois : `IMAGE_TAG=sha-<commit précédent>`, redéploiement, puis remise à `latest`
-- [ ] Résultats consignés dans `docs/completion/coolify-deploy.md`
+- [ ] Résultats consignés dans `.scratch/coolify-deploy/completion.md`
 
 ## Comments
