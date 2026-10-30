@@ -405,8 +405,8 @@ Files: `compose.coolify.yml`, `infra/coolify/proxy/dynamic/meetstudent.yaml`, `i
 `infra/docker-bake.hcl`, the `deploy / production` job of `.github/workflows/ci.yml`.
 Decisions: [ADR 0003](adr/0003-coolify-raw-compose-ghcr.md) (Raw compose, images from GHCR) and
 [ADR 0004](adr/0004-encrypted-offsite-backups-r2-eu.md) (encrypted off-site backups). The VPS, the
-Coolify install, the DNS and the R2 bucket are the owner's phases 1, 2, 4 and 5 of the
-[plan](plans/2026-10-26-deploy-hetzner-coolify.md); this section is what the repository expects from them.
+Coolify install, the DNS and the R2 bucket are the owner's steps, in the step-by-step
+[roadmap](deploy/coolify-roadmap.html); this section is what the repository expects from them.
 
 ```
 git push origin dev:main
@@ -418,6 +418,18 @@ git push origin dev:main
 
 Nothing else deploys: not a pull request, not `dev`, not a push to the repository (Coolify's auto
 deploy stays off).
+
+Server decisions kept from the original plan (the rest is in the ADRs and the sections below):
+
+- One Hetzner Cloud VPS, x86, 4 vCPU / 8 GB, in Germany; Coolify and the stack on the same machine. No
+  staging environment for now.
+- Filter with a **Hetzner Cloud Firewall**, not `ufw`: it filters before the host, so Docker cannot bypass it.
+  Inbound `22`, `80` and `443`; `8000` (Coolify dashboard) only during the install, restricted to the
+  owner's IP, then closed.
+- Hetzner server snapshots are optional and complement the nightly backups (9.4), never replace them.
+- Postgres stays inside the stack, on the internal `backend` network, never published.
+- Subdomain layout (`DOMAIN`, `BO_DOMAIN`, a `www` redirect or not) and the dashboard access (HTTPS hostname
+  with 2FA, or SSH tunnel only) are the owner's choices; the step-by-step is the roadmap.
 
 ### 9.1 Proxy configuration (once per server)
 
@@ -583,14 +595,14 @@ packages start private, and Coolify pulls without credentials. The images hold n
 
 The `backup` service idles (`sleep infinity`); a Coolify **Scheduled Task** runs the backup in it:
 resource -> Scheduled Tasks -> name `backup`, command `/usr/local/bin/backup.sh`, frequency `15 3 * * *`,
-container `backup`. Coolify notifies a failed task (Notifications, plan phase 2): `backup.sh` exits non-zero
+container `backup`. Coolify notifies a failed task (Notifications, roadmap): `backup.sh` exits non-zero
 on any error, and with `2` when a variable below is missing.
 
 A backup is a folder named after its UTC time (`20261027T031500Z`) holding the custom-format database dump,
 an archive of each upload volume and their checksums. It goes to the R2 bucket through an rclone `crypt`
 remote: names and contents are encrypted on the VPS, and no local copy is kept.
 
-- R2 (plan phase 5): bucket with **Jurisdiction: EU**, lifecycle rule deleting objects after 30 days (the
+- R2 (roadmap): bucket with **Jurisdiction: EU**, lifecycle rule deleting objects after 30 days (the
   retention lives there, not in the script), API token scoped to that bucket, read and write.
   That token sits on the VPS and can delete objects: whoever takes the server can erase the backups too.
   Add a **bucket lock** rule (R2 -> bucket -> Settings -> Bucket lock) with a retention of at least 30 days,
