@@ -1,5 +1,7 @@
 package com.bowe.meetstudent.integration.controllers;
 
+import com.bowe.meetstudent.support.ResetStateExtension;
+import org.junit.jupiter.api.extension.ExtendWith;
 import com.bowe.meetstudent.TestDataUtil;
 import com.bowe.meetstudent.entities.Role;
 import com.bowe.meetstudent.entities.UserEntity;
@@ -16,7 +18,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -30,7 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /** Admin queue of Expert accounts: list by status, approve, reject, and the immediate effect on rights. */
 @SpringBootTest
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@ExtendWith(ResetStateExtension.class)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class AdminExpertsIntegrationTests {

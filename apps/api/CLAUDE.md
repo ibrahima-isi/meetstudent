@@ -112,6 +112,7 @@ The `prod` profile (env vars, admin bootstrap via `AdminBootstrapRunner`, proxy 
 Tests live in `src/test/java/com/bowe/meetstudent/` split into `unit/` (Mockito) and `integration/` (MockMvc + H2).
 
 - Test config (`src/test/resources/application.yml`) disables Flyway and uses `ddl-auto: create-drop` with H2 in `MODE=PostgreSQL`.
+- **Isolation without restarting Spring:** a test class that needs an empty database for every test declares `@ExtendWith(ResetStateExtension.class)` (after `@SpringBootTest`, `support/`): before and after each test it truncates every H2 table with `RESTART IDENTITY` and forgets the in-memory rate limiters, so the cached context is reused. Do not use `@DirtiesContext(AFTER_EACH_TEST_METHOD)`: each use rebuilt the context for every test and made the suite take 6-7 minutes in CI.
 - **Authentication in tests:** do NOT use `jwt().authorities(...)` from `SecurityMockMvcRequestPostProcessors` — the generic principal causes a `ClassCastException` against the custom `UserPrincipal`. Use `TestDataUtil.mockUser(String role)`, which builds a `UserPrincipalAuthenticationToken` with a valid `UserPrincipal`.
 - Integration tests must use the full versioned path (`/api/v1/schools`, not `/api/schools`).
 
