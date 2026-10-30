@@ -6,6 +6,7 @@ import com.bowe.meetstudent.services.ForumModerationService;
 import com.bowe.meetstudent.services.ForumService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.PlatformTransactionManager;
 
 import static com.bowe.meetstudent.integration.controllers.forum.ForumRaceSupport.get;
@@ -36,7 +37,8 @@ class ForumLockRaceIntegrationTests extends ForumTestSupport {
         admin.release();
 
         assertThatThrownBy(() -> get(reply)).isInstanceOf(ConflictException.class);
-        assertThat(replies.count()).isZero();
+        // Only this thread's replies: the other tests of the class share the context and leave theirs.
+        assertThat(replies.findByThread_Id(t.getId(), Pageable.unpaged()).getTotalElements()).isZero();
         assertThat(threads.findById(t.getId()).orElseThrow().isLocked()).isTrue();
     }
 
