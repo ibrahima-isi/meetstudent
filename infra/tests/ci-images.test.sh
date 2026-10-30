@@ -258,6 +258,58 @@ test_a_hung_deploy_is_stopped() {
   [[ "$run" == *"-fsS -L --max-redirs 0"* ]] || fail "webhook curl lost -fsS -L --max-redirs 0: $run"
 }
 
+# --- api path filter ----------------------------------------------------------
+# A pull request that leaves the API untouched (docs, web, Dependabot) skips the
+# 6-7 minute api job; a skipped job satisfies the required check. Every push,
+# and any doubt (the filter failing or answering nothing), runs it.
+
+# Runs the changes job's filter step, as the runner does, in a throwaway
+# repository whose HEAD is the merge commit GitHub checks out for a pull
+# request: first parent the base, second parent a commit touching "$@".
+# Prints the `api` output.
+run_api_filter() { # event file...
+  local event="$1" script tmp f
+  shift
+  script="$(job changes | jq -r '[(.steps // [])[] | select(.id == "filter")][0].run // "false"')"
+  tmp="$(mktemp -d)"
+  (
+    cd "$tmp" || exit 1
+    git init -q -b base && git config user.email t@t && git config user.name t \
+      && git config commit.gpgsign false
+    echo base >README.md && git add . && git commit -qm base
+    git switch -qc pr
+    for f in "$@"; do mkdir -p "$(dirname "$f")" && echo change >"$f"; done
+    git add . && git commit -qm pr
+    git switch -q base && git merge -q --no-ff -m merge pr
+    : >"$tmp/out"
+    EVENT_NAME="$event" GITHUB_OUTPUT="$tmp/out" bash --noprofile --norc -eo pipefail -c "$script" >/dev/null 2>&1
+    sed -n 's/^api=//p' "$tmp/out"
+  )
+  rm -rf "$tmp"
+}
+
+test_api_tests_are_skipped_only_when_a_pull_request_leaves_the_api_untouched() {
+  assert_eq "false" "$(run_api_filter pull_request docs/x.md apps/web/src/a.ts .github/dependabot.yml)" \
+    "PR touching docs, web and dependabot.yml"
+  assert_eq "true" "$(run_api_filter pull_request docs/x.md apps/api/pom.xml)" "PR touching apps/api"
+  assert_eq "true" "$(run_api_filter pull_request .github/workflows/ci.yml)" "PR touching ci.yml"
+  assert_eq "true" "$(run_api_filter push docs/x.md)" "push touching docs only"
+}
+
+test_api_job_runs_unless_the_filter_answers_false() {
+  local j
+  j="$(job api)"
+  assert_eq "changes" "$(jq -r '.needs | if type == "array" then join(",") else . end' <<<"$j")" "api needs"
+  # != 'false', not == 'true': a failed or silent filter runs the tests (fail closed).
+  assert_eq "\${{ !cancelled() && needs.changes.outputs.api != 'false' }}" "$(jq -r '.if' <<<"$j")" \
+    "api condition"
+  assert_eq '{"api":"${{ steps.filter.outputs.api }}"}' "$(job changes | jq -c '.outputs')" "changes outputs"
+  # The script reads the event from env: `${{ }}` inside `run` is pasted into the script.
+  assert_eq "false" \
+    "$(job changes | jq '[(.steps // [])[] | select(.id == "filter")][0].run // "" | contains("${{")')" \
+    "no expression inside the filter script"
+}
+
 # --- runner -----------------------------------------------------------------
 tests=("$@")
 if [[ ${#tests[@]} -eq 0 ]]; then

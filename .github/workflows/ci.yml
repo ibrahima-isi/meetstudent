@@ -17,12 +17,45 @@ permissions:
   contents: read
 
 jobs:
+  # Tells whether a pull request touches the API. HEAD is the merge commit
+  # GitHub checks out for a PR, so HEAD^1..HEAD is exactly what the PR changes
+  # against the current base. Pushes always answer true. Not a required check.
+  changes:
+    name: changes / detect
+    runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+
+      - name: Detect API changes
+        id: filter
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT_NAME" != pull_request ]; then
+            api=true
+          elif changed="$(git diff --name-only HEAD^1 HEAD)"; then
+            if grep -qE '^(apps/api/|\.github/workflows/ci\.yml$)' <<<"$changed"; then api=true; else api=false; fi
+          else
+            api=true
+          fi
+          echo "api=$api" >> "$GITHUB_OUTPUT"
+
   # The published check name is the job's `name:`, not its id — branch
   # protection matches on that string, so keep the two in sync with the
   # required contexts configured on main/dev.
   api:
     name: api / build-and-test
     runs-on: ubuntu-latest
+    # Skipped (which satisfies the required check) only when the filter answers
+    # false; a failed or silent filter runs the tests.
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.api != 'false' }}
 
     # Throwaway PostgreSQL for the *MigrationPostgresIntegrationTests classes: they replay every Flyway
     # migration on the real engine (they wipe the schema) and are skipped when MIGRATION_PG_URL is absent.
