@@ -40,6 +40,9 @@ import java.util.List;
 @Tag(name = "05. Programs", description = "Endpoints for managing educational programs (Degrees, Certifications, etc.)")
 public class ProgramController {
 
+    private static final SortAllowlist SORTABLE = SortAllowlist.of(Program.class,
+            "id", "name", "code", "duration", "level", "annualFee", "availableSeats");
+
     private final ProgramService programService;
     private final SchoolService schoolService;
     private final ProgramMapper programMapper;
@@ -133,13 +136,14 @@ public class ProgramController {
     }
 
     @GetMapping
-    @Operation(summary = "Get all programs (paginated)", description = "Provides a paginated list of all programs, including their average ratings. Can be sorted by rating (most/less). Without ?sort= results are ordered by name, then id; an explicit ?sort= replaces that order and an unknown property answers 400. With ?sortRate= the rate comes first and that order only breaks ties.")
+    @Operation(summary = "Get all programs (paginated)", description = "Provides a paginated list of all programs, including their average ratings. Can be sorted by rating (most/less). Without ?sort= results are ordered by name, then id; an explicit ?sort= on id, name, code, duration, level, annualFee or availableSeats replaces that order and any other property answers 400. With ?sortRate= the rate comes first and that order only breaks ties.")
     @ApiResponse(responseCode = "200", description = "List of programs retrieved")
     public Page<ProgramDTO> getPrograms(
             @Parameter(description = "Sort by rate: 'most' for highest rated, 'less' for lowest rated") 
             @RequestParam(required = false) String sortRate,
             @ParameterObject @SortDefault(sort = {"name", "id"}) Pageable pageable) {
-        
+        SORTABLE.check(pageable);
+
         Page<Program> programPage;
         if ("most".equalsIgnoreCase(sortRate)) {
             programPage = programService.findAllOrderByRateDesc(pageable);
@@ -172,11 +176,12 @@ public class ProgramController {
     }
 
     @GetMapping(path = "/name/{name}")
-    @Operation(summary = "Search programs by name (paginated)", description = "Searches for programs whose name contains the given string. Each result carries its school (schoolId, schoolName, schoolCode; null when the program has no school). Without ?sort= results are ordered by name, then id; an explicit ?sort= replaces that order and an unknown property answers 400.")
+    @Operation(summary = "Search programs by name (paginated)", description = "Searches for programs whose name contains the given string. Each result carries its school (schoolId, schoolName, schoolCode; null when the program has no school). Without ?sort= results are ordered by name, then id; an explicit ?sort= on id, name, code, duration, level, annualFee or availableSeats replaces that order and any other property answers 400.")
     @ApiResponse(responseCode = "200", description = "Search results retrieved")
     public Page<ProgramDTO> getProgramByName(
             @Parameter(description = "Name to search for") @PathVariable String name,
             @ParameterObject @SortDefault(sort = {"name", "id"}) Pageable pageable) {
+        SORTABLE.check(pageable);
         return programService.findByName(name, pageable).map(program -> {
             ProgramDTO dto = programMapper.toDTO(program);
             dto.setAverageRate(programRateService.getAverageNoteByProgramId(program.getId()));

@@ -4,6 +4,7 @@ import com.bowe.meetstudent.dto.CourseDTO;
 import com.bowe.meetstudent.dto.CourseAccreditationDTO;
 import com.bowe.meetstudent.exceptions.FieldValidationException;
 import com.bowe.meetstudent.entities.Course;
+import com.bowe.meetstudent.entities.CourseAccreditation;
 import com.bowe.meetstudent.entities.Program;
 import com.bowe.meetstudent.mappers.implementations.CourseMapper;
 import com.bowe.meetstudent.mappers.implementations.CourseAccreditationMapper;
@@ -36,6 +37,10 @@ import java.util.Optional;
 @RequestMapping(path = "/api/v1/courses")
 @Tag(name = "06. Courses", description = "Endpoints for managing individual subjects or modules (Courses)")
 public class CourseController {
+
+    private static final SortAllowlist SORTABLE = SortAllowlist.of(Course.class, "id", "name", "code");
+    private static final SortAllowlist ACCREDITATIONS_SORTABLE =
+            SortAllowlist.of(CourseAccreditation.class, "startsAt", "endsAt");
 
     private final CourseService courseService;
     private final ProgramService programService;
@@ -77,6 +82,7 @@ public class CourseController {
     @ApiResponse(responseCode = "404", description = "Course not found")
     public ResponseEntity<Page<CourseAccreditationDTO>> getAccreditations(
             @PathVariable Integer courseId, @ParameterObject Pageable pageable) {
+        ACCREDITATIONS_SORTABLE.check(pageable);
         return ResponseEntity.ok(courseAccreditationService.findByCourseId(courseId, pageable)
                 .map(courseAccreditationMapper::toDTO));
     }
@@ -115,13 +121,14 @@ public class CourseController {
     }
 
     @GetMapping
-    @Operation(summary = "Get all courses (paginated)", description = "Provides a paginated list of all courses, including their average ratings. Can be sorted by rating (most/less). Each course carries its program (programId, programName; null when detached). Without ?sort= results are ordered by name, then id; an explicit ?sort= replaces that order and an unknown property answers 400. With ?sortRate= the rate comes first and that order only breaks ties.")
+    @Operation(summary = "Get all courses (paginated)", description = "Provides a paginated list of all courses, including their average ratings. Can be sorted by rating (most/less). Each course carries its program (programId, programName; null when detached). Without ?sort= results are ordered by name, then id; an explicit ?sort= on id, name or code replaces that order and any other property answers 400. With ?sortRate= the rate comes first and that order only breaks ties.")
     @ApiResponse(responseCode = "200", description = "List of courses retrieved")
     public Page<CourseDTO> getCourses(
             @Parameter(description = "Sort by rate: 'most' for highest rated, 'less' for lowest rated") 
             @RequestParam(required = false) String sortRate,
             @ParameterObject @SortDefault(sort = {"name", "id"}) Pageable pageable) {
-        
+        SORTABLE.check(pageable);
+
         Page<Course> coursePage;
         // The rate queries keep AVG as the first ORDER BY key; the page sort (name, id by default) is appended as the tie-break.
         if ("most".equalsIgnoreCase(sortRate)) {
@@ -155,11 +162,12 @@ public class CourseController {
     }
 
     @GetMapping(path = "/name/{name}")
-    @Operation(summary = "Search courses by name (paginated)", description = "Searches for courses whose name contains the given string. Each result carries its program (programId, programName; null when detached). Without ?sort= results are ordered by name, then id; an explicit ?sort= replaces that order and an unknown property answers 400.")
+    @Operation(summary = "Search courses by name (paginated)", description = "Searches for courses whose name contains the given string. Each result carries its program (programId, programName; null when detached). Without ?sort= results are ordered by name, then id; an explicit ?sort= on id, name or code replaces that order and any other property answers 400.")
     @ApiResponse(responseCode = "200", description = "Search results retrieved")
     public Page<CourseDTO> getCourseByName(
             @Parameter(description = "Name to search for") @PathVariable String name,
             @ParameterObject @SortDefault(sort = {"name", "id"}) Pageable pageable) {
+        SORTABLE.check(pageable);
         return courseService.findByName(name, pageable).map(course -> {
             CourseDTO dto = courseMapper.toDTO(course);
             dto.setAverageRate(courseRateService.getAverageNoteByCourseId(course.getId()));

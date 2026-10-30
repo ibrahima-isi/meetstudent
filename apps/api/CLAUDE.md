@@ -48,7 +48,7 @@ The test naming convention is enforced by the build: unit tests must end in `Tes
 
 Standard layered architecture under `src/main/java/com/bowe/meetstudent/`:
 
-- **controllers/** — `@RestController`s; validate input, call services, map entities to DTOs via mappers, return `ResponseEntity<DTO>` or `Page<DTO>`. Annotated with Swagger docs (`@Tag`, `@Operation`, `@ApiResponse`). List endpoints are paginated with `Pageable`.
+- **controllers/** — `@RestController`s; validate input, call services, map entities to DTOs via mappers, return `ResponseEntity<DTO>` or `Page<DTO>`. Annotated with Swagger docs (`@Tag`, `@Operation`, `@ApiResponse`). List endpoints are paginated with `Pageable`; a public list either fixes its order (rates, forum: `?sort=` ignored) or checks `?sort=` against its `SortAllowlist` (exact names of fields the response shows, never a path through an association: the row order would leak the joined column).
 - **services/** — business logic, `@Transactional`. Services return entities; mapping to DTOs happens in the controller.
 - **repositories/** — Spring Data JPA interfaces.
 - **entities/** — JPA entities (subpackages `rates/`, `embedded/`).

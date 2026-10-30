@@ -31,6 +31,9 @@ import java.util.Optional;
 @Tag(name = "04. Schools", description = "Endpoints for managing schools and universities")
 public class SchoolController {
 
+    private static final SortAllowlist SORTABLE =
+            SortAllowlist.of(School.class, "id", "name", "code", "address.city", "address.country");
+
     private final SchoolService schoolService;
     private final SchoolMapper schoolMapper;
     private final SchoolRateService schoolRateService;
@@ -48,13 +51,14 @@ public class SchoolController {
     }
 
     @GetMapping
-    @Operation(summary = "Get all schools (paginated)", description = "Provides a paginated list of all schools, including their average ratings. Can be sorted by rating (most/less). Without ?sort= results are ordered by name, then id; an explicit ?sort= replaces that order and an unknown property answers 400. With ?sortRate= the rate comes first and that order only breaks ties.")
+    @Operation(summary = "Get all schools (paginated)", description = "Provides a paginated list of all schools, including their average ratings. Can be sorted by rating (most/less). Without ?sort= results are ordered by name, then id; an explicit ?sort= on id, name, code, address.city or address.country replaces that order and any other property answers 400. With ?sortRate= the rate comes first and that order only breaks ties.")
     @ApiResponse(responseCode = "200", description = "List of schools retrieved")
     public Page<SchoolDTO> getSchools(
             @Parameter(description = "Sort by rate: 'most' for highest rated, 'less' for lowest rated") 
             @RequestParam(required = false) String sortRate,
             @ParameterObject @SortDefault(sort = {"name", "id"}) Pageable pageable) {
-        
+        SORTABLE.check(pageable);
+
         Page<School> schoolPage;
         if ("most".equalsIgnoreCase(sortRate)) {
             schoolPage = schoolService.findAllOrderByRateDesc(pageable);
@@ -92,6 +96,7 @@ public class SchoolController {
     public Page<SchoolDTO> getSchoolByName(
         @Parameter(description = "Name to search for") @PathVariable String name,
         @ParameterObject Pageable pageable) {
+        SORTABLE.check(pageable);
         return this.schoolService
                 .getSchoolByName(name, pageable)
                 .map(school -> {
@@ -107,6 +112,7 @@ public class SchoolController {
     public Page<SchoolDTO> getSchoolByCity(
         @Parameter(description = "City to search for") @PathVariable String city,
         @ParameterObject Pageable pageable){
+        SORTABLE.check(pageable);
         return this.schoolService.findSchoolByCity(city, pageable)
                 .map(school -> {
                     SchoolDTO dto = schoolMapper.toDTO(school);
@@ -121,6 +127,7 @@ public class SchoolController {
     public Page<SchoolDTO> getSchoolByCountry(
         @Parameter(description = "Country to search for") @PathVariable String country,
         @ParameterObject Pageable pageable){
+        SORTABLE.check(pageable);
         return this.schoolService.findSchoolByCountry(country, pageable)
                 .map(school -> {
                     SchoolDTO dto = schoolMapper.toDTO(school);
@@ -139,7 +146,8 @@ public class SchoolController {
         @Parameter(description = "Tag to filter by (e.g., PUBLIC, PRIVATE, GRANDE_ECOLE)") @RequestParam(required = false) String tag,
         @Parameter(description = "Program name to filter by (partial match)") @RequestParam(required = false) String program,
         @ParameterObject Pageable pageable) {
-        
+        SORTABLE.check(pageable);
+
         return this.schoolService.searchSchools(city, country, program, tag, pageable)
                 .map(school -> {
                     SchoolDTO dto = schoolMapper.toDTO(school);
