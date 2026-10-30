@@ -30,8 +30,6 @@ When claiming/resuming a ticket, read both its file and its spec's completion fi
 
 **Closing a spec:** once every ticket of the spec is merged and confirmed, its completion file is final: move on to other work and do not touch it again. The owner then reviews the file, checks that the tickets were implemented, and deletes it. Never delete a completion file yourself.
 
-The legacy `docs/completion.md` (one file for every ticket since the start) is frozen: do not add new specs to it. Entries of specs already in it (e.g. `expert-approval`, `forum`) stay there until the owner has reviewed and removed it.
-
 Preserve all prior completed entries and evidence in a spec's file. Rerunning ticket creation updates the existing entry rather than duplicating it.
 
 ## Existing GitHub work

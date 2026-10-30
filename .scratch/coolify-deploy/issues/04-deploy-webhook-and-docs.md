@@ -8,7 +8,7 @@
 
 **Worktree:** `coolify-deploy-04` — branche `ci/coolify-deploy-webhook`
 
-Spec : [coolify-deploy](../spec.md), user stories 1, 5, 9, 10, 31 ; [ADR 0003](../../../docs/adr/0003-coolify-raw-compose-ghcr.md) ; détail : [plan, phases 4 et 6](../../../docs/plans/2026-10-26-deploy-hetzner-coolify.md).
+Spec : [coolify-deploy](../spec.md), user stories 1, 5, 9, 10, 31 ; [ADR 0003](../../../docs/adr/0003-coolify-raw-compose-ghcr.md).
 
 - [x] Dernière étape du job `deploy`, après le push des images : `curl -fsS -H "Authorization: Bearer $COOLIFY_TOKEN" "$COOLIFY_WEBHOOK"` ; secrets lus depuis l'environnement GitHub `production` ; un échec du webhook rend le run rouge
 - [x] Rien d'autre ne déclenche un déploiement : pas sur PR ni sur `dev`, et le runbook impose l'auto-déploiement Coolify désactivé

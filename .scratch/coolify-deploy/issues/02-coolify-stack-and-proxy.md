@@ -8,7 +8,7 @@
 
 **Worktree:** `coolify-deploy-02` — branche `ci/coolify-stack`
 
-Spec : [coolify-deploy](../spec.md), user stories 7, 11 à 21, 30 ; [ADR 0003](../../../docs/adr/0003-coolify-raw-compose-ghcr.md) ; détail : [plan, phase 3b](../../../docs/plans/2026-10-26-deploy-hetzner-coolify.md).
+Spec : [coolify-deploy](../spec.md), user stories 7, 11 à 21, 30 ; [ADR 0003](../../../docs/adr/0003-coolify-raw-compose-ghcr.md).
 
 - [x] `compose.coolify.yml` dérivé de `compose.prod.yml` : pas de service `traefik`, aucun `ports:`, images `ghcr.io/ibrahima-isi/meetstudent-<app>:${IMAGE_TAG:-latest}` avec `pull_policy: always` ; variables, volumes, healthchecks et `security_opt` identiques
 - [x] Réseaux : réseau d'entrée = réseau externe du proxy Coolify ; `backend` reste `internal: true`, Postgres seul dessus
