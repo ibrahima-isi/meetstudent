@@ -45,7 +45,7 @@ MeetStudent is a monorepo assembled with `git subtree`. Each app keeps its own b
 - `apps/web/` — Angular 20 SSR frontend (npm). **Read `apps/web/.claude/CLAUDE.md`** for the mandatory Angular/TypeScript style rules (signals, `inject()`, native control flow, no `ngClass`/`ngStyle`, etc.).
 - `apps/backoffice/` — ADMIN-only back office (Angular 20 SPA, no SSR, UI in French), **live and feature-complete for launch**: login (non-admins refused), moderation of documents, schools, programs/courses (+ accreditation links), tags and accreditations, expert approval (Experts), contact messages (Messages), site settings and forum moderation (Forum: reports queue, hide, lock, delete). `apps/web` serves STUDENT and EXPERT. There is no manager role — `V2__data.sql` seeds only `ROLE_ADMIN`, `ROLE_EXPERT`, `ROLE_STUDENT`. **A rewrite in vanilla TypeScript + Vite is planned: read `docs/plans/2026-10-10-backoffice-vite-rewrite.md` before touching or replacing it.** Read `apps/backoffice/README.md` for its commands and conventions.
 - `docs/MONOREPO.md` — subtree provenance, branch topology, CI and ruleset conventions. **Read it before touching branches, CI job names or subtree history.**
-- `infra/` — production under Coolify: `docker-bake.hcl` (CI images), `coolify/proxy/dynamic/` (Traefik middlewares), `backup/` (backup image), `tests/` (their shell tests). `shared/` — empty placeholder.
+- `infra/` — production under Coolify: `docker-bake.hcl` (CI images), `coolify/proxy/dynamic/` (Traefik middlewares), `backup/` (backup image), `tests/` (their shell tests).
 - `compose.yml` / `compose.dev.yml` — full local stack, and the hot-reload override for the API.
 
 Because the apps arrived via subtree, keep changes scoped to a single `apps/<app>` subtree per commit where practical. There is **no upstream remote to pull the subtrees from** — the source repositories no longer exist, so never run `git subtree pull`.
@@ -112,7 +112,6 @@ The front is deliberately absent from the dev override: `ng serve` on the host h
 - TS path aliases are configured: `@services/*`, `@models/*`, `@shared/*`, `@i18n/*`. Use them instead of deep relative imports. There is **no mock data**: a failing API shows the shared `error-state` with a retry, never fake schools.
 - Roles reach the client as `ROLE_STUDENT` / `ROLE_EXPERT` / `ROLE_ADMIN` (`models/roles.ts`); the wishlist is by **school** and by **program** (formation); ratings: students rate schools, experts also programs and courses (the server enforces it).
 - The app is **zoneless** (`provideZonelessChangeDetection`) with client hydration and event replay — state must flow through signals; code relying on Zone.js change detection will not update the view.
-- `apps/web/meetstudent/` is a separate legacy React/Vite prototype (the design source for the Angular pages). Only modify it when a task explicitly targets it.
 - Angular styling is Tailwind v4 via `@tailwindcss/postcss` (`.postcssrc.json`), no `tailwind.config` file.
 
 ## Project state (2026-10-16) and lessons
