@@ -29,6 +29,8 @@ import java.util.Optional;
 @Tag(name = "08. Accreditations", description = "Endpoints for managing global accreditations (e.g., AACSB, EQUIS)")
 public class AccreditationController {
 
+    private static final SortAllowlist SORTABLE = SortAllowlist.of(Accreditation.class, "id", "name", "code");
+
     private final AccreditationService accreditationService;
     private final AccreditationMapper accreditationMapper;
     private final ModelMapper modelMapper;
@@ -45,9 +47,10 @@ public class AccreditationController {
     }
 
     @GetMapping
-    @Operation(summary = "Get all accreditations (paginated)", description = "Retrieves a paginated list of all available accreditations. Without ?sort= results are ordered by name, then id; an explicit ?sort= replaces that order and an unknown property answers 400.")
+    @Operation(summary = "Get all accreditations (paginated)", description = "Retrieves a paginated list of all available accreditations. Without ?sort= results are ordered by name, then id; an explicit ?sort= on id, name or code replaces that order and any other property answers 400.")
     @ApiResponse(responseCode = "200", description = "List of accreditations retrieved")
     public Page<AccreditationDTO> getAccreditations(@ParameterObject @SortDefault(sort = {"name", "id"}) Pageable pageable) {
+        SORTABLE.check(pageable);
         return accreditationService.findAll(pageable).map(accreditationMapper::toDTO);
     }
 
@@ -63,11 +66,12 @@ public class AccreditationController {
     }
 
     @GetMapping(path = "/name/{name}")
-    @Operation(summary = "Search accreditations by name (paginated)", description = "Searches for accreditations whose name contains the given string. Without ?sort= results are ordered by name, then id; an explicit ?sort= replaces that order and an unknown property answers 400.")
+    @Operation(summary = "Search accreditations by name (paginated)", description = "Searches for accreditations whose name contains the given string. Without ?sort= results are ordered by name, then id; an explicit ?sort= on id, name or code replaces that order and any other property answers 400.")
     @ApiResponse(responseCode = "200", description = "Search results retrieved")
     public Page<AccreditationDTO> getAccreditationByName(
             @Parameter(description = "Name to search for") @PathVariable String name,
             @ParameterObject @SortDefault(sort = {"name", "id"}) Pageable pageable) {
+        SORTABLE.check(pageable);
         return accreditationService.findByName(name, pageable).map(accreditationMapper::toDTO);
     }
 
