@@ -1,5 +1,7 @@
 package com.bowe.meetstudent.integration.controllers.rates;
 
+import com.bowe.meetstudent.support.ResetStateExtension;
+import org.junit.jupiter.api.extension.ExtendWith;
 import com.bowe.meetstudent.TestDataUtil;
 import com.bowe.meetstudent.dto.CourseRateDTO;
 import com.bowe.meetstudent.dto.ProgramRateDTO;
@@ -30,7 +32,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -44,7 +45,7 @@ import static org.mockito.Mockito.doThrow;
 
 /** A lost insert race (the lookup saw nothing, the insert hit the unique constraint) must answer 409. */
 @SpringBootTest
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@ExtendWith(ResetStateExtension.class)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class RateRaceConflictIntegrationTests {

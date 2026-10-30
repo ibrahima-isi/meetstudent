@@ -1,5 +1,7 @@
 package com.bowe.meetstudent.integration.controllers;
 
+import com.bowe.meetstudent.support.ResetStateExtension;
+import org.junit.jupiter.api.extension.ExtendWith;
 import com.bowe.meetstudent.entities.Role;
 import com.bowe.meetstudent.repositories.RoleRepository;
 import org.junit.jupiter.api.Test;
@@ -7,7 +9,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -17,7 +18,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /** Registration business-rule failures must carry the same {field: message} body as bean validation. */
 @SpringBootTest
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@ExtendWith(ResetStateExtension.class)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class RegistrationErrorBodyIntegrationTests {

@@ -1,5 +1,7 @@
 package com.bowe.meetstudent.integration.controllers;
 
+import com.bowe.meetstudent.support.ResetStateExtension;
+import org.junit.jupiter.api.extension.ExtendWith;
 import com.bowe.meetstudent.TestDataUtil;
 import com.bowe.meetstudent.entities.Role;
 import com.bowe.meetstudent.entities.UserEntity;
@@ -21,7 +23,6 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -36,7 +37,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Non-transactional: the mails leave from AFTER_COMMIT listeners (synchronous executor in the test profile).
  */
 @SpringBootTest
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@ExtendWith(ResetStateExtension.class)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Import(CapturingMailConfig.class)
