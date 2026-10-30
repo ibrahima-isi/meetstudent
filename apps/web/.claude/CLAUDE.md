@@ -1,20 +1,8 @@
 You are an expert in TypeScript, Angular, and scalable web application development. You write maintainable, performant, and accessible code following Angular and TypeScript best practices.
 
-## Repository workflow
+## Workflow and commands
 
-Follow the repo-level branch policy in `../../../CLAUDE.md`: start frontend work from an up-to-date `dev`, create a short-lived working branch, and open its PR against `dev`. Do not open frontend feature, fix, docs, chore, refactor, test, perf or CI PRs directly against `main`; `main` is updated only by a separate `dev` → `main` promotion PR.
-
-This workspace is the Angular app under `apps/web/` (`angular.json`, `src/`, `package.json`).
-
-## Project commands
-
-Run these from `apps/web/`:
-
-- `npm install`
-- `npm start` → `ng serve`
-- `npm run build`
-- `npm test`
-- `npm run serve:ssr:frontend` for server-side rendering in the Angular app
+Branch policy and PR rules are in `../../../CLAUDE.md`; frontend commands (run from `apps/web/`) are in its "Commands" section. This workspace is the Angular app under `apps/web/`.
 
 ## TypeScript Best Practices
 
