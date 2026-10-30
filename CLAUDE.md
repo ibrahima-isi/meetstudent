@@ -119,6 +119,7 @@ The front is deliberately absent from the dev override: `ng serve` on the host h
 **Known gaps (decisions, not bugs):**
 - Without SMTP no mail leaves: production needs `MAIL_ENABLED=true` and the `SPRING_MAIL_*` variables. Email verification is optional (unverified accounts sign in normally; the web has `/:lang/verify-email` and a banner), password reset exists in API and web (`/:lang/forgot-password`, `/:lang/reset-password`), and registration signs the user in right away.
 - Registration lets anyone self-declare as `ROLE_EXPERT`, but the account starts `PENDING`: only an `APPROVED` expert rates programs and courses. The back office Experts queue decides; the status is read from the database on every request. Details in `apps/api/docs/reference.md`.
+- Changing the password or deleting your own account asks for the current password (a password change or reset also revokes the sessions).
 - One rating per user per target (`V24` deletes older duplicates, so back up before migrating an existing database).
 - Schools have no capacity, tuition, level, description or contact data (the API has none); programs have only the optional `description`, `availableSeats`, `annualFee`, `level`.
 - The program photo is returned but not rendered in the web; `MediaDTO` has no owner or upload date, so moderation shows filename/category/type/size/status only; the backoffice sidebar Escape handler only fires when focus is inside the menu.
