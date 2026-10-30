@@ -14,3 +14,5 @@ Spec : [p2-backlog](../spec.md), « Problem Statement » (dernier point). Suivre
 - [ ] `apps/api/CLAUDE.md` vérifié pour les mêmes affirmations périmées
 
 ## Comments
+
+- 2026-10-30 : [prod-cleanup/03](../../prod-cleanup/issues/03-compact-claude-md.md) couvre la partie CLAUDE.md de ce ticket (plus d'etat date ni de hash, limites connues revues). Ticket laisse ouvert pour le proprietaire.

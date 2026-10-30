@@ -4,14 +4,18 @@
 
 **Blocked by:** [prod-cleanup/01](01-remove-dead-files.md), [prod-cleanup/02](02-remove-historical-docs.md)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 Spec : [prod-cleanup](../spec.md), point 3. Remplace la partie CLAUDE.md de [p2-backlog/15](../../p2-backlog/issues/15-claude-md-project-state.md) : à la fusion, ajouter un commentaire dans ce ticket qui le signale, sans le fermer à la place du propriétaire.
 
-- [ ] Plus aucun hash de commit ni « Project state (date) » dans les CLAUDE.md
-- [ ] Chaque règle non négociable du working agreement est toujours présente, mot pour mot ou plus courte, jamais affaiblie
-- [ ] Les quirks du contrat API existent à un seul endroit ; la racine y renvoie
-- [ ] Tailles avant/après notées dans la PR ; chaque lien relatif pointe vers un fichier existant
-- [ ] `apps/api/AGENTS.md` reste un symlink vers `apps/api/CLAUDE.md`
+- [x] Plus aucun hash de commit ni « Project state (date) » dans les CLAUDE.md
+- [x] Chaque règle non négociable du working agreement est toujours présente, mot pour mot ou plus courte, jamais affaiblie
+- [x] Les quirks du contrat API existent à un seul endroit ; la racine y renvoie
+- [x] Tailles avant/après notées dans la PR ; chaque lien relatif pointe vers un fichier existant
+- [x] `apps/api/AGENTS.md` reste un symlink vers `apps/api/CLAUDE.md`
 
 ## Comments
+
+- Tailles avant/apres (octets) : `CLAUDE.md` 22916 -> 18554, `apps/api/CLAUDE.md` 38019 -> 7747, `apps/web/.claude/CLAUDE.md` 2416 -> 1954. Les 38 Ko de detail API (media, mail, tokens, forum, experts, quirks) sont deplaces tels quels dans `apps/api/docs/reference.md` (33789), charge a la demande.
+- Quirks du contrat API : uniquement dans `apps/api/docs/reference.md` ; la racine et `apps/api/CLAUDE.md` y renvoient.
+- Working agreement (lignes 5-39 de la racine) : identique octet pour octet (diff vide). Plus de hash ni de "Project state" ; liens verifies ; `apps/api/AGENTS.md` toujours un symlink.
