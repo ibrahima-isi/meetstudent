@@ -2,7 +2,7 @@
 
 Status: ready-for-agent
 
-Branche cible : `ci/coolify-deploy` (PR vers `dev`). Décisions : [ADR 0003](../../docs/adr/0003-coolify-raw-compose-ghcr.md), [ADR 0004](../../docs/adr/0004-encrypted-offsite-backups-r2-eu.md) ; déroulé opérationnel complet : [plan Hetzner + Coolify](../../docs/plans/2026-10-26-deploy-hetzner-coolify.md) (phases 3b et 6). Ne dépend pas de `fix/hash-refresh-tokens` ni de la déconnexion côté serveur.
+Branche cible : `ci/coolify-deploy` (PR vers `dev`). Décisions : [ADR 0003](../../docs/adr/0003-coolify-raw-compose-ghcr.md), [ADR 0004](../../docs/adr/0004-encrypted-offsite-backups-r2-eu.md) ; déroulé opérationnel : [docs/DEPLOY.md §9](../../docs/DEPLOY.md) et [feuille de route](../../docs/deploy/coolify-roadmap.html). Ne dépend pas de `fix/hash-refresh-tokens` ni de la déconnexion côté serveur.
 
 ## Problem Statement
 
@@ -64,13 +64,13 @@ Quand `dev` est promu sur `main`, la CI publie les images de l'API, du web et du
 - Un bon test observe la stack comme un client : réponses HTTP, en-têtes, statuts, données restaurées. Il ne lit jamais les labels ni la configuration pour vérifier qu'ils « contiennent la bonne chaîne ».
 - **Point 1 — la stack vue de l'extérieur** : le fichier compose Coolify tourne en local derrière un Traefik configuré comme celui de Coolify (mêmes entrées, même réseau externe, même configuration dynamique, certificat local). La vérification reprend la checklist de smoke test du guide de déploiement : routage single-origin (`/api`, `/uploads/public`, site), back-office sur son domaine, redirection vers HTTPS, HSTS et nosniff présents, rafale de connexions qui finit en 429, upload de 11 Mo refusé, SSR qui affiche des données réelles, Postgres injoignable. Précédent : les smoke tests en direct de la stack de production (réplique Traefik + Playwright, cf. « Process lessons » du `CLAUDE.md` racine).
 - **Point 2 — aller-retour sauvegarde → restauration** : contre une stack peuplée (comptes, une école, un document privé), avec MinIO comme S3 local à la place de R2. La sauvegarde est lancée, on vérifie que les objets envoyés sont chiffrés (illisibles en clair), puis on restaure dans une stack vide et on retrouve la connexion d'un compte, l'école et le contenu du document privé, identique octet pour octet. Une sauvegarde qui échoue (S3 injoignable) doit rendre un code non nul. Précédent : la procédure de restauration du guide de déploiement (« a backup never restored is not a backup »).
-- **Point 3 — la CI** : sur PR, les trois images se construisent et le compose est valide. Le push GHCR et le webhook ne se testent qu'au premier déploiement réel sur `main` (phase 6 du plan), dont le résultat est consigné dans le fichier de suivi de la spec.
+- **Point 3 — la CI** : sur PR, les trois images se construisent et le compose est valide. Le push GHCR et le webhook ne se testent qu'au premier déploiement réel sur `main` (phase 6 de la feuille de route), dont le résultat est consigné dans le fichier de suivi de la spec.
 - Le code applicatif ne change pas : la suite Maven et les tests Karma existants doivent rester verts sans modification.
 
 ## Out of Scope
 
 - Le hachage des refresh tokens (branche `fix/hash-refresh-tokens`) et la déconnexion côté serveur (tâche séparée).
-- La création du VPS, l'installation de Coolify, le DNS, le bucket R2 et l'accès au dashboard : ce sont des actions et des décisions du propriétaire (phases 1, 2, 4 et 5 du plan).
+- La création du VPS, l'installation de Coolify, le DNS, le bucket R2 et l'accès au dashboard : ce sont des actions et des décisions du propriétaire (phases 1, 2, 4 et 5 de la feuille de route).
 - Un environnement de staging et le déploiement de `dev`.
 - Des images multi-architecture (le VPS est x86).
 - Une CSP complète (toujours volontairement limitée à `frame-ancestors`, cf. guide de déploiement).

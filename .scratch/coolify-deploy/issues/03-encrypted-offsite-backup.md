@@ -8,7 +8,7 @@
 
 **Worktree:** `coolify-deploy-03` — branche `feat/coolify-backup`
 
-Spec : [coolify-deploy](../spec.md), user stories 22 à 29 ; [ADR 0004](../../../docs/adr/0004-encrypted-offsite-backups-r2-eu.md) ; détail : [plan, phase 3b](../../../docs/plans/2026-10-26-deploy-hetzner-coolify.md).
+Spec : [coolify-deploy](../spec.md), user stories 22 à 29 ; [ADR 0004](../../../docs/adr/0004-encrypted-offsite-backups-r2-eu.md).
 
 - [x] `infra/backup/` : Dockerfile (`postgres:18-alpine` + `rclone`), `backup.sh`, `restore.sh`
 - [x] Image construite et publiée par la CI comme les trois autres (`meetstudent-backup`, mêmes tags), pour que le VPS ne compile rien (user story 3) ; ajout au build sur PR et au push du job `deploy` de [coolify-deploy/01](01-ci-images-ghcr.md)

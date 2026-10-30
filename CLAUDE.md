@@ -146,7 +146,7 @@ New issues and specs use local Markdown under `.scratch/<feature>/`. Before read
 
 ### Ticket progress
 
-Completion tracking is **per spec**: one file `.scratch/<spec-folder>/completion.md`, stored in the spec's own folder next to `spec.md` (several specs in progress, several tracking files), created as soon as the spec's tickets are created, with each ticket's entry saved right after its ticket file and before the next ticket. Once all tickets of the spec are merged and confirmed, leave the file alone and move on; the owner reviews it and deletes it. The legacy `docs/completion.md` is frozen, add nothing new to it. Rules in `docs/agents/issue-tracker.md`; read them when creating, claiming or completing tickets.
+Completion tracking is **per spec**: one file `.scratch/<spec-folder>/completion.md`, stored in the spec's own folder next to `spec.md` (several specs in progress, several tracking files), created as soon as the spec's tickets are created, with each ticket's entry saved right after its ticket file and before the next ticket. Once all tickets of the spec are merged and confirmed, leave the file alone and move on; the owner reviews it and deletes it. Rules in `docs/agents/issue-tracker.md`; read them when creating, claiming or completing tickets.
 
 ### Triage labels
 

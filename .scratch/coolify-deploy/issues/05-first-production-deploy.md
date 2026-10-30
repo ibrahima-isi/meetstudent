@@ -1,14 +1,14 @@
 # 05: Premier déploiement réel et vérifications
 
-**What to build:** La première promotion `dev` → `main` déploie la production via Coolify, et toutes les vérifications de la phase 6 du plan sont faites et consignées, y compris une restauration réelle.
+**What to build:** La première promotion `dev` → `main` déploie la production via Coolify, et toutes les vérifications de la phase 6 de la feuille de route sont faites et consignées, y compris une restauration réelle.
 
-**Blocked by:** [coolify-deploy/04](04-deploy-webhook-and-docs.md) ; côté propriétaire : phases 1, 2, 4 et 5 du [plan](../../../docs/plans/2026-10-26-deploy-hetzner-coolify.md) (VPS, Coolify, ressource, bucket R2)
+**Blocked by:** [coolify-deploy/04](04-deploy-webhook-and-docs.md) ; côté propriétaire : phases 1, 2, 4 et 5 de la [feuille de route](../../../docs/deploy/coolify-roadmap.html) (VPS, Coolify, ressource, bucket R2)
 
 **Status:** ready-for-human
 
 **Worktree:** aucun (opérations sur la production)
 
-Spec : [coolify-deploy](../spec.md), « Testing Decisions », point 3 ; [plan, phase 6](../../../docs/plans/2026-10-26-deploy-hetzner-coolify.md).
+Spec : [coolify-deploy](../spec.md), « Testing Decisions », point 3 ; [DEPLOY.md §9](../../../docs/DEPLOY.md) et la feuille de route.
 
 - [ ] Promotion `git push origin dev:main` ; le run CI atteint le job `deploy`, les quatre images sont sur GHCR, le webhook répond
 - [ ] Paquets GHCR passés en public

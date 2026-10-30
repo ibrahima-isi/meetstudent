@@ -175,7 +175,7 @@ same rule is stated in the root `CLAUDE.md` (Working agreement → Sessions).
 
 ## Ticket completion tracking: one file per spec
 
-Tickets are tracked in `.scratch/<spec-folder>/completion.md`, one file per spec, stored in the spec's own folder, created the moment the spec's tickets are created. When every ticket of a spec is merged and confirmed, the file is final and agents move on; the owner reads it to check the tickets were implemented, then deletes it. The old single `docs/completion.md` is frozen (legacy, to be reviewed and removed by the owner). Details: `docs/agents/issue-tracker.md`.
+Tickets are tracked in `.scratch/<spec-folder>/completion.md`, one file per spec, stored in the spec's own folder, created the moment the spec's tickets are created. When every ticket of a spec is merged and confirmed, the file is final and agents move on; the owner reads it to check the tickets were implemented, then deletes it. Details: `docs/agents/issue-tracker.md`.
 
 ## CI and branch protection
 
