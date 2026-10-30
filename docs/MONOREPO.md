@@ -179,7 +179,7 @@ Tickets are tracked in `.scratch/<spec-folder>/completion.md`, one file per spec
 
 ## CI and branch protection
 
-A single workflow, `.github/workflows/ci.yml`, runs six jobs — the published
+A single workflow, `.github/workflows/ci.yml`, runs seven jobs — the published
 check names are what branch protection matches. Two are **required**:
 
 - `api / build-and-test`
@@ -189,6 +189,12 @@ and `backoffice / build-and-test` runs on every PR but is not a required check
 (add it to the `required-ci` ruleset if it should gate merges). Three more jobs
 are not required checks either: `images / build` (pull requests),
 `deploy / production` (push to `main` only) and `compose / validate-coolify`.
+
+`changes / detect` (not required either) lets a pull request skip
+`api / build-and-test` when it touches neither `apps/api/` nor `ci.yml`
+(docs, web, Dependabot): the job is then skipped, which GitHub counts as a
+passing required check. Pushes always run it, and so does a failed or silent
+filter. Tested by `infra/tests/ci-images.test.sh`.
 
 Protection is enforced through **rulesets**, not legacy branch protection rules:
 
