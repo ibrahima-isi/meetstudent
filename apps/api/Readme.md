@@ -10,7 +10,7 @@ Run from `apps/api`.
 ```bash
 ./mvnw clean verify                 # unit + integration tests
 ./mvnw test -Dtest=UserServiceTest  # one test class
-./mvnw spring-boot:run              # dev profile, needs a local Postgres
+./mvnw spring-boot:run              # dev profile: Postgres on localhost:5433, or set CUSTOM_DEV_DB_URL
 docker compose up -d api            # from the repo root: api + its Postgres
 ```
 
