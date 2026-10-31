@@ -585,7 +585,7 @@ Do not use `$` in a value: compose would interpolate it.
 
 The `deploy / production` job runs only on a push to `main`, after `api / build-and-test`,
 `web / build-and-test` and `backoffice / build-and-test` pass. It builds and pushes the four images, then
-calls `curl -fsS -L --max-redirs 0 --max-time 60 -H "Authorization: Bearer $COOLIFY_TOKEN" "$COOLIFY_WEBHOOK"` (secrets
+calls `curl -fsS -L --max-redirs 0 --max-time 60 -X POST -H "Authorization: Bearer $COOLIFY_TOKEN" "$COOLIFY_WEBHOOK"` (a POST: Coolify answers a GET with 405; secrets
 passed by environment, never printed): any answer other than 2xx, a redirect included (use the exact `https://`
 URL Coolify shows), turns the run red, and the images are already on
 GHCR, so a redeploy from Coolify (or a re-run of the job) finishes the job. A hung push or webhook stops the
