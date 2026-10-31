@@ -235,13 +235,14 @@ jobs:
       # "Deploy Webhook (auth required)". Secrets of the `production` environment,
       # passed by env, never echoed. Any answer but 2xx fails the run: --fail for
       # 4xx/5xx, and a redirect (which deploys nothing) is refused, not followed;
-      # an answer that never comes fails it after 60 s.
+      # an answer that never comes fails it after 60 s. POST: since v4.5 Coolify
+      # answers a GET on /api/v1/deploy with 405.
       - name: Ask Coolify to deploy
         env:
           COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
           COOLIFY_WEBHOOK: ${{ secrets.COOLIFY_WEBHOOK }}
         run: |
-          curl -fsS -L --max-redirs 0 --max-time 60 -H "Authorization: Bearer $COOLIFY_TOKEN" "$COOLIFY_WEBHOOK"
+          curl -fsS -L --max-redirs 0 --max-time 60 -X POST -H "Authorization: Bearer $COOLIFY_TOKEN" "$COOLIFY_WEBHOOK"
 
   # Renders compose.coolify.yml with dummy variables and checks what the Coolify
   # stack guarantees (no published port, GHCR images, isolated Postgres...).
