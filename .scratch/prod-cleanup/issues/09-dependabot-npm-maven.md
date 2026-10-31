@@ -4,12 +4,14 @@
 
 **Blocked by:** [prod-cleanup/06](06-api-patch-minor-upgrades.md), [prod-cleanup/07](07-web-patch-minor-upgrades.md), [prod-cleanup/08](08-backoffice-patch-minor-upgrades.md)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 Spec : [prod-cleanup](../spec.md), point 7. Bloqué par les montées manuelles pour éviter une rafale de PR en conflit.
 
-- [ ] Le fichier est un YAML valide au schéma Dependabot v2 (vérifié avec un validateur ou `gh api` après la fusion)
-- [ ] Les majors sont ignorés, les patch/minor groupés, `target-branch: dev`
-- [ ] Le bloc `github-actions` existant est inchangé
+- [x] Le fichier est un YAML valide au schéma Dependabot v2 (vérifié avec un validateur ou `gh api` après la fusion)
+- [x] Les majors sont ignorés, les patch/minor groupés, `target-branch: dev`
+- [x] Le bloc `github-actions` existant est inchangé
 
 ## Comments
+
+Résolu : `.github/dependabot.yml` gagne npm `/apps/web`, npm `/apps/backoffice` et maven `/apps/api` (hebdo, `target-branch: dev`, majors ignorés via `dependency-name: "*"`, un groupe patch+minor par app, préfixes `chore(web)`, `chore(backoffice)`, `chore(api)`). Validé avant (fichier existant) et après contre le schéma SchemaStore `dependabot-2.0.json` (ajv-cli, YAML converti en JSON) : valide. Le bloc `github-actions` est inchangé (le diff ne contient aucune ligne supprimée).
