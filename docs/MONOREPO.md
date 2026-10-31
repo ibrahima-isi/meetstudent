@@ -160,6 +160,8 @@ from `dev` into `main`.
 
 `required-ci` now targets `dev` as well, so both checks gate it.
 
+Promote with `git push origin origin/dev:refs/heads/main` (a fast-forward). `git push origin dev:main` would push the *local* `dev`, which often lags `origin/dev`. Before opening a PR against a long-lived branch, run `git merge-base --is-ancestor origin/<branch> origin/main`. Pushing to `main` runs `deploy / production`, which fails harmlessly until the `production` environment and `COOLIFY_*` secrets exist.
+
 Watch for this whenever a long-lived branch predates the migration or appears
 stale: check the merge base before opening a PR against it. A working-branch PR
 should compare cleanly against `origin/dev`, and a promotion PR should compare
