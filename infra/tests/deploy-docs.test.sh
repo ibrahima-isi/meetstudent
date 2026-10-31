@@ -61,6 +61,16 @@ test_the_production_guide_names_every_backup_variable() {
       <(yq '.services | del(.backup)' "$STACK_FILE" | interpolated))
 }
 
+# Coolify escapes the `$` of every label by default ("Escape special characters
+# in labels"), so `Host(`${DOMAIN}`)` reaches Traefik as is and no route
+# matches (503 everywhere, first deploy of coolify-deploy/05). While the stack's
+# labels interpolate a variable, the guide must say to turn that option off.
+test_the_guide_turns_off_label_escaping_when_labels_interpolate() {
+  [[ -n "$(yq '.services[].labels[]' "$STACK_FILE" | interpolated)" ]] || return
+  grep -qF "Escape special characters in labels" <<<"$(section "$GUIDE" Coolify)" \
+    || fail "the Coolify section of $GUIDE does not say to turn off label escaping"
+}
+
 test_relative_links_of_both_guides_resolve() {
   local doc link target
   for doc in "$GUIDE" "$PRODUCTION"; do

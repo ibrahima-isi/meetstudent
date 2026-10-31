@@ -548,6 +548,9 @@ Risks this setup accepts, to keep in mind:
 2. Advanced -> Docker Compose -> **Raw** on (ADR 0003: Coolify's generated labels cannot express the rate
    limits, the upload cap or the headers). **Auto deploy off**: only the CI webhook deploys, once the images
    exist. Do not set domains in the Coolify UI: the routes are the stack's labels.
+   Turn **off** "Escape special characters in labels" (General -> Docker Compose; on by default): it keeps the `$` of every
+   label, so `` Host(`${DOMAIN}`) `` reaches Traefik as is, no route matches and every host answers 503 with
+   Traefik's default certificate.
 3. Environment variables, marking the secrets as secret. Coolify passes them to compose for interpolation.
 
 | Variable | Required | Meaning |
