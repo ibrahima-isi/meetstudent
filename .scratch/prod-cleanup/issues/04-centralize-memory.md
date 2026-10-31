@@ -4,13 +4,13 @@
 
 **Blocked by:** [prod-cleanup/03](03-compact-claude-md.md)
 
-**Status:** resolved (repo part). The `~/.claude` memory cleanup remains for the owner after this PR merges.
+**Status:** resolved. Repo part merged in #262; the `~/.claude` memory was cleared on 2026-10-31 with the owner's approval.
 
 Spec : [prod-cleanup](../spec.md), point 4. La partie dépôt passe par une PR. La suppression dans `~/.claude` se fait hors Git, seulement après la fusion de cette PR et avec l'accord du propriétaire.
 
 - [x] La PR contient un tableau : note mémoire → fait → destination dans le dépôt, ou « abandonné (instantané) »
 - [x] Aucun secret, ni l'adresse IP du VPS si le propriétaire la refuse dans le dépôt (lui demander)
-- [ ] Après la fusion : le dossier mémoire ne contient plus que `MEMORY.md` et `onepassword-commit-signing.md` (étape du propriétaire, hors Git)
+- [x] Après la fusion : dossier mémoire vidé le 2026-10-31 avec l’accord du propriétaire ; la note 1Password (partie générale) est passée dans `~/.claude/CLAUDE.md` au lieu de rester ici.
 
 ## Comments
 

@@ -10,7 +10,7 @@
 
 Spec : [coolify-deploy](../spec.md), « Testing Decisions », point 3 ; [DEPLOY.md §9](../../../docs/DEPLOY.md) et la feuille de route.
 
-- [ ] Promotion `git push origin dev:main` ; le run CI atteint le job `deploy`, les quatre images sont sur GHCR, le webhook répond
+- [ ] Promotion `git push origin origin/dev:refs/heads/main` (voir `docs/MONOREPO.md`) ; le run CI atteint le job `deploy`, les quatre images sont sur GHCR, le webhook répond
 - [ ] Paquets GHCR passés en public
 - [ ] Coolify tire les images `latest`, tous les conteneurs sont sains
 - [ ] Certificats émis pour `DOMAIN` et `BO_DOMAIN`, `http://` redirige vers `https://`
