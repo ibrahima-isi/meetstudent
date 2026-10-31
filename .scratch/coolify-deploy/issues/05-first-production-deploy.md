@@ -21,3 +21,5 @@ Spec : [coolify-deploy](../spec.md), « Testing Decisions », point 3 ; [DEPLOY.
 - [ ] Résultats consignés dans `.scratch/coolify-deploy/completion.md`
 
 ## Comments
+
+- 2026-10-31 : le nettoyage d'avant-prod [prod-cleanup](../../prod-cleanup/spec.md) est terminé et fusionné dans `dev` (#254 à #265) : fichiers et docs morts supprimés, dépendances patch/minor à jour (Spring Boot 3.5.16, Angular 20.3.34, `npm audit` à 0 dans le web et le back-office), Dependabot npm et Maven actif. Ce prérequis est levé ; avant la promotion, ouvrir aussi un PDF privé avec la CSP active ([DEPLOY.md §9](../../../docs/DEPLOY.md)).
