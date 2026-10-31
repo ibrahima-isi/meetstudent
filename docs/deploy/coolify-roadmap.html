@@ -301,7 +301,7 @@ a { color: var(--accent); }
       steps: [
         { id: 'p10-promote', who: 'toi', title: 'Promouvoir dev sur main',
           html: '<p>Selon la règle du dépôt (avance rapide, jamais de merge commit ; nécessite le contournement du ruleset) :</p>',
-          code: ['git fetch origin && git push origin origin/dev:main'] },
+          code: ['git fetch origin && git push origin origin/dev:refs/heads/main'] },
         { id: 'p10-ci', who: 'GitHub', title: 'Suivre la CI jusqu’au job deploy',
           html: '<p>Actions : les trois jobs de tests passent, puis <code>deploy</code> pousse les images et appelle le webhook. Pense à la phase 8, étape 3 (images publiques) si Coolify n’arrive pas à les tirer.</p>' },
         { id: 'p10-healthy', who: 'Coolify', title: 'Tous les conteneurs sont healthy',
