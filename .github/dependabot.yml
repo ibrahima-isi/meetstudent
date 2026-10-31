@@ -10,3 +10,48 @@ updates:
       interval: weekly
     commit-message:
       prefix: ci
+
+  # Patch/minor bumps only, one grouped PR per app; majors are done by hand.
+  - package-ecosystem: npm
+    directory: /apps/web
+    target-branch: dev
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "chore(web)"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    groups:
+      web-patch-minor:
+        update-types: ["minor", "patch"]
+
+  # Patch/minor bumps only, one grouped PR per app; majors are done by hand.
+  - package-ecosystem: npm
+    directory: /apps/backoffice
+    target-branch: dev
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "chore(backoffice)"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    groups:
+      backoffice-patch-minor:
+        update-types: ["minor", "patch"]
+
+  # Patch/minor bumps only, one grouped PR per app; majors are done by hand.
+  - package-ecosystem: maven
+    directory: /apps/api
+    target-branch: dev
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "chore(api)"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    groups:
+      api-patch-minor:
+        update-types: ["minor", "patch"]
