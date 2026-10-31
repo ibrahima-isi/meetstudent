@@ -8,10 +8,10 @@
 
 Spec : [prod-cleanup](../spec.md), point 5. Vérifier au passage que `spring-boot-devtools` est exclu du jar de production (exclusion dans `spring-boot-maven-plugin`) ; rien à changer si c'est le cas.
 
-- [ ] `./mvnw clean verify` passe dans `apps/api` sans oauth2-resource-server
-- [ ] `npm ci && npm run build && npm test -- --no-watch --browsers=ChromeHeadless` passe dans `apps/web` et `apps/backoffice`
-- [ ] Les lockfiles sont régénérés par `npm install`, pas édités à la main
-- [ ] Le résultat de la vérification devtools est noté
+- [x] `./mvnw clean verify` passe dans `apps/api` sans oauth2-resource-server
+- [x] `npm ci && npm run build && npm test -- --no-watch --browsers=ChromeHeadless` passe dans `apps/web` et `apps/backoffice` (karma-coverage et karma-jasmine-html-reporter : gardés, voir le commentaire)
+- [x] Les lockfiles sont régénérés par `npm install`, pas édités à la main
+- [x] Le résultat de la vérification devtools est noté
 
 ## Comments
 
