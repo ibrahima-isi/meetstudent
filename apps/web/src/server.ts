@@ -7,7 +7,12 @@ import {
 import express from 'express';
 import { join } from 'node:path';
 import { environment } from './environments/environment';
-import { applyServerEnvironment, isBackendPath, readAllowedHosts } from './environments/server-environment';
+import {
+  applyServerEnvironment,
+  isBackendPath,
+  readAllowedHosts,
+  TRUSTED_PROXY_HEADERS,
+} from './environments/server-environment';
 
 /**
  * Applies the override to *this* bundle's copy of `environment`, for anything
@@ -25,6 +30,7 @@ const browserDistFolder = join(import.meta.dirname, '../browser');
 const app = express();
 const angularApp = new AngularNodeAppEngine({
   allowedHosts: readAllowedHosts(process.env),
+  trustProxyHeaders: TRUSTED_PROXY_HEADERS,
 });
 
 /**

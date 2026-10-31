@@ -84,6 +84,21 @@ export function readAllowedHosts(vars: Record<string, string | undefined>): stri
 }
 
 /**
+ * The `X-Forwarded-*` headers `@angular/ssr` may read. By default it trusts only
+ * `-Host` and `-Proto`, and any other one falls back to client-side rendering
+ * (logged, never thrown). Traefik, the proxy in front in production, sets all
+ * five on every request and overwrites what a client sends, so they are trusted;
+ * `X-Forwarded-Host` is still checked against `ALLOWED_HOSTS`.
+ */
+export const TRUSTED_PROXY_HEADERS: readonly string[] = [
+  'x-forwarded-for',
+  'x-forwarded-host',
+  'x-forwarded-port',
+  'x-forwarded-proto',
+  'x-forwarded-server',
+];
+
+/**
  * Paths that belong to the API server (`/api/*`, `/uploads/*`), never to the
  * application. A reverse proxy routes them before they reach this process; if
  * one arrives anyway the routing in front is missing, and it must fail loudly
