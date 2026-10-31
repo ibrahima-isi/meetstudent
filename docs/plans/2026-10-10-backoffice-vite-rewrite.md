@@ -1,7 +1,7 @@
 # Plan — rewrite the backoffice in vanilla TypeScript + Vite
 
 Written 2026-10-10 against `dev` @ `75294df` (= `main`). Written for a **fresh session** that has none of the
-context below: read this file, root `CLAUDE.md` (working agreement, project state, API contract quirks) and
+context below: read this file, root `CLAUDE.md` (working agreement), `apps/api/docs/reference.md` (API contract quirks) and
 `apps/backoffice/README.md`, then start at "How to run the session".
 
 ## 1. Goal and non-goals
@@ -11,7 +11,7 @@ single-page app that does exactly what the current one does, with the same UI la
 contract, the same runtime configuration and the same deployment shape (static files behind nginx).
 
 **Non-goals.** No new features, no new screens, no API changes, no visual redesign, no i18n library (inline French
-strings), no SSR. Anything the API cannot do today (see root `CLAUDE.md` → "API contract quirks") stays undone.
+strings), no SSR. Anything the API cannot do today (see `apps/api/docs/reference.md`) stays undone.
 
 **Why this is a rewrite, not a fix.** The Angular backoffice works and passed two live smoke tests; the rewrite is a
 product decision (smaller bundle, no framework upgrade treadmill, full control of the DOM). That means **the Angular
@@ -161,7 +161,7 @@ merge `dev` into the branch before opening the PR (the ruleset requires an up-to
   shims. Docker image builds of the api/web cannot run inside the sandbox (the egress proxy blocks Maven/npm in
   containers); the backoffice image *can* be built if its build stage only needs npm from the host cache — try it, and
   state clearly if it could not be exercised.
-- Promotion: `git push origin dev:main` (fast-forward, needs the ruleset bypass), then re-check the protection.
+- Promotion: fast-forward `main` to `origin/dev` as described in `docs/MONOREPO.md` (needs the ruleset bypass), then re-check the protection.
 
 ## 9. Risks
 
@@ -177,7 +177,7 @@ merge `dev` into the branch before opening the PR (the ruleset requires an up-to
 
 ## 10. How to run the session
 
-1. Read root `CLAUDE.md` (working agreement, project state, API quirks), this plan, `apps/backoffice/README.md`, and skim
+1. Read root `CLAUDE.md` (working agreement), `apps/api/docs/reference.md` (API quirks), this plan, `apps/backoffice/README.md`, and skim
    the Angular specs of the page you are porting.
 2. Confirm the three open defaults in section 3 with the owner (one message), then start at T0.
 3. Per task: branch from an up-to-date `dev`, failing tests first (watch them fail), minimal code, `typecheck`/`test`/

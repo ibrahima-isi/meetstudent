@@ -416,7 +416,7 @@ git push origin origin/dev:refs/heads/main
   -> Coolify pulls the images (never builds) and restarts the stack behind its own Traefik
 ```
 
-Nothing else deploys: not a pull request, not `dev`, not a push to the repository (Coolify's auto
+The promotion command and why it uses `origin/dev` are in [MONOREPO.md](MONOREPO.md). Nothing else deploys: not a pull request, not `dev`, not a push to the repository (Coolify's auto
 deploy stays off).
 
 Server decisions kept from the original plan (the rest is in the ADRs and the sections below):
@@ -431,13 +431,13 @@ Server decisions kept from the original plan (the rest is in the ADRs and the se
 - Subdomain layout (`DOMAIN`, `BO_DOMAIN`, a `www` redirect or not) and the dashboard access (HTTPS hostname
   with 2FA, or SSH tunnel only) are the owner's choices; the step-by-step is the roadmap.
 
-Owner decisions for the first deploy (2026-10-30):
+Owner decisions for the first deploy:
 
 - The Coolify dashboard is served at `https://dev.meetstudent.me` (not a `coolify.` host); do not confuse it with the dev environment.
 - DNS is at Cloudflare. The design needs DNS-only (grey cloud) records pointing at the VPS.
 - Production: `DOMAIN=app.meetstudent.me`, `BO_DOMAIN=admin.meetstudent.me`, branch `main`, Coolify environment `production`. The root `meetstudent.me` stays untouched: it holds the Namecheap mail forwarding (MX) and SPF records.
 - Dev environment, later, same VPS and Coolify project: `DOMAIN=demo.meetstudent.me`, `BO_DOMAIN=bo.meetstudent.me`, branch `dev`. It needs a code change not yet approved: unique Traefik router/service names per stack (two stacks on one Traefik collide), a moving image tag other than `latest`, a deploy job for pushes to `dev` with a GitHub `dev` environment, and a second api-edge network (another subnet and `TRUSTED_PROXIES`).
-- Before the first deploy, also open a private PDF in back-office moderation by hand to check it under the enforcing CSP.
+- Before the first deploy, open a private PDF in back-office moderation by hand to check it under the enforcing CSP.
 
 ### 9.1 Proxy configuration (once per server)
 

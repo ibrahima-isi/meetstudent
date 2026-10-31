@@ -8,9 +8,9 @@
 
 Spec : [prod-cleanup](../spec.md), point 4. La partie dépôt passe par une PR. La suppression dans `~/.claude` se fait hors Git, seulement après la fusion de cette PR et avec l'accord du propriétaire.
 
-- [ ] La PR contient un tableau : note mémoire → fait → destination dans le dépôt, ou « abandonné (instantané) »
-- [ ] Aucun secret, ni l'adresse IP du VPS si le propriétaire la refuse dans le dépôt (lui demander)
-- [ ] Après la fusion : le dossier mémoire ne contient plus que `MEMORY.md` et `onepassword-commit-signing.md`
+- [x] La PR contient un tableau : note mémoire → fait → destination dans le dépôt, ou « abandonné (instantané) »
+- [x] Aucun secret, ni l'adresse IP du VPS si le propriétaire la refuse dans le dépôt (lui demander)
+- [ ] Après la fusion : le dossier mémoire ne contient plus que `MEMORY.md` et `onepassword-commit-signing.md` (étape du propriétaire, hors Git)
 
 ## Comments
 

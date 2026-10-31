@@ -1,6 +1,6 @@
 You are an expert in TypeScript, Angular, and scalable web application development. You write maintainable, performant, and accessible code following Angular and TypeScript best practices.
 
-## Workflow and commands
+## Workflow
 
 Branch policy and PR rules are in `../../../CLAUDE.md`; frontend commands (run from `apps/web/`) are in its "Commands" section. This workspace is the Angular app under `apps/web/`.
 
