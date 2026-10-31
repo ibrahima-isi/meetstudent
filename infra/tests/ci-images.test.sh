@@ -138,17 +138,20 @@ test_deploys_queue_instead_of_cancelling_each_other() {
 # Once the images are pushed, the deploy job asks Coolify to deploy through the
 # resource's authenticated webhook. Nothing else may trigger a deploy.
 
-# A local stand-in for Coolify's webhook: answers $1 and appends the request's
-# path and Authorization header to $2. Prints its port once listening.
+# A local stand-in for Coolify's webhook: answers $1 to a POST and, like
+# Coolify since v4.5, 405 to a GET. Appends the request's method, path and
+# Authorization header to $2. Prints its port once listening.
 fake_coolify() {
   # exec: the background job's pid is the server itself, so kill stops it.
   exec python3 -u - "$1" "$2" <<'PY'
 import http.server, sys
 status, log = int(sys.argv[1]), sys.argv[2]
 class H(http.server.BaseHTTPRequestHandler):
-    def do_GET(self):
+    def do_GET(self): self.answer(405)
+    def do_POST(self): self.answer(status)
+    def answer(self, status):
         with open(log, "a") as f:
-            f.write("%s %s\n" % (self.path, self.headers.get("Authorization", "")))
+            f.write("%s %s %s\n" % (self.command, self.path, self.headers.get("Authorization", "")))
         self.send_response(status)
         if 300 <= status < 400:
             self.send_header("Location", "https://127.0.0.1:1/api/v1/deploy")
@@ -200,7 +203,7 @@ test_deploy_ends_by_calling_the_coolify_webhook_with_the_production_secrets() {
 test_webhook_step_asks_coolify_once_with_the_bearer_token() {
   run_webhook_step 200
   assert_eq "0" "$step_status" "exit status on 200 (output: $step_output)"
-  assert_eq "/api/v1/deploy?uuid=test Bearer $TOKEN" "$step_seen" "requests received by Coolify"
+  assert_eq "POST /api/v1/deploy?uuid=test Bearer $TOKEN" "$step_seen" "requests received by Coolify"
 }
 
 test_webhook_failure_turns_the_deploy_red() {

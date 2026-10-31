@@ -548,6 +548,9 @@ Risks this setup accepts, to keep in mind:
 2. Advanced -> Docker Compose -> **Raw** on (ADR 0003: Coolify's generated labels cannot express the rate
    limits, the upload cap or the headers). **Auto deploy off**: only the CI webhook deploys, once the images
    exist. Do not set domains in the Coolify UI: the routes are the stack's labels.
+   Turn **off** "Escape special characters in labels" (General -> Docker Compose; on by default): it keeps the `$` of every
+   label, so `` Host(`${DOMAIN}`) `` reaches Traefik as is, no route matches and every host answers 503 with
+   Traefik's default certificate.
 3. Environment variables, marking the secrets as secret. Coolify passes them to compose for interpolation.
 
 | Variable | Required | Meaning |
@@ -585,7 +588,7 @@ Do not use `$` in a value: compose would interpolate it.
 
 The `deploy / production` job runs only on a push to `main`, after `api / build-and-test`,
 `web / build-and-test` and `backoffice / build-and-test` pass. It builds and pushes the four images, then
-calls `curl -fsS -L --max-redirs 0 --max-time 60 -H "Authorization: Bearer $COOLIFY_TOKEN" "$COOLIFY_WEBHOOK"` (secrets
+calls `curl -fsS -L --max-redirs 0 --max-time 60 -X POST -H "Authorization: Bearer $COOLIFY_TOKEN" "$COOLIFY_WEBHOOK"` (a POST: Coolify answers a GET with 405; secrets
 passed by environment, never printed): any answer other than 2xx, a redirect included (use the exact `https://`
 URL Coolify shows), turns the run red, and the images are already on
 GHCR, so a redeploy from Coolify (or a re-run of the job) finishes the job. A hung push or webhook stops the
