@@ -1,4 +1,10 @@
-import { applyServerEnvironment, isBackendPath, readAllowedHosts, RuntimeEnvironment } from './server-environment';
+import {
+  applyServerEnvironment,
+  isBackendPath,
+  readAllowedHosts,
+  RuntimeEnvironment,
+  TRUSTED_PROXY_HEADERS,
+} from './server-environment';
 
 describe('applyServerEnvironment', () => {
   let env: RuntimeEnvironment;
@@ -77,6 +83,20 @@ describe('readAllowedHosts', () => {
     expect(readAllowedHosts({ ALLOWED_HOSTS: ',' })).toEqual(['localhost', 'web']);
     expect(readAllowedHosts({ ALLOWED_HOSTS: ' , ' })).toEqual(['localhost', 'web']);
     expect(readAllowedHosts({ ALLOWED_HOSTS: ',,' })).toEqual(['localhost', 'web']);
+  });
+});
+
+describe('TRUSTED_PROXY_HEADERS', () => {
+  // `@angular/ssr` falls back to client-side rendering on any X-Forwarded-* header it does not trust,
+  // and Traefik (Coolify's proxy) sets all five of these on every request.
+  it('trusts every X-Forwarded-* header Traefik sets', () => {
+    expect([...TRUSTED_PROXY_HEADERS].sort()).toEqual([
+      'x-forwarded-for',
+      'x-forwarded-host',
+      'x-forwarded-port',
+      'x-forwarded-proto',
+      'x-forwarded-server',
+    ]);
   });
 });
 
