@@ -1,6 +1,6 @@
 # Spec : prod-cleanup
 
-Status: ready-for-agent
+Status: resolved
 
 Origine : séance de grilling du 2026-10-30, avant le premier déploiement en production (`coolify-deploy/05`). Inventaire en lecture seule fait sur `main` @ `0863a41`.
 
@@ -30,7 +30,7 @@ Une PR par thème vers `dev`, toutes fusionnées avant `coolify-deploy/05` :
 
 ## Implementation Decisions
 
-- **Le dépôt est la source de vérité de la mémoire du projet.** La mémoire perso `~/.claude` ne garde que des préférences personnelles (note de signature 1Password).
+- **Le dépôt est la source de vérité de la mémoire du projet.** La mémoire perso du projet est vide ; la leçon de signature 1Password, valable pour tous les dépôts, est dans `~/.claude/CLAUDE.md`.
 - **Pas de version majeure avant la prod.** Angular reste en 20.3.x, Spring Boot en 3.5.x, lucide-angular en 0.x, Flyway en 10.x. Les majors (Angular 22, Spring Boot 4, lucide 1.0) feront l'objet de tickets séparés après le déploiement.
 - **Supprimer plutôt qu'archiver** : pas de `docs/archive/`, l'historique Git suffit.
 - **À conserver** : `docs/plans/2026-10-10-backoffice-vite-rewrite.md` (travail à venir), les ADR, `GLOSSARY.md`, `docs/DEPLOY.md`, `docs/MONOREPO.md`, `apps/api/docs/production.md`, `apps/web/docs/backend-api-integration.md`, `docs/deploy/coolify-roadmap.html`, les specs `.scratch/` ouvertes.
@@ -50,3 +50,7 @@ Une PR par thème vers `dev`, toutes fusionnées avant `coolify-deploy/05` :
 - La réécriture du back-office en Vite.
 - Les tickets `p2-backlog`. Exception : `prod-cleanup/03` remplace la partie CLAUDE.md de `p2-backlog/15`, ce qui est noté dans le ticket.
 - La suppression des branches distantes : le propriétaire la fait (HTTP 403 depuis les sessions d'agents).
+
+## Résultat (2026-10-31)
+
+Les 10 tickets sont fusionnés dans `dev` (PR #254 à #263, corrections de revue #264 et #265) ; le détail est dans [completion.md](completion.md). Écarts décidés par le propriétaire : une PR par ticket ; `karma-coverage` et `karma-jasmine-html-reporter` gardés (le builder Karma d'Angular les charge) ; aucune adresse IP du VPS dans le dépôt. Reste : promouvoir `dev` vers `main` dans [coolify-deploy/05](../coolify-deploy/issues/05-first-production-deploy.md).
