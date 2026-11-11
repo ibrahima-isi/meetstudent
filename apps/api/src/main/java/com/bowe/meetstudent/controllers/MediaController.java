@@ -5,14 +5,20 @@ import com.bowe.meetstudent.dto.MediaVerificationRequest;
 import com.bowe.meetstudent.entities.Media;
 import com.bowe.meetstudent.entities.enums.MediaCategory;
 import com.bowe.meetstudent.entities.enums.VerificationStatus;
+import com.bowe.meetstudent.exceptions.ResourceNotFoundException;
 import com.bowe.meetstudent.mappers.Mapper;
 import com.bowe.meetstudent.security.UserPrincipal;
 import com.bowe.meetstudent.services.MediaService;
+import com.bowe.meetstudent.services.MediaStorage;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
-import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ContentDisposition;
@@ -38,6 +44,7 @@ import java.util.Set;
 public class MediaController {
 
     private final MediaService mediaService;
+    private final MediaContentResponse mediaContentResponse;
     private final Mapper<Media, MediaDTO> mediaMapper;
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -60,11 +67,15 @@ public class MediaController {
     @GetMapping("/{id}")
     @Operation(summary = "Download a media file",
             description = "Public media is served to anyone; private media only to its owner or an admin.")
-    public ResponseEntity<Resource> download(
+    @ApiResponse(responseCode = "200", description = "Media file",
+            content = @Content(mediaType = MediaType.APPLICATION_OCTET_STREAM_VALUE,
+                    schema = @Schema(type = "string", format = "binary")))
+    public void download(
             @AuthenticationPrincipal UserPrincipal principal,
-            @PathVariable Integer id) throws IOException {
+            @PathVariable Integer id,
+            HttpServletRequest request,
+            HttpServletResponse response) throws IOException {
         Media media = mediaService.getAccessibleMedia(id, principal);
-        Resource resource = mediaService.loadContent(media);
 
         String contentType = media.getContentType() != null
                 ? media.getContentType()
@@ -80,12 +91,19 @@ public class MediaController {
                 .filename(filename, StandardCharsets.UTF_8)
                 .build();
 
-        return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(responseType))
-                .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
-                .header("X-Content-Type-Options", "nosniff")
-                .header("Content-Security-Policy", "sandbox; default-src 'none'")
-                .body(resource);
+        MediaContentResponse.setSecurityHeaders(response);
+        try {
+            response.setHeader(HttpHeaders.CONTENT_DISPOSITION, disposition.toString());
+            mediaContentResponse.write(request, response, media.getStorageKey(), responseType, false);
+        } catch (IOException e) {
+            if (!response.isCommitted()) {
+                response.setHeader(HttpHeaders.CONTENT_DISPOSITION, null);
+                if (e instanceof MediaStorage.MissingObjectException) {
+                    throw new ResourceNotFoundException("Media not found");
+                }
+            }
+            throw e;
+        }
     }
 
     @GetMapping("/mine")

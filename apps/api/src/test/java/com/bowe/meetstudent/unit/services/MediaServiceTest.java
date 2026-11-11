@@ -7,7 +7,7 @@ import com.bowe.meetstudent.entities.enums.VerificationStatus;
 import com.bowe.meetstudent.repositories.MediaRepository;
 import com.bowe.meetstudent.security.UserPrincipal;
 import com.bowe.meetstudent.services.MediaService;
-import com.bowe.meetstudent.services.MediaStorageService;
+import com.bowe.meetstudent.services.MediaStorage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -39,7 +39,7 @@ class MediaServiceTest {
 
     private static final byte[] JPEG = {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0, 0, 0x10, 'J', 'F', 'I', 'F'};
 
-    @Mock MediaStorageService storageService;
+    @Mock MediaStorage storageService;
     @Mock MediaRepository mediaRepository;
     @InjectMocks MediaService mediaService;
 
@@ -59,7 +59,6 @@ class MediaServiceTest {
 
     private void wireStorageAndSave() throws IOException {
         ReflectionTestUtils.setField(mediaService, "maxUploadBytes", 10_485_760L);
-        when(storageService.store(any(), any(), any())).thenReturn("private/uuid.jpg");
         when(mediaRepository.save(any(Media.class))).thenAnswer(i -> i.getArgument(0));
     }
 
@@ -95,7 +94,6 @@ class MediaServiceTest {
     @Test
     void uploadSchoolLogoAsAdminHasNoOwnerAndNoStatus() throws IOException {
         ReflectionTestUtils.setField(mediaService, "maxUploadBytes", 10_485_760L);
-        when(storageService.store(any(), any(), any())).thenReturn("public/uuid.png");
         when(mediaRepository.save(any(Media.class))).thenAnswer(i -> i.getArgument(0));
 
         Media saved = mediaService.upload(
@@ -673,7 +671,6 @@ class MediaServiceTest {
     @Test
     void secondUserPhotoReplacesTheFirstAndItsFileGoesOnlyAfterCommit() throws IOException {
         wireStorageAndSave();
-        when(storageService.store(any(), any(), any())).thenReturn("public/new.png");
         Media old = Media.builder().id(3).storageKey("public/old.png").category(MediaCategory.USER_PHOTO)
                 .visibility(MediaVisibility.PUBLIC).ownerId(7).build();
         when(mediaRepository.findByOwnerIdAndCategory(7, MediaCategory.USER_PHOTO)).thenReturn(List.of(old));
@@ -681,7 +678,8 @@ class MediaServiceTest {
         try {
             Media saved = mediaService.upload(png("me.png"), MediaCategory.USER_PHOTO, principal(7, "ROLE_STUDENT"), null);
 
-            assertEquals("public/new.png", saved.getStorageKey());
+            assertTrue(saved.getStorageKey().startsWith("public/"));
+            assertTrue(saved.getStorageKey().endsWith(".png"));
             verify(mediaRepository).deleteAll(List.of(old));
             verify(storageService, never()).delete("public/old.png");
 
@@ -777,13 +775,14 @@ class MediaServiceTest {
     @Test
     void failedInsertDeletesTheJustWrittenFile() throws IOException {
         ReflectionTestUtils.setField(mediaService, "maxUploadBytes", 10_485_760L);
-        when(storageService.store(any(), any(), any())).thenReturn("private/orphan.jpg");
         when(mediaRepository.save(any(Media.class))).thenThrow(new IllegalStateException("insert failed"));
 
         assertThrows(IllegalStateException.class,
                 () -> mediaService.upload(jpeg(), MediaCategory.DIPLOMA, principal(99, "ROLE_ADMIN"), null));
 
-        verify(storageService).delete("private/orphan.jpg");
+        ArgumentCaptor<Media> failedRow = ArgumentCaptor.forClass(Media.class);
+        verify(mediaRepository).save(failedRow.capture());
+        verify(storageService).delete(failedRow.getValue().getStorageKey());
     }
 
     @Test
@@ -791,13 +790,13 @@ class MediaServiceTest {
         wireStorageAndSave();
         TransactionSynchronizationManager.initSynchronization();
         try {
-            mediaService.upload(jpeg(), MediaCategory.DIPLOMA, principal(99, "ROLE_ADMIN"), null);
+            Media saved = mediaService.upload(jpeg(), MediaCategory.DIPLOMA, principal(99, "ROLE_ADMIN"), null);
             verify(storageService, never()).delete(any());
 
             TransactionSynchronizationManager.getSynchronizations()
                     .forEach(s -> s.afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK));
 
-            verify(storageService).delete("private/uuid.jpg");
+            verify(storageService).delete(saved.getStorageKey());
         } finally {
             TransactionSynchronizationManager.clearSynchronization();
         }

@@ -5,7 +5,7 @@ import com.bowe.meetstudent.exceptions.MediaValidationException;
 import com.bowe.meetstudent.repositories.MediaRepository;
 import com.bowe.meetstudent.security.UserPrincipal;
 import com.bowe.meetstudent.services.MediaService;
-import com.bowe.meetstudent.services.MediaStorageService;
+import com.bowe.meetstudent.services.MediaStorage;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 @ExtendWith(MockitoExtension.class)
 class MediaServiceValidationTest {
 
-    @Mock MediaStorageService storageService;
+    @Mock MediaStorage storageService;
     @Mock MediaRepository mediaRepository;
     @InjectMocks MediaService mediaService;
 
