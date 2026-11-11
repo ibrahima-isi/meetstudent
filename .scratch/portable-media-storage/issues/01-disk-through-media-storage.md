@@ -1,7 +1,7 @@
 # 01 · Servir les médias sur disque via l’interface de stockage
 
 Blocked by: Aucun
-Status: ready-for-agent
+Status: claimed
 
 ## What to build
 
