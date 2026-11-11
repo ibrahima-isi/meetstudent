@@ -222,7 +222,7 @@ export class ProgramForm implements OnInit {
 
   /** Limits mirror the columns of the `programs` table. */
   readonly form = inject(FormBuilder).nonNullable.group({
-    name: ['', [notBlank, Validators.maxLength(50)]],
+    name: ['', [notBlank, Validators.maxLength(255)]],
     code: ['', Validators.maxLength(5)],
     duration: ['', optionalYears],
     schoolId: [''],

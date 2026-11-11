@@ -113,7 +113,7 @@ export class CourseForm implements OnInit {
 
   /** Limits mirror the columns of the `courses` table. */
   readonly form = inject(FormBuilder).nonNullable.group({
-    name: ['', [notBlank, Validators.maxLength(50)]],
+    name: ['', [notBlank, Validators.maxLength(255)]],
     code: ['', Validators.maxLength(5)],
     description: ['', Validators.maxLength(1000)],
   });

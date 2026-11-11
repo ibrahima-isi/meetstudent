@@ -104,9 +104,9 @@ describe('SchoolForm', () => {
     expect(errorOf('name')).toContain('obligatoire');
   });
 
-  it('mirrors the column limits: name 50, code 5, address parts 255', () => {
+  it('mirrors the column limits: name 255, code 5, address parts 255', () => {
     setup();
-    type('#name', 'n'.repeat(51));
+    type('#name', 'n'.repeat(256));
     type('#code', 'ABCDEF');
     type('#location', 'l'.repeat(256));
     type('#city', 'c'.repeat(256));
@@ -116,7 +116,7 @@ describe('SchoolForm', () => {
     for (const f of ['name', 'code', 'location', 'city', 'country']) {
       expect(errorOf(f)).toContain('caractères');
     }
-    type('#name', 'n'.repeat(50));
+    type('#name', 'n'.repeat(255));
     type('#code', 'ABCDE');
     type('#location', 'l'.repeat(255));
     type('#city', 'c'.repeat(255));
@@ -148,8 +148,8 @@ describe('SchoolForm', () => {
   });
 
   it('updates with PUT and leaves the media ids out when no file was chosen', () => {
-    setup(existing);
-    type('#name', 'Ecole Sup 2');
+    const officialName = 'Institut Supérieur de Technologie de Commerce et de Bâtiment';
+    setup({ ...existing, name: officialName });
     el().querySelectorAll<HTMLInputElement>('input[data-tag]')[0].click();
     submit();
 
@@ -157,14 +157,14 @@ describe('SchoolForm', () => {
     expect(req.request.method).toBe('PUT');
     expect(req.request.body).toEqual({
       code: 'ESS',
-      name: 'Ecole Sup 2',
+      name: officialName,
       address: { location: '1 rue A', city: 'Lyon', country: 'France' },
       tags: [
         { id: 1, name: 'PUBLIC' },
         { id: 2, name: 'PRIVATE' },
       ],
     });
-    req.flush({ ...existing, name: 'Ecole Sup 2' });
+    req.flush({ ...existing, name: officialName });
     expect(saved.length).toBe(1);
   });
 

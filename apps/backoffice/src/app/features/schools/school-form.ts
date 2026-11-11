@@ -163,7 +163,7 @@ export class SchoolForm implements OnInit, OnDestroy {
 
   /** Limits mirror the columns of the `schools` table. */
   readonly form = inject(FormBuilder).nonNullable.group({
-    name: ['', [notBlank, Validators.maxLength(50)]],
+    name: ['', [notBlank, Validators.maxLength(255)]],
     code: ['', Validators.maxLength(5)],
     location: ['', Validators.maxLength(255)],
     city: ['', Validators.maxLength(255)],
