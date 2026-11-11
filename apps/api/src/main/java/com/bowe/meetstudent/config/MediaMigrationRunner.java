@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.nio.file.Files;
@@ -22,6 +23,7 @@ import java.util.UUID;
  * fresh databases (including the test profile).
  */
 @Component
+@ConditionalOnProperty(name = "file.storage-backend", havingValue = "disk", matchIfMissing = true)
 @RequiredArgsConstructor
 public class MediaMigrationRunner implements ApplicationRunner {
 

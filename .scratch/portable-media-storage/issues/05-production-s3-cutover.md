@@ -1,16 +1,16 @@
-# 05 · Basculer les médias de production vers S3
+# 05 · Préparer la bascule des médias de production vers S3
 
 Blocked by: [portable-media-storage/03](03-s3-media-backup-restore.md), [portable-media-storage/04](04-rehearse-media-transfer-rollback.md)
 Status: ready-for-agent
 
 ## What to build
 
-L’exploitant migre la production vers un bucket privé compatible S3, avec une courte pause des modifications et des vérifications avant de rouvrir les écritures.
+L’exploitant dispose d’une procédure répétée et d’un outillage pour migrer la production vers le bucket privé compatible S3 de son choix. La procédure décrit la courte pause des modifications et les vérifications avant réouverture des écritures.
 
 ## Acceptance criteria
 
-- [ ] Le fournisseur compatible S3 et la région européenne sont sélectionnés. La destination et la sauvegarde indépendante sont qualifiées avant la fenêtre de bascule.
-- [ ] La répétition sur une destination isolée du fournisseur choisi vérifie le transfert, la restauration et la reprise. Les résultats fixent la durée de la fenêtre de bascule.
-- [ ] Après sauvegarde, copie initiale et drainage des écritures, l’inventaire final concorde avant activation dans Coolify. Les lectures publiques et privées et les refus d’accès sont vérifiés avant réouverture.
-- [ ] Après réouverture, un dépôt, une suppression et une sauvegarde depuis S3 sont vérifiés. Le retour arrière conserve un accès aux volumes source et à la dernière archive complète.
-- [ ] Le suivi enregistre le fournisseur, la durée réelle, les résultats et le point de restauration disponible.
+- [ ] L’endpoint, le bucket, la région de signature et le mode d’adressage se configurent au déploiement. La préparation fonctionne avec des buckets privés compatibles S3 à des endpoints différents.
+- [ ] Une répétition avec une destination S3 isolée couvre la sauvegarde, la copie initiale, le drainage des écritures, la validation de l’inventaire final et l’activation. Elle consigne la durée de la pause et le point de restauration.
+- [ ] Avant la réouverture, la répétition vérifie les lectures publiques et privées et les refus d’accès. Après réouverture, elle vérifie un dépôt, une suppression et une sauvegarde depuis S3.
+- [ ] La procédure décrit la qualification du bucket de l’exploitant, la sauvegarde indépendante et le retour au stockage source avec les fichiers créés ou supprimés après activation.
+- [ ] Le suivi distingue la répétition isolée et l’activation réelle dans Coolify.

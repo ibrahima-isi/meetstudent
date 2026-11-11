@@ -42,6 +42,7 @@ springdoc:
   show-actuator: true
 
 file:
+  storage-backend: ${MEDIA_STORAGE_BACKEND:disk}
   # Overridable so containers can point at mounted volumes; the defaults keep
   # `./mvnw spring-boot:run` working from the project directory.
   upload-dir: ${FILE_UPLOAD_DIR:uploads}

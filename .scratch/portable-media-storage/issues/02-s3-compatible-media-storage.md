@@ -1,7 +1,7 @@
 # 02 · Servir les médias depuis une destination compatible S3
 
 Blocked by: [portable-media-storage/01](01-disk-through-media-storage.md)
-Status: ready-for-agent
+Status: claimed
 
 ## What to build
 
