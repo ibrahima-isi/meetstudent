@@ -18,7 +18,7 @@ public class BaseEntity extends AbstractEntity {
     @ToString.Include
     private String code;
 
-    @Column(length = 50)
+    @Column(length = 255)
     @ToString.Include
     private String name;
 }

@@ -20,6 +20,6 @@ public class BaseDTO extends AbstractDTO {
     private String code;
 
     @NotBlank(groups = OnCreate.class, message = "name is required")
-    @Size(max = 50, message = "name must be at most 50 characters")
+    @Size(max = 255, message = "name must be at most 255 characters")
     private String name;
 }
