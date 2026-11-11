@@ -16,4 +16,4 @@ Les utilisateurs peuvent déposer, consulter, remplacer et supprimer des médias
 
 ## Comments
 
-- Adaptateur disque et parcours HTTP intégrés dans `05d2e01`. Les tests ciblés ont réussi (74 unitaires et 45 d’intégration). La suite API complète est en cours.
+- Adaptateur disque et parcours HTTP intégrés dans `05d2e01`. Les tests ciblés ont réussi (74 unitaires et 45 d’intégration). Bilan API : 496 tests unitaires et 836 tests d’intégration réussis, dont les 7 tests réseau relancés avec accès au loopback. 9 tests PostgreSQL ont été ignorés faute de base dédiée sur cette exécution.
