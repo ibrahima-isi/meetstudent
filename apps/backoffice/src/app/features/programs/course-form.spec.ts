@@ -148,15 +148,15 @@ describe('CourseForm', () => {
     expect(errorOf('name')).toContain('obligatoire');
   });
 
-  it('mirrors the column limits: name 50, code 5', () => {
+  it('mirrors the column limits: name 255, code 5', () => {
     setup();
-    type('#name', 'n'.repeat(51));
+    type('#name', 'n'.repeat(256));
     type('#code', 'ABCDEF');
     submit();
     backend.expectNone(`${api}/courses`);
-    expect(errorOf('name')).toContain('50');
+    expect(errorOf('name')).toContain('255');
     expect(errorOf('code')).toContain('5');
-    type('#name', 'n'.repeat(50));
+    type('#name', 'n'.repeat(255));
     type('#code', 'ABCDE');
     fixture.detectChanges();
     expect(errorOf('name')).toBe('');
@@ -176,13 +176,13 @@ describe('CourseForm', () => {
   });
 
   it('updates with PUT, sending an empty description to clear it, omitting an empty code and the photo when none was chosen', () => {
-    setup({ id: 9, name: 'Algèbre' });
-    type('#name', 'Algèbre 2');
+    const officialName = 'Théories des sciences de l’information et de la communication';
+    setup({ id: 9, name: officialName });
     submit();
     const req = backend.expectOne(`${api}/courses/9`);
     expect(req.request.method).toBe('PUT');
-    expect(req.request.body).toEqual({ name: 'Algèbre 2', programId: 4, description: '' });
-    req.flush({ id: 9, name: 'Algèbre 2' });
+    expect(req.request.body).toEqual({ name: officialName, programId: 4, description: '' });
+    req.flush({ id: 9, name: officialName });
     expect(saved.length).toBe(1);
   });
 

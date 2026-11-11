@@ -51,9 +51,17 @@ class RequestValidationIntegrationTests {
 
     @Test
     void createSchoolWithTooLongNameIs400() throws Exception {
-        postAsAdmin("/api/v1/schools", "{\"name\":\"" + "x".repeat(51) + "\"}")
+        postAsAdmin("/api/v1/schools", "{\"name\":\"" + "x".repeat(256) + "\"}")
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.name").isNotEmpty());
+    }
+
+    @Test
+    void createSchoolWithAnOfficialNameLongerThanFiftyCharactersIs201() throws Exception {
+        var name = "Institut Supérieur de Technologie de Commerce et de Bâtiment";
+        postAsAdmin("/api/v1/schools", "{\"name\":\"" + name + "\"}")
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.name").value(name));
     }
 
     @Test
@@ -95,7 +103,7 @@ class RequestValidationIntegrationTests {
     void patchSchoolWithTooLongNameIs400() throws Exception {
         var school = schoolService.save(schoolMapper.toEntity(TestDataUtil.createSchoolDto()));
         mockMvc.perform(patch("/api/v1/schools/" + school.getId()).contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"" + "x".repeat(51) + "\"}").with(TestDataUtil.mockUser("ROLE_ADMIN")))
+                        .content("{\"name\":\"" + "x".repeat(256) + "\"}").with(TestDataUtil.mockUser("ROLE_ADMIN")))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.name").isNotEmpty());
     }
@@ -109,7 +117,7 @@ class RequestValidationIntegrationTests {
 
     @Test
     void createProgramWithTooLongNameIs400() throws Exception {
-        postAsAdmin("/api/v1/programs", "{\"name\":\"" + "x".repeat(51) + "\"}")
+        postAsAdmin("/api/v1/programs", "{\"name\":\"" + "x".repeat(256) + "\"}")
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.name").isNotEmpty());
     }

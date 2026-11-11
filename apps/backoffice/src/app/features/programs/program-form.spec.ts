@@ -123,13 +123,13 @@ describe('ProgramForm', () => {
     expect(errorOf('name')).toContain('obligatoire');
   });
 
-  it('mirrors the column limits: name 50, code 5', () => {
+  it('mirrors the column limits: name 255, code 5', () => {
     setup();
-    type('#name', 'n'.repeat(51));
+    type('#name', 'n'.repeat(256));
     type('#code', 'ABCDEF');
     submit();
     backend.expectNone(`${api}/programs`);
-    expect(errorOf('name')).toContain('50');
+    expect(errorOf('name')).toContain('255');
     expect(errorOf('code')).toContain('5');
   });
 
@@ -171,13 +171,14 @@ describe('ProgramForm', () => {
   });
 
   it('updates with PUT and leaves the photo out when none was chosen', () => {
-    setup(existing);
-    type('#name', 'Master 2');
+    const officialName =
+      'Licence professionnelle en Technologies de l’information et de la communication appliquées au tourisme';
+    setup({ ...existing, name: officialName });
     submit();
     const req = backend.expectOne(`${api}/programs/7`);
     expect(req.request.method).toBe('PUT');
-    expect(req.request.body).toEqual({ code: 'MST', name: 'Master 2', duration: 2, description: '', schoolId: 8 });
-    req.flush({ id: 7, name: 'Master 2' });
+    expect(req.request.body).toEqual({ code: 'MST', name: officialName, duration: 2, description: '', schoolId: 8 });
+    req.flush({ id: 7, name: officialName });
     expect(saved.length).toBe(1);
   });
 
