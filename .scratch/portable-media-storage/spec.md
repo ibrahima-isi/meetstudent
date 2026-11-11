@@ -8,7 +8,7 @@ MeetStudent sert les images et les documents privés depuis les volumes du serve
 
 ## Solution
 
-Ajouter une interface de stockage indépendante du fournisseur pour le disque et les services compatibles S3. L’API continue de servir les URL publiques et de vérifier les droits d’accès aux documents privés. Le projet inclut le déplacement des fichiers existants et la bascule de production, avec une courte pause des modifications validée pour la synchronisation finale.
+Ajouter une interface de stockage indépendante du fournisseur pour le disque et les services compatibles S3. L’API continue de servir les URL publiques et de vérifier les droits d’accès aux documents privés. Le projet livre la procédure et l’outillage de migration des fichiers existants vers un bucket compatible S3. La synchronisation finale prévoit une courte pause des modifications. L’exploitant renseigne sa destination au moment du déploiement.
 
 ## User Stories
 
@@ -39,11 +39,11 @@ Ajouter une interface de stockage indépendante du fournisseur pour le disque et
 ## Implementation Decisions
 
 - Utiliser les clés existantes comme identifiants stables des fichiers dans PostgreSQL. L’interface couvre l’écriture, la lecture en flux avec métadonnées et plages d’octets, ainsi que la suppression idempotente.
-- Sélectionner l’adaptateur par configuration de déploiement. Le disque est le mode par défaut. Le client S3 reçoit la région, le bucket et, si nécessaire, un endpoint et un mode d’adressage.
+- Sélectionner l’adaptateur par configuration de déploiement. Le disque est le mode par défaut. Le client S3 reçoit la région de signature, le bucket et, si nécessaire, un endpoint et un mode d’adressage. La région de signature sert à authentifier les requêtes. La configuration accepte la destination et la localisation choisies par l’exploitant.
 - Servir les médias par l’API depuis des buckets et conteneurs privés. Appliquer les URL, règles d’autorisation et en-têtes existants. Le service métier gère la validation, les tentatives répétées, la modération et la suppression après validation de la transaction.
 - Couvrir les anciens chemins publics encore servis. Régler les références historiques privées avant la bascule et empêcher leur réécriture au démarrage en mode objet.
 - Sauvegarder le dump, l’inventaire des clés issu du même instantané PostgreSQL, les fichiers et leurs sommes de contrôle. Inclure les anciens fichiers publics servis, sérialiser les sauvegardes et publier uniquement les archives complètes. Retenter une sauvegarde incohérente et garder la dernière archive complète accessible.
-- Conserver le chiffrement, la juridiction européenne et la rétention de 30 jours pour les sauvegardes. Leur fournisseur doit être indépendant du VPS et du stockage actif. Une bascule du stockage actif vers R2 impose une destination de sauvegarde compatible S3 et indépendante et une lecture des archives R2 historiques jusqu’à leur échéance.
+- Conserver le chiffrement, la juridiction européenne et la rétention de 30 jours pour les sauvegardes. Leur fournisseur doit être indépendant du VPS et du stockage actif. Si le fournisseur du stockage actif héberge aussi les sauvegardes, qualifier une nouvelle destination compatible S3 et indépendante selon l’ADR de sauvegarde, et préserver la lecture des anciennes archives jusqu’à leur échéance.
 - Copier et vérifier les fichiers avant la pause. Pendant la pause, suspendre les opérations qui modifient les fichiers ou leurs références, attendre la fin des transactions et suppressions différées, puis réconcilier l’inventaire. Reprendre sur la source si la fenêtre est dépassée ou si les inventaires divergent.
 - Tester les lectures publiques et privées sur la destination avant de rouvrir les écritures. Après leur réouverture, un retour au disque exige une synchronisation inverse des ajouts, modifications et suppressions. Si la destination est inaccessible, restaurer la dernière sauvegarde complète et expliciter la perte possible depuis ce point.
 
@@ -51,7 +51,7 @@ Ajouter une interface de stockage indépendante du fournisseur pour le disque et
 
 - Vérifier d’abord les comportements par les routes HTTP existantes. Reprendre les tests d’intégration du contrôleur des médias pour les dépôts, lectures, refus, suppressions, en-têtes, plages d’octets et pannes. Exercer chaque adaptateur avec un stockage isolé et réserver les tests du contrat de stockage aux comportements que l’API ne permet pas d’observer.
 - Reprendre les tests de sauvegarde et de restauration de l’infrastructure pour vérifier des archives anciennes et nouvelles, un fichier manquant et une sauvegarde interrompue. Restaurer ensemble PostgreSQL et les fichiers dans un environnement jetable.
-- Répéter la copie, la pause, le retour arrière et la restauration avec le fournisseur de production choisi. Comparer clés, tailles et sommes de contrôle, puis vérifier les mêmes URL et autorisations sur l’instance restaurée.
+- Répéter la copie, la pause, le retour arrière et la restauration avec des destinations S3 isolées. Qualifier le bucket choisi avant toute bascule réelle. Comparer clés, tailles et sommes de contrôle, puis vérifier les mêmes URL et autorisations sur l’instance restaurée.
 
 ## Out of Scope
 
@@ -62,4 +62,4 @@ Ajouter une interface de stockage indépendante du fournisseur pour le disque et
 
 ## Further Notes
 
-Le fournisseur compatible S3 et la région européenne de production restent à choisir avant la création de la destination. La durée de la pause sera estimée pendant la répétition. La référence d’architecture est l’ADR proposé sur le stockage portable des médias. La décision de sauvegarde hors site reste applicable.
+L’exploitant peut fournir un bucket S3 compatible au moment du déploiement. La durée de la pause sera estimée pendant la répétition. L’ADR sur le stockage portable des médias décrit la séparation entre l’application et le fournisseur. L’ADR de sauvegarde hors site couvre la destination des sauvegardes.
