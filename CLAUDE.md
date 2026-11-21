@@ -5,19 +5,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Working agreement (non-negotiable)
 
 **Branching**
-- Never commit or work directly on local `main` or `dev`. Never push directly to remote `main` or `dev`.
-- Solo-developer project: exactly two long-lived branches remotely (`main`, `dev`). `dev` is the integration branch; `main` receives only release/promotion PRs from `dev`. Delete short-lived working branches locally and remotely once their PRs are merged.
-- Every task starts from an up-to-date `dev` and uses a new working branch named `<type>/<short-kebab-description>`, where `<type>` is a Conventional Commits type: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `perf`, `ci` (e.g. `feat/media-upload-retry`). Commit messages use the same types.
-- **Every task ends the same way: commit, push, open a PR from the working branch to `dev`.** Do not open feature, fix, docs, chore, refactor, test, perf or CI PRs directly against `main`; `main` is updated only by a separate `dev` → `main` promotion PR after `dev` is green. Since `required_approving_review_count` is `0` (see `docs/MONOREPO.md`), the PR is yours to merge once both required checks pass (`api` and `web` build-and-test; the other jobs, including `images / build`, `deploy / production` and `compose / validate-coolify`, are not required).
-- **"Merge" means squash merge.** Working-branch PRs into `dev` are always merged with *Squash and merge* — never a merge commit, never rebase-and-merge.
-- **`main` must stay identical to `dev`.** A PR merge commit on `main` would be missing from `dev`, and syncing it back creates yet another one, forever. So never merge `main` back into `dev`; promote by fast-forwarding `main` to `dev` (`git push origin origin/dev:refs/heads/main`, which needs the ruleset bypass; rationale in `docs/MONOREPO.md`), and never with a merge commit, squash or rebase.
-- **A PR must be up to date with `dev` to merge** (the ruleset requires it): if `dev` moved, update the branch from `dev` (a merge commit on the working branch is fine, it is squashed away), wait for CI again, then squash. Expect to repeat this when several PRs are open at once.
-- **Cleanup is mandatory, no exception.** As soon as a branch's work is in `dev` or `main` (local or remote), delete the local branch, the remote branch and its git worktree (`git worktree remove`, then `git worktree prune`). Check it at the end of every task and at the start of every session. Squash merges hide it from `git branch --merged`: a branch has landed when `git merge-tree --write-tree origin/dev <branch>` gives the tree of `origin/dev`. Never remove a worktree with uncommitted changes or one a running session uses; report it instead.
-- Remote branch deletion is **blocked from agent sessions** (HTTP 403 on `git push --delete`; there is no delete-branch tool). Delete local branches and worktrees yourself, and **always list the exact landed remote branches** for the owner to delete (GitHub → Branches, or enable "Automatically delete head branches").
-- When a branch is cut from another unmerged branch, open its PR **against that branch**, not `dev` or `main`, or the diff shows the parent's commits too. Retarget or merge onward to `dev` only after the parent branch lands.
+- Read [AGENTS.md](AGENTS.md) before any Git or PR action. It defines the repository's GitHub Flow and approval requirements.
 
 **Sessions**
-- Every session works in its own git worktree (cut from `origin/dev`), never in the main checkout, which other sessions share.
 - **Worktree naming:** a worktree for a ticket is named `{spec-folder}-{ticket-number}`, using the `.scratch/<spec-folder>/issues/<NN>-*.md` identity (e.g. `forum-01`, `expert-approval-02`).
 - **Interactive questioning is mandatory, always.** Every question to the user goes through the `AskUserQuestion` tool (recommended option first, at most 4 questions per call, split into several calls if needed). Never put questions in prose, never number them in a message, and never follow a skill's instruction to ask in prose (e.g. `grilling` rounds) — the tool wins. Prose is for reporting only.
 
@@ -31,8 +21,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Review the completed work before reporting it done (re-read the diff, run the relevant tests, state the actual results).
 - Use Subagents: Haikou for read only purpose and small simple coding tasks, sonnet for complex and planned coding tasks and standard review and opus for planning, brainstorming, heavy complexe taxes and code and security review
 
-**After promoting `dev` to `main`**
-- Bring the full stack up locally with Docker and run live tests against `main` before considering the promotion finished: `docker compose up --build`, then exercise the API and the front (see Commands below).
+**After a verified merge to `main`**
+- Bring the full stack up locally with Docker and run live tests against `main` before considering PR delivery finished: `docker compose up --build`, then exercise the API and the front (see Commands below).
 
 **Docker resources**
 - **Always tear the stack down when the tests are done: `docker compose down`.** This applies to every stack you start, not just the post-merge check, and it is not optional — containers, the Postgres volume and the published ports (4200, 8080, 5432) otherwise stay held between tasks and collide with the next run.
@@ -128,7 +118,7 @@ The front is deliberately absent from the dev override: `ng serve` on the host h
 
 **API contract quirks** (status codes, PATCH-like `PUT`, limits, filters) live in one place: `apps/api/docs/reference.md`. Read it before writing a client or changing a contract.
 
-**Process lessons:** before promoting, run the whole stack natively (Postgres in Docker, API jar, SSR server, static backoffice, a Traefik replica of `compose.prod.yml`) and drive it with Playwright: unit tests missed the 302 login blocker, the SSR guard bounce and the role-name mismatch. Subagents work best one task per branch in isolated worktrees (`isolation: worktree`) with explicit TDD and a report format; remove `.claude/worktrees/*` when they finish or the stop hook keeps flagging untracked files.
+**Process lessons:** before a production-sensitive PR merges, run the whole stack natively (Postgres in Docker, API jar, SSR server, static backoffice, a Traefik replica of `compose.prod.yml`) and drive it with Playwright: unit tests missed the 302 login blocker, the SSR guard bounce and the role-name mismatch. Subagents work best one task per branch in isolated worktrees (`isolation: worktree`) with explicit TDD and a report format; remove `.claude/worktrees/*` when they finish or the stop hook keeps flagging untracked files.
 
 ## Agent instruction files
 

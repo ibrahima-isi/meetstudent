@@ -99,73 +99,21 @@ git subtree add --prefix=apps/backoffice bo-upstream <branch> --squash
 If it is started from scratch, no subtree is involved — just create the
 directory and add a job to `.github/workflows/ci.yml`.
 
-## Branches
+## Branches and project memory
 
-This is a solo-developer project, and the branch model is deliberately small:
+[AGENTS.md](../AGENTS.md) defines the GitHub Flow branch, commit, authorization and cleanup policy. [CLAUDE.md](../CLAUDE.md) holds the rest of the shared project memory. Working branches start from `origin/main`, and an authorized PR targets `main`. A merge into `main` starts the production workflow described in [DEPLOY.md](DEPLOY.md#9-coolify-production-on-the-hetzner-vps).
 
-| Branch | Role |
-|---|---|
-| `main` | release/source-of-truth branch; receives only promotion PRs from `dev` |
-| `dev` | integration branch; all working branches merge here first |
+### Retiring the legacy integration branch
 
-**Two long-lived branches remotely: `main` and `dev`.** Keep local tracking
-branches for them when needed, but never commit directly on either branch and
-never push directly to either remote branch. Short-lived working branches are
-created from an up-to-date `dev`, pushed, merged through a PR **into `dev`**,
-then deleted on both sides. `main` is updated only by a separate promotion PR
-from `dev` to `main` after `dev` is green. No feature, fix, docs, chore,
-refactor, test, perf or CI branch opens directly against `main`.
+Keep `dev` until its existing work is incorporated. After explicit authorization, open a one-time `dev` → `main` PR and use a GitHub merge commit to retain the original commits. Review the production changes before authorizing that merge. Verify GitHub reports the PR merged, then fetch and check `git merge-base --is-ancestor origin/dev origin/main`. Compare any local `dev` tip as well. Update outstanding working branches from `origin/main` before resuming them.
 
-The normal flow is:
+After separate cleanup approval, go to **Settings → Rules → Rulesets** and remove the `refs/heads/dev` target from `protected-branches` and `required-ci`. In **Settings → Branches**, check for a classic rule that still blocks deleting `dev` and retire the `dev`-specific rule if present. Keep the active rules for `main`. Delete the verified branch through **Branches** on GitHub and with `git branch -d dev` locally where the ancestry check passes. A `protected branch hook declined` response can indicate a classic rule even after the ruleset target has been removed.
 
-```bash
-git fetch origin
-git switch dev
-git pull --ff-only origin dev
-git switch -c <type>/<short-kebab-description>
-# commit, push, open PR: <working-branch> -> dev
-# after dev is ready, open PR: dev -> main
-```
+After the migration, use **Settings → General → Pull Requests** to disable **Allow merge commits** and edit `github-flow-main` under **Rules → Rulesets** to allow only squash merges. Rebase merging, automatic merging, and automatic head-branch deletion should be off.
 
-If a working branch is stacked on another unmerged branch, target the parent
-branch first so the diff stays reviewable. Once the parent lands, retarget or
-merge onward to `dev`. `main` remains reserved for `dev` promotion PRs.
+### Branch history
 
-A third branch, `stage`, was deleted on 2026-08-09. It never left the
-pre-migration layout, so it could not run CI, and a solo workflow does not need a
-third environment. Its three commits unique to `main` were merge commits with an
-empty diff against their merge base — no code was lost.
-
-Deleting it took two steps, and the second is easy to miss: removing
-`refs/heads/stage` from the `protected-branches` ruleset was not enough, because
-a **legacy branch-protection object** still carried `allow_deletions: false`.
-The push then failed with `protected branch hook declined` instead of
-`repository rule violations` — the wording is the only clue that a legacy rule,
-not a ruleset, is refusing. `DELETE /repos/…/branches/stage/protection` cleared
-it. `main` and `dev` may still carry similar remnants.
-
-### The lesson from `dev`
-
-`dev` stayed on the **pre-migration** layout long after the migration: its head
-was `7899a12`, the very commit used as the `apps/api` subtree source, so it still
-had `pom.xml` and `src/` at the root. Any PR targeting it showed the whole
-monorepo restructuring (~342 files) instead of the actual change, and the CI jobs
-could not run at all on a tree with no `apps/api`.
-
-It was realigned by merging `main` into `dev` through PR #18 — a fast-forward,
-since `dev` was a strict ancestor of `main` — rather than by force-pushing, which
-`protected-branches` forbids. `dev` now carries the monorepo layout. That was a
-one-time repair; normal work now flows from working branches into `dev`, then
-from `dev` into `main`.
-
-`required-ci` now targets `dev` as well, so both checks gate it.
-
-Promote with `git push origin origin/dev:refs/heads/main` (a fast-forward). `git push origin dev:main` would push the *local* `dev`, which often lags `origin/dev`. Before opening a PR against a long-lived branch, run `git merge-base --is-ancestor origin/<branch> origin/main`. Pushing to `main` runs `deploy / production`, which fails harmlessly until the `production` environment and `COOLIFY_*` secrets exist.
-
-Watch for this whenever a long-lived branch predates the migration or appears
-stale: check the merge base before opening a PR against it. A working-branch PR
-should compare cleanly against `origin/dev`, and a promotion PR should compare
-cleanly from `origin/dev` to `origin/main`.
+PR #18 realigned the old pre-monorepo `dev` with `main` without rewriting history. The retired `stage` branch never received the monorepo layout. Its classic branch protection had to be removed separately from its ruleset target before deletion.
 
 ## Working with agents: ask interactively, always
 
@@ -181,60 +129,16 @@ Tickets are tracked in `.scratch/<spec-folder>/completion.md`, one file per spec
 
 ## CI and branch protection
 
-A single workflow, `.github/workflows/ci.yml`, runs seven jobs — the published
-check names are what branch protection matches. Two are **required**:
+[CI](../.github/workflows/ci.yml) runs for PRs targeting `main` and pushes published to `main` after a merge. Protect `main` with these active rulesets and empty bypass lists:
 
-- `api / build-and-test`
-- `web / build-and-test`
+| Ruleset | Main branch requirements |
+|---|---|
+| `protected-branches` | Block deletion and force pushes. Require verified commit signatures. |
+| `required-ci` | Require `api / build-and-test` and `web / build-and-test` from GitHub Actions. Require an up-to-date branch. |
+| `github-flow-main` | Require a PR with zero approvals for the solo maintainer. Require `backoffice / build-and-test` from GitHub Actions and an up-to-date branch. Allow squash merges and temporarily allow merge commits for the `dev` migration. |
 
-and `backoffice / build-and-test` runs on every PR but is not a required check
-(add it to the `required-ci` ruleset if it should gate merges). Three more jobs
-are not required checks either: `images / build` (pull requests),
-`deploy / production` (push to `main` only) and `compose / validate-coolify`.
+GitHub matches required checks by the job's published `name:`. Update the ruleset when renaming a required check. Use one entry per branch pattern and select check names from autocomplete.
 
-`changes / detect` (not required either) lets a pull request skip
-`api / build-and-test` when it touches neither `apps/api/` nor `ci.yml`
-(docs, web, Dependabot): the job is then skipped, which GitHub counts as a
-passing required check. Pushes always run it, and so does a failed or silent
-filter. Tested by `infra/tests/ci-images.test.sh`.
+`changes / detect` lets a PR skip `api / build-and-test` if it touches neither `apps/api/` nor `ci.yml`. GitHub counts the skipped job as passing. Main runs always test the API, and a failed or silent filter also runs it. `images / build` checks PR images, `compose / validate-coolify` validates the deployment configuration, and `deploy / production` runs only after the three app checks pass on `main`. The CI contract is covered by [infra/tests/ci-images.test.sh](../infra/tests/ci-images.test.sh).
 
-Protection is enforced through **rulesets**, not legacy branch protection rules:
-
-- `protected-branches` → `main`, `dev`: no deletion, no force push, signed
-  commits, PR required, `required_approving_review_count: 0`
-- `required-ci` → `main`, `dev`: both checks above must pass, branch must be up
-  to date
-
-Both bypass lists are **empty**, so the rules apply to the repository owner too.
-
-That once made a solo merge impossible — one approval was required and nobody
-was there to give it. **Settled on 2026-08-09 by setting
-`required_approving_review_count` to `0`** (verified against the live ruleset,
-not remembered). A PR is still required and still gets a review surface; what is
-gone is the need for someone else to click approve.
-
-The reason that is safe rather than a hole is that **the two rulesets are
-independent**. Lowering the approval count in `protected-branches` leaves
-`required-ci` untouched, so both checks still have to pass and the branch still
-has to be up to date. CI is the real gate, and it cannot be waved through.
-
-Prefer this over the two alternatives that also unblock a solo merge: a bypass
-entry exempts the owner from the *whole* ruleset, and `gh pr merge --admin`
-overrides required status checks too — either one lets a red build reach `main`,
-which is exactly what the setup exists to prevent.
-
-When renaming a job, remember the check name comes from the job's `name:` field,
-not its id — rename it in the rulesets at the same time or PRs block on a check
-nobody produces.
-
-Rulesets have to be edited **by hand in the GitHub UI**. A classic OAuth token
-with the `repo` scope can read them but not write: `PATCH /repos/…/rulesets/{id}`
-answers `404`, which is GitHub's way of reporting a missing Administration
-permission rather than a missing resource.
-
-Two habits worth keeping when editing a target list: enter **one pattern per
-`Include by pattern` dialog**, without quotes or commas — pasting
-`"main", "dev"` creates a single literal pattern that matches no branch and
-silently protects nothing — and pick check names from the autocomplete rather
-than typing them, since a stray space around the `/` produces a required check
-nobody ever reports.
+Maintain dependencies through explicitly authorized PRs. [Dependabot configuration](../.github/dependabot.yml) pauses scheduled version-update PRs for all ecosystems. Keep **Dependabot security updates** off under **Settings → Advanced Security** to prevent automatic security PRs.

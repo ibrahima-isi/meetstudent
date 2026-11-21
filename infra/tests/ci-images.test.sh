@@ -63,6 +63,12 @@ test_no_image_is_tagged_without_a_full_commit_sha() {
 WORKFLOW=.github/workflows/ci.yml
 job() { yq -o=json ".jobs.$1" "$WORKFLOW"; }
 
+test_ci_runs_for_main_pull_requests_and_main_updates() {
+  local branches
+  branches="$(yq -o=json -I=0 '.on | {"push": .push.branches, "pull_request": .pull_request.branches}' "$WORKFLOW")"
+  assert_eq '{"push":["main"],"pull_request":["main"]}' "$branches" "CI branch filters"
+}
+
 # The rulesets require checks by job `name:` (docs/MONOREPO.md): renaming a
 # test job, or giving a new job one of these names, breaks every merge.
 test_required_test_checks_keep_their_names() {
@@ -90,7 +96,7 @@ test_pull_request_builds_every_image_without_pushing() {
     "$(jq -r '.[0].with | "\(.files)|\(.source)|\(.push)"' <<<"$bake")" "bake files|source|push"
 }
 
-test_promotion_to_main_publishes_every_image_to_ghcr_after_the_tests() {
+test_main_publishes_every_image_to_ghcr_after_the_tests() {
   local j
   j="$(job deploy)"
   assert_eq "api,web,backoffice" "$(jq -r '.needs | join(",")' <<<"$j")" "deploy needs"
@@ -125,7 +131,7 @@ test_no_secret_file_reaches_an_image_build_context() {
 }
 
 # Deploys queue one after another instead of cancelling each other. A new
-# push cancels the superseded run on a PR or `dev`, never on `main`: there
+# push cancels the superseded run on a PR. Runs on `main` stay queued: there
 # the run carries a deploy, and cancelling it could stop it mid-push.
 test_deploys_queue_instead_of_cancelling_each_other() {
   assert_eq '{"group":"deploy-production","cancel-in-progress":false}' \
@@ -235,14 +241,16 @@ test_every_action_is_pinned_to_a_full_commit_sha() {
   assert_eq "" "$bad" "actions not pinned to <sha> # vX.Y.Z"
 }
 
-test_dependabot_keeps_the_pinned_actions_up_to_date_on_dev() {
+test_dependabot_scheduled_pull_requests_are_paused() {
   local f=.github/dependabot.yml
   [[ -f "$f" ]] || { fail "$f missing"; return; }
   assert_eq "2" "$(yq '.version' "$f")" "dependabot version"
-  assert_eq '{"package-ecosystem":"github-actions","directory":"/","interval":"weekly","target-branch":"dev"}' \
-    "$(yq -o=json -I=0 '.updates[] | select(.package-ecosystem == "github-actions")
-      | {"package-ecosystem": .package-ecosystem, "directory": .directory, "interval": .schedule.interval, "target-branch": .target-branch}' "$f")" \
-    "github-actions updates"
+  assert_eq 'github-actions:/|npm:/apps/web|npm:/apps/backoffice|maven:/apps/api' \
+    "$(yq '[.updates[] | .package-ecosystem + ":" + .directory] | join("|")' "$f")" \
+    "configured ecosystems"
+  assert_eq '0' "$(yq '[.updates[] | select(
+    .schedule.interval != "weekly" or .open-pull-requests-limit != 0 or (.target-branch // "main") != "main"
+  )] | length' "$f")" "scheduled version-update PRs are paused"
 }
 
 # Every job gets a read-only token unless it says otherwise (only deploy does).
