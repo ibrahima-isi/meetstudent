@@ -83,6 +83,14 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD}
       FILE_UPLOAD_DIR: /data/uploads
       FILE_PRIVATE_DIR: /data/private
+      MEDIA_STORAGE_BACKEND: ${MEDIA_STORAGE_BACKEND:-disk}
+      MEDIA_S3_BUCKET: ${MEDIA_S3_BUCKET:-}
+      MEDIA_S3_REGION: ${MEDIA_S3_REGION:-}
+      MEDIA_S3_ENDPOINT: ${MEDIA_S3_ENDPOINT:-}
+      MEDIA_S3_PATH_STYLE: ${MEDIA_S3_PATH_STYLE:-false}
+      MEDIA_S3_ACCESS_KEY_ID: ${MEDIA_S3_ACCESS_KEY_ID:-}
+      MEDIA_S3_SECRET_ACCESS_KEY: ${MEDIA_S3_SECRET_ACCESS_KEY:-}
+      MEDIA_S3_SESSION_TOKEN: ${MEDIA_S3_SESSION_TOKEN:-}
       # Account emails. Off unless MAIL_ENABLED=true; none of these is required, see docs/DEPLOY.md.
       MAIL_ENABLED: ${MAIL_ENABLED:-false}
       # brevo | gmail | ses | custom (default). A preset only supplies DEFAULTS for the SMTP connection (host, port 587,
