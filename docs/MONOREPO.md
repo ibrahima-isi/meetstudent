@@ -105,11 +105,11 @@ directory and add a job to `.github/workflows/ci.yml`.
 
 ### Retiring the legacy integration branch
 
-Keep `dev` until its existing work is incorporated. After explicit authorization, open a one-time `dev` → `main` PR and use a GitHub merge commit to retain the original commits. Review the production changes before authorizing that merge. Verify GitHub reports the PR merged, then fetch and check `git merge-base --is-ancestor origin/dev origin/main`. Compare any local `dev` tip as well. Update outstanding working branches from `origin/main` before resuming them.
+The one-time [PR #288](https://github.com/ibrahima-isi/meetstudent/pull/288) brought all seven legacy `dev` commits into `main` with their original IDs. Before deleting the remote branch, fetch and verify `git merge-base --is-ancestor origin/dev origin/main`. Update outstanding working branches from `origin/main` before resuming them.
 
-After separate cleanup approval, go to **Settings → Rules → Rulesets** and remove the `refs/heads/dev` target from `protected-branches` and `required-ci`. In **Settings → Branches**, check for a classic rule that still blocks deleting `dev` and retire the `dev`-specific rule if present. Keep the active rules for `main`. Delete the verified branch through **Branches** on GitHub and with `git branch -d dev` locally where the ancestry check passes. A `protected branch hook declined` response can indicate a classic rule even after the ruleset target has been removed.
+The repository owner handles the remote cleanup. In **Settings → Rules → Rulesets**, remove the `refs/heads/dev` target from `protected-branches` and `required-ci`. In **Settings → Branches**, retire the classic protection that blocks deleting `dev`. Keep the active rules for `main`. Delete the verified branch through **Branches** on GitHub.
 
-After the migration, use **Settings → General → Pull Requests** to disable **Allow merge commits** and edit `github-flow-main` under **Rules → Rulesets** to allow only squash merges. Rebase merging, automatic merging, and automatic head-branch deletion should be off.
+After deleting `dev`, use **Settings → General → Pull Requests** to disable **Allow merge commits** and edit `github-flow-main` under **Rules → Rulesets** to allow only squash merges. Rebase merging, automatic merging, and automatic head-branch deletion should be off.
 
 ### Branch history
 
@@ -135,7 +135,7 @@ Tickets are tracked in `.scratch/<spec-folder>/completion.md`, one file per spec
 |---|---|
 | `protected-branches` | Block deletion and force pushes. Require verified commit signatures. |
 | `required-ci` | Require `api / build-and-test` and `web / build-and-test` from GitHub Actions. Require an up-to-date branch. |
-| `github-flow-main` | Require a PR with zero approvals for the solo maintainer. Require `backoffice / build-and-test` from GitHub Actions and an up-to-date branch. Allow squash merges and temporarily allow merge commits for the `dev` migration. |
+| `github-flow-main` | Require a PR with zero approvals for the solo maintainer. Require `backoffice / build-and-test` from GitHub Actions and an up-to-date branch. Allow squash merges. Remove the temporary merge-commit option during the owner’s cleanup. |
 
 GitHub matches required checks by the job's published `name:`. Update the ruleset when renaming a required check. Use one entry per branch pattern and select check names from autocomplete.
 
