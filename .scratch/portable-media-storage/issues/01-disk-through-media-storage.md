@@ -1,7 +1,7 @@
 # 01 · Servir les médias sur disque via l’interface de stockage
 
 Blocked by: Aucun
-Status: claimed
+Status: resolved
 
 ## What to build
 
@@ -9,7 +9,12 @@ Les utilisateurs peuvent déposer, consulter, remplacer et supprimer des médias
 
 ## Acceptance criteria
 
-- [ ] Les images publiques, les anciennes URL servies et les documents privés existants restent lisibles depuis le disque.
-- [ ] Les dépôts, tentatives répétées, remplacements et suppressions passent par le parcours HTTP existant. La suppression du fichier suit la validation de la transaction.
-- [ ] Les lectures privées vérifient le propriétaire ou le rôle administrateur. Les tests d’intégration couvrent les accès refusés, les en-têtes et les plages d’octets prises en charge.
-- [ ] Le dépôt démarre en mode disque sans identifiants cloud.
+- [x] Les images publiques, les anciennes URL servies et les documents privés existants restent lisibles depuis le disque.
+- [x] Les dépôts, tentatives répétées, remplacements et suppressions passent par le parcours HTTP existant. La suppression du fichier suit la validation de la transaction.
+- [x] Les lectures privées vérifient le propriétaire ou le rôle administrateur. Les tests d’intégration couvrent les accès refusés, les en-têtes et les plages d’octets prises en charge.
+- [x] Le dépôt démarre en mode disque sans identifiants cloud.
+
+## Comments
+
+- Adaptateur disque et parcours HTTP intégrés dans `05d2e01`. Les tests ciblés ont réussi (74 unitaires et 45 d’intégration). La suite locale a ensuite validé 496 tests unitaires et 836 tests d’intégration. Neuf tests PostgreSQL ont été ignorés durant cette exécution locale.
+- Travail intégré à `main` via les PR [#279](https://github.com/ibrahima-isi/meetstudent/pull/279) et [#288](https://github.com/ibrahima-isi/meetstudent/pull/288). La [CI API sur `main`](https://github.com/ibrahima-isi/meetstudent/actions/runs/44932867333) a réussi avec le service PostgreSQL.
