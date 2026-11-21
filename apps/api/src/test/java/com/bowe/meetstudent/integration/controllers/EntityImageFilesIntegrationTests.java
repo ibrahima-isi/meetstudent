@@ -13,7 +13,7 @@ import com.bowe.meetstudent.repositories.CourseRepository;
 import com.bowe.meetstudent.repositories.MediaRepository;
 import com.bowe.meetstudent.repositories.ProgramRepository;
 import com.bowe.meetstudent.repositories.SchoolRepository;
-import com.bowe.meetstudent.services.MediaStorageService;
+import com.bowe.meetstudent.services.MediaStorage;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -44,23 +44,25 @@ class EntityImageFilesIntegrationTests {
 
     @Autowired private MockMvc mockMvc;
     @Autowired private MediaRepository mediaRepository;
-    @Autowired private MediaStorageService storage;
+    @Autowired private MediaStorage storage;
     @Autowired private SchoolRepository schoolRepository;
     @Autowired private ProgramRepository programRepository;
     @Autowired private CourseRepository courseRepository;
 
     /** A media row backed by a real file on disk. */
     private Media image(MediaCategory category) throws IOException {
-        String key = storage.store(new byte[] {1, 2, 3}, "png", MediaVisibility.PUBLIC);
+        String key = "public/" + java.util.UUID.randomUUID() + ".png";
+        storage.write(key, new byte[] {1, 2, 3}, "image/png");
         return mediaRepository.save(Media.builder().storageKey(key).originalFilename("i.png")
                 .contentType("image/png").sizeBytes(3L).category(category)
                 .visibility(MediaVisibility.PUBLIC).build());
     }
 
-    private boolean fileExists(Media media) {
+    private boolean fileExists(Media media) throws IOException {
         try {
-            return storage.loadAsResource(media.getStorageKey()).exists();
-        } catch (IOException e) {
+            storage.stat(media.getStorageKey());
+            return true;
+        } catch (MediaStorage.MissingObjectException e) {
             return false;
         }
     }
