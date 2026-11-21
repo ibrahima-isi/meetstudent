@@ -2,6 +2,7 @@ package com.bowe.meetstudent.services;
 
 import com.bowe.meetstudent.entities.Media;
 import com.bowe.meetstudent.entities.enums.MediaCategory;
+import com.bowe.meetstudent.entities.enums.MediaVisibility;
 import com.bowe.meetstudent.entities.enums.VerificationStatus;
 import com.bowe.meetstudent.exceptions.MediaValidationException;
 import com.bowe.meetstudent.exceptions.ResourceNotFoundException;
@@ -10,7 +11,6 @@ import com.bowe.meetstudent.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -23,9 +23,6 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -33,13 +30,14 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class MediaService {
 
-    private final MediaStorageService storageService;
+    private final MediaStorage storageService;
     private final MediaRepository mediaRepository;
 
     private static final List<MediaCategory> PERSONAL_DOCUMENT_CATEGORIES = Arrays.stream(MediaCategory.values())
@@ -57,9 +55,6 @@ public class MediaService {
             "mov", Set.of("video/quicktime")
     );
 
-    @Value("${file.upload-dir:uploads}")
-    private String uploadDir;
-
     @Value("${file.max-upload-bytes:10485760}")
     private long maxUploadBytes;
 
@@ -70,53 +65,6 @@ public class MediaService {
     /** Cumulative size of those documents, in bytes (100 MB by default). */
     @Value("${file.max-personal-bytes:104857600}")
     private long maxPersonalBytes = 100L * 1024 * 1024;
-
-    /**
-     * Delete media file from filesystem
-     * @param relativePath The relative path stored in DB (e.g., "schools/uuid.jpg")
-     * @return boolean true if deleted
-     * @throws IOException
-     */
-    public boolean deleteMedia(String relativePath) throws IOException {
-        if (relativePath == null || relativePath.isEmpty()) return false;
-        
-        Path filePath = getUploadBasePath().resolve(relativePath).normalize();
-        ensurePathInsideUploadDir(filePath);
-        return Files.deleteIfExists(filePath);
-    }
-
-    /**
-     * Delete media file by its full URL or relative path
-     * @param fileUrl The URL or relative path
-     */
-    public void deleteMediaByUrl(String fileUrl) {
-        if (fileUrl == null || fileUrl.isEmpty()) return;
-
-        try {
-            // Extract relative path from URL if necessary
-            // e.g., http://localhost:8080/uploads/schools/uuid.jpg -> schools/uuid.jpg
-            String relativePath = fileUrl;
-            if (fileUrl.contains("/uploads/")) {
-                relativePath = fileUrl.substring(fileUrl.indexOf("/uploads/") + 9);
-            }
-            
-            deleteMedia(relativePath);
-        } catch (IOException e) {
-            // Log error but don't fail the transaction
-            System.err.println("Could not delete file: " + fileUrl + ". Error: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Delete old media if it has been replaced by a new one
-     * @param oldUrl The previous URL
-     * @param newUrl The new URL
-     */
-    public void deleteOldMediaIfChanged(String oldUrl, String newUrl) {
-        if (oldUrl != null && !oldUrl.isEmpty() && !oldUrl.equals(newUrl)) {
-            deleteMediaByUrl(oldUrl);
-        }
-    }
 
     private String validateFile(MultipartFile file, MediaCategory category) {
         if (file == null || file.isEmpty()) {
@@ -183,19 +131,7 @@ public class MediaService {
         return normalized.trim().toLowerCase();
     }
 
-    private Path getUploadBasePath() {
-        return Paths.get(uploadDir).toAbsolutePath().normalize();
-    }
-
-    private void ensurePathInsideUploadDir(Path path) throws IOException {
-        if (!path.toAbsolutePath().normalize().startsWith(getUploadBasePath())) {
-            throw new IOException("Invalid media path");
-        }
-    }
-
-    // --- Media entity orchestration ---
-
-    @Transactional
+    @Transactional(rollbackFor = IOException.class)
     public Media upload(MultipartFile file, MediaCategory category,
                         UserPrincipal principal, String idempotencyKey) throws IOException {
         assertCanUpload(principal, category);
@@ -223,8 +159,10 @@ public class MediaService {
             deleteRowsNowFilesAfterCommit(mediaRepository.findByOwnerIdAndCategory(ownerId, category));
         }
 
-        String storageKey = storageService.store(content, extension, category.getVisibility());
+        String prefix = category.getVisibility() == MediaVisibility.PUBLIC ? "public/" : "private/";
+        String storageKey = prefix + UUID.randomUUID() + "." + extension;
         removeFileUnlessCommitted(storageKey);
+        storageService.write(storageKey, content, normalizeContentType(file.getContentType()));
 
         Media media = Media.builder()
                 .storageKey(storageKey)
@@ -299,7 +237,7 @@ public class MediaService {
         Optional<Media> found = mediaRepository.findById(mediaId);
 
         if (found.isPresent()
-                && found.get().getVisibility() == com.bowe.meetstudent.entities.enums.MediaVisibility.PUBLIC) {
+                && found.get().getVisibility() == MediaVisibility.PUBLIC) {
             return found.get();
         }
         return requireOwnerOrAdmin(found, principal);
@@ -328,10 +266,6 @@ public class MediaService {
             return media;
         }
         throw new AccessDeniedException("You cannot access this document.");
-    }
-
-    public Resource loadContent(Media media) throws IOException {
-        return storageService.loadAsResource(media.getStorageKey());
     }
 
     private boolean isAdmin(UserPrincipal principal) {
