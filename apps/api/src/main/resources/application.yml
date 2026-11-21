@@ -43,6 +43,14 @@ springdoc:
 
 file:
   storage-backend: ${MEDIA_STORAGE_BACKEND:disk}
+  s3:
+    bucket: ${MEDIA_S3_BUCKET:}
+    region: ${MEDIA_S3_REGION:}
+    endpoint: ${MEDIA_S3_ENDPOINT:}
+    path-style: ${MEDIA_S3_PATH_STYLE:false}
+    access-key-id: ${MEDIA_S3_ACCESS_KEY_ID:}
+    secret-access-key: ${MEDIA_S3_SECRET_ACCESS_KEY:}
+    session-token: ${MEDIA_S3_SESSION_TOKEN:}
   # Overridable so containers can point at mounted volumes; the defaults keep
   # `./mvnw spring-boot:run` working from the project directory.
   upload-dir: ${FILE_UPLOAD_DIR:uploads}

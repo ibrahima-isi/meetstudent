@@ -1,5 +1,6 @@
 package com.bowe.meetstudent.exceptions;
 
+import com.bowe.meetstudent.services.MediaStorage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -278,6 +279,13 @@ public class GlobalExceptionHandler {
                 request.getDescription(false).replace("uri=", "")
         );
         return new ResponseEntity<>(errorResponse, status);
+    }
+
+    @ExceptionHandler(MediaStorage.UnavailableException.class)
+    public ResponseEntity<ErrorResponse> handleMediaStorageUnavailable(
+            MediaStorage.UnavailableException ex, WebRequest request) {
+        log.warn("Media storage unavailable: {}", ex.getMessage());
+        return build(HttpStatus.SERVICE_UNAVAILABLE, "Media storage is temporarily unavailable", request);
     }
 
     /**
