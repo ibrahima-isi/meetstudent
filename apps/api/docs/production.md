@@ -47,6 +47,23 @@ or equal (case-insensitive, trimmed) to a value published in the repository: the
 the `dev` default and the `test` profile secret. Generate a real one with `openssl rand -base64 48` (64 characters).
 `dev`, `docker` and `test` are not checked. Changing the secret signs everyone out.
 
+## Media storage
+
+Disk is the default. Use `MEDIA_STORAGE_BACKEND=s3` only with a prepared private bucket and after verifying media migration and backup/restore for that destination. The application serves the existing URLs and continues to authorize private downloads.
+
+| Variable | S3 settings |
+|---|---|
+| `MEDIA_S3_BUCKET` | Required bucket name. |
+| `MEDIA_S3_REGION` | Required signing region for the selected provider. |
+| `MEDIA_S3_ENDPOINT` | Custom S3 API endpoint where required. Use HTTPS for deployed environments. Omit for AWS's regional endpoint. |
+| `MEDIA_S3_PATH_STYLE` | Set to `true` for path-style requests. Defaults to `false`. |
+| `MEDIA_S3_ACCESS_KEY_ID`, `MEDIA_S3_SECRET_ACCESS_KEY` | Required credentials scoped to the configured bucket. Store them as secrets. |
+| `MEDIA_S3_SESSION_TOKEN` | Required alongside temporary credentials that include a session token. |
+
+[AWS S3](https://docs.aws.amazon.com/sdk-for-java/latest/developer-guide/endpoint-config.html) uses the bucket's AWS region. [Cloudflare R2](https://developers.cloudflare.com/r2/examples/aws/aws-sdk-java/) uses signing region `auto`, the account's jurisdiction-specific S3 endpoint, and path-style addressing. [Hetzner Object Storage](https://docs.hetzner.com/storage/object-storage/getting-started/using-libraries/) uses the location code for signing, for example `fsn1`, with an endpoint such as `https://fsn1.your-objectstorage.com`.
+
+Give the API object read, write, and delete access plus bucket inspection/list permission. On AWS, `s3:ListBucket` allows a missing key to return 404 instead of 403. A storage outage or invalid bucket configuration returns 503. Keep public bucket access disabled, including for keys under `public/`, which MeetStudent serves through its own public route.
+
 ## Backups (Coolify stack)
 
 The API does not read these: the `backup` service of `compose.coolify.yml` does, when the nightly Coolify

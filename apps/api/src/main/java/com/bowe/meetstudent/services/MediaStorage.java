@@ -34,6 +34,13 @@ public interface MediaStorage {
 
     record Metadata(long size, Instant lastModified) {}
 
+    /** A storage backend could not complete the operation. The detail is safe for server logs. */
+    class UnavailableException extends IOException {
+        public UnavailableException(String detail) {
+            super(detail);
+        }
+    }
+
     /** Reported by stat and reads when the requested key has no object. */
     class MissingObjectException extends IOException {
         public MissingObjectException() {

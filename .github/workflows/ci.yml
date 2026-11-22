@@ -74,6 +74,18 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+      minio:
+        image: bitnamilegacy/minio:2025.5.24@sha256:451fe6858cb770cc9d0e77ba811ce287420f781c7c1b806a386f6896471a349c
+        env:
+          MINIO_ROOT_USER: meetstudent-test
+          MINIO_ROOT_PASSWORD: meetstudent-test-secret
+        ports:
+          - 59000:9000
+        options: >-
+          --health-cmd "curl -fsS http://127.0.0.1:9000/minio/health/ready"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
 
     defaults:
       run:
@@ -100,6 +112,7 @@ jobs:
           MIGRATION_PG_URL: jdbc:postgresql://127.0.0.1:55432/mig
           MIGRATION_PG_USER: postgres
           MIGRATION_PG_PASSWORD: postgres
+          MEDIA_S3_TEST_ENDPOINT: http://127.0.0.1:59000
 
       - name: Upload test reports on failure
         if: failure()
