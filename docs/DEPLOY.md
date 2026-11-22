@@ -578,12 +578,11 @@ Risks this setup accepts, to keep in mind:
 Coolify's Traefik issues the certificates and the `backup` service replaces `scripts/backup.sh`.
 Do not use `$` in a value: compose would interpolate it.
 
-For media storage, keep `MEDIA_STORAGE_BACKEND` set to `disk` until the migration and backup/restore rehearsal
-are complete. During a cutover or rollback window, set `MEDIA_WRITES_PAUSED` to `true` (`false` by default) to return `503` + `Retry-After` on media/reference writes while reads keep serving and `api` shuts down gracefully (`stop_grace_period: 35s`). When qualifying a separate S3 destination, configure `MEDIA_S3_BUCKET`, `MEDIA_S3_REGION`,
+For media storage, keep `MEDIA_STORAGE_BACKEND` set to `disk` until the operator bucket qualification (`infra/media/media_transfer.py qualify-bucket`), pre-cutover encrypted backup (recording its restore point), initial media sync, and backup/restore rehearsal are complete. During a cutover or rollback window, set `MEDIA_WRITES_PAUSED` to `true` (`false` by default) to return `503` + `Retry-After` on media/reference writes while reads keep serving and `api` shuts down gracefully (`stop_grace_period: 35s`). Keep `MEDIA_WRITES_PAUSED=true` across the Coolify redeploy switching `MEDIA_STORAGE_BACKEND=s3` until public/private reads, authorization refusals (`401`/`403`), direct anonymous S3 denial, and paused write enforcement (`503`) pass; then set `MEDIA_WRITES_PAUSED=false`, verify a new upload and deletion, and take a fresh S3-mode backup to the independent EU destination. When qualifying a separate S3 destination, configure `MEDIA_S3_BUCKET`, `MEDIA_S3_REGION`,
 `MEDIA_S3_ENDPOINT`, and `MEDIA_S3_PATH_STYLE` as applicable. Store `MEDIA_S3_ACCESS_KEY_ID`,
 `MEDIA_S3_SECRET_ACCESS_KEY`, and any `MEDIA_S3_SESSION_TOKEN` in Coolify's secrets.
 See [API media storage configuration](../apps/api/docs/production.md#media-storage) and the
-[media migration and rollback guide](MEDIA_MIGRATION.md) for transfer, pause/drain, rollback, and archive recovery procedures.
+[media migration and rollback guide](MEDIA_MIGRATION.md) for bucket qualification, independent backup checks, pause/drain cutover, reverse sync rollback (reconciling post-activation creations, edits, and deletions), and archive recovery procedures.
 
 ### 9.3 GitHub `production` environment and the deploy webhook
 
