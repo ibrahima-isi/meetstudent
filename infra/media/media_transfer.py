@@ -482,8 +482,16 @@ class S3Endpoint(StorageEndpoint):
         self.timeout = timeout
 
         if endpoint:
-            parsed = urllib.parse.urlparse(endpoint.rstrip("/"))
-            if parsed.scheme not in ("http", "https") or not parsed.hostname:
+            parsed = urllib.parse.urlparse(endpoint.strip().rstrip("/"))
+            if (
+                parsed.scheme not in ("http", "https")
+                or not parsed.hostname
+                or parsed.username is not None
+                or parsed.password is not None
+                or "@" in (parsed.netloc or "")
+                or bool(parsed.query)
+                or bool(parsed.fragment)
+            ):
                 raise ValueError(f"Invalid S3 endpoint URL: {endpoint}")
             self.scheme = parsed.scheme
             self.base_host = parsed.hostname
@@ -492,6 +500,7 @@ class S3Endpoint(StorageEndpoint):
             self.scheme = "https"
             self.base_host = f"s3.{region}.amazonaws.com"
             self.port = None
+        self.endpoint_url = f"{self.scheme}://{self.base_host}" + (f":{self.port}" if self.port else "")
 
     def _effective_host_and_port(self) -> tuple[str, Optional[int], str]:
         host = self.base_host if self.path_style else f"{self.bucket}.{self.base_host}"
@@ -516,6 +525,7 @@ class S3Endpoint(StorageEndpoint):
         query_params: Optional[dict[str, str]] = None,
         body: bytes = b"",
         content_type: Optional[str] = None,
+        extra_headers: Optional[dict[str, str]] = None,
         now: Optional[datetime] = None,
     ) -> dict:
         now = now or datetime.now(timezone.utc)
@@ -542,6 +552,13 @@ class S3Endpoint(StorageEndpoint):
             headers_lower["content-type"] = content_type
         if self.session_token:
             headers_lower["x-amz-security-token"] = self.session_token
+        extra_preserved: dict[str, str] = {}
+        if extra_headers:
+            for k, v in extra_headers.items():
+                kl = k.lower()
+                if kl not in headers_lower:
+                    headers_lower[kl] = v
+                    extra_preserved[k] = v
 
         sorted_header_names = sorted(headers_lower.keys())
         canonical_headers = "".join(f"{name}:{headers_lower[name].strip()}\n" for name in sorted_header_names)
@@ -586,6 +603,7 @@ class S3Endpoint(StorageEndpoint):
             out_headers["Content-Type"] = content_type
         if self.session_token:
             out_headers["x-amz-security-token"] = self.session_token
+        out_headers.update(extra_preserved)
         if body or method.upper() == "PUT":
             out_headers["Content-Length"] = str(len(body))
 
@@ -609,8 +627,16 @@ class S3Endpoint(StorageEndpoint):
         query_params: Optional[dict[str, str]] = None,
         body: bytes = b"",
         content_type: Optional[str] = None,
+        extra_headers: Optional[dict[str, str]] = None,
     ) -> tuple[http.client.HTTPConnection, http.client.HTTPResponse]:
-        signed = self.build_signed_request(method, key=key, query_params=query_params, body=body, content_type=content_type)
+        signed = self.build_signed_request(
+            method,
+            key=key,
+            query_params=query_params,
+            body=body,
+            content_type=content_type,
+            extra_headers=extra_headers,
+        )
         conn = self._connect(signed["connect_host"], signed["connect_port"])
         conn.request(signed["method"], signed["path"], body=body if body else None, headers=signed["headers"])
         resp = conn.getresponse()
@@ -687,6 +713,48 @@ class S3Endpoint(StorageEndpoint):
             raw = resp.read()
             if resp.status not in (200, 201, 204):
                 raise S3RequestError(resp.status, f"put({key})", raw.decode("utf-8", errors="replace"))
+        finally:
+            conn.close()
+
+    def head_object_status(self, key: str) -> int:
+        if not is_valid_key(key):
+            raise ValueError(f"Invalid storage key: {key}")
+        conn, resp = self._open_response("HEAD", key=key)
+        try:
+            resp.read()
+            return resp.status
+        finally:
+            conn.close()
+
+    def read_range(self, key: str, offset: int, length: int) -> tuple[int, dict[str, str], bytes]:
+        if not is_valid_key(key):
+            raise ValueError(f"Invalid storage key: {key}")
+        if offset < 0 or length <= 0:
+            raise ValueError("Invalid byte range")
+        range_spec = f"bytes={offset}-{offset + length - 1}"
+        conn, resp = self._open_response("GET", key=key, extra_headers={"Range": range_spec})
+        try:
+            data = resp.read()
+            headers = {k.lower(): v for k, v in resp.getheaders()}
+            return resp.status, headers, data
+        finally:
+            conn.close()
+
+    def anonymous_get(self, key: Optional[str] = None, query_params: Optional[dict[str, str]] = None) -> int:
+        host, port, host_header = self._effective_host_and_port()
+        canonical_uri = self._canonical_uri(key)
+        params = query_params or {}
+        canonical_qs = "&".join(
+            f"{urllib.parse.quote(k, safe='~')}={urllib.parse.quote(v, safe='~')}"
+            for k, v in sorted(params.items())
+        )
+        target = f"{canonical_uri}?{canonical_qs}" if canonical_qs else canonical_uri
+        conn = self._connect(host, port)
+        try:
+            conn.request("GET", target, headers={"Host": host_header})
+            resp = conn.getresponse()
+            resp.read()
+            return resp.status
         finally:
             conn.close()
 
@@ -941,9 +1009,12 @@ class ApiClient:
         path: str,
         token: str = "",
         json_body: Optional[dict] = None,
+        extra_headers: Optional[dict[str, str]] = None,
     ) -> tuple[int, dict[str, str], bytes]:
         url = f"{self.base_url}{path}"
         headers: dict[str, str] = {}
+        if extra_headers:
+            headers.update(extra_headers)
         data = None
         if token:
             headers["Authorization"] = f"Bearer {token}"
@@ -1000,8 +1071,13 @@ class ApiClient:
         owner_token: str = "",
         other_token: str = "",
         expect_writes_paused: Optional[bool] = None,
+        verify_range: bool = False,
+        verify_paused_write_503: bool = False,
+        s3_anonymous_check: Optional[S3Endpoint] = None,
+        s3_anonymous_keys: Optional[list[str]] = None,
     ) -> dict:
         errors: list[str] = []
+        range_checked = False
         for key, expected_sha in public_expected.items():
             encoded = "/uploads/" + urllib.parse.quote(key, safe="/~")
             status, _, body = self._request("GET", encoded)
@@ -1009,6 +1085,17 @@ class ApiClient:
                 errors.append(f"Public GET {encoded} returned {status}")
             elif sha256_bytes(body) != expected_sha:
                 errors.append(f"Public GET {encoded} SHA-256 mismatch")
+            elif verify_range and not range_checked and len(body) >= 4:
+                r_status, r_hdrs, r_body = self._request(
+                    "GET", encoded, extra_headers={"Range": "bytes=0-3"}
+                )
+                c_range = r_hdrs.get("content-range", "")
+                if r_status != 206 or r_body != body[:4] or not c_range.startswith("bytes 0-3/"):
+                    errors.append(f"Public Range GET {encoded} expected 206 bytes 0-3, got {r_status}")
+                range_checked = True
+
+        has_admin_creds = bool(self.admin_token or (self.admin_email and self.admin_password))
+        admin_tok = self._ensure_admin_token() if has_admin_creds else ""
 
         for media_id, expected_sha in private_expected.items():
             path = f"/api/v1/media/{media_id}"
@@ -1019,17 +1106,44 @@ class ApiClient:
                 other_status, _, _ = self._request("GET", path, token=other_token)
                 if other_status != 403:
                     errors.append(f"Non-owner GET {path} expected 403, got {other_status}")
-            read_token = owner_token or self._ensure_admin_token()
-            ok_status, _, body = self._request("GET", path, token=read_token)
-            if ok_status != 200:
-                errors.append(f"Authorized GET {path} expected 200, got {ok_status}")
-            elif sha256_bytes(body) != expected_sha:
-                errors.append(f"Authorized GET {path} SHA-256 mismatch")
+            if owner_token:
+                ok_status, _, body = self._request("GET", path, token=owner_token)
+                if ok_status != 200:
+                    errors.append(f"Owner GET {path} expected 200, got {ok_status}")
+                elif sha256_bytes(body) != expected_sha:
+                    errors.append(f"Owner GET {path} SHA-256 mismatch")
+            if admin_tok:
+                adm_status, _, adm_body = self._request("GET", path, token=admin_tok)
+                if adm_status != 200:
+                    errors.append(f"Admin GET {path} expected 200, got {adm_status}")
+                elif sha256_bytes(adm_body) != expected_sha:
+                    errors.append(f"Admin GET {path} SHA-256 mismatch")
 
         if expect_writes_paused is not None:
             st = self.maintenance_status()
             if bool(st.get("writesPaused")) != expect_writes_paused:
                 errors.append(f"Expected writesPaused={expect_writes_paused}, got {st.get('writesPaused')}")
+
+        if verify_paused_write_503:
+            adm = admin_tok or self._ensure_admin_token()
+            mut_status, mut_hdrs, _ = self._request("DELETE", "/api/v1/media/2147483647", token=adm)
+            if mut_status != 503:
+                errors.append(f"Paused write probe DELETE /api/v1/media/2147483647 expected 503, got {mut_status}")
+            elif not mut_hdrs.get("retry-after"):
+                errors.append("Paused write probe expected Retry-After header alongside 503")
+
+        if s3_anonymous_check is not None:
+            keys_to_probe = list(s3_anonymous_keys or [])
+            if not keys_to_probe and public_expected:
+                keys_to_probe.append(next(iter(public_expected)))
+            for s3_key in keys_to_probe:
+                try:
+                    anon_s3_status = s3_anonymous_check.anonymous_get(s3_key)
+                except Exception as exc:
+                    errors.append(f"Anonymous S3 probe for {s3_key} failed: {exc}")
+                    continue
+                if anon_s3_status not in (401, 403):
+                    errors.append(f"Anonymous S3 GET {s3_key} expected 401/403, got {anon_s3_status}")
 
         return {"ok": not errors, "errors": errors}
 
@@ -1116,6 +1230,7 @@ def run_cutover(
         if (clock() - pause_start) > max_pause_seconds:
             return _abort("WINDOW_EXCEEDED", {"final_sync": final_sync, "verification": verification})
 
+        reads = None
         if verify_reads_fn is not None:
             reads = verify_reads_fn()
             if not reads.get("ok"):
@@ -1126,7 +1241,7 @@ def run_cutover(
 
         api.resume()
         elapsed_ms = round(max(0.0, clock() - pause_start) * 1000.0, 2)
-        return {
+        out = {
             "status": "COMMITTED",
             "pause_duration_ms": elapsed_ms,
             "max_pause_ms": round(max_pause_seconds * 1000.0, 2),
@@ -1134,8 +1249,271 @@ def run_cutover(
             "final_sync": final_sync,
             "verification": verification,
         }
+        if reads is not None:
+            out["pre_reopen_verification"] = reads
+        return out
     except Exception as exc:
         return _abort("ERROR", {"error": str(exc)})
+
+
+_EU_AWS_REGIONS = {
+    "eu-west-1",
+    "eu-west-3",
+    "eu-central-1",
+    "eu-north-1",
+    "eu-south-1",
+    "eu-south-2",
+}
+_EU_CUSTOM_REGIONS = _EU_AWS_REGIONS | {"fr-par", "nl-ams", "pl-waw", "gra", "rbx", "sbg", "eu-west-par"}
+_NON_EU_REGION_PREFIXES = ("us-", "ap-", "ca-", "sa-", "me-", "af-", "il-", "cn-")
+
+
+def classify_s3_provider_identity(endpoint: str = "", provider: str = "") -> str:
+    ep = (endpoint or "").strip().lower().rstrip("/")
+    prov = (provider or "").strip().lower()
+    if "r2.cloudflarestorage.com" in ep:
+        return "cloudflare-r2"
+    if "your-objectstorage.com" in ep or "hetzner." in ep:
+        return "hetzner"
+    if "amazonaws.com" in ep:
+        return "aws"
+    if "scw.cloud" in ep:
+        return "scaleway"
+    if "ovh.net" in ep:
+        return "ovh"
+    if not ep:
+        if prov in ("aws", ""):
+            return "aws"
+        if prov.startswith("cloudflare"):
+            return "cloudflare-r2"
+        if prov.startswith("hetzner"):
+            return "hetzner"
+        return f"provider:{prov}"
+    return f"custom:{ep}"
+
+
+def check_eu_jurisdiction(endpoint: str = "", region: str = "", label: str = "backup") -> tuple[bool, str]:
+    raw_ep = (endpoint or "").strip()
+    ep = raw_ep.lower()
+    reg = (region or "").strip().lower()
+
+    if "your-objectstorage.com" in ep or "hetzner." in ep:
+        return False, f"{label} ({raw_ep}) uses Hetzner (same provider as the VPS); backup storage must use an independent provider"
+
+    if ep:
+        parsed = urllib.parse.urlparse(raw_ep)
+        if (
+            parsed.scheme not in ("http", "https")
+            or not parsed.hostname
+            or parsed.username is not None
+            or parsed.password is not None
+            or "@" in (parsed.netloc or "")
+            or bool(parsed.query)
+            or bool(parsed.fragment)
+        ):
+            return False, f"{label} ({raw_ep}) must be a valid http(s) URL without credentials, query, or fragment"
+
+    if "r2.cloudflarestorage.com" in ep:
+        if ".eu." in ep:
+            return True, ""
+        return False, f"{label} ({raw_ep}) is not an EU R2 endpoint (https://<ACCOUNT_ID>.eu.r2.cloudflarestorage.com)"
+
+    if reg.startswith(_NON_EU_REGION_PREFIXES):
+        return False, f"{label} region '{region}' is outside the EU"
+
+    if not ep or "amazonaws.com" in ep:
+        if reg in _EU_AWS_REGIONS:
+            return True, ""
+        return False, f"{label} region '{region}' is not an EU AWS region"
+
+    if any(marker in ep for marker in (".eu.", ".eu-", "-eu-")):
+        return True, ""
+
+    if reg in _EU_CUSTOM_REGIONS and (reg in ep or ".scw.cloud" in ep or ".cloud.ovh.net" in ep):
+        return True, ""
+
+    return False, f"{label} ({raw_ep}, region '{region}') is not an EU endpoint"
+
+
+def check_backup_independence(
+    media_endpoint: str = "",
+    media_provider: str = "",
+    backup_endpoint: str = "",
+    backup_region: str = "",
+    backup_provider: str = "",
+) -> dict:
+    errors: list[str] = []
+    if not (backup_endpoint or "").strip() and not (backup_region or "").strip():
+        errors.append("backup endpoint or region must be provided for independence verification")
+        return {"ok": False, "errors": errors}
+
+    eu_ok, eu_err = check_eu_jurisdiction(backup_endpoint, backup_region, "backup destination")
+    if not eu_ok:
+        errors.append(eu_err)
+
+    b_prov = backup_provider or ("AWS" if not (backup_endpoint or "").strip() else "Other")
+    m_prov = media_provider or ("AWS" if not (media_endpoint or "").strip() else "Other")
+    b_id = classify_s3_provider_identity(backup_endpoint, b_prov)
+    m_id = classify_s3_provider_identity(media_endpoint, m_prov)
+
+    if b_id == "hetzner":
+        msg = f"backup provider ({b_id}) must be independent of the VPS"
+        if msg not in errors:
+            errors.append(msg)
+    if b_id == m_id:
+        errors.append(f"backup provider ({b_id}) must be independent of active media storage ({m_id})")
+
+    return {
+        "ok": not errors,
+        "media_provider_identity": m_id,
+        "backup_provider_identity": b_id,
+        "eu_jurisdiction_ok": eu_ok,
+        "errors": errors,
+    }
+
+
+def qualify_bucket(
+    s3: S3Endpoint,
+    require_https: bool = False,
+    backup_config: Optional[dict] = None,
+) -> dict:
+    probe_id = uuid.uuid4().hex
+    payload = b"meetstudent-qualify-probe-0123456789"
+    expected_sha = sha256_bytes(payload)
+    missing_key = f"public/__qualify_probe__/{probe_id}-missing.txt"
+    probe_keys = {
+        "public": f"public/__qualify_probe__/{probe_id}.txt",
+        "private": f"private/__qualify_probe__/{probe_id}.txt",
+    }
+
+    errors: list[str] = []
+    checks: dict = {
+        "https": True,
+        "missing_object_404": False,
+        "anonymous_bucket_list_denied": False,
+        "public": {},
+        "private": {},
+    }
+
+    if require_https and s3.scheme != "https":
+        checks["https"] = False
+        errors.append(f"Endpoint scheme must be https when --require-https is set (got {s3.scheme})")
+
+    try:
+        missing_status = s3.head_object_status(missing_key)
+        checks["missing_object_404"] = missing_status == 404
+        if missing_status != 404:
+            errors.append(f"Missing key HEAD expected 404 (requires s3:ListBucket), got HTTP {missing_status}")
+    except Exception as exc:
+        errors.append(f"Missing key HEAD check failed: {exc}")
+
+    try:
+        anon_list_status = s3.anonymous_get(key=None, query_params={"list-type": "2", "max-keys": "1"})
+        checks["anonymous_bucket_list_denied"] = anon_list_status in (401, 403)
+        if not checks["anonymous_bucket_list_denied"]:
+            errors.append(f"Anonymous bucket listing expected 401/403, got HTTP {anon_list_status}")
+    except Exception as exc:
+        errors.append(f"Anonymous bucket list probe failed: {exc}")
+
+    try:
+        for prefix, key in probe_keys.items():
+            p_res = {
+                "put": False,
+                "get": False,
+                "range_206": False,
+                "list": False,
+                "anonymous_denied": False,
+                "delete": False,
+            }
+            checks[prefix] = p_res
+            try:
+                s3.write_bytes(key, payload, "text/plain")
+                p_res["put"] = True
+            except Exception as exc:
+                errors.append(f"{prefix}: PUT failed: {exc}")
+                continue
+
+            try:
+                got = s3.read_bytes(key)
+                p_res["get"] = sha256_bytes(got) == expected_sha
+                if not p_res["get"]:
+                    errors.append(f"{prefix}: GET payload SHA-256 mismatch")
+            except Exception as exc:
+                errors.append(f"{prefix}: GET failed: {exc}")
+
+            try:
+                r_status, r_hdrs, r_body = s3.read_range(key, 2, 4)
+                c_range = r_hdrs.get("content-range", "")
+                c_len = r_hdrs.get("content-length")
+                p_res["range_206"] = (
+                    r_status == 206
+                    and r_body == payload[2:6]
+                    and c_range.startswith(f"bytes 2-5/{len(payload)}")
+                    and (c_len is None or c_len == "4")
+                )
+                if not p_res["range_206"]:
+                    errors.append(
+                        f"{prefix}: Range bytes=2-5 expected 206 with exact slice, got HTTP {r_status} (content-range={c_range!r})"
+                    )
+            except Exception as exc:
+                errors.append(f"{prefix}: Range GET failed: {exc}")
+
+            try:
+                listed = s3._list_prefix(f"{prefix}/__qualify_probe__/{probe_id}")
+                p_res["list"] = key in listed
+                if not p_res["list"]:
+                    errors.append(f"{prefix}: ListObjectsV2 did not return {key}")
+            except Exception as exc:
+                errors.append(f"{prefix}: ListObjectsV2 failed: {exc}")
+
+            try:
+                anon_status = s3.anonymous_get(key)
+                p_res["anonymous_denied"] = anon_status in (401, 403)
+                if not p_res["anonymous_denied"]:
+                    errors.append(f"{prefix}: Anonymous direct GET must be denied (401/403), got HTTP {anon_status}")
+            except Exception as exc:
+                errors.append(f"{prefix}: Anonymous direct GET probe failed: {exc}")
+
+            try:
+                s3.delete_key(key)
+                after_del = s3.head_object_status(key)
+                p_res["delete"] = after_del == 404
+                if not p_res["delete"]:
+                    errors.append(f"{prefix}: DELETE did not remove object (HEAD returned HTTP {after_del})")
+            except Exception as exc:
+                errors.append(f"{prefix}: DELETE failed: {exc}")
+    finally:
+        for key in probe_keys.values():
+            try:
+                s3.delete_key(key)
+            except Exception:
+                pass
+
+    backup_report = None
+    if backup_config is not None:
+        backup_report = check_backup_independence(
+            media_endpoint=s3.endpoint_url,
+            media_provider=backup_config.get("media_provider", ""),
+            backup_endpoint=backup_config.get("endpoint", ""),
+            backup_region=backup_config.get("region", ""),
+            backup_provider=backup_config.get("provider", ""),
+        )
+        if not backup_report["ok"]:
+            errors.extend(backup_report["errors"])
+
+    out = {
+        "ok": not errors,
+        "bucket": s3.bucket,
+        "endpoint": s3.endpoint_url,
+        "region": s3.region,
+        "addressing_mode": "path-style" if s3.path_style else "virtual-hosted",
+        "require_https": require_https,
+        "checks": checks,
+        "errors": errors,
+    }
+    if backup_report is not None:
+        out["backup_independence"] = backup_report
+    return out
 
 
 def _endpoint_from_args(args: argparse.Namespace, role: str) -> StorageEndpoint:
@@ -1213,6 +1591,38 @@ def _add_api_flags(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--api-admin-password", default="")
 
 
+def _verify_api_against_storage(
+    db: PostgresClient,
+    endpoint: StorageEndpoint,
+    api: ApiClient,
+    owner_token: str = "",
+    other_token: str = "",
+    expect_writes_paused: Optional[bool] = None,
+) -> dict:
+    rows = db.fetch_media_rows()
+    inv = build_inventory(rows, endpoint)
+    public_expected = {k: v["sha256"] for k, v in inv["items"].items() if k.startswith("public/")}
+    private_expected = {
+        r.id: inv["items"][r.storage_key]["sha256"]
+        for r in rows
+        if r.visibility == "PRIVATE" and r.storage_key in inv["items"]
+    }
+    s3_probe_keys = ([next(iter(public_expected))] if public_expected else []) + [
+        r.storage_key for r in rows if r.visibility == "PRIVATE" and r.storage_key in inv["items"]
+    ][:1]
+    return api.verify_reads(
+        public_expected=public_expected,
+        private_expected=private_expected,
+        owner_token=owner_token,
+        other_token=other_token,
+        expect_writes_paused=expect_writes_paused,
+        verify_range=True,
+        verify_paused_write_503=bool(expect_writes_paused),
+        s3_anonymous_check=endpoint if isinstance(endpoint, S3Endpoint) else None,
+        s3_anonymous_keys=s3_probe_keys,
+    )
+
+
 def main(argv: Optional[list[str]] = None) -> int:
     parser = argparse.ArgumentParser(description="MeetStudent portable media transfer & rollback CLI")
     parser.add_argument("--docker-helper-image", default="postgres:18-alpine")
@@ -1258,6 +1668,9 @@ def main(argv: Optional[list[str]] = None) -> int:
     p_cut.add_argument("--activate-cmd", default="")
     p_cut.add_argument("--abort-cmd", default="")
     p_cut.add_argument("--after-sync-cmd", default="")
+    p_cut.add_argument("--verify-reads", action="store_true", default=False)
+    p_cut.add_argument("--owner-token", default="")
+    p_cut.add_argument("--other-token", default="")
 
     p_vapi = sub.add_parser("verify-api")
     _add_storage_flags(p_vapi, "source", required=True)
@@ -1266,6 +1679,26 @@ def main(argv: Optional[list[str]] = None) -> int:
     p_vapi.add_argument("--owner-token", default="")
     p_vapi.add_argument("--other-token", default="")
     p_vapi.add_argument("--expect-writes-paused", action="store_true", default=False)
+
+    p_qual = sub.add_parser("qualify-bucket")
+    p_qual.add_argument("--s3-bucket", default=os.environ.get("MEDIA_S3_BUCKET", ""), required=not os.environ.get("MEDIA_S3_BUCKET"))
+    p_qual.add_argument("--s3-region", default=os.environ.get("MEDIA_S3_REGION", ""), required=not os.environ.get("MEDIA_S3_REGION"))
+    p_qual.add_argument("--s3-endpoint", default=os.environ.get("MEDIA_S3_ENDPOINT", ""))
+    p_qual.add_argument(
+        "--s3-path-style",
+        action="store_true",
+        default=os.environ.get("MEDIA_S3_PATH_STYLE", "false").strip().lower() == "true",
+    )
+    p_qual.add_argument("--s3-access-key", default=os.environ.get("MEDIA_S3_ACCESS_KEY_ID", ""), required=not os.environ.get("MEDIA_S3_ACCESS_KEY_ID"))
+    p_qual.add_argument("--s3-secret-key", default=os.environ.get("MEDIA_S3_SECRET_ACCESS_KEY", ""), required=not os.environ.get("MEDIA_S3_SECRET_ACCESS_KEY"))
+    p_qual.add_argument("--s3-session-token", default=os.environ.get("MEDIA_S3_SESSION_TOKEN", ""))
+    p_qual.add_argument("--media-provider", default="")
+    p_qual.add_argument("--require-https", action="store_true", default=False)
+    p_qual.add_argument("--check-backup-independence", action="store_true", default=False)
+    p_qual.add_argument("--backup-s3-endpoint", default=os.environ.get("BACKUP_S3_ENDPOINT", ""))
+    p_qual.add_argument("--backup-s3-region", default=os.environ.get("BACKUP_S3_REGION", ""))
+    p_qual.add_argument("--backup-s3-provider", default=os.environ.get("BACKUP_S3_PROVIDER", ""))
+    p_qual.add_argument("--r2-endpoint", default=os.environ.get("R2_ENDPOINT", os.environ.get("RCLONE_CONFIG_R2_ENDPOINT", "")))
 
     args = parser.parse_args(argv)
 
@@ -1364,27 +1797,48 @@ def main(argv: Optional[list[str]] = None) -> int:
             on_activate=(lambda: _shell(args.activate_cmd)) if args.activate_cmd else None,
             on_abort=(lambda: _shell(args.abort_cmd)) if args.abort_cmd else None,
             after_final_sync_hook=(lambda: _shell(args.after_sync_cmd)) if args.after_sync_cmd else None,
+            verify_reads_fn=(
+                (lambda: _verify_api_against_storage(db, target, api, args.owner_token, args.other_token, True))
+                if args.verify_reads
+                else None
+            ),
         )
         print(json.dumps(report, indent=2))
         return 0 if report["status"] == "COMMITTED" else 5
+
+    if args.command == "qualify-bucket":
+        s3 = S3Endpoint(
+            bucket=args.s3_bucket,
+            region=args.s3_region,
+            endpoint=args.s3_endpoint,
+            path_style=args.s3_path_style,
+            access_key=args.s3_access_key,
+            secret_key=args.s3_secret_key,
+            session_token=args.s3_session_token,
+        )
+        backup_cfg = None
+        if args.check_backup_independence or args.backup_s3_endpoint or args.backup_s3_region or args.r2_endpoint:
+            b_ep = args.backup_s3_endpoint or args.r2_endpoint
+            b_reg = args.backup_s3_region or ("auto" if args.r2_endpoint else "")
+            b_prov = args.backup_s3_provider or ("Cloudflare" if args.r2_endpoint else "")
+            backup_cfg = {
+                "endpoint": b_ep,
+                "region": b_reg,
+                "provider": b_prov,
+                "media_provider": args.media_provider,
+            }
+        report = qualify_bucket(s3, require_https=args.require_https, backup_config=backup_cfg)
+        print(json.dumps(report, indent=2))
+        return 0 if report["ok"] else 7
 
     if args.command == "verify-api":
         db = _db_from_args(args)
         source = _endpoint_from_args(args, "source")
         api = _api_from_args(args)
-        rows = db.fetch_media_rows()
-        inv = build_inventory(rows, source)
-        public_expected = {
-            k: v["sha256"] for k, v in inv["items"].items() if k.startswith("public/")
-        }
-        private_expected = {
-            r.id: inv["items"][r.storage_key]["sha256"]
-            for r in rows
-            if r.visibility == "PRIVATE" and r.storage_key in inv["items"]
-        }
-        report = api.verify_reads(
-            public_expected=public_expected,
-            private_expected=private_expected,
+        report = _verify_api_against_storage(
+            db,
+            source,
+            api,
             owner_token=args.owner_token,
             other_token=args.other_token,
             expect_writes_paused=True if args.expect_writes_paused else None,
