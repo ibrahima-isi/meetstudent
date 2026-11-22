@@ -62,7 +62,7 @@ Disk is the default. Use `MEDIA_STORAGE_BACKEND=s3` only with a prepared private
 | `MEDIA_S3_ACCESS_KEY_ID`, `MEDIA_S3_SECRET_ACCESS_KEY` | Required credentials scoped to the configured bucket. Store them as secrets. |
 | `MEDIA_S3_SESSION_TOKEN` | Required alongside temporary credentials that include a session token. |
 
-See the [media migration and rollback guide](../../../docs/MEDIA_MIGRATION.md) for pre-copy checks, repeatable copy/verification, pause/drain orchestration, reverse sync rollback, and off-site archive disaster recovery.
+See the [media migration and rollback guide](../../../docs/MEDIA_MIGRATION.md) for operator bucket qualification (`infra/media/media_transfer.py qualify-bucket --require-https --check-backup-independence`), pre-copy checks, repeatable copy/verification, pause/drain orchestration, reverse sync rollback, and off-site archive disaster recovery.
 
 [AWS S3](https://docs.aws.amazon.com/sdk-for-java/latest/developer-guide/endpoint-config.html) uses the bucket's AWS region. [Cloudflare R2](https://developers.cloudflare.com/r2/examples/aws/aws-sdk-java/) uses signing region `auto`, the account's jurisdiction-specific S3 endpoint, and path-style addressing. [Hetzner Object Storage](https://docs.hetzner.com/storage/object-storage/getting-started/using-libraries/) uses the location code for signing, for example `fsn1`, with an endpoint such as `https://fsn1.your-objectstorage.com`.
 
