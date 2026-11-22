@@ -6,12 +6,14 @@ import com.bowe.meetstudent.dto.UserDTO;
 import com.bowe.meetstudent.entities.UserEntity;
 import com.bowe.meetstudent.mappers.Mapper;
 import com.bowe.meetstudent.services.EmailVerificationService;
+import com.bowe.meetstudent.services.MediaWriteGate;
 import com.bowe.meetstudent.services.RoleService;
 import com.bowe.meetstudent.services.UserService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -30,6 +32,7 @@ class UserControllerRegistrationTest {
     @Mock private Mapper<UserEntity, UserDTO> userMapper;
     @Mock private RoleService roleService;
     @Mock private EmailVerificationService emailVerificationService;
+    @Spy private MediaWriteGate mediaWriteGate = new MediaWriteGate(false, 60);
 
     @InjectMocks
     private UserController controller;

@@ -16,6 +16,7 @@ import com.bowe.meetstudent.mail.ExpertEmailRequested;
 import com.bowe.meetstudent.mappers.Mapper;
 import com.bowe.meetstudent.security.UserPrincipal;
 import com.bowe.meetstudent.services.EmailVerificationService;
+import com.bowe.meetstudent.services.MediaWriteGate;
 import com.bowe.meetstudent.services.RoleService;
 import com.bowe.meetstudent.services.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -55,6 +56,7 @@ public class UserController {
     private final RoleService roleService;
     private final EmailVerificationService emailVerificationService;
     private final ApplicationEventPublisher events;
+    private final MediaWriteGate mediaWriteGate;
 
     @PostMapping
     @Operation(summary = "Create a new user", description = "Registers a student or teacher account; student is the default.")
@@ -215,9 +217,11 @@ public class UserController {
             @Parameter(description = "ID of the user to delete") @PathVariable int id,
             @RequestBody(required = false) DeleteAccountRequest request) {
         checkOwnershipOrAdmin(principal, id);
-        userService.deleteUser(id, encoder, request == null ? null : request.currentPassword(),
-                isAdmin(principal) && !principal.getId().equals(id));
-        return ResponseEntity.noContent().build();
+        try (var ignored = mediaWriteGate.enterWrite()) {
+            userService.deleteUser(id, encoder, request == null ? null : request.currentPassword(),
+                    isAdmin(principal) && !principal.getId().equals(id));
+            return ResponseEntity.noContent().build();
+        }
     }
 
     @PostMapping("/{userId}/wishlist/{schoolId}")

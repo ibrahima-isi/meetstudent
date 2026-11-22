@@ -49,16 +49,20 @@ the `dev` default and the `test` profile secret. Generate a real one with `opens
 
 ## Media storage
 
-Disk is the default. Use `MEDIA_STORAGE_BACKEND=s3` only with a prepared private bucket and after verifying media migration and backup/restore for that destination. The application serves the existing URLs and continues to authorize private downloads.
+Disk is the default. Use `MEDIA_STORAGE_BACKEND=s3` only with a prepared private bucket and after verifying media migration and backup/restore for that destination. The application serves the existing URLs and continues to authorize private downloads. `server.shutdown` is set to `graceful` with a `30s` shutdown phase timeout (`stop_grace_period: 35s` in Compose) so in-flight requests and deferred post-commit deletions drain cleanly across restarts.
 
 | Variable | S3 settings |
 |---|---|
+| `MEDIA_WRITES_PAUSED` | Set to `true` (`false` by default) during a migration/rollback window to return `503` + `Retry-After` on media and media-reference mutations while reads stay available. |
+| `MEDIA_WRITES_RETRY_AFTER_SECONDS` | `Retry-After` seconds sent with `503` when writes are paused (default `60`). |
 | `MEDIA_S3_BUCKET` | Required bucket name. |
 | `MEDIA_S3_REGION` | Required signing region for the selected provider. |
 | `MEDIA_S3_ENDPOINT` | Custom S3 API endpoint where required. Use HTTPS for deployed environments. Omit for AWS's regional endpoint. |
 | `MEDIA_S3_PATH_STYLE` | Set to `true` for path-style requests. Defaults to `false`. |
 | `MEDIA_S3_ACCESS_KEY_ID`, `MEDIA_S3_SECRET_ACCESS_KEY` | Required credentials scoped to the configured bucket. Store them as secrets. |
 | `MEDIA_S3_SESSION_TOKEN` | Required alongside temporary credentials that include a session token. |
+
+See the [media migration and rollback guide](../../../docs/MEDIA_MIGRATION.md) for pre-copy checks, repeatable copy/verification, pause/drain orchestration, reverse sync rollback, and off-site archive disaster recovery.
 
 [AWS S3](https://docs.aws.amazon.com/sdk-for-java/latest/developer-guide/endpoint-config.html) uses the bucket's AWS region. [Cloudflare R2](https://developers.cloudflare.com/r2/examples/aws/aws-sdk-java/) uses signing region `auto`, the account's jurisdiction-specific S3 endpoint, and path-style addressing. [Hetzner Object Storage](https://docs.hetzner.com/storage/object-storage/getting-started/using-libraries/) uses the location code for signing, for example `fsn1`, with an endpoint such as `https://fsn1.your-objectstorage.com`.
 

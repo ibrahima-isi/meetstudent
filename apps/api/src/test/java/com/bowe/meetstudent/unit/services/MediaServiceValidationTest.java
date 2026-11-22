@@ -6,10 +6,12 @@ import com.bowe.meetstudent.repositories.MediaRepository;
 import com.bowe.meetstudent.security.UserPrincipal;
 import com.bowe.meetstudent.services.MediaService;
 import com.bowe.meetstudent.services.MediaStorage;
+import com.bowe.meetstudent.services.MediaWriteGate;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockMultipartFile;
@@ -27,6 +29,7 @@ class MediaServiceValidationTest {
 
     @Mock MediaStorage storageService;
     @Mock MediaRepository mediaRepository;
+    @Spy MediaWriteGate mediaWriteGate = new MediaWriteGate(false, 60);
     @InjectMocks MediaService mediaService;
 
     private final UserPrincipal student = UserPrincipal.builder().id(7).username("u@x.com")

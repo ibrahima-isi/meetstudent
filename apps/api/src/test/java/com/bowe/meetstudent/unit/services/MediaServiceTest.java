@@ -8,12 +8,14 @@ import com.bowe.meetstudent.repositories.MediaRepository;
 import com.bowe.meetstudent.security.UserPrincipal;
 import com.bowe.meetstudent.services.MediaService;
 import com.bowe.meetstudent.services.MediaStorage;
+import com.bowe.meetstudent.services.MediaWriteGate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.access.AccessDeniedException;
@@ -41,6 +43,7 @@ class MediaServiceTest {
 
     @Mock MediaStorage storageService;
     @Mock MediaRepository mediaRepository;
+    @Spy MediaWriteGate mediaWriteGate = new MediaWriteGate(false, 60);
     @InjectMocks MediaService mediaService;
 
     @BeforeEach
