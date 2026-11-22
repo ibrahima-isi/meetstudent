@@ -67,22 +67,38 @@ Give the API object read, write, and delete access plus bucket inspection/list p
 ## Backups (Coolify stack)
 
 The API does not read these: the `backup` service of `compose.coolify.yml` does, when the nightly Coolify
-Scheduled Task runs `backup.sh` in it (ADR 0004). rclone is configured by environment only: a remote `r2`
-(S3, provider Cloudflare) wrapped by a `crypt` remote `r2crypt`, so names and contents are encrypted before
-they leave the VPS. The database settings (`POSTGRES_*`) are shared with the stack. Setup, restore and the
-R2 bucket rules (EU jurisdiction, 30-day lifecycle): `docs/DEPLOY.md` section 9.4 and 9.5.
+Scheduled Task runs `backup.sh` in it (ADR 0004, ADR 0005). It reads active media in either `disk` or `s3`
+mode (`MEDIA_STORAGE_BACKEND`, `MEDIA_S3_*`), captures `db.dump` and the `media` inventory from a single
+PostgreSQL snapshot (`pg_export_snapshot()`), includes legacy served `public/**` paths, ignores `.media-*.tmp`,
+verifies per-file sizes and SHA-256 checksums (`media-manifest.tsv`), serializes runs with `flock`, and retries
+automatically on transient inconsistency.
+
+rclone is configured by environment only: either `r2` + `r2crypt` (Cloudflare R2 EU) or `backup_s3` +
+`backupcrypt` (an independent EU S3-compatible bucket via `BACKUP_S3_*` when active media also uses R2), so
+names and contents are encrypted before they leave the VPS. The database settings (`POSTGRES_*`) are shared
+with the stack. Setup, restore (both disk and S3, including historical archives) and the 30-day EU lifecycle
+rules: `docs/DEPLOY.md` section 9.4 and 9.5.
 
 | Variable | Required | Default | Purpose |
 |---|---|---|---|
-| `R2_ENDPOINT` | for backups | none | `https://<ACCOUNT_ID>.eu.r2.cloudflarestorage.com` (EU jurisdiction endpoint). The scripts refuse an endpoint without `.eu.` (exit `2`). |
-| `R2_BUCKET` | for backups | none | Bucket name; the token is scoped to it, so rclone never checks or creates it. |
-| `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | for backups | none | Keys of the bucket-scoped R2 API token (read + write). Secrets. |
+| `R2_ENDPOINT` | for R2 backups | none | `https://<ACCOUNT_ID>.eu.r2.cloudflarestorage.com` (EU jurisdiction endpoint). The scripts refuse an endpoint without `.eu.` (exit `2`). |
+| `R2_BUCKET` | for R2 backups | none | Bucket name; the token is scoped to it, so rclone never checks or creates it. |
+| `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | for R2 backups | none | Keys of the bucket-scoped R2 API token (read + write). Secrets. |
+| `BACKUP_S3_PROVIDER` | no | `AWS` if endpoint empty, else `Other` | rclone S3 provider for the independent EU backup destination (`AWS`, `Other`, `Cloudflare`, ...). |
+| `BACKUP_S3_ENDPOINT` | when `BACKUP_S3_*` is non-AWS | none | Custom EU S3 endpoint (for example `https://s3.fr-par.scw.cloud`). Omit for AWS regional S3. Non-EU endpoints and Hetzner Object Storage are refused (exit `2`). |
+| `BACKUP_S3_REGION` | when `BACKUP_S3_*` is set | none | EU region for signing (for example `eu-west-1`, `fr-par`). Non-EU regions are refused (exit `2`). |
+| `BACKUP_S3_BUCKET` | for independent EU S3 backups | none | Bucket name on the independent EU S3 destination; makes `backupcrypt:` the default backup remote instead of `r2crypt:`. |
+| `BACKUP_S3_PATH_STYLE` | no | `false` | Set `true` if the backup S3 provider requires path-style addressing. |
+| `BACKUP_S3_ACCESS_KEY_ID`, `BACKUP_S3_SECRET_ACCESS_KEY` | when `BACKUP_S3_*` is set | none | Credentials scoped to `BACKUP_S3_BUCKET`. Secrets. |
+| `BACKUP_S3_SESSION_TOKEN` | if temporary creds | none | Optional session token for temporary credentials on `BACKUP_S3_*`. |
+| `BACKUP_REMOTE` | no | `backupcrypt:` if `BACKUP_S3_BUCKET` is set, else `r2crypt:` | Override target rclone remote (for example pass `--remote r2crypt:` to `restore.sh` to read historical R2 backups after moving active media to R2). |
 | `BACKUP_CRYPT_PASSWORD` | for backups | none | `crypt` password, the original in clear (Coolify secret + password manager); the scripts obscure it for rclone. Without it no backup can be read. |
 | `BACKUP_CRYPT_SALT` | for backups | none | `crypt` salt (rclone's `password2`), same handling as the password. |
 
-None of them is needed to render or start the stack. `backup.sh` and `restore.sh` refuse to run without all of
-them and exit `2`, naming the missing ones, so a forgotten variable shows up as a failed scheduled task. The
-check lives in `infra/backup/backup-env.sh`, sourced by both scripts.
+None of them is needed to render or start the stack. `backup.sh` and `restore.sh` refuse to run without a valid
+EU backup destination and exit `2`, naming the missing or invalid variables. `backup.sh` also refuses to write
+backups to Hetzner (VPS provider) or to the same provider as active `MEDIA_S3_*`, while `restore.sh` keeps
+historical `r2crypt:` archives readable. The checks live in `infra/backup/backup-env.sh`, sourced by both scripts.
 
 ## Email
 

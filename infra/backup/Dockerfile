@@ -9,7 +9,7 @@ RUN apk add --no-cache rclone
 
 COPY --chmod=0755 backup.sh restore.sh /usr/local/bin/
 # Sourced by both scripts from their own folder, never run on its own.
-COPY --chmod=0644 backup-env.sh /usr/local/bin/
+COPY --chmod=0644 backup-env.sh media-manifest.sh /usr/local/bin/
 
 # The postgres image stops with SIGINT; exit at once on it or on SIGTERM.
 CMD ["sh", "-c", "trap 'exit 0' INT TERM; sleep infinity & wait"]
