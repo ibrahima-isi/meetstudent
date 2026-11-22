@@ -166,6 +166,7 @@ services:
       FILE_UPLOAD_DIR: /data/uploads
       FILE_PRIVATE_DIR: /data/private
       MEDIA_STORAGE_BACKEND: ${MEDIA_STORAGE_BACKEND:-disk}
+      MEDIA_WRITES_PAUSED: ${MEDIA_WRITES_PAUSED:-false}
       MEDIA_S3_BUCKET: ${MEDIA_S3_BUCKET:-}
       MEDIA_S3_REGION: ${MEDIA_S3_REGION:-}
       MEDIA_S3_ENDPOINT: ${MEDIA_S3_ENDPOINT:-}
@@ -212,6 +213,7 @@ services:
       # changed to run unprivileged, chown these two paths to its uid first.
       - api-uploads:/data/uploads
       - api-private:/data/private
+    stop_grace_period: 35s
     depends_on:
       db:
         condition: service_healthy

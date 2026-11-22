@@ -142,4 +142,23 @@ class ProdProfileConfigTest {
         env.put("JWT_ACCESS_TTL_MINUTES", "15");
         assertEquals("15", resolver(env).getProperty("security.jwt.access-ttl-minutes"));
     }
+
+    @Test
+    void gracefulShutdownIsEnabledWithThirtySecondTimeout() {
+        assertEquals("graceful", prod.getProperty("server.shutdown"));
+        assertEquals("30s", prod.getProperty("spring.lifecycle.timeout-per-shutdown-phase"));
+    }
+
+    @Test
+    void mediaWritesPausedDefaultsToFalseAndIsEnvOverridable() throws IOException {
+        assertEquals("false", prod.getProperty("file.writes-paused"));
+        assertEquals("60", prod.getProperty("file.writes-retry-after-seconds"));
+
+        var env = new java.util.HashMap<>(FULL_ENV);
+        env.put("MEDIA_WRITES_PAUSED", "true");
+        env.put("MEDIA_WRITES_RETRY_AFTER_SECONDS", "120");
+        var resolved = resolver(env);
+        assertEquals("true", resolved.getProperty("file.writes-paused"));
+        assertEquals("120", resolved.getProperty("file.writes-retry-after-seconds"));
+    }
 }

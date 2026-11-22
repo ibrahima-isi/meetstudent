@@ -39,6 +39,7 @@ public class MediaService {
 
     private final MediaStorage storageService;
     private final MediaRepository mediaRepository;
+    private final MediaWriteGate mediaWriteGate;
 
     private static final List<MediaCategory> PERSONAL_DOCUMENT_CATEGORIES = Arrays.stream(MediaCategory.values())
             .filter(MediaCategory::isPersonalDocument)
@@ -135,53 +136,54 @@ public class MediaService {
     public Media upload(MultipartFile file, MediaCategory category,
                         UserPrincipal principal, String idempotencyKey) throws IOException {
         assertCanUpload(principal, category);
+        try (var ignored = mediaWriteGate.enterWrite()) {
+            Integer ownerId = category.isPersonalDocument() || category == MediaCategory.USER_PHOTO
+                    ? principal.getId()
+                    : null;
 
-        Integer ownerId = category.isPersonalDocument() || category == MediaCategory.USER_PHOTO
-                ? principal.getId()
-                : null;
-
-        if (idempotencyKey != null && !idempotencyKey.isBlank() && ownerId != null) {
-            Optional<Media> existing = mediaRepository.findByOwnerIdAndIdempotencyKey(ownerId, idempotencyKey);
-            if (existing.isPresent()) {
-                return existing.get();
+            if (idempotencyKey != null && !idempotencyKey.isBlank() && ownerId != null) {
+                Optional<Media> existing = mediaRepository.findByOwnerIdAndIdempotencyKey(ownerId, idempotencyKey);
+                if (existing.isPresent()) {
+                    return existing.get();
+                }
             }
-        }
 
-        String extension = validateFile(file, category);
-        byte[] content = file.getBytes();
-        validateFileContent(extension, content);
+            String extension = validateFile(file, category);
+            byte[] content = file.getBytes();
+            validateFileContent(extension, content);
 
-        if (category.isPersonalDocument() && !isAdmin(principal)) {
-            assertWithinPersonalQuota(ownerId, file.getSize());
-        }
-        if (category == MediaCategory.USER_PHOTO) {
-            // One profile photo per owner: the previous row goes now, its file only after commit.
-            deleteRowsNowFilesAfterCommit(mediaRepository.findByOwnerIdAndCategory(ownerId, category));
-        }
+            if (category.isPersonalDocument() && !isAdmin(principal)) {
+                assertWithinPersonalQuota(ownerId, file.getSize());
+            }
+            if (category == MediaCategory.USER_PHOTO) {
+                // One profile photo per owner: the previous row goes now, its file only after commit.
+                deleteRowsNowFilesAfterCommit(mediaRepository.findByOwnerIdAndCategory(ownerId, category));
+            }
 
-        String prefix = category.getVisibility() == MediaVisibility.PUBLIC ? "public/" : "private/";
-        String storageKey = prefix + UUID.randomUUID() + "." + extension;
-        removeFileUnlessCommitted(storageKey);
-        storageService.write(storageKey, content, normalizeContentType(file.getContentType()));
+            String prefix = category.getVisibility() == MediaVisibility.PUBLIC ? "public/" : "private/";
+            String storageKey = prefix + UUID.randomUUID() + "." + extension;
+            removeFileUnlessCommitted(storageKey);
+            storageService.write(storageKey, content, normalizeContentType(file.getContentType()));
 
-        Media media = Media.builder()
-                .storageKey(storageKey)
-                .originalFilename(file.getOriginalFilename())
-                .contentType(file.getContentType())
-                .sizeBytes(file.getSize())
-                .category(category)
-                .visibility(category.getVisibility())
-                .ownerId(ownerId)
-                .verificationStatus(category.isModerated() ? VerificationStatus.PENDING : null)
-                .idempotencyKey(idempotencyKey)
-                .build();
+            Media media = Media.builder()
+                    .storageKey(storageKey)
+                    .originalFilename(file.getOriginalFilename())
+                    .contentType(file.getContentType())
+                    .sizeBytes(file.getSize())
+                    .category(category)
+                    .visibility(category.getVisibility())
+                    .ownerId(ownerId)
+                    .verificationStatus(category.isModerated() ? VerificationStatus.PENDING : null)
+                    .idempotencyKey(idempotencyKey)
+                    .build();
 
-        try {
-            return mediaRepository.save(media);
-        } catch (RuntimeException e) {
-            // The row never made it: do not leave the just-written file behind.
-            deleteFilesQuietly(List.of(storageKey));
-            throw e;
+            try {
+                return mediaRepository.save(media);
+            } catch (RuntimeException e) {
+                // The row never made it: do not leave the just-written file behind.
+                deleteFilesQuietly(List.of(storageKey));
+                throw e;
+            }
         }
     }
 
@@ -207,14 +209,24 @@ public class MediaService {
     /** If the surrounding transaction does not commit (rollback, failing commit), the new file is an orphan: remove it. */
     private void removeFileUnlessCommitted(String storageKey) {
         if (!TransactionSynchronizationManager.isSynchronizationActive()) return;
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCompletion(int status) {
-                if (status != STATUS_COMMITTED) {
-                    deleteFilesQuietly(List.of(storageKey));
+        var deferredTask = mediaWriteGate.registerDeferredTask();
+        try {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCompletion(int status) {
+                    try {
+                        if (status != STATUS_COMMITTED) {
+                            deleteFilesQuietly(List.of(storageKey));
+                        }
+                    } finally {
+                        deferredTask.complete();
+                    }
                 }
-            }
-        });
+            });
+        } catch (RuntimeException e) {
+            deferredTask.complete();
+            throw e;
+        }
     }
 
     public void assertCanUpload(UserPrincipal principal, MediaCategory category) {
@@ -278,11 +290,13 @@ public class MediaService {
         if (status == null || status == VerificationStatus.PENDING) {
             throw new IllegalArgumentException("Status must be VERIFIED or REJECTED.");
         }
-        Media media = mediaRepository.findById(mediaId)
-                .orElseThrow(() -> new ResourceNotFoundException("Media not found"));
-        media.setVerificationStatus(status);
-        media.setRejectionReason(status == VerificationStatus.REJECTED ? reason : null);
-        return mediaRepository.save(media);
+        try (var ignored = mediaWriteGate.enterWrite()) {
+            Media media = mediaRepository.findById(mediaId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Media not found"));
+            media.setVerificationStatus(status);
+            media.setRejectionReason(status == VerificationStatus.REJECTED ? reason : null);
+            return mediaRepository.save(media);
+        }
     }
 
     public Page<Media> findByStatus(VerificationStatus status, Pageable pageable) {
@@ -299,8 +313,10 @@ public class MediaService {
 
     @Transactional
     public void delete(Integer mediaId, UserPrincipal principal) {
-        Media media = requireOwnerOrAdmin(mediaRepository.findById(mediaId), principal);
-        deleteRowsNowFilesAfterCommit(List.of(media));
+        try (var ignored = mediaWriteGate.enterWrite()) {
+            Media media = requireOwnerOrAdmin(mediaRepository.findById(mediaId), principal);
+            deleteRowsNowFilesAfterCommit(List.of(media));
+        }
     }
 
     public Optional<Media> findById(Integer mediaId) {
@@ -328,7 +344,9 @@ public class MediaService {
      */
     @Transactional
     public void deleteAllOwnedBy(Integer ownerId) {
-        deleteRowsNowFilesAfterCommit(mediaRepository.findByOwnerId(ownerId));
+        try (var ignored = mediaWriteGate.enterWrite()) {
+            deleteRowsNowFilesAfterCommit(mediaRepository.findByOwnerId(ownerId));
+        }
     }
 
     /**
@@ -337,13 +355,15 @@ public class MediaService {
      */
     @Transactional
     public void deleteByIdsAfterCommit(Collection<Integer> ids) {
-        List<Media> rows = ids.stream()
-                .filter(Objects::nonNull)
-                .distinct()
-                .map(mediaRepository::findById)
-                .flatMap(Optional::stream)
-                .toList();
-        deleteRowsNowFilesAfterCommit(rows);
+        try (var ignored = mediaWriteGate.enterWrite()) {
+            List<Media> rows = ids.stream()
+                    .filter(Objects::nonNull)
+                    .distinct()
+                    .map(mediaRepository::findById)
+                    .flatMap(Optional::stream)
+                    .toList();
+            deleteRowsNowFilesAfterCommit(rows);
+        }
     }
 
     private void deleteRowsNowFilesAfterCommit(List<Media> rows) {
@@ -352,12 +372,23 @@ public class MediaService {
         mediaRepository.deleteAll(rows);
         if (keys.isEmpty()) return;
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    deleteFilesQuietly(keys);
-                }
-            });
+            var deferredTask = mediaWriteGate.registerDeferredTask();
+            try {
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        deleteFilesQuietly(keys);
+                    }
+
+                    @Override
+                    public void afterCompletion(int status) {
+                        deferredTask.complete();
+                    }
+                });
+            } catch (RuntimeException e) {
+                deferredTask.complete();
+                throw e;
+            }
         } else {
             deleteFilesQuietly(keys);
         }

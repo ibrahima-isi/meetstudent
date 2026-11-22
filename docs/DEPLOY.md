@@ -89,6 +89,7 @@ Fill in every variable (the file documents them):
 | `SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_ENABLE` | `true` for implicit TLS (port 465); leave the STARTTLS variables unset then |
 | `APP_CONTACT_MAIL_RETRY_MAX_ATTEMPTS`, `APP_CONTACT_MAIL_RETRY_INITIAL_DELAY`, `APP_CONTACT_MAIL_RETRY_BACKOFF_MULTIPLIER` | optional, retries of the contact mail on a transient failure: defaults `3`, `2s`, `5` (waits of 2 s then 10 s) |
 | `BACKUP_DIR`, `BACKUP_KEEP_DAYS` | optional, used by `scripts/backup.sh` |
+| `MEDIA_STORAGE_BACKEND`, `MEDIA_WRITES_PAUSED`, `MEDIA_S3_*` | media storage (`disk` default, or `s3` after rehearsal); set `MEDIA_WRITES_PAUSED=true` only during cutover/rollback pause |
 
 Do not use `$` in secrets: compose would try to interpolate it.
 `POSTGRES_PASSWORD` is applied only when the database volume is first created.
@@ -578,10 +579,11 @@ Coolify's Traefik issues the certificates and the `backup` service replaces `scr
 Do not use `$` in a value: compose would interpolate it.
 
 For media storage, keep `MEDIA_STORAGE_BACKEND` set to `disk` until the migration and backup/restore rehearsal
-are complete. When qualifying a separate S3 destination, configure `MEDIA_S3_BUCKET`, `MEDIA_S3_REGION`,
+are complete. During a cutover or rollback window, set `MEDIA_WRITES_PAUSED` to `true` (`false` by default) to return `503` + `Retry-After` on media/reference writes while reads keep serving and `api` shuts down gracefully (`stop_grace_period: 35s`). When qualifying a separate S3 destination, configure `MEDIA_S3_BUCKET`, `MEDIA_S3_REGION`,
 `MEDIA_S3_ENDPOINT`, and `MEDIA_S3_PATH_STYLE` as applicable. Store `MEDIA_S3_ACCESS_KEY_ID`,
 `MEDIA_S3_SECRET_ACCESS_KEY`, and any `MEDIA_S3_SESSION_TOKEN` in Coolify's secrets.
-See [API media storage configuration](../apps/api/docs/production.md#media-storage) for provider settings.
+See [API media storage configuration](../apps/api/docs/production.md#media-storage) and the
+[media migration and rollback guide](MEDIA_MIGRATION.md) for transfer, pause/drain, rollback, and archive recovery procedures.
 
 ### 9.3 GitHub `production` environment and the deploy webhook
 

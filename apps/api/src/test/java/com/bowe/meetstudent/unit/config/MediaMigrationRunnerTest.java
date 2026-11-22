@@ -9,12 +9,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
+import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -62,5 +64,18 @@ class MediaMigrationRunnerTest {
         runner.run(null);
 
         verify(mediaRepository, never()).save(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void runnerBeanIsRegisteredInDiskModeAndDisabledInS3Mode() {
+        var contextRunner = new ApplicationContextRunner()
+                .withBean(MediaRepository.class, () -> mock(MediaRepository.class))
+                .withUserConfiguration(MediaMigrationRunner.class);
+
+        contextRunner.run(context -> assertThat(context).hasSingleBean(MediaMigrationRunner.class));
+        contextRunner.withPropertyValues("file.storage-backend=disk")
+                .run(context -> assertThat(context).hasSingleBean(MediaMigrationRunner.class));
+        contextRunner.withPropertyValues("file.storage-backend=s3")
+                .run(context -> assertThat(context).doesNotHaveBean(MediaMigrationRunner.class));
     }
 }
