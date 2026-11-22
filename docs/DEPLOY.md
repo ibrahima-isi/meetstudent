@@ -567,7 +567,10 @@ Risks this setup accepts, to keep in mind:
 | `BO_API_URL` | no, default `https://${DOMAIN}/api/v1` | API base URL of the back office |
 | `MAIL_ENABLED`, `MAIL_PROVIDER`, `MAIL_SES_REGION`, `MAIL_FROM`, `CONTACT_RECIPIENT`, `FRONTEND_BASE_URL` | no | mail, as in section 2 and 2b (off by default) |
 | `SPRING_MAIL_*`, `SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE`, `SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED`, `APP_CONTACT_MAIL_*`, `APP_MAIL_TEST_COOLDOWN_SECONDS` | no | SMTP settings and mail tuning, as in section 2 |
-| `R2_ENDPOINT`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | for backups, keys secret | the R2 bucket (9.4) |
+| `R2_ENDPOINT`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | for backups on R2, keys secret | the Cloudflare R2 EU backup bucket (9.4); keep during the 30-day overlap when moving backups off R2 |
+| `BACKUP_S3_BUCKET`, `BACKUP_S3_REGION`, `BACKUP_S3_ENDPOINT`, `BACKUP_S3_PROVIDER`, `BACKUP_S3_PATH_STYLE` | for backups on an independent EU S3 destination | overrides `R2_*` as the primary backup target when active media uses R2 (9.4) |
+| `BACKUP_S3_ACCESS_KEY_ID`, `BACKUP_S3_SECRET_ACCESS_KEY`, `BACKUP_S3_SESSION_TOKEN` | for `BACKUP_S3_*`, secret | credentials for the independent EU S3 backup bucket (9.4) |
+| `BACKUP_REMOTE` | no, default `backupcrypt:` when `BACKUP_S3_BUCKET` is set else `r2crypt:` | override target rclone remote (for example `r2crypt:` during restore) |
 | `BACKUP_CRYPT_PASSWORD`, `BACKUP_CRYPT_SALT` | for backups, secret | the backup encryption key (9.4) |
 
 `ACME_EMAIL`, `ACME_CA_SERVER`, `BACKUP_DIR` and `BACKUP_KEEP_DAYS` belong to `compose.prod.yml` only:
@@ -614,46 +617,67 @@ resource -> Scheduled Tasks -> name `backup`, command `/usr/local/bin/backup.sh`
 container `backup`. Coolify notifies a failed task (Notifications, roadmap): `backup.sh` exits non-zero
 on any error, and with `2` when a variable below is missing.
 
-A backup is a folder named after its UTC time (`20261027T031500Z`) holding the custom-format database dump,
-an archive of each upload volume and their checksums. It goes to the R2 bucket through an rclone `crypt`
-remote: names and contents are encrypted on the VPS, and no local copy is kept.
+A backup is a folder named after its UTC time (`20261027T031500Z`) holding the custom-format database dump
+(`db.dump`), both media archives (`uploads.tar.gz`, `private.tar.gz`), the snapshot inventory and per-file
+SHA-256 manifest (`media-manifest.tsv`), and `SHA256SUMS`. The dump and inventory share a single PostgreSQL
+snapshot (`pg_export_snapshot()`), cover both database-referenced keys and legacy served `public/**` files,
+ignore `.media-*.tmp` temporary files, serialize concurrent runs with a lock, and retry automatically on
+transient inconsistency. Everything goes to an encrypted `rclone crypt` remote (`backupcrypt:` when
+`BACKUP_S3_*` is set, otherwise `r2crypt:`): names and contents are encrypted on the VPS, and no local copy is kept.
 
-- R2 (roadmap): bucket with **Jurisdiction: EU**, lifecycle rule deleting objects after 30 days (the
-  retention lives there, not in the script), API token scoped to that bucket, read and write.
-  That token sits on the VPS and can delete objects: whoever takes the server can erase the backups too.
-  Add a **bucket lock** rule (R2 -> bucket -> Settings -> Bucket lock) with a retention of at least 30 days,
-  so no object can be deleted or overwritten before then, by the token or anyone else.
-  `R2_ENDPOINT` is `https://<ACCOUNT_ID>.eu.r2.cloudflarestorage.com` (the scripts refuse, with exit `2`, an
-  endpoint without `.eu.`), `R2_BUCKET` the bucket name, `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` the
-  token's keys.
+- **EU jurisdiction, 30-day retention, and provider independence**: backup storage must stay in the EU, keep
+  a 30-day lifecycle deletion rule (plus **bucket lock** / object lock of at least 30 days), and use a provider
+  independent of both the Hetzner VPS and active media storage (`MEDIA_S3_*`). `backup.sh` refuses Hetzner
+  Object Storage and refuses writing backups to the same provider as active `MEDIA_S3_*`.
+  - With disk media (or S3 media on another provider such as Hetzner Object Storage), Cloudflare R2 EU works:
+    `R2_ENDPOINT` is `https://<ACCOUNT_ID>.eu.r2.cloudflarestorage.com` (the scripts refuse, with exit `2`, an
+    endpoint without `.eu.`), `R2_BUCKET` the bucket name, `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` the
+    bucket-scoped token's keys.
+  - When active media itself moves to Cloudflare R2, configure an independent EU S3-compatible backup bucket
+    (for example AWS S3 `eu-west-1` / `eu-west-3` or Scaleway `fr-par` / `nl-ams`) via `BACKUP_S3_BUCKET`,
+    `BACKUP_S3_REGION`, `BACKUP_S3_ENDPOINT` (omit for AWS regional S3), `BACKUP_S3_PROVIDER` (`AWS` or
+    `Other`), `BACKUP_S3_PATH_STYLE` (`false` or `true`), `BACKUP_S3_ACCESS_KEY_ID`,
+    `BACKUP_S3_SECRET_ACCESS_KEY`, and any `BACKUP_S3_SESSION_TOKEN` (optional `BACKUP_REMOTE` override).
+    Keep `R2_*` configured alongside `BACKUP_S3_*` until the older R2 backups reach their 30-day expiry so
+    `restore.sh --remote r2crypt: --list` / `restore.sh --remote r2crypt: <stamp> --yes` can still read them.
 - `BACKUP_CRYPT_PASSWORD` and `BACKUP_CRYPT_SALT`: two long random strings
   (`openssl rand -base64 32 | tr -d '/+=\n'`). Store them **in clear**, both in the Coolify secrets and in the
   password manager, before the first backup; the scripts obscure them for rclone. Without both, no backup
   can ever be read again; changing them makes the older backups unreadable with the new ones.
 - `backup` is the only service on the `egress` network (with outbound access): `backend`, where Postgres
-  lives, is internal and has no route to R2. It mounts the upload volumes read-only.
+  lives, is internal and has no route to off-site storage. In `disk` mode it mounts the upload volumes read-only;
+  in `s3` mode it reads active media using the shared `MEDIA_STORAGE_BACKEND` and `MEDIA_S3_*` settings.
 
 Run the task once by hand after the first deploy (from the task's page, or `backup.sh` in the `backup`
 container's terminal) and check its log ends with `backup complete`. `restore.sh --list`, run in the same
 container, lists the complete backups: `SHA256SUMS` is sent last, so a folder without it (an upload cut off
-halfway) is never listed nor taken as `latest`. A run killed hard leaves its local copy in `/tmp`; the next
-run removes it.
+halfway or a failed verification) is never listed nor taken as `latest`. A run killed hard leaves its local
+copy in `/tmp`; the next run removes it.
 
 ### 9.5 Restore
 
-DESTRUCTIVE: the database and both upload volumes are replaced. Nothing is touched until the backup is
-downloaded and its checksums match. The `backup` service mounts the volumes read-only, so a restore is a
-one-off run of that service with the volumes mounted writable at `/restore`, the api stopped:
+DESTRUCTIVE: the database and active media storage (both upload volumes in `disk` mode, or `public/` and
+`private/` in `MEDIA_S3_BUCKET` in `s3` mode) are replaced. Nothing is touched until the backup is downloaded,
+`SHA256SUMS` and `media-manifest.tsv` (for new archives) match, and historical disk-format archives (without
+`media-manifest.tsv`) remain restorable into either empty disk volumes or an empty S3 bucket. Keep `api`
+stopped during the restore, then start it again:
 
 ```bash
 ssh <vps>
 docker compose ls                                # the stack's project: the resource UUID
 cd /data/coolify/applications/<uuid>             # Coolify's copy of the compose file and its .env
-docker volume ls | grep -E 'api-(uploads|private)'   # the real volume names under this project
 docker compose -p <uuid> -f docker-compose.yaml stop api
+
+# When MEDIA_STORAGE_BACKEND=disk (default): mount the upload volumes writable at /restore
+docker volume ls | grep -E 'api-(uploads|private)'   # the real volume names under this project
 docker compose -p <uuid> -f docker-compose.yaml run --rm \
   -v <uploads volume>:/restore/uploads -v <private volume>:/restore/private \
   backup restore.sh latest --yes                 # or a folder name from restore.sh --list
+
+# When MEDIA_STORAGE_BACKEND=s3: no /restore volume mounts are needed
+docker compose -p <uuid> -f docker-compose.yaml run --rm \
+  backup restore.sh latest --yes                 # pass --remote r2crypt: to read an older R2 archive
+
 docker compose -p <uuid> -f docker-compose.yaml start api
 ```
 
