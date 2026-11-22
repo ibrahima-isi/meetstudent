@@ -16,4 +16,5 @@ Les utilisateurs peuvent déposer, consulter, remplacer et supprimer des médias
 
 ## Comments
 
-- Adaptateur disque et parcours HTTP intégrés dans `05d2e01`. Les tests ciblés ont réussi (74 unitaires et 45 d’intégration). La suite API complète est en cours.
+- Adaptateur disque et parcours HTTP intégrés dans `05d2e01`. Les tests ciblés ont réussi (74 unitaires et 45 d’intégration). La suite locale a ensuite validé 496 tests unitaires et 836 tests d’intégration. Neuf tests PostgreSQL ont été ignorés durant cette exécution locale.
+- Travail intégré à `main` via les PR [#279](https://github.com/ibrahima-isi/meetstudent/pull/279) et [#288](https://github.com/ibrahima-isi/meetstudent/pull/288). La [CI API sur `main`](https://github.com/ibrahima-isi/meetstudent/actions/runs/44932867333) a réussi avec le service PostgreSQL.

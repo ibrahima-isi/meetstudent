@@ -574,6 +574,12 @@ Risks this setup accepts, to keep in mind:
 Coolify's Traefik issues the certificates and the `backup` service replaces `scripts/backup.sh`.
 Do not use `$` in a value: compose would interpolate it.
 
+For media storage, keep `MEDIA_STORAGE_BACKEND` set to `disk` until the migration and backup/restore rehearsal
+are complete. When qualifying a separate S3 destination, configure `MEDIA_S3_BUCKET`, `MEDIA_S3_REGION`,
+`MEDIA_S3_ENDPOINT`, and `MEDIA_S3_PATH_STYLE` as applicable. Store `MEDIA_S3_ACCESS_KEY_ID`,
+`MEDIA_S3_SECRET_ACCESS_KEY`, and any `MEDIA_S3_SESSION_TOKEN` in Coolify's secrets.
+See [API media storage configuration](../apps/api/docs/production.md#media-storage) for provider settings.
+
 ### 9.3 GitHub `production` environment and the deploy webhook
 
 1. Coolify: Settings -> Advanced -> **API Access** on; Keys & Tokens -> an API token with the **deploy**
