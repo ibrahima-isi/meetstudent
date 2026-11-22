@@ -153,7 +153,7 @@ a { color: var(--accent); }
         { id: 'p0-ticket', who: 'agent / toi', title: 'La spec coolify-deploy est implémentée et fusionnée dans dev',
           html: '<p>La spec <code>.scratch/coolify-deploy/spec.md</code> doit être livrée : <code>compose.coolify.yml</code> (images GHCR, sans service Traefik), la configuration dynamique Traefik versionnée, le service <code>backup</code> (pg_dump + volumes → rclone crypt → R2), le job <code>deploy</code> dans <code>.github/workflows/ci.yml</code> et la section Coolify de <code>docs/DEPLOY.md</code>.</p><div class="note">Tant que ce n’est pas fait, les phases 9 et 10 ne peuvent pas aboutir. Les noms de variables de sauvegarde ci-dessous (<code>R2_*</code>, <code>BACKUP_CRYPT_*</code>) et le chemin de la configuration dynamique sont ceux proposés ici : <strong>prends ceux que le ticket a réellement choisis</strong>.</div>' },
         { id: 'p0-main', who: 'toi', title: 'main est à jour avec dev et la CI est verte',
-          html: '<p>Rien n’est déployé tant que <code>main</code> ne bouge pas. On fera la promotion à la phase 10, une fois le serveur prêt.</p>' }
+          html: '<p>Rien n’est déployé tant que <code>main</code> ne bouge pas. La fusion sur GitHub se fait à la phase 10, une fois le serveur prêt.</p>' }
       ]
     },
     {
@@ -299,9 +299,8 @@ a { color: var(--accent); }
       title: 'Premier déploiement et vérifications',
       intro: 'La production est prête quand tout ceci est vert.',
       steps: [
-        { id: 'p10-promote', who: 'toi', title: 'Promouvoir dev sur main',
-          html: '<p>Selon la règle du dépôt (avance rapide, jamais de merge commit ; nécessite le contournement du ruleset) :</p>',
-          code: ['git fetch origin && git push origin origin/dev:refs/heads/main'] },
+        { id: 'p10-promote', who: 'toi', title: 'Fusionner la PR sur main',
+          html: '<p>Une fois le serveur prêt, fusionne la PR autorisée vers <code>main</code> sur GitHub après la réussite des contrôles requis. Le workflow publie les images puis appelle le webhook Coolify.</p>' },
         { id: 'p10-ci', who: 'GitHub', title: 'Suivre la CI jusqu’au job deploy',
           html: '<p>Actions : les trois jobs de tests passent, puis <code>deploy</code> pousse les images et appelle le webhook. Pense à la phase 8, étape 3 (images publiques) si Coolify n’arrive pas à les tirer.</p>' },
         { id: 'p10-healthy', who: 'Coolify', title: 'Tous les conteneurs sont healthy',

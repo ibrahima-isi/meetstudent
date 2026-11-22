@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, dev]
+    branches: [main]
   pull_request:
-    branches: [main, dev]
+    branches: [main]
 
 # Cancel superseded runs on the same branch/PR to save runner minutes, except
 # on main: a run there carries the deploy, which must never stop mid-push.
@@ -48,7 +48,7 @@ jobs:
 
   # The published check name is the job's `name:`, not its id — branch
   # protection matches on that string, so keep the two in sync with the
-  # required contexts configured on main/dev.
+  # required contexts configured on main.
   api:
     name: api / build-and-test
     runs-on: ubuntu-latest
@@ -204,7 +204,7 @@ jobs:
           files: infra/docker-bake.hcl
           push: false
 
-  # Runs only when dev is promoted to main, once the three test jobs are green.
+  # Deploys the updated main once the three test jobs are green.
   # The `production` environment holds the deploy secrets (coolify-deploy/04).
   deploy:
     name: deploy / production

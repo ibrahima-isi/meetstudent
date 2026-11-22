@@ -55,7 +55,7 @@ Never add a `ports:` entry to `db` or `api`.
 ```bash
 git clone https://github.com/ibrahima-isi/meetstudent.git
 cd meetstudent
-git checkout main            # deploy only what was promoted to main
+git checkout main            # deploy the version merged on GitHub
 cp .env.production.example .env
 chmod 600 .env
 nano .env
@@ -409,15 +409,14 @@ Coolify install, the DNS and the R2 bucket are the owner's steps, in the step-by
 [roadmap](deploy/coolify-roadmap.html); this section is what the repository expects from them.
 
 ```
-git push origin origin/dev:refs/heads/main
+Merge an authorized pull request into main on GitHub
   -> CI: api, web, backoffice tests green
   -> deploy / production: push ghcr.io/ibrahima-isi/meetstudent-{api,web,backoffice,backup}
                           (sha-<40-char commit> and latest), then call the Coolify deploy webhook
   -> Coolify pulls the images (never builds) and restarts the stack behind its own Traefik
 ```
 
-The promotion command and why it uses `origin/dev` are in [MONOREPO.md](MONOREPO.md). Nothing else deploys: not a pull request, not `dev`, not a push to the repository (Coolify's auto
-deploy stays off).
+Follow the [GitHub Flow policy](../AGENTS.md) for PR and merge authorization. Production starts from the resulting update to `main` after all three app checks pass. Coolify's automatic deploy stays off. The CI webhook starts deployment.
 
 Server decisions kept from the original plan (the rest is in the ADRs and the sections below):
 
@@ -436,7 +435,7 @@ Owner decisions for the first deploy:
 - The Coolify dashboard is served at `https://dev.meetstudent.me` (not a `coolify.` host); do not confuse it with the dev environment.
 - DNS is at Cloudflare. The design needs DNS-only (grey cloud) records pointing at the VPS.
 - Production: `DOMAIN=app.meetstudent.me`, `BO_DOMAIN=admin.meetstudent.me`, branch `main`, Coolify environment `production`. The root `meetstudent.me` stays untouched: it holds the Namecheap mail forwarding (MX) and SPF records.
-- Dev environment, later, same VPS and Coolify project: `DOMAIN=demo.meetstudent.me`, `BO_DOMAIN=bo.meetstudent.me`, branch `dev`. It needs a code change not yet approved: unique Traefik router/service names per stack (two stacks on one Traefik collide), a moving image tag other than `latest`, a deploy job for pushes to `dev` with a GitHub `dev` environment, and a second api-edge network (another subnet and `TRUSTED_PROXIES`).
+- Possible demo environment on the same VPS: `DOMAIN=demo.meetstudent.me` and `BO_DOMAIN=bo.meetstudent.me`. It would need a separately approved deployment trigger compatible with GitHub Flow, unique Traefik router and service names, an image tag other than `latest`, and its own api-edge network with matching `TRUSTED_PROXIES`.
 - Before the first deploy, open a private PDF in back-office moderation by hand to check it under the enforcing CSP.
 
 ### 9.1 Proxy configuration (once per server)

@@ -1,11 +1,11 @@
-# Keeps the actions of .github/workflows/ci.yml up to date. They are pinned to a
-# commit SHA with a `# vX.Y.Z` comment; Dependabot bumps both, in a PR to dev
-# (main only receives dev's promotion). Tested by infra/tests/ci-images.test.sh.
+# Preserve the dependency update groups and commit conventions.
+# A zero limit pauses scheduled version-update PRs under GitHub Flow.
+# GitHub controls Dependabot security-update PRs separately.
 version: 2
 updates:
   - package-ecosystem: github-actions
     directory: /
-    target-branch: dev
+    open-pull-requests-limit: 0
     schedule:
       interval: weekly
     commit-message:
@@ -14,7 +14,7 @@ updates:
   # Patch/minor bumps only, one grouped PR per app; majors are done by hand.
   - package-ecosystem: npm
     directory: /apps/web
-    target-branch: dev
+    open-pull-requests-limit: 0
     schedule:
       interval: weekly
     commit-message:
@@ -29,7 +29,7 @@ updates:
   # Patch/minor bumps only, one grouped PR per app; majors are done by hand.
   - package-ecosystem: npm
     directory: /apps/backoffice
-    target-branch: dev
+    open-pull-requests-limit: 0
     schedule:
       interval: weekly
     commit-message:
@@ -44,7 +44,7 @@ updates:
   # Patch/minor bumps only, one grouped PR per app; majors are done by hand.
   - package-ecosystem: maven
     directory: /apps/api
-    target-branch: dev
+    open-pull-requests-limit: 0
     schedule:
       interval: weekly
     commit-message:

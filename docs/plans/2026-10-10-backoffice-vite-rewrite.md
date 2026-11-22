@@ -101,37 +101,37 @@ apps/backoffice-next/            (becomes apps/backoffice at the swap)
 1. Build the new app in **`apps/backoffice-next/`** next to the Angular one. CI gets a new job
    `backoffice-next / build-and-test` (not a required check). The Angular job, Dockerfile, compose and DEPLOY.md are
    not touched until the swap.
-2. Reach the parity checklist (section 7) page by page; each page is its own branch/PR into `dev` (squash).
+2. Reach the parity checklist (section 7) page by page; each page uses its own branch and an explicitly authorized PR to `main` (squash).
 3. **Swap PR** (one reviewable change): delete the Angular sources, `git mv apps/backoffice-next apps/backoffice`, set
-   `DIST_DIR=dist` in `apps/backoffice/Dockerfile` and `compose.prod.yml`, give the CI job back its required name
-   `backoffice / build-and-test` (the ruleset's required checks are only `api / build-and-test` and `web / build-and-test`, and the branch must be up to date — read `docs/MONOREPO.md`; the backoffice job is informational today),
+   `DIST_DIR=dist` in `apps/backoffice/Dockerfile` and `compose.prod.yml`, keep the required CI check
+   `backoffice / build-and-test` on the replacement app,
    update `README.md`, `docs/DEPLOY.md`, `docs/MONOREPO.md`, root `CLAUDE.md`.
-4. Re-run the full live smoke test (section 8) on the swapped `dev`; only then promote `dev` → `main` by fast-forward.
+4. Run the full live smoke test (section 8) on the swap branch before asking for merge authorization.
 5. **Rollback** = revert the swap PR (the Angular app is in git history); the image shape never changed, so the
    deployment needs no change either way.
 
-## 6. Work breakdown (one branch + PR each, TDD, squash-merge, `dev` first)
+## 6. Work breakdown (one branch + PR each, TDD, squash-merge to `main`)
 
-Branch names follow `<type>/<short-kebab>` (root `CLAUDE.md`). Sizes are rough.
+Use the branch names in [AGENTS.md](../../AGENTS.md). Sizes are rough.
 
 | # | Branch | Deliverable and acceptance | Size | Depends on |
 |---|---|---|---|---|
-| T0 | `feat/bo-next-scaffold` | `apps/backoffice-next` with Vite, strict TS, Vitest, Tailwind v4, Prettier, `npm run {dev,build,test,typecheck}`, CI job, empty shell renders. `npm ci && npm run build && npm test` green in CI. | S | — |
-| T1 | `feat/bo-next-core` | `dom`, `signal`, `router`, `http`, `auth-interceptor`, `config`, `token-store` with unit tests ported from `runtime-config.spec`, `api-config.spec`, `token.service.spec`, `refresh.interceptor.spec` (burst of 401s → **one** refresh, retry once, logout on failure, auth endpoints skipped). | M | T0 |
-| T2 | `feat/bo-next-shell-login` | Login page (admin only, French errors, `returnUrl` rules), admin guard, shell with responsive drawer, 404. Ports `login-page`, `admin.guard`, `shell`, `app.routes` specs. | M | T1 |
-| T3 | `feat/bo-next-ui-kit` | alert, states, pagination, inline confirm, tabs, image-field + `validate-image`, form helpers, `http-errors`. Ports `alert`, `http-errors`, `form-errors`, `media.service` validation specs. | M | T1 |
-| T4 | `feat/bo-next-moderation` | Moderation page complete (section 2 row). | M | T2, T3 |
-| T5 | `feat/bo-next-tags-accreditations` | Tags + accreditations tabs. | M | T2, T3 |
-| T6 | `feat/bo-next-schools` | Schools list/form/media upload. | L | T2, T3 |
-| T7 | `feat/bo-next-programs-courses` | Programs, courses sub-view, accreditation links. | L | T3, T5, T6 (school select, accreditation service) |
-| T8 | `test/bo-next-e2e-parity` | Playwright smoke against a stubbed API and against the real stack; 320/390/1280 px no horizontal overflow on every page; keyboard path through the drawer; bundle size recorded (budget: smaller than the Angular `dist` — measure it first). | M | T4–T7 |
+| T0 | `feature/bo-next-scaffold` | `apps/backoffice-next` with Vite, strict TS, Vitest, Tailwind v4, Prettier, `npm run {dev,build,test,typecheck}`, CI job, empty shell renders. `npm ci && npm run build && npm test` green in CI. | S | — |
+| T1 | `feature/bo-next-core` | `dom`, `signal`, `router`, `http`, `auth-interceptor`, `config`, `token-store` with unit tests ported from `runtime-config.spec`, `api-config.spec`, `token.service.spec`, `refresh.interceptor.spec` (burst of 401s → **one** refresh, retry once, logout on failure, auth endpoints skipped). | M | T0 |
+| T2 | `feature/bo-next-shell-login` | Login page (admin only, French errors, `returnUrl` rules), admin guard, shell with responsive drawer, 404. Ports `login-page`, `admin.guard`, `shell`, `app.routes` specs. | M | T1 |
+| T3 | `feature/bo-next-ui-kit` | alert, states, pagination, inline confirm, tabs, image-field + `validate-image`, form helpers, `http-errors`. Ports `alert`, `http-errors`, `form-errors`, `media.service` validation specs. | M | T1 |
+| T4 | `feature/bo-next-moderation` | Moderation page complete (section 2 row). | M | T2, T3 |
+| T5 | `feature/bo-next-tags-accreditations` | Tags + accreditations tabs. | M | T2, T3 |
+| T6 | `feature/bo-next-schools` | Schools list/form/media upload. | L | T2, T3 |
+| T7 | `feature/bo-next-programs-courses` | Programs, courses sub-view, accreditation links. | L | T3, T5, T6 (school select, accreditation service) |
+| T8 | `chore/bo-next-e2e-parity` | Playwright smoke against a stubbed API and against the real stack; 320/390/1280 px no horizontal overflow on every page; keyboard path through the drawer; bundle size recorded (budget: smaller than the Angular `dist` — measure it first). | M | T4–T7 |
 | T9 | `refactor/bo-swap-to-vite` | The swap PR (section 5.3). Includes updating the memory files. | M | T8 |
-| T10 | owner action | Delete merged remote branches (agent sessions get HTTP 403 on remote deletion). | S | T9 |
+| T10 | owner action | Approve cleanup after verifying the branches have merged. | S | T9 |
 
 **Parallelism.** After T1, run T2 and T3 in parallel; after both, T4–T6 in parallel (separate worktrees:
 `Agent` with `isolation: "worktree"`, each told its branch name, the TDD rule and the report format). T7 waits for the
 shared services. Shared files (`ui/`, `core/`) will conflict: each task adds new files and only *appends* exports;
-merge `dev` into the branch before opening the PR (the ruleset requires an up-to-date branch).
+update the branch from `origin/main` before merging so the required checks run against the current base.
 
 ## 7. Parity checklist (tick every line in T8 and again in T9)
 
@@ -151,17 +151,17 @@ merge `dev` into the branch before opening the PR (the ruleset requires an up-to
 - [ ] `config.json` override works without rebuilding; image runs under nginx-unprivileged with SPA fallback.
 - [ ] Nothing in the Angular app's behaviour list above is missing (cross-check against its 261 specs).
 
-## 8. Verification and promotion
+## 8. Verification and deployment
 
 - Per PR: `npm run typecheck`, `npm test`, `npm run build`, screenshots (Playwright, headless Chromium from
   `/opt/pw-browsers`, API stubbed with `page.route()`, admin session faked in `localStorage`), and the CI job.
-- Before the swap is promoted: the **native full-stack smoke test** that ended in GO on 2026-10-09 — throwaway Postgres
+- Before merging the swap PR: the **native full-stack smoke test** that ended in GO on 2026-10-09 — throwaway Postgres
   18 in Docker, API jar under the `prod` profile (`mvn -DskipTests package`, system `mvn`), web SSR under node, the new
   backoffice built and served statically with a `config.json`, a Traefik replica of `compose.prod.yml` in front, no
   shims. Docker image builds of the api/web cannot run inside the sandbox (the egress proxy blocks Maven/npm in
   containers); the backoffice image *can* be built if its build stage only needs npm from the host cache — try it, and
   state clearly if it could not be exercised.
-- Promotion: fast-forward `main` to `origin/dev` as described in `docs/MONOREPO.md` (needs the ruleset bypass), then re-check the protection.
+- Merge through the approved GitHub PR with all required checks passing. Then verify the production workflow for the merge commit.
 
 ## 9. Risks
 
@@ -171,7 +171,7 @@ merge `dev` into the branch before opening the PR (the ruleset requires an up-to
 | XSS through hand-built DOM | `h()` + `textContent` only; grep test for `innerHTML`; filenames, names and rejection reasons are treated as hostile. |
 | Memory/listener leaks without a framework lifecycle | Every page returns `dispose()`; tests assert effects stop and requests abort on navigation. |
 | Subtle auth bugs (refresh races) | Port `refresh.interceptor.spec` first (T1), including the concurrent-401 case. |
-| CI job names | Keep `backoffice / build-and-test` for the Angular app until the swap, then give the new app that name; the required checks are `api` and `web` only (see `docs/MONOREPO.md`). |
+| CI job names | Keep `backoffice / build-and-test` for the Angular app until the swap, then give the new app that name; it is required alongside the API and web checks (see `docs/MONOREPO.md`). |
 | Blob/object URL leaks in moderation | Revoke after 60 s and on dispose; unit-tested. |
 | Scope creep ("while we're here") | Non-goals in section 1; new ideas go to a list at the end of the swap PR, not into code. |
 
@@ -180,11 +180,8 @@ merge `dev` into the branch before opening the PR (the ruleset requires an up-to
 1. Read root `CLAUDE.md` (working agreement), `apps/api/docs/reference.md` (API quirks), this plan, `apps/backoffice/README.md`, and skim
    the Angular specs of the page you are porting.
 2. Confirm the three open defaults in section 3 with the owner (one message), then start at T0.
-3. Per task: branch from an up-to-date `dev`, failing tests first (watch them fail), minimal code, `typecheck`/`test`/
-   `build`, screenshots, commit with Conventional Commits and the attribution trailers, push, open a PR to `dev`,
-   subscribe to it, update the branch from `dev` if the ruleset says it is behind, **squash-merge when CI is green**.
+3. Per task: follow [AGENTS.md](../../AGENTS.md) for branching, commits and PR authorization. Write failing tests first, implement the change, then run `typecheck`/`test`/`build` and capture screenshots. Keep the attribution trailers.
 4. Use subagents for T2/T3 and T4–T6 as described in section 6; give each its own worktree, branch name, TDD rule and a
    report format (files, test counts, failing-test evidence, build result, what was verified in a browser, what was not
    done). Remove `.claude/worktrees/*` when they finish.
-5. Never push to `main`/`dev` directly except the owner-approved fast-forward promotion; never touch the Angular app
-   before T9; ask before editing more than three files outside the new app (the working agreement).
+5. Keep the Angular app intact until T9 and ask before editing more than three files outside the new app (the working agreement).
