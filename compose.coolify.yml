@@ -264,10 +264,12 @@ services:
       - traefik.http.routers.backoffice-http.middlewares=https-redirect@file
       - traefik.http.routers.backoffice-http.service=noop@internal
 
-  # Encrypted off-site backup (docs/adr/0004-encrypted-offsite-backups-r2-eu.md).
+  # Encrypted off-site backup (docs/adr/0004-encrypted-offsite-backups-r2-eu.md,
+  # docs/adr/0005-stockage-portable-des-medias.md).
   # Idles; a Coolify Scheduled Task runs /usr/local/bin/backup.sh in it every
-  # night. Reads the upload volumes, never writes them: a restore runs the same
-  # image with writable volumes (see infra/backup/restore.sh).
+  # night. Reads the upload volumes (or S3 media bucket), never writes them:
+  # a restore runs the same image with writable volumes or S3 credentials
+  # (see infra/backup/restore.sh).
   backup:
     image: ghcr.io/ibrahima-isi/meetstudent-backup:${IMAGE_TAG:-latest}
     pull_policy: always
@@ -277,6 +279,15 @@ services:
       PGUSER: ${POSTGRES_USER:-meetstudent}
       PGPASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
       PGDATABASE: ${POSTGRES_DB:-meetstudent}
+      # Active media backend (matches api so backups cover disk volumes or S3 media).
+      MEDIA_STORAGE_BACKEND: ${MEDIA_STORAGE_BACKEND:-disk}
+      MEDIA_S3_BUCKET: ${MEDIA_S3_BUCKET:-}
+      MEDIA_S3_REGION: ${MEDIA_S3_REGION:-}
+      MEDIA_S3_ENDPOINT: ${MEDIA_S3_ENDPOINT:-}
+      MEDIA_S3_PATH_STYLE: ${MEDIA_S3_PATH_STYLE:-false}
+      MEDIA_S3_ACCESS_KEY_ID: ${MEDIA_S3_ACCESS_KEY_ID:-}
+      MEDIA_S3_SECRET_ACCESS_KEY: ${MEDIA_S3_SECRET_ACCESS_KEY:-}
+      MEDIA_S3_SESSION_TOKEN: ${MEDIA_S3_SESSION_TOKEN:-}
       # rclone is configured by environment only. r2: the Cloudflare R2 bucket,
       # endpoint https://<ACCOUNT_ID>.eu.r2.cloudflarestorage.com (EU jurisdiction),
       # token scoped to the bucket, hence no bucket check or creation.
@@ -291,6 +302,17 @@ services:
       # scripts obscure them for rclone); without them a backup is unrecoverable.
       RCLONE_CONFIG_R2CRYPT_TYPE: crypt
       RCLONE_CONFIG_R2CRYPT_REMOTE: r2:${R2_BUCKET:-}
+      # Independent EU S3-compatible backup destination (used instead of R2_*
+      # when active media also uses R2; keeps historical r2crypt: readable).
+      BACKUP_S3_PROVIDER: ${BACKUP_S3_PROVIDER:-}
+      BACKUP_S3_ENDPOINT: ${BACKUP_S3_ENDPOINT:-}
+      BACKUP_S3_REGION: ${BACKUP_S3_REGION:-}
+      BACKUP_S3_BUCKET: ${BACKUP_S3_BUCKET:-}
+      BACKUP_S3_PATH_STYLE: ${BACKUP_S3_PATH_STYLE:-false}
+      BACKUP_S3_ACCESS_KEY_ID: ${BACKUP_S3_ACCESS_KEY_ID:-}
+      BACKUP_S3_SECRET_ACCESS_KEY: ${BACKUP_S3_SECRET_ACCESS_KEY:-}
+      BACKUP_S3_SESSION_TOKEN: ${BACKUP_S3_SESSION_TOKEN:-}
+      BACKUP_REMOTE: ${BACKUP_REMOTE:-}
       BACKUP_CRYPT_PASSWORD: ${BACKUP_CRYPT_PASSWORD:-}
       BACKUP_CRYPT_SALT: ${BACKUP_CRYPT_SALT:-}
     volumes:
