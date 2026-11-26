@@ -3,7 +3,9 @@ package com.bowe.meetstudent.unit.exceptions;
 import com.bowe.meetstudent.exceptions.ErrorResponse;
 import com.bowe.meetstudent.exceptions.GlobalExceptionHandler;
 import com.bowe.meetstudent.exceptions.MediaValidationException;
+import com.bowe.meetstudent.exceptions.MediaWritesPausedException;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -192,5 +194,13 @@ class GlobalExceptionHandlerTest {
         } finally {
             detach(appender);
         }
+    }
+
+    @Test
+    void mediaWritesPausedIs503WithRetryAfterHeader() {
+        var response = handler.handleMediaWritesPaused(new MediaWritesPausedException(45), request());
+
+        assertShape(response, HttpStatus.SERVICE_UNAVAILABLE);
+        assertEquals("45", response.getHeaders().getFirst(HttpHeaders.RETRY_AFTER));
     }
 }

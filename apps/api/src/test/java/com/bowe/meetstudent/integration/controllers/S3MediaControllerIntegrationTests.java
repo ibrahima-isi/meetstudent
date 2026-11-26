@@ -1,6 +1,12 @@
 package com.bowe.meetstudent.integration.controllers;
 
 import com.bowe.meetstudent.TestDataUtil;
+import com.bowe.meetstudent.config.MediaMigrationRunner;
+import com.bowe.meetstudent.entities.Media;
+import com.bowe.meetstudent.entities.enums.MediaCategory;
+import com.bowe.meetstudent.entities.enums.MediaVisibility;
+import com.bowe.meetstudent.repositories.MediaRepository;
+import com.bowe.meetstudent.services.MediaWriteGate;
 import com.bowe.meetstudent.support.ResetStateExtension;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -12,6 +18,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationContext;
 import org.springframework.http.HttpHeaders;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
@@ -35,6 +42,7 @@ import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
@@ -57,6 +65,12 @@ class S3MediaControllerIntegrationTests {
     MockMvc mockMvc;
     @Autowired
     ObjectMapper objectMapper;
+    @Autowired
+    ApplicationContext applicationContext;
+    @Autowired
+    MediaRepository mediaRepository;
+    @Autowired
+    MediaWriteGate mediaWriteGate;
 
     @DynamicPropertySource
     static void configureStorage(DynamicPropertyRegistry properties) {
@@ -79,6 +93,7 @@ class S3MediaControllerIntegrationTests {
 
     @AfterEach
     void deleteFixtureObjects() {
+        mediaWriteGate.resume();
         clearFixtureBucket();
     }
 
@@ -178,6 +193,64 @@ class S3MediaControllerIntegrationTests {
         } finally {
             fixture.createBucket(request -> request.bucket(BUCKET));
         }
+    }
+
+    @Test
+    void s3ModeDisablesMediaMigrationRunnerAndSupportsWritePauseWhileKeepingReads() throws Exception {
+        assertThat(applicationContext.getBeansOfType(MediaMigrationRunner.class)).isEmpty();
+
+        Media legacy = mediaRepository.save(Media.builder()
+                .storageKey("users/legacy-diploma.pdf")
+                .originalFilename("legacy-diploma.pdf")
+                .contentType("application/pdf")
+                .sizeBytes(10L)
+                .category(MediaCategory.DIPLOMA)
+                .visibility(MediaVisibility.PRIVATE)
+                .ownerId(7)
+                .build());
+        assertThat(mediaRepository.findById(legacy.getId()).orElseThrow().getStorageKey())
+                .isEqualTo("users/legacy-diploma.pdf");
+
+        var diploma = upload(new MockMultipartFile("file", "diploma.pdf", "application/pdf", PDF), "DIPLOMA");
+        var logo = upload(new MockMultipartFile("file", "logo.png", "image/png", PNG), "USER_PHOTO");
+        int diplomaId = diploma.get("id").asInt();
+
+        mockMvc.perform(post("/api/v1/admin/media/maintenance/pause")
+                        .param("waitSeconds", "5")
+                        .with(TestDataUtil.mockUser(99, "ROLE_ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.storageBackend").value("s3"))
+                .andExpect(jsonPath("$.writesPaused").value(true))
+                .andExpect(jsonPath("$.drained").value(true));
+
+        mockMvc.perform(multipart("/api/v1/media")
+                        .file(new MockMultipartFile("file", "next.pdf", "application/pdf", PDF))
+                        .param("category", "DIPLOMA")
+                        .with(TestDataUtil.mockUser(7, "ROLE_STUDENT")))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(header().string(HttpHeaders.RETRY_AFTER, "60"));
+
+        mockMvc.perform(get(logo.get("publicUrl").asText()))
+                .andExpect(status().isOk())
+                .andExpect(content().bytes(PNG));
+        mockMvc.perform(get("/api/v1/media/{id}", diplomaId))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/v1/media/{id}", diplomaId)
+                        .with(TestDataUtil.mockUser(8, "ROLE_STUDENT")))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/v1/media/{id}", diplomaId)
+                        .with(TestDataUtil.mockUser(7, "ROLE_STUDENT")))
+                .andExpect(status().isOk())
+                .andExpect(content().bytes(PDF));
+
+        mockMvc.perform(post("/api/v1/admin/media/maintenance/resume")
+                        .with(TestDataUtil.mockUser(99, "ROLE_ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.writesPaused").value(false));
+
+        mockMvc.perform(delete("/api/v1/media/{id}", diplomaId)
+                        .with(TestDataUtil.mockUser(7, "ROLE_STUDENT")))
+                .andExpect(status().isNoContent());
     }
 
     private static void assertProviderDeniesAnonymousAccess(String key) throws Exception {

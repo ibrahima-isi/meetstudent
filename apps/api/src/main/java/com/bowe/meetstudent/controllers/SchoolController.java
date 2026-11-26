@@ -3,6 +3,7 @@ package com.bowe.meetstudent.controllers;
 import com.bowe.meetstudent.dto.SchoolDTO;
 import com.bowe.meetstudent.entities.School;
 import com.bowe.meetstudent.mappers.implementations.SchoolMapper;
+import com.bowe.meetstudent.services.MediaWriteGate;
 import com.bowe.meetstudent.services.SchoolRateService;
 import com.bowe.meetstudent.services.SchoolService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -38,16 +39,19 @@ public class SchoolController {
     private final SchoolMapper schoolMapper;
     private final SchoolRateService schoolRateService;
     private final ModelMapper modelMapper;
+    private final MediaWriteGate mediaWriteGate;
 
     @PostMapping
     @Operation(summary = "Create a new school", description = "Adds a new school/university to the platform.")
     @ApiResponse(responseCode = "201", description = "School created successfully")
     @ApiResponse(responseCode = "400", description = "Invalid input data")
     public ResponseEntity<SchoolDTO> create(@RequestBody @Validated({Default.class, OnCreate.class}) SchoolDTO schoolDTO) {
-        School school = schoolMapper.toEntity(schoolDTO);
-        var savedSchool = this.schoolService.save(school);
-        SchoolDTO savedSchoolDto = schoolMapper.toDTO(savedSchool);
-        return new ResponseEntity<>(savedSchoolDto, HttpStatus.CREATED);
+        try (var ignored = mediaWriteGate.enterWrite()) {
+            School school = schoolMapper.toEntity(schoolDTO);
+            var savedSchool = this.schoolService.save(school);
+            SchoolDTO savedSchoolDto = schoolMapper.toDTO(savedSchool);
+            return new ResponseEntity<>(savedSchoolDto, HttpStatus.CREATED);
+        }
     }
 
     @GetMapping
@@ -163,12 +167,13 @@ public class SchoolController {
     public ResponseEntity<SchoolDTO> update(
         @RequestBody @Validated SchoolDTO newSchoolDTO,
         @Parameter(description = "ID of the school to update") @PathVariable int id) {
-
-        School updates = schoolMapper.toEntity(newSchoolDTO);
-        School saved = schoolService.patch(id, updates);
-        SchoolDTO dto = schoolMapper.toDTO(saved);
-        dto.setAverageRate(schoolRateService.getAverageNoteBySchoolId(saved.getId()));
-        return ResponseEntity.ok(dto);
+        try (var ignored = mediaWriteGate.enterWrite()) {
+            School updates = schoolMapper.toEntity(newSchoolDTO);
+            School saved = schoolService.patch(id, updates);
+            SchoolDTO dto = schoolMapper.toDTO(saved);
+            dto.setAverageRate(schoolRateService.getAverageNoteBySchoolId(saved.getId()));
+            return ResponseEntity.ok(dto);
+        }
     }
 
     @PatchMapping(path = "/{id}")
@@ -178,12 +183,13 @@ public class SchoolController {
     public ResponseEntity<SchoolDTO> patch(
         @RequestBody @Validated SchoolDTO schoolDTO,
         @Parameter(description = "ID of the school to patch") @PathVariable int id) {
-
-        School updates = schoolMapper.toEntity(schoolDTO);
-        School saved = schoolService.patch(id, updates);
-        SchoolDTO dto = schoolMapper.toDTO(saved);
-        dto.setAverageRate(schoolRateService.getAverageNoteBySchoolId(saved.getId()));
-        return ResponseEntity.ok(dto);
+        try (var ignored = mediaWriteGate.enterWrite()) {
+            School updates = schoolMapper.toEntity(schoolDTO);
+            School saved = schoolService.patch(id, updates);
+            SchoolDTO dto = schoolMapper.toDTO(saved);
+            dto.setAverageRate(schoolRateService.getAverageNoteBySchoolId(saved.getId()));
+            return ResponseEntity.ok(dto);
+        }
     }
 
     @DeleteMapping(path = "/{id}")
@@ -192,12 +198,14 @@ public class SchoolController {
     @ApiResponse(responseCode = "404", description = "School not found")
     public ResponseEntity<SchoolDTO> delete(
             @Parameter(description = "ID of the school to delete") @PathVariable int id) {
-        return this.schoolService.getSchoolById(id).map(toDelete -> {
-            // Map to DTO BEFORE deleting: the entity's lazy collections cannot be
-            // resolved once it has been removed from the session.
-            SchoolDTO dto = schoolMapper.toDTO(toDelete);
-            this.schoolService.delete(toDelete.getId());
-            return new ResponseEntity<>(dto, HttpStatus.OK);
-        }).orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
+        try (var ignored = mediaWriteGate.enterWrite()) {
+            return this.schoolService.getSchoolById(id).map(toDelete -> {
+                // Map to DTO BEFORE deleting: the entity's lazy collections cannot be
+                // resolved once it has been removed from the session.
+                SchoolDTO dto = schoolMapper.toDTO(toDelete);
+                this.schoolService.delete(toDelete.getId());
+                return new ResponseEntity<>(dto, HttpStatus.OK);
+            }).orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
+        }
     }
 }

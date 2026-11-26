@@ -166,6 +166,14 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage(), request);
     }
 
+    @ExceptionHandler(MediaWritesPausedException.class)
+    public ResponseEntity<ErrorResponse> handleMediaWritesPaused(MediaWritesPausedException ex, WebRequest request) {
+        var response = build(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage(), request);
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .header(HttpHeaders.RETRY_AFTER, String.valueOf(ex.getRetryAfterSeconds()))
+                .body(response.getBody());
+    }
+
     /**
      * Upload validation failures: 400 (invalid), 413 (too large) or 415 (unsupported type).
      */

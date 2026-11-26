@@ -5,6 +5,7 @@ import com.bowe.meetstudent.exceptions.FieldValidationException;
 import com.bowe.meetstudent.entities.Program;
 import com.bowe.meetstudent.entities.School;
 import com.bowe.meetstudent.mappers.implementations.ProgramMapper;
+import com.bowe.meetstudent.services.MediaWriteGate;
 import com.bowe.meetstudent.services.ProgramService;
 import com.bowe.meetstudent.services.SchoolService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -50,6 +51,7 @@ public class ProgramController {
     private final ProgramAccreditationService programAccreditationService;
     private final ProgramAccreditationMapper programAccreditationMapper;
     private final ProgramRateService programRateService;
+    private final MediaWriteGate mediaWriteGate;
 
     @PostMapping(path = "/{programId}/accreditations/{accreditationId}")
     @Operation(summary = "Link an accreditation to a program", description = "Associates a specific accreditation with a program, specifying start and end years.")
@@ -119,20 +121,22 @@ public class ProgramController {
     @ApiResponse(responseCode = "400", description = "Invalid School ID or input data")
     @ApiResponse(responseCode = "409", description = "Program code already exists")
     public ResponseEntity<ProgramDTO> create(@RequestBody @Validated({Default.class, OnCreate.class}) ProgramDTO programDTO) {
-        Program program = programMapper.toEntity(programDTO);
-        
-        if (programDTO.getSchoolId() != null) {
-            Optional<School> schoolOpt = schoolService.getSchoolById(programDTO.getSchoolId());
-            if (schoolOpt.isEmpty()) {
-                throw new FieldValidationException("schoolId", "School not found");
-            }
-            program.setSchool(schoolOpt.get());
-        } else {
-            program.setSchool(null);
-        }
+        try (var ignored = mediaWriteGate.enterWrite()) {
+            Program program = programMapper.toEntity(programDTO);
 
-        Program savedProgram = programService.save(program);
-        return new ResponseEntity<>(programMapper.toDTO(savedProgram), HttpStatus.CREATED);
+            if (programDTO.getSchoolId() != null) {
+                Optional<School> schoolOpt = schoolService.getSchoolById(programDTO.getSchoolId());
+                if (schoolOpt.isEmpty()) {
+                    throw new FieldValidationException("schoolId", "School not found");
+                }
+                program.setSchool(schoolOpt.get());
+            } else {
+                program.setSchool(null);
+            }
+
+            Program savedProgram = programService.save(program);
+            return new ResponseEntity<>(programMapper.toDTO(savedProgram), HttpStatus.CREATED);
+        }
     }
 
     @GetMapping
@@ -198,16 +202,17 @@ public class ProgramController {
     public ResponseEntity<ProgramDTO> update(
             @RequestBody @Validated ProgramDTO newProgramDTO,
             @Parameter(description = "ID of the program to update") @PathVariable int id) {
-        
-        Program updates = programMapper.toEntity(newProgramDTO);
-        if (newProgramDTO.getSchoolId() != null) {
-            Optional<School> schoolOpt = schoolService.getSchoolById(newProgramDTO.getSchoolId());
-            if (schoolOpt.isEmpty()) throw new FieldValidationException("schoolId", "School not found");
-            updates.setSchool(schoolOpt.get());
-        }
+        try (var ignored = mediaWriteGate.enterWrite()) {
+            Program updates = programMapper.toEntity(newProgramDTO);
+            if (newProgramDTO.getSchoolId() != null) {
+                Optional<School> schoolOpt = schoolService.getSchoolById(newProgramDTO.getSchoolId());
+                if (schoolOpt.isEmpty()) throw new FieldValidationException("schoolId", "School not found");
+                updates.setSchool(schoolOpt.get());
+            }
 
-        Program saved = programService.patch(id, updates);
-        return ResponseEntity.ok(programMapper.toDTO(saved));
+            Program saved = programService.patch(id, updates);
+            return ResponseEntity.ok(programMapper.toDTO(saved));
+        }
     }
 
     @PatchMapping(path = "/{id}")
@@ -219,16 +224,17 @@ public class ProgramController {
     public ResponseEntity<ProgramDTO> patch(
             @RequestBody @Validated ProgramDTO programDTO,
             @Parameter(description = "ID of the program to patch") @PathVariable int id) {
-        
-        Program updates = programMapper.toEntity(programDTO);
-        if (programDTO.getSchoolId() != null) {
-            Optional<School> schoolOpt = schoolService.getSchoolById(programDTO.getSchoolId());
-            if (schoolOpt.isEmpty()) throw new FieldValidationException("schoolId", "School not found");
-            updates.setSchool(schoolOpt.get());
-        }
+        try (var ignored = mediaWriteGate.enterWrite()) {
+            Program updates = programMapper.toEntity(programDTO);
+            if (programDTO.getSchoolId() != null) {
+                Optional<School> schoolOpt = schoolService.getSchoolById(programDTO.getSchoolId());
+                if (schoolOpt.isEmpty()) throw new FieldValidationException("schoolId", "School not found");
+                updates.setSchool(schoolOpt.get());
+            }
 
-        Program saved = programService.patch(id, updates);
-        return ResponseEntity.ok(programMapper.toDTO(saved));
+            Program saved = programService.patch(id, updates);
+            return ResponseEntity.ok(programMapper.toDTO(saved));
+        }
     }
 
     @DeleteMapping(path = "/{id}")
@@ -236,12 +242,14 @@ public class ProgramController {
     @ApiResponse(responseCode = "200", description = "Program deleted successfully")
     @ApiResponse(responseCode = "404", description = "Program not found")
     public ResponseEntity<ProgramDTO> delete(@Parameter(description = "ID of the program to delete") @PathVariable int id) {
-        return programService.findById(id).map(toDelete -> {
-            // Map to DTO BEFORE deleting: the entity's lazy collections cannot be
-            // resolved once it has been removed from the session.
-            ProgramDTO dto = programMapper.toDTO(toDelete);
-            programService.delete(toDelete.getId());
-            return new ResponseEntity<>(dto, HttpStatus.OK);
-        }).orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
+        try (var ignored = mediaWriteGate.enterWrite()) {
+            return programService.findById(id).map(toDelete -> {
+                // Map to DTO BEFORE deleting: the entity's lazy collections cannot be
+                // resolved once it has been removed from the session.
+                ProgramDTO dto = programMapper.toDTO(toDelete);
+                programService.delete(toDelete.getId());
+                return new ResponseEntity<>(dto, HttpStatus.OK);
+            }).orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
+        }
     }
 }

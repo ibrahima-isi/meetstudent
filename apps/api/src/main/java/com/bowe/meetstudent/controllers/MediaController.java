@@ -10,6 +10,7 @@ import com.bowe.meetstudent.mappers.Mapper;
 import com.bowe.meetstudent.security.UserPrincipal;
 import com.bowe.meetstudent.services.MediaService;
 import com.bowe.meetstudent.services.MediaStorage;
+import com.bowe.meetstudent.services.MediaWriteGate;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -46,6 +47,7 @@ public class MediaController {
     private final MediaService mediaService;
     private final MediaContentResponse mediaContentResponse;
     private final Mapper<Media, MediaDTO> mediaMapper;
+    private final MediaWriteGate mediaWriteGate;
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Upload a media file",
@@ -55,8 +57,11 @@ public class MediaController {
             @RequestParam("category") MediaCategory category,
             @RequestParam("file") MultipartFile file,
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) throws IOException {
-        Media media = mediaService.upload(file, category, principal, idempotencyKey);
-        return new ResponseEntity<>(mediaMapper.toDTO(media), HttpStatus.CREATED);
+        mediaService.assertCanUpload(principal, category);
+        try (var ignored = mediaWriteGate.enterWrite()) {
+            Media media = mediaService.upload(file, category, principal, idempotencyKey);
+            return new ResponseEntity<>(mediaMapper.toDTO(media), HttpStatus.CREATED);
+        }
     }
 
     // MIME types safe to render inline in the browser. Anything else is forced to download.
@@ -132,8 +137,10 @@ public class MediaController {
     public ResponseEntity<MediaDTO> verify(
             @PathVariable Integer id,
             @RequestBody @Validated MediaVerificationRequest request) {
-        Media media = mediaService.setVerification(id, request.getStatus(), request.getReason());
-        return ResponseEntity.ok(mediaMapper.toDTO(media));
+        try (var ignored = mediaWriteGate.enterWrite()) {
+            Media media = mediaService.setVerification(id, request.getStatus(), request.getReason());
+            return ResponseEntity.ok(mediaMapper.toDTO(media));
+        }
     }
 
     @DeleteMapping("/{id}")
@@ -141,7 +148,10 @@ public class MediaController {
     public ResponseEntity<Void> delete(
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable Integer id) throws IOException {
-        mediaService.delete(id, principal);
-        return ResponseEntity.noContent().build();
+        mediaService.assertCanDelete(id, principal);
+        try (var ignored = mediaWriteGate.enterWrite()) {
+            mediaService.delete(id, principal);
+            return ResponseEntity.noContent().build();
+        }
     }
 }

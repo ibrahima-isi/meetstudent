@@ -13,4 +13,6 @@
 **/output.xml
 **/report.html
 **/target/
+__pycache__/
+*.py[cod]
 .DS_Store

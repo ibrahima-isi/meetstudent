@@ -11,6 +11,7 @@ import com.bowe.meetstudent.mappers.implementations.CourseAccreditationMapper;
 import com.bowe.meetstudent.services.CourseAccreditationService;
 import com.bowe.meetstudent.services.CourseRateService;
 import com.bowe.meetstudent.services.CourseService;
+import com.bowe.meetstudent.services.MediaWriteGate;
 import com.bowe.meetstudent.services.ProgramService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -49,6 +50,7 @@ public class CourseController {
     private final CourseRateService courseRateService;
     private final CourseAccreditationService courseAccreditationService;
     private final CourseAccreditationMapper courseAccreditationMapper;
+    private final MediaWriteGate mediaWriteGate;
 
     @PostMapping(path = "/{courseId}/accreditations/{accreditationId}")
     @Operation(summary = "Link an accreditation to a course", description = "Creates a course-specific accreditation association with validity years.")
@@ -104,20 +106,22 @@ public class CourseController {
     @ApiResponse(responseCode = "400", description = "Invalid Program ID or input data")
     @ApiResponse(responseCode = "409", description = "Course code already exists")
     public ResponseEntity<CourseDTO> create(@RequestBody @Validated({Default.class, OnCreate.class}) CourseDTO courseDTO) {
-        Course course = courseMapper.toEntity(courseDTO);
-        
-        if (courseDTO.getProgramId() != null) {
-            Optional<Program> programOpt = programService.findById(courseDTO.getProgramId());
-            if (programOpt.isEmpty()) {
-                throw new FieldValidationException("programId", "Program not found");
-            }
-            course.setProgram(programOpt.get());
-        } else {
-            course.setProgram(null);
-        }
+        try (var ignored = mediaWriteGate.enterWrite()) {
+            Course course = courseMapper.toEntity(courseDTO);
 
-        Course savedCourse = courseService.save(course);
-        return new ResponseEntity<>(courseMapper.toDTO(savedCourse), HttpStatus.CREATED);
+            if (courseDTO.getProgramId() != null) {
+                Optional<Program> programOpt = programService.findById(courseDTO.getProgramId());
+                if (programOpt.isEmpty()) {
+                    throw new FieldValidationException("programId", "Program not found");
+                }
+                course.setProgram(programOpt.get());
+            } else {
+                course.setProgram(null);
+            }
+
+            Course savedCourse = courseService.save(course);
+            return new ResponseEntity<>(courseMapper.toDTO(savedCourse), HttpStatus.CREATED);
+        }
     }
 
     @GetMapping
@@ -184,16 +188,17 @@ public class CourseController {
     public ResponseEntity<CourseDTO> update(
             @RequestBody @Validated CourseDTO newCourseDTO,
             @Parameter(description = "ID of the course to update") @PathVariable int id) {
-        
-        Course updates = courseMapper.toEntity(newCourseDTO);
-        if (newCourseDTO.getProgramId() != null) {
-            Optional<Program> programOpt = programService.findById(newCourseDTO.getProgramId());
-            if (programOpt.isEmpty()) throw new FieldValidationException("programId", "Program not found");
-            updates.setProgram(programOpt.get());
-        }
+        try (var ignored = mediaWriteGate.enterWrite()) {
+            Course updates = courseMapper.toEntity(newCourseDTO);
+            if (newCourseDTO.getProgramId() != null) {
+                Optional<Program> programOpt = programService.findById(newCourseDTO.getProgramId());
+                if (programOpt.isEmpty()) throw new FieldValidationException("programId", "Program not found");
+                updates.setProgram(programOpt.get());
+            }
 
-        Course saved = courseService.patch(id, updates);
-        return ResponseEntity.ok(courseMapper.toDTO(saved));
+            Course saved = courseService.patch(id, updates);
+            return ResponseEntity.ok(courseMapper.toDTO(saved));
+        }
     }
 
     @PatchMapping(path = "/{id}")
@@ -205,16 +210,17 @@ public class CourseController {
     public ResponseEntity<CourseDTO> patch(
             @RequestBody @Validated CourseDTO courseDTO,
             @Parameter(description = "ID of the course to patch") @PathVariable int id) {
-        
-        Course updates = courseMapper.toEntity(courseDTO);
-        if (courseDTO.getProgramId() != null) {
-            Optional<Program> programOpt = programService.findById(courseDTO.getProgramId());
-            if (programOpt.isEmpty()) throw new FieldValidationException("programId", "Program not found");
-            updates.setProgram(programOpt.get());
-        }
+        try (var ignored = mediaWriteGate.enterWrite()) {
+            Course updates = courseMapper.toEntity(courseDTO);
+            if (courseDTO.getProgramId() != null) {
+                Optional<Program> programOpt = programService.findById(courseDTO.getProgramId());
+                if (programOpt.isEmpty()) throw new FieldValidationException("programId", "Program not found");
+                updates.setProgram(programOpt.get());
+            }
 
-        Course saved = courseService.patch(id, updates);
-        return ResponseEntity.ok(courseMapper.toDTO(saved));
+            Course saved = courseService.patch(id, updates);
+            return ResponseEntity.ok(courseMapper.toDTO(saved));
+        }
     }
 
     @DeleteMapping(path = "/{id}")
@@ -222,12 +228,14 @@ public class CourseController {
     @ApiResponse(responseCode = "200", description = "Course deleted successfully")
     @ApiResponse(responseCode = "404", description = "Course not found")
     public ResponseEntity<CourseDTO> delete(@Parameter(description = "ID of the course to delete") @PathVariable int id) {
-        return courseService.findById(id).map(toDelete -> {
-            // Map to DTO BEFORE deleting: the entity's lazy collections cannot be
-            // resolved once it has been removed from the session.
-            CourseDTO dto = courseMapper.toDTO(toDelete);
-            courseService.delete(toDelete.getId());
-            return new ResponseEntity<>(dto, HttpStatus.OK);
-        }).orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
+        try (var ignored = mediaWriteGate.enterWrite()) {
+            return courseService.findById(id).map(toDelete -> {
+                // Map to DTO BEFORE deleting: the entity's lazy collections cannot be
+                // resolved once it has been removed from the session.
+                CourseDTO dto = courseMapper.toDTO(toDelete);
+                courseService.delete(toDelete.getId());
+                return new ResponseEntity<>(dto, HttpStatus.OK);
+            }).orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
+        }
     }
 }

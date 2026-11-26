@@ -1,6 +1,11 @@
+server:
+  shutdown: graceful
+
 spring:
   application:
     name: meetstudent
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
   profiles:
     active: dev
   jackson:
@@ -43,6 +48,8 @@ springdoc:
 
 file:
   storage-backend: ${MEDIA_STORAGE_BACKEND:disk}
+  writes-paused: ${MEDIA_WRITES_PAUSED:false}
+  writes-retry-after-seconds: ${MEDIA_WRITES_RETRY_AFTER_SECONDS:60}
   s3:
     bucket: ${MEDIA_S3_BUCKET:}
     region: ${MEDIA_S3_REGION:}
