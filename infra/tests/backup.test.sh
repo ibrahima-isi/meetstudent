@@ -666,6 +666,15 @@ roundtrip_tests() {
   verify_restored_media_and_auth "$PROJECT_B" "$logo_url" "$photo_url" "$media_id" \
     "$sha_diploma" "$sha_logo" "$sha_photo" "$sha_legacy"
 
+  stack "$PROJECT_B" run --rm -T --pull never -e BACKUP_CRYPT_PASSWORD=not-the-key \
+    -v api-uploads:/restore/uploads -v api-private:/restore/private backup restore.sh latest --yes >/dev/null 2>&1; rc=$?
+  check "without the crypt key the backup cannot be restored (exit $rc)" test "$rc" -ne 0
+  # This disk target is done. Release its networks before bringing up two S3 stacks.
+  if ! stack "$PROJECT_B" down -v --remove-orphans; then
+    fail "the disposable disk restore stack tears down"
+    return
+  fi
+
   echo "restore historical archive into an empty S3 destination ($PROJECT_C)"
   local media_bucket_c="meetstudent-media-hist" media_bucket_d="meetstudent-media-restored"
   MEDIA_STORAGE_BACKEND=s3 \
@@ -801,10 +810,15 @@ roundtrip_tests() {
     stack "$PROJECT_D" run --rm -T --pull never backup restore.sh "$s3_stamp" --yes 2>&1); rc=$?
   check "S3-mode backup restores into empty S3 bucket (exit $rc)" test "$rc" -eq 0
   [ "$rc" -eq 0 ] || printf '%s\n' "$out" | sed 's/^/        /'
-  MEDIA_STORAGE_BACKEND=s3 MEDIA_S3_BUCKET="$media_bucket_d" MEDIA_S3_REGION=us-east-1 \
+  if ! MEDIA_STORAGE_BACKEND=s3 MEDIA_S3_BUCKET="$media_bucket_d" MEDIA_S3_REGION=us-east-1 \
   MEDIA_S3_ENDPOINT="http://$MEDIA_S3_HOST:9000" MEDIA_S3_PATH_STYLE=true \
   MEDIA_S3_ACCESS_KEY_ID="$MEDIA_S3_USER" MEDIA_S3_SECRET_ACCESS_KEY="$MEDIA_S3_SECRET" \
-    stack "$PROJECT_D" up -d --pull never --wait --wait-timeout 300 api >/dev/null 2>&1
+    stack "$PROJECT_D" up -d --pull never --wait --wait-timeout 300 api; then
+    stack "$PROJECT_D" ps -a
+    stack "$PROJECT_D" logs --tail 60 api
+    fail "the API starts on the restored S3 database"
+    return
+  fi
 
   verify_restored_media_and_auth "$PROJECT_D" "$logo2_url" "$photo_url" "$media_id" \
     "$sha_diploma" "$sha_logo2" "$sha_photo" "$sha_legacy"
@@ -859,9 +873,7 @@ roundtrip_tests() {
     bash -c '[ "$0" -ne 0 ] && [ "$1" = "must-survive" ] && grep -qi "private/\|public/\|legacy" <<<"$2"' "$rc" "$sentinel_after" "$out"
 
   echo "failures are loud"
-  stack "$PROJECT_B" run --rm -T --pull never -e BACKUP_CRYPT_PASSWORD=not-the-key \
-    -v api-uploads:/restore/uploads -v api-private:/restore/private backup restore.sh latest --yes >/dev/null 2>&1; rc=$?
-  check "without the crypt key the backup cannot be restored (exit $rc)" test "$rc" -ne 0
+
   stack "$PROJECT_A" exec -T -e BACKUP_CRYPT_SALT= backup backup.sh >/dev/null 2>&1; rc=$?
   check "an incomplete configuration fails the backup (exit $rc)" test "$rc" -ne 0
   docker stop "$S3_NAME" >/dev/null
