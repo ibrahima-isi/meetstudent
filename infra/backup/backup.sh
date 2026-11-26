@@ -14,6 +14,7 @@
 # Retention is the bucket's lifecycle rule (30 days EU), not this script's business.
 set -eu
 set -o pipefail
+umask 077
 
 UPLOADS_DIR=${UPLOADS_DIR:-/data/uploads}
 PRIVATE_DIR=${PRIVATE_DIR:-/data/private}
@@ -225,6 +226,15 @@ collect_media_s3() {
       [ "$rc" -eq 3 ] || return "$rc"
     }
 
+  for prefix in public private; do
+    staged="$adir/stage/private"
+    [ "$prefix" != public ] || staged="$adir/stage/uploads/public"
+    if [ -n "$(find "$staged" -type f -print -quit)" ]; then
+      rclone check --one-way --download --exclude ".media-*.tmp" --exclude "**/.media-*.tmp" \
+        "$staged" "media:$MEDIA_S3_BUCKET/$prefix" || return 1
+    fi
+  done
+
   manifest_scan_media_roots "$adir/stage/uploads" "$adir/stage/private" "$adir/scanned.tsv" || return 1
   manifest_build_and_verify \
     "$adir/scanned.tsv" \
@@ -257,10 +267,11 @@ run_attempt() {
   (cd "$out_dir" && sha256sum db.dump uploads.tar.gz private.tar.gz media-manifest.tsv > SHA256SUMS) || return 1
 
   echo "[$STAMP] sending to $REMOTE$STAMP"
-  rclone copy --exclude /SHA256SUMS "$out_dir" "$REMOTE$STAMP" || return 1
+  rclone copy --immutable --exclude /SHA256SUMS "$out_dir" "$REMOTE$STAMP" || return 1
+  rclone check --one-way --download --exclude /SHA256SUMS "$out_dir" "$REMOTE$STAMP" || return 1
   # Last, once everything else is there: restore.sh only offers folders holding it,
   # so an upload cut off halfway is never mistaken for a backup.
-  rclone copy "$out_dir/SHA256SUMS" "$REMOTE$STAMP" || return 1
+  rclone copyto --immutable "$out_dir/SHA256SUMS" "$REMOTE$STAMP/SHA256SUMS" || return 1
 }
 
 attempt=1

@@ -221,7 +221,15 @@ if [ -n "${RCLONE_CONFIG_R2_ENDPOINT:-}" ] || [ -n "${RCLONE_CONFIG_R2_ACCESS_KE
   case ${RCLONE_CONFIG_R2CRYPT_REMOTE:-} in *:) missing="$missing R2_BUCKET" ;; esac
 fi
 
-if [ "$BACKUP_HAS_S3" -eq 0 ] && [ "$BACKUP_HAS_R2" -eq 0 ]; then
+BACKUP_HAS_AWS=0
+if [ -n "${BACKUP_AWS_BUCKET:-}${BACKUP_AWS_REGION:-}${BACKUP_AWS_ACCESS_KEY_ID:-}${BACKUP_AWS_SECRET_ACCESS_KEY:-}" ]; then
+  BACKUP_HAS_AWS=1
+  for var in BACKUP_AWS_BUCKET BACKUP_AWS_REGION BACKUP_AWS_ACCESS_KEY_ID BACKUP_AWS_SECRET_ACCESS_KEY; do
+    eval '[ -n "${'"$var"':-}" ]' || missing="$missing $var"
+  done
+fi
+
+if [ "$BACKUP_HAS_S3" -eq 0 ] && [ "$BACKUP_HAS_R2" -eq 0 ] && [ "$BACKUP_HAS_AWS" -eq 0 ]; then
   missing="$missing RCLONE_CONFIG_R2_ENDPOINT RCLONE_CONFIG_R2_ACCESS_KEY_ID RCLONE_CONFIG_R2_SECRET_ACCESS_KEY RCLONE_CONFIG_R2CRYPT_REMOTE"
 fi
 
@@ -272,6 +280,16 @@ if [ "$BACKUP_HAS_S3" -eq 1 ]; then
   export RCLONE_CONFIG_BACKUPCRYPT_REMOTE="backup_s3:${BACKUP_S3_BUCKET}"
 fi
 
+if [ "$BACKUP_HAS_AWS" -eq 1 ]; then
+  backup_env_check_eu "" "$BACKUP_AWS_REGION" "BACKUP_AWS_REGION"
+  export RCLONE_CONFIG_AWS_TYPE=s3 RCLONE_CONFIG_AWS_PROVIDER=AWS
+  export RCLONE_CONFIG_AWS_REGION="$BACKUP_AWS_REGION"
+  export RCLONE_CONFIG_AWS_ACCESS_KEY_ID="$BACKUP_AWS_ACCESS_KEY_ID"
+  export RCLONE_CONFIG_AWS_SECRET_ACCESS_KEY="$BACKUP_AWS_SECRET_ACCESS_KEY"
+  export RCLONE_CONFIG_AWS_NO_CHECK_BUCKET=true
+  export RCLONE_CONFIG_AWSCRYPT_TYPE=crypt RCLONE_CONFIG_AWSCRYPT_REMOTE="aws:$BACKUP_AWS_BUCKET"
+fi
+
 # The originals stay in Coolify and the password manager; rclone wants them obscured.
 BACKUP_CRYPT_PASSWORD_OBSCURED=$(printf '%s' "$BACKUP_CRYPT_PASSWORD" | rclone obscure -)
 BACKUP_CRYPT_SALT_OBSCURED=$(printf '%s' "$BACKUP_CRYPT_SALT" | rclone obscure -)
@@ -284,10 +302,17 @@ if [ "$BACKUP_HAS_S3" -eq 1 ]; then
   export RCLONE_CONFIG_BACKUPCRYPT_PASSWORD2="$BACKUP_CRYPT_SALT_OBSCURED"
 fi
 
+if [ "$BACKUP_HAS_AWS" -eq 1 ]; then
+  export RCLONE_CONFIG_AWSCRYPT_PASSWORD="$BACKUP_CRYPT_PASSWORD_OBSCURED"
+  export RCLONE_CONFIG_AWSCRYPT_PASSWORD2="$BACKUP_CRYPT_SALT_OBSCURED"
+fi
+
 if [ -n "${BACKUP_REMOTE:-}" ]; then
   DEFAULT_BACKUP_REMOTE=$BACKUP_REMOTE
 elif [ "$BACKUP_HAS_S3" -eq 1 ]; then
   DEFAULT_BACKUP_REMOTE=backupcrypt:
+elif [ "$BACKUP_HAS_AWS" -eq 1 ]; then
+  DEFAULT_BACKUP_REMOTE=awscrypt:
 else
   DEFAULT_BACKUP_REMOTE=r2crypt:
 fi
@@ -301,6 +326,11 @@ backup_env_assert_remote_configured() {
     r2crypt:*)
       [ "$BACKUP_HAS_R2" -eq 1 ] || { echo "${0##*/}: remote '$target' requested but R2_* is not configured" >&2; exit 2; }
       ;;
+    awscrypt:*)
+      [ "$BACKUP_HAS_AWS" -eq 1 ] || { echo "${0##*/}: remote '$target' requested but BACKUP_AWS_* is not configured" >&2; exit 2; }
+      ;;
+    /*/) ;; # Isolated local fixture.
+    *) echo "${0##*/}: select an encrypted backup remote" >&2; exit 2 ;;
   esac
 }
 
@@ -310,6 +340,10 @@ backup_env_assert_provider_independence() {
     backupcrypt:*)
       b_ep=${BACKUP_S3_ENDPOINT:-}
       b_prov=${BACKUP_S3_PROVIDER:-$([ -z "$b_ep" ] && echo AWS || echo Other)}
+      ;;
+    awscrypt:*)
+      b_ep=
+      b_prov=AWS
       ;;
     r2crypt:*)
       b_ep=${RCLONE_CONFIG_R2_ENDPOINT:-}

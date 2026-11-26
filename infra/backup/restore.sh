@@ -8,9 +8,10 @@
 #   restore.sh [--remote <remote>] <20261027T031500Z|latest> --yes
 #
 # In disk mode (default): mount api-uploads at /restore/uploads and api-private at /restore/private.
-# In S3 mode (MEDIA_STORAGE_BACKEND=s3): no volume mounts are required; media is synced to MEDIA_S3_BUCKET.
+# In S3 mode (MEDIA_STORAGE_BACKEND=s3): restore to an empty MEDIA_S3_BUCKET.
 set -eu
 set -o pipefail
+umask 077
 
 UPLOADS_DIR=${RESTORE_UPLOADS_DIR:-/restore/uploads}
 PRIVATE_DIR=${RESTORE_PRIVATE_DIR:-/restore/private}
@@ -49,11 +50,11 @@ backups() {
 }
 
 case ${1:-} in
-  --list) backups; exit 0 ;;
+  --list) [ "$#" -eq 1 ] || usage; backups; exit 0 ;;
   '') usage ;;
 esac
 NAME=$1
-[ "${2:-}" = --yes ] || {
+[ "$#" -eq 2 ] && [ "$2" = --yes ] || {
   echo "This ERASES database '$PGDATABASE' on $PGHOST and active media ($MEDIA_STORAGE_BACKEND), and replaces them" >&2
   echo "with backup '$NAME'. Run again with --yes to proceed." >&2
   exit 2
@@ -61,24 +62,12 @@ NAME=$1
 [ "$NAME" != latest ] || NAME=$(backups | tail -n 1)
 [ -n "$NAME" ] || { echo "restore: no backup found on $REMOTE" >&2; exit 1; }
 
+case "$NAME" in *[!0-9TZ]*) echo "restore: invalid backup ID" >&2; exit 2 ;; esac
+printf '%s\n' "$NAME" | grep -qxE '[0-9]{8}T[0-9]{6}Z' || { echo "restore: invalid backup ID" >&2; exit 2; }
+
 mkdir -p "$(dirname "$LOCK_FILE")"
 exec 9>"$LOCK_FILE"
 flock 9
-
-if [ "$MEDIA_STORAGE_BACKEND" = "disk" ]; then
-  for dir in "$UPLOADS_DIR" "$PRIVATE_DIR"; do
-    probe="$dir/.restore-probe"
-    touch "$probe" 2>/dev/null && rm -f "$probe" || {
-      echo "restore: $dir is not a writable mount; mount the upload volumes there (see the usage)" >&2
-      exit 1
-    }
-  done
-else
-  rclone lsf "media:$MEDIA_S3_BUCKET" --max-depth 1 >/dev/null || {
-    echo "restore: cannot reach S3 destination media bucket '$MEDIA_S3_BUCKET'" >&2
-    exit 1
-  }
-fi
 
 WORK=$(mktemp -d /tmp/restore.XXXXXX)
 trap 'rm -rf "$WORK"' EXIT
@@ -86,27 +75,71 @@ trap 'exit 130' INT TERM
 
 mkdir -p "$WORK/archive" "$WORK/stage/uploads" "$WORK/stage/private"
 echo "downloading $REMOTE$NAME"
-rclone copy "$REMOTE$NAME" "$WORK/archive"
-(cd "$WORK/archive" && sha256sum -c SHA256SUMS)
+rclone copy "$REMOTE$NAME" "$WORK/archive" --include /SHA256SUMS --include /db.dump \
+  --include /uploads.tar.gz --include /private.tar.gz --include /media-manifest.tsv --include /inventory.json
+(
+  cd "$WORK/archive"
+  awk '
+    length($1) != 64 || $1 ~ /[^0-9a-f]/ || NF != 2 { bad = 1 }
+    $2 !~ /^(db[.]dump|uploads[.]tar[.]gz|private[.]tar[.]gz|media-manifest[.]tsv|inventory[.]json)$/ { bad = 1 }
+    seen[$2]++ { bad = 1 }
+    END { exit(bad || !seen["db.dump"] || !seen["uploads.tar.gz"] || !seen["private.tar.gz"]) }
+  ' SHA256SUMS || { echo "restore: invalid SHA256SUMS" >&2; exit 1; }
+  sha256sum -c SHA256SUMS
+  # Sidecars are trusted only when the completion marker covers them.
+  for sidecar in media-manifest.tsv inventory.json; do
+    if ! awk -v name="$sidecar" '$2 == name { present = 1 } END { exit !present }' SHA256SUMS; then
+      rm -f "$sidecar"
+    fi
+  done
+  pg_restore --list db.dump >"$WORK/dump.toc"
+)
 
-tar -xzf "$WORK/archive/uploads.tar.gz" -C "$WORK/stage/uploads"
-tar -xzf "$WORK/archive/private.tar.gz" -C "$WORK/stage/private"
+python3 - "$WORK" <<'PYTHON'
+import json
+import sys
+import tarfile
+from pathlib import Path, PurePosixPath
+
+root = Path(sys.argv[1])
+for name in ("uploads", "private"):
+    with tarfile.open(root / "archive" / f"{name}.tar.gz", "r:gz") as archive:
+        destination = root / "stage" / name
+        for entry in archive:
+            path = PurePosixPath(entry.name)
+            if path.is_absolute() or ".." in path.parts or not (entry.isfile() or entry.isdir()):
+                sys.exit("restore: unsafe media archive member")
+            archive.extract(entry, destination, filter="data")
+
+inventory = root / "archive" / "inventory.json"
+if inventory.is_file():
+    rows = json.loads(inventory.read_text())
+    if not isinstance(rows, list):
+        sys.exit("restore: invalid JSON media inventory")
+    for row in rows:
+        key = row["key"]
+        visibility = row["visibility"]
+        if (visibility not in {"PUBLIC", "PRIVATE"} or not key.startswith(visibility.lower() + "/")
+                or any(part in {"", ".", ".."} for part in key.split("/"))
+                or any(ord(char) < 32 or char == chr(92) for char in key)):
+            sys.exit("restore: invalid media key in JSON inventory")
+        path = root / "stage" / ("uploads" if visibility == "PUBLIC" else "") / key
+        if not path.is_file() or (row["size"] is not None and path.stat().st_size != row["size"]):
+            sys.exit("restore: media inventory is incomplete or has a size mismatch")
+PYTHON
 if [ -f "$WORK/archive/media-manifest.tsv" ]; then
   manifest_scan_media_roots "$WORK/stage/uploads" "$WORK/stage/private" "$WORK/scanned.tsv"
   manifest_verify_tree "$WORK/archive/media-manifest.tsv" "$WORK/scanned.tsv"
 fi
 
 if [ "$MEDIA_STORAGE_BACKEND" = "s3" ]; then
-  mkdir -p "$WORK/s3_root/public" "$WORK/s3_root/private"
+  mkdir -p "$WORK/s3_root/public"
   if [ -d "$WORK/stage/uploads/public" ]; then
     (cd "$WORK/stage/uploads/public" && tar --exclude='.media-*.tmp' -cf - .) \
       | (cd "$WORK/s3_root/public" && tar -xf -)
   fi
-  if [ -d "$WORK/stage/private" ]; then
-    (cd "$WORK/stage/private" && tar --exclude='.media-*.tmp' -cf - .) \
-      | (cd "$WORK/s3_root/private" && tar -xf -)
-  fi
-  find "$WORK/s3_root" -type l -delete
+  mv "$WORK/stage/private" "$WORK/s3_root/private"
+  find "$WORK/s3_root" -name '.media-*.tmp' -type f -delete
   manifest_scan_tree "$WORK/s3_root" "" "$WORK/s3_expected.tsv"
 
   # Pre-validate all database media rows BEFORE dropping or recreating $PGDATABASE.
@@ -125,7 +158,7 @@ if [ "$MEDIA_STORAGE_BACKEND" = "s3" ]; then
         printf "%s\t%s\t%s\t%s\n", $2, $3, $7, from_hex($7)
       }
     ' "$WORK/archive/media-manifest.tsv" > "$WORK/precheck_db_media.tsv"
-  elif pg_restore --list "$WORK/archive/db.dump" | grep -qE '[[:space:]]TABLE DATA[[:space:]]+[^ ]+[[:space:]]+"?media"?([[:space:]]|$)'; then
+  elif [ ! -f "$WORK/archive/inventory.json" ] && grep -qE '[[:space:]]TABLE DATA[[:space:]]+[^ ]+[[:space:]]+"?media"?([[:space:]]|$)' "$WORK/dump.toc"; then
     pg_restore -f - --table=media --data-only "$WORK/archive/db.dump" \
       | LC_ALL=C awk '
           BEGIN {
@@ -197,54 +230,43 @@ if [ "$MEDIA_STORAGE_BACKEND" = "s3" ]; then
     }
     END { if (err) exit 1 }
   ' "$WORK/s3_expected.tsv" "$WORK/precheck_db_media.tsv"
-fi
-
-echo "recreating database $PGDATABASE"
-psql -v ON_ERROR_STOP=1 -d postgres \
-  -c "DROP DATABASE IF EXISTS \"$PGDATABASE\" WITH (FORCE)" \
-  -c "CREATE DATABASE \"$PGDATABASE\" OWNER \"$PGUSER\""
-pg_restore --exit-on-error --no-owner --no-privileges -d "$PGDATABASE" "$WORK/archive/db.dump"
-
-if [ "$MEDIA_STORAGE_BACKEND" = "disk" ]; then
-  for name in uploads private; do
-    [ "$name" = uploads ] && dst=$UPLOADS_DIR || dst=$PRIVATE_DIR
-    echo "restoring $dst"
-    find "$dst" -mindepth 1 -delete
-    tar -xzf "$WORK/archive/$name.tar.gz" -C "$dst"
-    find "$dst" -name '.media-*.tmp' -type f -delete
-  done
-else
-  # Verify every DB media row maps to a valid public/ or private/ key present in the archive.
-  psql -X -A -t -v ON_ERROR_STOP=1 -d "$PGDATABASE" \
-    -c "SELECT id, encode(convert_to(storage_key, 'UTF8'), 'hex') FROM media ORDER BY id" > "$WORK/restored_db_media.tsv"
-  awk '
-    BEGIN { FS = "\t"; err = 0 }
-    FILENAME == ARGV[1] {
-      if (NF >= 1) have[$1] = 1
-      next
-    }
-    FILENAME == ARGV[2] {
-      split($0, d, "|")
-      if (length(d[1]) == 0) next
-      if (!(d[2] in have)) {
-        printf "restore: database media id=%s key_hex=%s is missing or lacks public/ or private/ prefix for S3 mode\n", d[1], d[2] > "/dev/stderr"
-        err = 1
-      }
-      next
-    }
-    END { if (err) exit 1 }
-  ' "$WORK/s3_expected.tsv" "$WORK/restored_db_media.tsv"
-
+  rclone lsf -R "media:$MEDIA_S3_BUCKET" >"$WORK/destination.list"
+  [ ! -s "$WORK/destination.list" ] || { echo "restore: S3 destination bucket must be empty" >&2; exit 2; }
   for prefix in public private; do
-    echo "restoring s3://$MEDIA_S3_BUCKET/$prefix"
-    rclone sync "$WORK/s3_root/$prefix" "media:$MEDIA_S3_BUCKET/$prefix"
-    if [ "$(find "$WORK/s3_root/$prefix" -type f | wc -l)" -gt 0 ]; then
-      rclone check --size-only "$WORK/s3_root/$prefix" "media:$MEDIA_S3_BUCKET/$prefix"
-    else
-      leftover=$(rclone lsf -R --files-only "media:$MEDIA_S3_BUCKET/$prefix" 2>/dev/null || true)
-      [ -z "$leftover" ] || { echo "restore: unexpected objects left under $prefix in $MEDIA_S3_BUCKET" >&2; exit 1; }
+    src="$WORK/s3_root/$prefix"
+    if [ -n "$(find "$src" -type f -print -quit)" ]; then
+      echo "restoring s3://$MEDIA_S3_BUCKET/$prefix"
+      rclone copy --immutable "$src" "media:$MEDIA_S3_BUCKET/$prefix"
+      rclone check --download "$src" "media:$MEDIA_S3_BUCKET/$prefix"
     fi
   done
+else
+  for dir in "$UPLOADS_DIR" "$PRIVATE_DIR"; do
+    probe=$(mktemp "$dir/.restore-probe.XXXXXX") || {
+      echo "restore: writable media mounts are required" >&2
+      exit 2
+    }
+    rm "$probe"
+  done
+  [ "$(realpath "$UPLOADS_DIR")" != "$(realpath "$PRIVATE_DIR")" ] || {
+    echo "restore: separate media mounts are required" >&2
+    exit 2
+  }
+fi
+
+echo "recreating database"
+psql -X -v ON_ERROR_STOP=1 -v target="$PGDATABASE" -v owner="$PGUSER" -d postgres <<'SQL'
+DROP DATABASE IF EXISTS :"target" WITH (FORCE);
+CREATE DATABASE :"target" OWNER :"owner";
+SQL
+pg_restore --single-transaction --exit-on-error --no-owner --no-privileges -d "$PGDATABASE" "$WORK/archive/db.dump"
+
+if [ "$MEDIA_STORAGE_BACKEND" = "disk" ]; then
+  find "$UPLOADS_DIR" -mindepth 1 -delete
+  find "$PRIVATE_DIR" -mindepth 1 -delete
+  cp -a "$WORK/stage/uploads/." "$UPLOADS_DIR/"
+  cp -a "$WORK/stage/private/." "$PRIVATE_DIR/"
+  find "$UPLOADS_DIR" "$PRIVATE_DIR" -name '.media-*.tmp' -type f -delete
 fi
 
 echo "restore of $NAME complete; start the api again"

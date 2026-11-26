@@ -16,7 +16,7 @@ L’exploitant peut produire une archive chiffrée avec la base et les fichiers,
 
 ## Comments
 
-Implémenté sur `feature/portable-media-storage-03` :
+Intégré à `main` via la [PR #293](https://github.com/ibrahima-isi/meetstudent/pull/293). La PR #292 conserve la restauration des archives JSON et l’accès à `awscrypt:`, ainsi que les garanties de vérification avant publication et de restauration vers un bucket vide. Le manifeste SHA-256 par fichier et la destination S3 générique restent disponibles.
 
 - `infra/backup/backup.sh`, `infra/backup/media-manifest.sh`, `infra/backup/restore.sh`, `infra/backup/backup-env.sh`, `infra/backup/Dockerfile` :
   - Instantané PostgreSQL unique partagé (`pg_export_snapshot()` + `pg_dump --snapshot`) entre `db.dump` et l’inventaire `media`, plus collecte des anciens chemins `public/**`, en ignorant `.media-*.tmp`.

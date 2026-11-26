@@ -620,11 +620,11 @@ on any error, and with `2` when a variable below is missing.
 
 A backup is a folder named after its UTC time (`20261027T031500Z`) holding the custom-format database dump
 (`db.dump`), both media archives (`uploads.tar.gz`, `private.tar.gz`), the snapshot inventory and per-file
-SHA-256 manifest (`media-manifest.tsv`), and `SHA256SUMS`. The dump and inventory share a single PostgreSQL
+SHA-256 manifest (`media-manifest.tsv`), and `SHA256SUMS`. The job reads back the uploaded payload before publishing the completion marker. The dump and inventory share a single PostgreSQL
 snapshot (`pg_export_snapshot()`), cover both database-referenced keys and legacy served `public/**` files,
 ignore `.media-*.tmp` temporary files, serialize concurrent runs with a lock, and retry automatically on
 transient inconsistency. Everything goes to an encrypted `rclone crypt` remote (`backupcrypt:` when
-`BACKUP_S3_*` is set, otherwise `r2crypt:`): names and contents are encrypted on the VPS, and no local copy is kept.
+`BACKUP_S3_*` is set, then `awscrypt:` for the earlier AWS configuration, then `r2crypt:`): names and contents are encrypted on the VPS, and no local copy is kept.
 
 - **EU jurisdiction, 30-day retention, and provider independence**: backup storage must stay in the EU, keep
   a 30-day lifecycle deletion rule (plus **bucket lock** / object lock of at least 30 days), and use a provider
@@ -641,6 +641,9 @@ transient inconsistency. Everything goes to an encrypted `rclone crypt` remote (
     `BACKUP_S3_SECRET_ACCESS_KEY`, and any `BACKUP_S3_SESSION_TOKEN` (optional `BACKUP_REMOTE` override).
     Keep `R2_*` configured alongside `BACKUP_S3_*` until the older R2 backups reach their 30-day expiry so
     `restore.sh --remote r2crypt: --list` / `restore.sh --remote r2crypt: <stamp> --yes` can still read them.
+- Existing ticket 03 AWS backups retain the `awscrypt:` remote. Keep `BACKUP_AWS_BUCKET`,
+  `BACKUP_AWS_REGION`, `BACKUP_AWS_ACCESS_KEY_ID` and `BACKUP_AWS_SECRET_ACCESS_KEY` to read
+  them with `restore.sh --remote awscrypt:`. Use `BACKUP_S3_*` for new bucket qualification.
 - `BACKUP_CRYPT_PASSWORD` and `BACKUP_CRYPT_SALT`: two long random strings
   (`openssl rand -base64 32 | tr -d '/+=\n'`). Store them **in clear**, both in the Coolify secrets and in the
   password manager, before the first backup; the scripts obscure them for rclone. Without both, no backup
@@ -657,11 +660,11 @@ copy in `/tmp`; the next run removes it.
 
 ### 9.5 Restore
 
-DESTRUCTIVE: the database and active media storage (both upload volumes in `disk` mode, or `public/` and
-`private/` in `MEDIA_S3_BUCKET` in `s3` mode) are replaced. Nothing is touched until the backup is downloaded,
-`SHA256SUMS` and `media-manifest.tsv` (for new archives) match, and historical disk-format archives (without
-`media-manifest.tsv`) remain restorable into either empty disk volumes or an empty S3 bucket. Keep `api`
-stopped during the restore, then start it again:
+Stop the API before restoring. The script stages and checks the archive before changing the target.
+It reads both manifest formats (`media-manifest.tsv` and ticket 03’s `inventory.json`) and historical
+three-file archives. Disk restore replaces the target database and media volumes. S3 restore requires
+an empty private bucket. It copies and verifies media bytes before replacing PostgreSQL. If the copy
+fails midway, use a fresh empty bucket for the retry.
 
 ```bash
 ssh <vps>

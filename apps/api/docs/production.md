@@ -95,7 +95,9 @@ rules: `docs/DEPLOY.md` section 9.4 and 9.5.
 | `BACKUP_S3_PATH_STYLE` | no | `false` | Set `true` if the backup S3 provider requires path-style addressing. |
 | `BACKUP_S3_ACCESS_KEY_ID`, `BACKUP_S3_SECRET_ACCESS_KEY` | when `BACKUP_S3_*` is set | none | Credentials scoped to `BACKUP_S3_BUCKET`. Secrets. |
 | `BACKUP_S3_SESSION_TOKEN` | if temporary creds | none | Optional session token for temporary credentials on `BACKUP_S3_*`. |
-| `BACKUP_REMOTE` | no | `backupcrypt:` if `BACKUP_S3_BUCKET` is set, else `r2crypt:` | Override target rclone remote (for example pass `--remote r2crypt:` to `restore.sh` to read historical R2 backups after moving active media to R2). |
+| `BACKUP_AWS_BUCKET`, `BACKUP_AWS_REGION` | for legacy `awscrypt:` | none | Retains the original ticket 03 AWS bucket in its EU region. |
+| `BACKUP_AWS_ACCESS_KEY_ID`, `BACKUP_AWS_SECRET_ACCESS_KEY` | for legacy `awscrypt:` | none | Bucket-scoped credentials. Store as secrets. |
+| `BACKUP_REMOTE` | no | `backupcrypt:` for `BACKUP_S3_*`, then `awscrypt:` for `BACKUP_AWS_*`, then `r2crypt:` | Override target rclone remote (for example pass `--remote r2crypt:` to `restore.sh` to read historical R2 backups after moving active media to R2). |
 | `BACKUP_CRYPT_PASSWORD` | for backups | none | `crypt` password, the original in clear (Coolify secret + password manager); the scripts obscure it for rclone. Without it no backup can be read. |
 | `BACKUP_CRYPT_SALT` | for backups | none | `crypt` salt (rclone's `password2`), same handling as the password. |
 

@@ -5,7 +5,7 @@
 # (see the service in compose.coolify.yml); the image holds no secret.
 FROM postgres:18-alpine
 
-RUN apk add --no-cache rclone
+RUN apk add --no-cache rclone jq flock python3
 
 COPY --chmod=0755 backup.sh restore.sh /usr/local/bin/
 # Sourced by both scripts from their own folder, never run on its own.

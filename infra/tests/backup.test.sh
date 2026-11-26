@@ -159,6 +159,20 @@ scripts_tests() {
   check "restore says so when the storage holds no backup (exit $rc: $out)" \
     bash -c '[ "$0" -eq 1 ] && grep -q "no backup found" <<<"$1"' "$rc" "$out"
 
+  out=$(in_backup 'restore.sh ../other --yes'); rc=$?
+  check "restore rejects an invalid backup ID" \
+    bash -c '[ "$0" -eq 2 ] && grep -q "invalid backup ID" <<<"$1"' "$rc" "$out"
+
+  out=$(in_backup 'restore.sh --list' -e BACKUP_REMOTE=unencrypted:bucket); rc=$?
+  check "restore refuses an unencrypted backup remote" \
+    bash -c '[ "$0" -eq 2 ] && grep -q "encrypted backup remote" <<<"$1"' "$rc" "$out"
+
+  out=$(in_backup 'REMOTE=awscrypt:; . /usr/local/bin/backup-env.sh; backup_env_assert_remote_configured "$REMOTE"; printf "%s" "$RCLONE_CONFIG_AWSCRYPT_REMOTE"' \
+    -e BACKUP_AWS_BUCKET=legacy -e BACKUP_AWS_REGION=eu-west-3 \
+    -e BACKUP_AWS_ACCESS_KEY_ID=k -e BACKUP_AWS_SECRET_ACCESS_KEY=s); rc=$?
+  check "the ticket 03 AWS crypt remote remains configured" \
+    bash -c '[ "$0" -eq 0 ] && [ "$1" = aws:legacy ]' "$rc" "$out"
+
   # Two complete backups, then an interrupted one: its files went out, not its
   # SHA256SUMS (backup.sh sends it last). Restoring it would fail at the
   # checksums at best; it must not be offered.
@@ -448,6 +462,19 @@ SQL
     -v "$swork/restored_u:/ru" -v "$swork/restored_p:/rp"); rc=$?
   check "restore.sh aborts before wiping DB/volumes when media-manifest.tsv checksum fails (exit $rc)" \
     bash -c '[ "$0" -ne 0 ] && [ -f "$1/keep.txt" ] && grep -qi "mismatch" <<<"$2"' "$rc" "$swork/restored_p" "$out"
+
+  local json_stamp=20261122T235958Z
+  cp -r "$swork/remote/$stamp" "$swork/remote/$json_stamp"
+  rm "$swork/remote/$json_stamp/media-manifest.tsv"
+  printf '%s\n' '[{"key":"private/doc1.pdf","size":null,"visibility":"PRIVATE"},{"key":"public/logo.png","size":null,"visibility":"PUBLIC"}]' \
+    >"$swork/remote/$json_stamp/inventory.json"
+  (cd "$swork/remote/$json_stamp" && sha256sum db.dump uploads.tar.gz private.tar.gz inventory.json > SHA256SUMS)
+  out=$(run_pg_backup "RESTORE_UPLOADS_DIR=/ru RESTORE_PRIVATE_DIR=/rp restore.sh $json_stamp --yes" \
+    -v "$swork/restored_u:/ru" -v "$swork/restored_p:/rp"); rc=$?
+  check "the ticket 03 JSON archive restores the original media bytes" \
+    bash -c '[ "$0" -eq 0 ] && cmp -s "$1/private/doc1.pdf" "$1/restored_p/doc1.pdf" && cmp -s "$1/uploads/public/logo.png" "$1/restored_u/public/logo.png"' "$rc" "$swork"
+  [ "$rc" -eq 0 ] || printf '%s\n' "$out"
+
 }
 
 # --- roundtrip: disk & S3 backup/restore + historical archive compatibility ---
