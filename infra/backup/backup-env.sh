@@ -10,7 +10,8 @@ backup_env_lower() {
 
 backup_env_check_http_url() {
   url=$1 name=$2
-  case $url in
+  scheme_lower=$(backup_env_lower "$url")
+  case $scheme_lower in
     http://*|https://*) ;;
     *)
       echo "${0##*/}: $name must be an http:// or https:// URL" >&2
@@ -18,11 +19,41 @@ backup_env_check_http_url() {
       ;;
   esac
   case $url in
-    *@*|*\?*|*#*)
-      echo "${0##*/}: $name must not contain credentials, query, or fragment" >&2
+    *@*|*\?*|*#*|*' '*|*'	'*)
+      echo "${0##*/}: $name must not contain credentials, query, fragment, or whitespace" >&2
       exit 2
       ;;
   esac
+  rest=${url#*://}
+  authority=${rest%%/*}
+  case $authority in
+    ""|:*)
+      echo "${0##*/}: $name must include a valid hostname" >&2
+      exit 2
+      ;;
+    \[*\]) ;;
+    \[*\]:*)
+      port=${authority#\[*\]:}
+      case $port in ''|*[!0-9]*) echo "${0##*/}: $name must include a valid port" >&2; exit 2 ;; esac
+      ;;
+    *:*)
+      host_only=${authority%%:*}
+      port=${authority#*:}
+      [ -n "$host_only" ] || { echo "${0##*/}: $name must include a valid hostname" >&2; exit 2; }
+      case $port in ''|*[!0-9]*) echo "${0##*/}: $name must include a valid hostname/port" >&2; exit 2 ;; esac
+      ;;
+  esac
+}
+
+backup_env_url_host() {
+  rest=${1#*://}
+  authority=${rest%%/*}
+  case $authority in
+    \[*\]:*) authority=${authority%:*} ;;
+    \[*\]) ;;
+    *:*) authority=${authority%%:*} ;;
+  esac
+  backup_env_lower "$authority"
 }
 
 backup_env_not_hetzner() {
@@ -43,13 +74,30 @@ backup_env_check_eu() {
 
   backup_env_not_hetzner "${1:-}" "$label"
 
+  host=
   if [ -n "$ep" ]; then
     backup_env_check_http_url "$1" "$label"
+    host=$(backup_env_url_host "$1")
+    backup_env_not_hetzner "$host" "$label"
   fi
 
-  case $ep in
+  case $reg in
+    us-*|ap-*|ca-*|sa-*|me-*|af-*|il-*|cn-*|uk-*|ch-*|eu-west-2|eu-central-2)
+      echo "${0##*/}: $label region '$2' is outside the EU" >&2
+      exit 2
+      ;;
+  esac
+
+  case $host in
+    *eu-west-2*|*eu-central-2*)
+      echo "${0##*/}: $label ($1) targets a non-EU region" >&2
+      exit 2
+      ;;
+  esac
+
+  case $host in
     *r2.cloudflarestorage.com*)
-      case $ep in
+      case $host in
         *.eu.*) return 0 ;;
         *)
           echo "${0##*/}: $label $1 is not an EU endpoint (https://<ACCOUNT_ID>.eu.r2.cloudflarestorage.com)" >&2
@@ -59,14 +107,7 @@ backup_env_check_eu() {
       ;;
   esac
 
-  case $reg in
-    us-*|ap-*|ca-*|sa-*|me-*|af-*|il-*|cn-*)
-      echo "${0##*/}: $label region '$2' is outside the EU" >&2
-      exit 2
-      ;;
-  esac
-
-  if [ -z "$ep" ] || case $ep in *amazonaws.com*) true ;; *) false ;; esac; then
+  if [ -z "$host" ] || case $host in *amazonaws.com*) true ;; *) false ;; esac; then
     case $reg in
       eu-west-1|eu-west-3|eu-central-1|eu-north-1|eu-south-1|eu-south-2) return 0 ;;
       *)
@@ -76,13 +117,13 @@ backup_env_check_eu() {
     esac
   fi
 
-  case $ep in
+  case $host in
     *.eu.*|*.eu-*|*-eu-*) return 0 ;;
   esac
 
   case $reg in
     eu-west-1|eu-west-3|eu-central-1|eu-north-1|eu-south-1|eu-south-2|fr-par|nl-ams|pl-waw|gra|rbx|sbg|eu-west-par)
-      case $ep in
+      case $host in
         *"$reg"*|*.scw.cloud*|*.cloud.ovh.net*) return 0 ;;
       esac
       ;;
@@ -187,9 +228,15 @@ fi
 [ -z "$missing" ] || { echo "${0##*/}: not configured, missing:$missing" >&2; exit 2; }
 
 if [ "$BACKUP_HAS_R2" -eq 1 ]; then
+  backup_env_check_http_url "$RCLONE_CONFIG_R2_ENDPOINT" "R2_ENDPOINT"
+  r2_host=$(backup_env_url_host "$RCLONE_CONFIG_R2_ENDPOINT")
   # User story 25: students' documents stay in the EU. A bucket of R2's EU
   # jurisdiction is only reachable at https://<ACCOUNT_ID>.eu.r2.cloudflarestorage.com.
-  case $RCLONE_CONFIG_R2_ENDPOINT in
+  case $r2_host in
+    *eu-west-2*|*eu-central-2*)
+      echo "${0##*/}: R2_ENDPOINT $RCLONE_CONFIG_R2_ENDPOINT targets a non-EU region" >&2
+      exit 2
+      ;;
     *.eu.*) ;;
     *)
       echo "${0##*/}: R2_ENDPOINT $RCLONE_CONFIG_R2_ENDPOINT is not an EU endpoint" \
@@ -197,7 +244,7 @@ if [ "$BACKUP_HAS_R2" -eq 1 ]; then
       exit 2
       ;;
   esac
-  backup_env_not_hetzner "$RCLONE_CONFIG_R2_ENDPOINT" "R2_ENDPOINT"
+  backup_env_not_hetzner "$r2_host" "R2_ENDPOINT"
 fi
 
 if [ "$BACKUP_HAS_S3" -eq 1 ]; then

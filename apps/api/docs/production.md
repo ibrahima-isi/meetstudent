@@ -54,7 +54,7 @@ Disk is the default. Use `MEDIA_STORAGE_BACKEND=s3` only with a prepared private
 | Variable | S3 settings |
 |---|---|
 | `MEDIA_WRITES_PAUSED` | Set to `true` (`false` by default) during a migration/rollback window to return `503` + `Retry-After` on media and media-reference mutations while reads stay available. |
-| `MEDIA_WRITES_RETRY_AFTER_SECONDS` | `Retry-After` seconds sent with `503` when writes are paused (default `60`). |
+| `MEDIA_WRITES_RETRY_AFTER_SECONDS` | `Retry-After` seconds sent with `503` when writes are paused (default `60` in the API, `30` in Compose stacks). |
 | `MEDIA_S3_BUCKET` | Required bucket name. |
 | `MEDIA_S3_REGION` | Required signing region for the selected provider. |
 | `MEDIA_S3_ENDPOINT` | Custom S3 API endpoint where required. Use HTTPS for deployed environments. Omit for AWS's regional endpoint. |

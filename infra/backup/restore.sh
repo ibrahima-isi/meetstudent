@@ -108,6 +108,95 @@ if [ "$MEDIA_STORAGE_BACKEND" = "s3" ]; then
   fi
   find "$WORK/s3_root" -type l -delete
   manifest_scan_tree "$WORK/s3_root" "" "$WORK/s3_expected.tsv"
+
+  # Pre-validate all database media rows BEFORE dropping or recreating $PGDATABASE.
+  : > "$WORK/precheck_db_media.tsv"
+  if [ -f "$WORK/archive/media-manifest.tsv" ]; then
+    LC_ALL=C awk -F '\t' '
+      BEGIN {
+        for (i = 0; i < 256; i++) chr_of[sprintf("%02x", i)] = sprintf("%c", i)
+      }
+      function from_hex(h,   i, out) {
+        out = ""
+        for (i = 1; i <= length(h); i += 2) out = out chr_of[tolower(substr(h, i, 2))]
+        return out
+      }
+      $0 !~ /^#/ && $1 == "db" {
+        printf "%s\t%s\t%s\t%s\n", $2, $3, $7, from_hex($7)
+      }
+    ' "$WORK/archive/media-manifest.tsv" > "$WORK/precheck_db_media.tsv"
+  elif pg_restore --list "$WORK/archive/db.dump" | grep -qE '[[:space:]]TABLE DATA[[:space:]]+[^ ]+[[:space:]]+"?media"?([[:space:]]|$)'; then
+    pg_restore -f - --table=media --data-only "$WORK/archive/db.dump" \
+      | LC_ALL=C awk '
+          BEGIN {
+            FS = "\t"
+            in_copy = 0
+            for (i = 0; i < 256; i++) hex_of[sprintf("%c", i)] = sprintf("%02x", i)
+          }
+          function to_hex(s,   i, out) {
+            out = ""
+            for (i = 1; i <= length(s); i++) out = out hex_of[substr(s, i, 1)]
+            return out
+          }
+          /^COPY ([^ ]+\.)?"?media"? \(/ && /FROM stdin;$/ {
+            in_copy = 1
+            cols_part = $0
+            sub(/^COPY ([^ ]+\.)?"?media"? \(/, "", cols_part)
+            sub(/\) FROM stdin;$/, "", cols_part)
+            n = split(cols_part, cols, /, */)
+            id_col = 0; key_col = 0; vis_col = 0
+            for (i = 1; i <= n; i++) {
+              gsub(/^"|"$|[[:space:]]/, "", cols[i])
+              if (cols[i] == "id") id_col = i
+              else if (cols[i] == "storage_key") key_col = i
+              else if (cols[i] == "visibility") vis_col = i
+            }
+            if (id_col == 0 || key_col == 0 || vis_col == 0) {
+              printf "restore: missing id, storage_key, or visibility column in media COPY header\n" > "/dev/stderr"
+              exit 1
+            }
+            next
+          }
+          in_copy && /^\\\.$/ { in_copy = 0; next }
+          in_copy && NF > 0 {
+            printf "%s\t%s\t%s\t%s\n", $(id_col), $(vis_col), to_hex($(key_col)), $(key_col)
+          }
+        ' > "$WORK/precheck_db_media.tsv"
+  fi
+
+  LC_ALL=C awk '
+    BEGIN { FS = "\t"; err = 0 }
+    function is_valid_s3_key(key, vis,   n, segs, i) {
+      if (key == "" || key == "\\N") return 0
+      if (index(key, "\\") > 0) return 0
+      if (vis == "PRIVATE" && substr(key, 1, 8) != "private/") return 0
+      if (vis == "PUBLIC" && substr(key, 1, 7) != "public/") return 0
+      if (substr(key, 1, 7) != "public/" && substr(key, 1, 8) != "private/") return 0
+      n = split(key, segs, "/")
+      if (n < 2) return 0
+      for (i = 1; i <= n; i++) {
+        if (segs[i] == "" || segs[i] == "." || segs[i] == "..") return 0
+      }
+      return 1
+    }
+    FILENAME == ARGV[1] {
+      if (NF >= 1) have[$1] = 1
+      next
+    }
+    FILENAME == ARGV[2] {
+      if (NF < 4) next
+      id = $1; vis = $2; khex = $3; kraw = $4
+      if (!is_valid_s3_key(kraw, vis)) {
+        printf "restore: incompatible media id=%s visibility=%s key=%s for S3 mode (requires valid public/ or private/ key)\n", id, vis, kraw > "/dev/stderr"
+        err = 1
+      } else if (!(khex in have)) {
+        printf "restore: database media id=%s key=%s is missing from archive media payload\n", id, kraw > "/dev/stderr"
+        err = 1
+      }
+      next
+    }
+    END { if (err) exit 1 }
+  ' "$WORK/s3_expected.tsv" "$WORK/precheck_db_media.tsv"
 fi
 
 echo "recreating database $PGDATABASE"

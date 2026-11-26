@@ -48,6 +48,7 @@ class MediaRow:
     category: str
     size_bytes: Optional[int]
     content_type: str
+    owner_id: Optional[int] = None
 
 
 def is_temp_filename(name: str) -> bool:
@@ -457,6 +458,22 @@ class S3RequestError(RuntimeError):
         self.status = status
 
 
+def parse_http_endpoint_url(endpoint: str) -> urllib.parse.ParseResult:
+    """Validates and parses an http(s) endpoint URL without userinfo, query, or fragment."""
+    parsed = urllib.parse.urlparse(endpoint.strip().rstrip("/"))
+    if (
+        parsed.scheme not in ("http", "https")
+        or not parsed.hostname
+        or parsed.username is not None
+        or parsed.password is not None
+        or "@" in (parsed.netloc or "")
+        or bool(parsed.query)
+        or bool(parsed.fragment)
+    ):
+        raise ValueError(f"Invalid http(s) endpoint URL: {endpoint}")
+    return parsed
+
+
 class S3Endpoint(StorageEndpoint):
     """S3-compatible endpoint using pure-stdlib AWS SigV4 (AWS S3, Cloudflare R2, Hetzner, MinIO)."""
 
@@ -482,17 +499,10 @@ class S3Endpoint(StorageEndpoint):
         self.timeout = timeout
 
         if endpoint:
-            parsed = urllib.parse.urlparse(endpoint.strip().rstrip("/"))
-            if (
-                parsed.scheme not in ("http", "https")
-                or not parsed.hostname
-                or parsed.username is not None
-                or parsed.password is not None
-                or "@" in (parsed.netloc or "")
-                or bool(parsed.query)
-                or bool(parsed.fragment)
-            ):
-                raise ValueError(f"Invalid S3 endpoint URL: {endpoint}")
+            try:
+                parsed = parse_http_endpoint_url(endpoint)
+            except ValueError as exc:
+                raise ValueError(f"Invalid S3 endpoint URL: {endpoint}") from exc
             self.scheme = parsed.scheme
             self.base_host = parsed.hostname
             self.port = parsed.port
@@ -957,12 +967,14 @@ class PostgresClient:
     def fetch_media_rows(self) -> list[MediaRow]:
         rows = self._query_csv(
             "SELECT id, storage_key, visibility, category, "
-            "COALESCE(size_bytes, -1) AS size_bytes, COALESCE(content_type, '') AS content_type "
+            "COALESCE(size_bytes, -1) AS size_bytes, COALESCE(content_type, '') AS content_type, "
+            "owner_id "
             "FROM media ORDER BY id"
         )
         out: list[MediaRow] = []
         for r in rows:
             size_val = int(r["size_bytes"])
+            owner_raw = (r.get("owner_id") or "").strip()
             out.append(MediaRow(
                 id=int(r["id"]),
                 storage_key=r["storage_key"],
@@ -970,6 +982,7 @@ class PostgresClient:
                 category=r["category"],
                 size_bytes=None if size_val < 0 else size_val,
                 content_type=r["content_type"],
+                owner_id=int(owner_raw) if owner_raw else None,
             ))
         return out
 
@@ -984,6 +997,28 @@ class PostgresClient:
             "       OR query ~* '\\m(media|schools|programs|courses|users)\\M')"
         )
         return int(rows[0]["cnt"]) if rows else 0
+
+
+def _decode_jwt_identity(token: str) -> tuple[Optional[int], bool]:
+    parts = (token or "").split(".")
+    if len(parts) != 3:
+        return None, False
+    try:
+        payload_b64 = parts[1] + ("=" * (-len(parts[1]) % 4))
+        payload = json.loads(base64.urlsafe_b64decode(payload_b64).decode("utf-8"))
+    except Exception:
+        return None, False
+    if not isinstance(payload, dict):
+        return None, False
+    sub = payload.get("sub")
+    user_id: Optional[int] = None
+    if isinstance(sub, int):
+        user_id = sub
+    elif isinstance(sub, str) and sub.isdigit():
+        user_id = int(sub)
+    roles = payload.get("roles") or []
+    is_admin = isinstance(roles, list) and "ROLE_ADMIN" in roles
+    return user_id, is_admin
 
 
 class ApiClient:
@@ -1010,6 +1045,7 @@ class ApiClient:
         token: str = "",
         json_body: Optional[dict] = None,
         extra_headers: Optional[dict[str, str]] = None,
+        timeout: Optional[float] = None,
     ) -> tuple[int, dict[str, str], bytes]:
         url = f"{self.base_url}{path}"
         headers: dict[str, str] = {}
@@ -1022,8 +1058,9 @@ class ApiClient:
             data = json.dumps(json_body).encode("utf-8")
             headers["Content-Type"] = "application/json"
         req = urllib.request.Request(url, data=data, headers=headers, method=method)
+        req_timeout = self.timeout if timeout is None else timeout
         try:
-            with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+            with urllib.request.urlopen(req, timeout=req_timeout) as resp:
                 return resp.status, {k.lower(): v for k, v in resp.headers.items()}, resp.read()
         except urllib.error.HTTPError as exc:
             return exc.code, {k.lower(): v for k, v in exc.headers.items()}, exc.read()
@@ -1050,8 +1087,12 @@ class ApiClient:
 
     def pause(self, wait_seconds: int = 0) -> dict:
         token = self._ensure_admin_token()
+        req_timeout = max(self.timeout, int(wait_seconds) + 10)
         status, _, body = self._request(
-            "POST", f"/api/v1/admin/media/maintenance/pause?waitSeconds={int(wait_seconds)}", token=token
+            "POST",
+            f"/api/v1/admin/media/maintenance/pause?waitSeconds={int(wait_seconds)}",
+            token=token,
+            timeout=req_timeout,
         )
         if status != 200:
             raise RuntimeError(f"POST pause failed: HTTP {status} {body.decode('utf-8', errors='replace')}")
@@ -1064,6 +1105,52 @@ class ApiClient:
             raise RuntimeError(f"POST resume failed: HTTP {status} {body.decode('utf-8', errors='replace')}")
         return json.loads(body.decode("utf-8"))
 
+    def resolve_token_identity(self, token: str) -> dict:
+        if not token:
+            return {"user_id": None, "is_admin": False, "owned_ids": None}
+        uid, is_admin = _decode_jwt_identity(token)
+        if uid is not None:
+            return {"user_id": uid, "is_admin": is_admin, "owned_ids": None}
+        status, _, body = self._request("GET", "/api/v1/users/me", token=token)
+        if status == 200:
+            try:
+                data = json.loads(body.decode("utf-8"))
+                if isinstance(data, dict) and data.get("id") is not None:
+                    roles = data.get("roles") or ([data["role"]] if data.get("role") else [])
+                    return {
+                        "user_id": int(data["id"]),
+                        "is_admin": isinstance(roles, list) and "ROLE_ADMIN" in roles,
+                        "owned_ids": None,
+                    }
+            except Exception:
+                pass
+        m_status, _, m_body = self._request("GET", "/api/v1/media/mine", token=token)
+        if m_status == 200:
+            try:
+                items = json.loads(m_body.decode("utf-8"))
+                if isinstance(items, list):
+                    owned = {
+                        int(item["id"])
+                        for item in items
+                        if isinstance(item, dict) and item.get("id") is not None
+                    }
+                    return {"user_id": None, "is_admin": False, "owned_ids": owned}
+            except Exception:
+                pass
+        return {"user_id": None, "is_admin": False, "owned_ids": None}
+
+    @staticmethod
+    def _token_owns_media(identity: Optional[dict], media_id: int, row_owner: Optional[int]) -> Optional[bool]:
+        if identity is None:
+            return None
+        if identity.get("is_admin"):
+            return True
+        if identity.get("owned_ids") is not None:
+            return media_id in identity["owned_ids"]
+        if identity.get("user_id") is not None:
+            return row_owner is not None and row_owner == identity["user_id"]
+        return None
+
     def verify_reads(
         self,
         public_expected: dict[str, str],
@@ -1075,6 +1162,9 @@ class ApiClient:
         verify_paused_write_503: bool = False,
         s3_anonymous_check: Optional[S3Endpoint] = None,
         s3_anonymous_keys: Optional[list[str]] = None,
+        private_owners: Optional[dict[int, Optional[int]]] = None,
+        owner_identity: Optional[dict] = None,
+        other_identity: Optional[dict] = None,
     ) -> dict:
         errors: list[str] = []
         range_checked = False
@@ -1099,19 +1189,44 @@ class ApiClient:
 
         for media_id, expected_sha in private_expected.items():
             path = f"/api/v1/media/{media_id}"
+            row_owner = private_owners.get(media_id) if private_owners is not None else None
             anon_status, _, _ = self._request("GET", path)
             if anon_status != 401:
                 errors.append(f"Anonymous GET {path} expected 401, got {anon_status}")
             if other_token:
-                other_status, _, _ = self._request("GET", path, token=other_token)
-                if other_status != 403:
-                    errors.append(f"Non-owner GET {path} expected 403, got {other_status}")
+                if private_owners is None and other_identity is None:
+                    other_owns = False
+                else:
+                    other_owns = self._token_owns_media(other_identity, media_id, row_owner)
+                if other_owns is True:
+                    other_status, _, other_body = self._request("GET", path, token=other_token)
+                    if other_status != 200:
+                        errors.append(f"Other-owner GET {path} expected 200, got {other_status}")
+                    elif sha256_bytes(other_body) != expected_sha:
+                        errors.append(f"Other-owner GET {path} SHA-256 mismatch")
+                elif other_owns is False:
+                    other_status, _, _ = self._request("GET", path, token=other_token)
+                    if other_status != 403:
+                        errors.append(f"Non-owner GET {path} expected 403, got {other_status}")
+                else:
+                    errors.append(f"Cannot determine user identity for --other-token on {path}")
             if owner_token:
-                ok_status, _, body = self._request("GET", path, token=owner_token)
-                if ok_status != 200:
-                    errors.append(f"Owner GET {path} expected 200, got {ok_status}")
-                elif sha256_bytes(body) != expected_sha:
-                    errors.append(f"Owner GET {path} SHA-256 mismatch")
+                if private_owners is None and owner_identity is None:
+                    owner_owns = True
+                else:
+                    owner_owns = self._token_owns_media(owner_identity, media_id, row_owner)
+                if owner_owns is True:
+                    ok_status, _, body = self._request("GET", path, token=owner_token)
+                    if ok_status != 200:
+                        errors.append(f"Owner GET {path} expected 200, got {ok_status}")
+                    elif sha256_bytes(body) != expected_sha:
+                        errors.append(f"Owner GET {path} SHA-256 mismatch")
+                elif owner_owns is False:
+                    denied_status, _, _ = self._request("GET", path, token=owner_token)
+                    if denied_status != 403:
+                        errors.append(f"Non-owner owner-token GET {path} expected 403, got {denied_status}")
+                else:
+                    errors.append(f"Cannot determine user identity for --owner-token on {path}")
             if admin_tok:
                 adm_status, _, adm_body = self._request("GET", path, token=admin_tok)
                 if adm_status != 200:
@@ -1148,6 +1263,50 @@ class ApiClient:
         return {"ok": not errors, "errors": errors}
 
 
+def pause_and_drain(
+    db: PostgresClient,
+    api: ApiClient,
+    max_pause_seconds: float = 30.0,
+    drain_timeout_seconds: float = 15.0,
+    clock: Callable[[], float] = time.monotonic,
+    poll_interval: float = 0.2,
+    pause_start: Optional[float] = None,
+) -> dict:
+    start = clock() if pause_start is None else pause_start
+    wait_arg = max(0, min(120, int(min(drain_timeout_seconds, max_pause_seconds))))
+    api_status = api.pause(wait_seconds=wait_arg)
+
+    while True:
+        api_status = api.maintenance_status()
+        active_pg = db.count_active_write_transactions()
+        if api_status.get("drained") and active_pg == 0:
+            return {
+                "ok": True,
+                "api_status": api_status,
+                "active_pg_writes": 0,
+                "elapsed_ms": round(max(0.0, clock() - start) * 1000.0, 2),
+            }
+        elapsed = clock() - start
+        if elapsed > max_pause_seconds:
+            return {
+                "ok": False,
+                "reason": "WINDOW_EXCEEDED",
+                "api_status": api_status,
+                "active_pg_writes": active_pg,
+                "elapsed_ms": round(max(0.0, elapsed) * 1000.0, 2),
+            }
+        if elapsed > drain_timeout_seconds:
+            return {
+                "ok": False,
+                "reason": "DRAIN_TIMEOUT",
+                "api_status": api_status,
+                "active_pg_writes": active_pg,
+                "elapsed_ms": round(max(0.0, elapsed) * 1000.0, 2),
+            }
+        if poll_interval > 0:
+            time.sleep(poll_interval)
+
+
 def run_cutover(
     db: PostgresClient,
     source: StorageEndpoint,
@@ -1171,39 +1330,56 @@ def run_cutover(
     initial_report = sync_storage(rows, source, target, delete_extra=False) if initial_sync else None
 
     pause_start = clock()
+    pause_attempted = False
+    switch_started = False
     activated = False
 
     def _abort(reason: str, extra: Optional[dict] = None) -> dict:
-        if activated and on_abort is not None:
-            on_abort()
-        api.resume()
+        activation_state = "post_switch" if activated else ("mid_switch" if switch_started else "pre_switch")
+        abort_errors: list[str] = []
+        if switch_started and on_abort is not None:
+            try:
+                on_abort()
+            except Exception as abort_exc:
+                abort_errors.append(f"on_abort failed: {abort_exc}")
+        writes_reopened = False
+        if pause_attempted:
+            try:
+                api.resume()
+                writes_reopened = True
+            except Exception as resume_exc:
+                abort_errors.append(f"api.resume failed: {resume_exc}")
         elapsed_ms = round(max(0.0, clock() - pause_start) * 1000.0, 2)
         payload = {
             "status": "ABORTED",
             "abort_reason": reason,
+            "activation_state": activation_state,
+            "writes_reopened": writes_reopened,
             "pause_duration_ms": elapsed_ms,
             "max_pause_ms": round(max_pause_seconds * 1000.0, 2),
         }
+        if abort_errors:
+            payload["abort_errors"] = abort_errors
         if extra:
             payload.update(extra)
         return payload
 
     try:
-        wait_arg = max(0, min(120, int(min(drain_timeout_seconds, max_pause_seconds))))
-        api_status = api.pause(wait_seconds=wait_arg)
-
-        while True:
-            api_status = api.maintenance_status()
-            active_pg = db.count_active_write_transactions()
-            if api_status.get("drained") and active_pg == 0:
-                break
-            elapsed = clock() - pause_start
-            if elapsed > max_pause_seconds:
-                return _abort("WINDOW_EXCEEDED", {"api_status": api_status, "active_pg_writes": active_pg})
-            if elapsed > drain_timeout_seconds:
-                return _abort("DRAIN_TIMEOUT", {"api_status": api_status, "active_pg_writes": active_pg})
-            if poll_interval > 0:
-                time.sleep(poll_interval)
+        pause_attempted = True
+        drain_res = pause_and_drain(
+            db,
+            api,
+            max_pause_seconds=max_pause_seconds,
+            drain_timeout_seconds=drain_timeout_seconds,
+            clock=clock,
+            poll_interval=poll_interval,
+            pause_start=pause_start,
+        )
+        if not drain_res["ok"]:
+            return _abort(
+                drain_res["reason"],
+                {"api_status": drain_res["api_status"], "active_pg_writes": drain_res["active_pg_writes"]},
+            )
 
         if (clock() - pause_start) > max_pause_seconds:
             return _abort("WINDOW_EXCEEDED")
@@ -1224,7 +1400,11 @@ def run_cutover(
             return _abort("WINDOW_EXCEEDED", {"final_sync": final_sync, "verification": verification})
 
         if on_activate is not None:
-            on_activate()
+            switch_started = True
+            try:
+                on_activate()
+            except Exception as act_exc:
+                return _abort("ACTIVATION_FAILED", {"error": str(act_exc), "final_sync": final_sync, "verification": verification})
             activated = True
 
         if (clock() - pause_start) > max_pause_seconds:
@@ -1265,7 +1445,8 @@ _EU_AWS_REGIONS = {
     "eu-south-2",
 }
 _EU_CUSTOM_REGIONS = _EU_AWS_REGIONS | {"fr-par", "nl-ams", "pl-waw", "gra", "rbx", "sbg", "eu-west-par"}
-_NON_EU_REGION_PREFIXES = ("us-", "ap-", "ca-", "sa-", "me-", "af-", "il-", "cn-")
+_NON_EU_REGION_PREFIXES = ("us-", "ap-", "ca-", "sa-", "me-", "af-", "il-", "cn-", "uk-", "ch-")
+_NON_EU_EU_REGIONS = ("eu-west-2", "eu-central-2")
 
 
 def classify_s3_provider_identity(endpoint: str = "", provider: str = "") -> str:
@@ -1300,36 +1481,36 @@ def check_eu_jurisdiction(endpoint: str = "", region: str = "", label: str = "ba
     if "your-objectstorage.com" in ep or "hetzner." in ep:
         return False, f"{label} ({raw_ep}) uses Hetzner (same provider as the VPS); backup storage must use an independent provider"
 
+    host = ""
     if ep:
-        parsed = urllib.parse.urlparse(raw_ep)
-        if (
-            parsed.scheme not in ("http", "https")
-            or not parsed.hostname
-            or parsed.username is not None
-            or parsed.password is not None
-            or "@" in (parsed.netloc or "")
-            or bool(parsed.query)
-            or bool(parsed.fragment)
-        ):
+        try:
+            parsed = parse_http_endpoint_url(raw_ep)
+        except ValueError:
             return False, f"{label} ({raw_ep}) must be a valid http(s) URL without credentials, query, or fragment"
+        host = (parsed.hostname or "").lower()
+        if "your-objectstorage.com" in host or "hetzner." in host:
+            return False, f"{label} ({raw_ep}) uses Hetzner (same provider as the VPS); backup storage must use an independent provider"
 
-    if "r2.cloudflarestorage.com" in ep:
-        if ".eu." in ep:
+    if reg.startswith(_NON_EU_REGION_PREFIXES) or reg in _NON_EU_EU_REGIONS:
+        return False, f"{label} region '{region}' is outside the EU"
+
+    if host and any(non_eu in host for non_eu in _NON_EU_EU_REGIONS):
+        return False, f"{label} ({raw_ep}) targets a non-EU region"
+
+    if "r2.cloudflarestorage.com" in host:
+        if ".eu." in host:
             return True, ""
         return False, f"{label} ({raw_ep}) is not an EU R2 endpoint (https://<ACCOUNT_ID>.eu.r2.cloudflarestorage.com)"
 
-    if reg.startswith(_NON_EU_REGION_PREFIXES):
-        return False, f"{label} region '{region}' is outside the EU"
-
-    if not ep or "amazonaws.com" in ep:
+    if not host or "amazonaws.com" in host:
         if reg in _EU_AWS_REGIONS:
             return True, ""
         return False, f"{label} region '{region}' is not an EU AWS region"
 
-    if any(marker in ep for marker in (".eu.", ".eu-", "-eu-")):
+    if any(marker in host for marker in (".eu.", ".eu-", "-eu-")):
         return True, ""
 
-    if reg in _EU_CUSTOM_REGIONS and (reg in ep or ".scw.cloud" in ep or ".cloud.ovh.net" in ep):
+    if reg in _EU_CUSTOM_REGIONS and (reg in host or ".scw.cloud" in host or ".cloud.ovh.net" in host):
         return True, ""
 
     return False, f"{label} ({raw_ep}, region '{region}') is not an EU endpoint"
@@ -1369,6 +1550,54 @@ def check_backup_independence(
         "backup_provider_identity": b_id,
         "eu_jurisdiction_ok": eu_ok,
         "errors": errors,
+    }
+
+
+def resolve_backup_config(
+    backup_s3_bucket: str = "",
+    backup_s3_endpoint: str = "",
+    backup_s3_region: str = "",
+    backup_s3_provider: str = "",
+    r2_endpoint: str = "",
+    backup_remote: str = "",
+    media_provider: str = "",
+    backup_s3_access_key: str = "",
+    backup_s3_secret_key: str = "",
+) -> dict:
+    """Mirrors infra/backup/backup-env.sh destination selection between BACKUP_S3_* and R2_*."""
+    has_s3 = any(
+        (v or "").strip()
+        for v in (
+            backup_s3_bucket,
+            backup_s3_endpoint,
+            backup_s3_region,
+            backup_s3_provider,
+            backup_s3_access_key,
+            backup_s3_secret_key,
+        )
+    )
+    remote = (backup_remote or "").strip()
+    if remote.startswith("r2crypt:"):
+        use_s3 = False
+    elif remote.startswith("backupcrypt:"):
+        use_s3 = True
+    else:
+        use_s3 = has_s3
+
+    if use_s3:
+        ep = (backup_s3_endpoint or "").strip()
+        reg = (backup_s3_region or "").strip()
+        prov = (backup_s3_provider or "").strip() or ("AWS" if not ep else "Other")
+    else:
+        ep = (r2_endpoint or "").strip()
+        reg = "auto" if ep else ""
+        prov = "Cloudflare" if ep else ""
+
+    return {
+        "endpoint": ep,
+        "region": reg,
+        "provider": prov,
+        "media_provider": (media_provider or "").strip(),
     }
 
 
@@ -1602,13 +1831,13 @@ def _verify_api_against_storage(
     rows = db.fetch_media_rows()
     inv = build_inventory(rows, endpoint)
     public_expected = {k: v["sha256"] for k, v in inv["items"].items() if k.startswith("public/")}
-    private_expected = {
-        r.id: inv["items"][r.storage_key]["sha256"]
-        for r in rows
-        if r.visibility == "PRIVATE" and r.storage_key in inv["items"]
-    }
+    private_rows = [r for r in rows if r.visibility == "PRIVATE" and r.storage_key in inv["items"]]
+    private_expected = {r.id: inv["items"][r.storage_key]["sha256"] for r in private_rows}
+    private_owners = {r.id: r.owner_id for r in private_rows}
+    owner_identity = api.resolve_token_identity(owner_token) if (owner_token and private_rows) else None
+    other_identity = api.resolve_token_identity(other_token) if (other_token and private_rows) else None
     s3_probe_keys = ([next(iter(public_expected))] if public_expected else []) + [
-        r.storage_key for r in rows if r.visibility == "PRIVATE" and r.storage_key in inv["items"]
+        r.storage_key for r in private_rows
     ][:1]
     return api.verify_reads(
         public_expected=public_expected,
@@ -1620,6 +1849,9 @@ def _verify_api_against_storage(
         verify_paused_write_503=bool(expect_writes_paused),
         s3_anonymous_check=endpoint if isinstance(endpoint, S3Endpoint) else None,
         s3_anonymous_keys=s3_probe_keys,
+        private_owners=private_owners,
+        owner_identity=owner_identity,
+        other_identity=other_identity,
     )
 
 
@@ -1695,10 +1927,12 @@ def main(argv: Optional[list[str]] = None) -> int:
     p_qual.add_argument("--media-provider", default="")
     p_qual.add_argument("--require-https", action="store_true", default=False)
     p_qual.add_argument("--check-backup-independence", action="store_true", default=False)
+    p_qual.add_argument("--backup-s3-bucket", default=os.environ.get("BACKUP_S3_BUCKET", ""))
     p_qual.add_argument("--backup-s3-endpoint", default=os.environ.get("BACKUP_S3_ENDPOINT", ""))
     p_qual.add_argument("--backup-s3-region", default=os.environ.get("BACKUP_S3_REGION", ""))
     p_qual.add_argument("--backup-s3-provider", default=os.environ.get("BACKUP_S3_PROVIDER", ""))
     p_qual.add_argument("--r2-endpoint", default=os.environ.get("R2_ENDPOINT", os.environ.get("RCLONE_CONFIG_R2_ENDPOINT", "")))
+    p_qual.add_argument("--backup-remote", default=os.environ.get("BACKUP_REMOTE", ""))
 
     args = parser.parse_args(argv)
 
@@ -1747,30 +1981,29 @@ def main(argv: Optional[list[str]] = None) -> int:
     if args.command == "pause-drain":
         db = _db_from_args(args)
         api = _api_from_args(args)
-        start = time.monotonic()
-        api.pause(wait_seconds=max(0, min(120, int(min(args.drain_timeout_seconds, args.max_pause_seconds)))))
-        while True:
-            st = api.maintenance_status()
-            pg_cnt = db.count_active_write_transactions()
-            if st.get("drained") and pg_cnt == 0:
-                print(json.dumps({
-                    "ok": True,
-                    "api": st,
-                    "active_pg_writes": 0,
-                    "elapsed_ms": round((time.monotonic() - start) * 1000.0, 2),
-                }, indent=2))
-                return 0
-            if (time.monotonic() - start) > min(args.drain_timeout_seconds, args.max_pause_seconds):
-                api.resume()
-                print(json.dumps({
-                    "ok": False,
-                    "reason": "DRAIN_TIMEOUT",
-                    "api": st,
-                    "active_pg_writes": pg_cnt,
-                    "reopened_writes": True,
-                }, indent=2))
-                return 4
-            time.sleep(0.2)
+        drain_res = pause_and_drain(
+            db,
+            api,
+            max_pause_seconds=args.max_pause_seconds,
+            drain_timeout_seconds=args.drain_timeout_seconds,
+        )
+        if drain_res["ok"]:
+            print(json.dumps({
+                "ok": True,
+                "api": drain_res["api_status"],
+                "active_pg_writes": 0,
+                "elapsed_ms": drain_res["elapsed_ms"],
+            }, indent=2))
+            return 0
+        api.resume()
+        print(json.dumps({
+            "ok": False,
+            "reason": drain_res["reason"],
+            "api": drain_res["api_status"],
+            "active_pg_writes": drain_res["active_pg_writes"],
+            "reopened_writes": True,
+        }, indent=2))
+        return 4
 
     if args.command == "resume":
         api = _api_from_args(args)
@@ -1817,16 +2050,25 @@ def main(argv: Optional[list[str]] = None) -> int:
             session_token=args.s3_session_token,
         )
         backup_cfg = None
-        if args.check_backup_independence or args.backup_s3_endpoint or args.backup_s3_region or args.r2_endpoint:
-            b_ep = args.backup_s3_endpoint or args.r2_endpoint
-            b_reg = args.backup_s3_region or ("auto" if args.r2_endpoint else "")
-            b_prov = args.backup_s3_provider or ("Cloudflare" if args.r2_endpoint else "")
-            backup_cfg = {
-                "endpoint": b_ep,
-                "region": b_reg,
-                "provider": b_prov,
-                "media_provider": args.media_provider,
-            }
+        if (
+            args.check_backup_independence
+            or args.backup_s3_bucket
+            or args.backup_s3_endpoint
+            or args.backup_s3_region
+            or args.backup_s3_provider
+            or args.r2_endpoint
+        ):
+            backup_cfg = resolve_backup_config(
+                backup_s3_bucket=args.backup_s3_bucket,
+                backup_s3_endpoint=args.backup_s3_endpoint,
+                backup_s3_region=args.backup_s3_region,
+                backup_s3_provider=args.backup_s3_provider,
+                r2_endpoint=args.r2_endpoint,
+                backup_remote=args.backup_remote,
+                media_provider=args.media_provider,
+                backup_s3_access_key=os.environ.get("BACKUP_S3_ACCESS_KEY_ID", ""),
+                backup_s3_secret_key=os.environ.get("BACKUP_S3_SECRET_ACCESS_KEY", ""),
+            )
         report = qualify_bucket(s3, require_https=args.require_https, backup_config=backup_cfg)
         print(json.dumps(report, indent=2))
         return 0 if report["ok"] else 7

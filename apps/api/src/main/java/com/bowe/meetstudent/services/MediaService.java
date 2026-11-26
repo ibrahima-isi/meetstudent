@@ -311,10 +311,22 @@ public class MediaService {
         return mediaRepository.findByOwnerIdAndCategory(ownerId, category);
     }
 
+    public void assertCanDelete(Integer mediaId, UserPrincipal principal) {
+        if (isAdmin(principal)) {
+            return;
+        }
+        requireOwnerOrAdmin(mediaRepository.findById(mediaId), principal);
+    }
+
     @Transactional
     public void delete(Integer mediaId, UserPrincipal principal) {
+        Media preloaded = isAdmin(principal)
+                ? null
+                : requireOwnerOrAdmin(mediaRepository.findById(mediaId), principal);
         try (var ignored = mediaWriteGate.enterWrite()) {
-            Media media = requireOwnerOrAdmin(mediaRepository.findById(mediaId), principal);
+            Media media = preloaded != null
+                    ? preloaded
+                    : requireOwnerOrAdmin(mediaRepository.findById(mediaId), principal);
             deleteRowsNowFilesAfterCommit(List.of(media));
         }
     }

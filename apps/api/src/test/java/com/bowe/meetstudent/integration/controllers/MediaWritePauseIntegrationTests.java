@@ -182,6 +182,42 @@ class MediaWritePauseIntegrationTests {
     }
 
     @Test
+    void pausedMediaDeleteChecksOwnershipOrAdminBeforeReturning503() throws Exception {
+        var diploma = upload(7, "ROLE_STUDENT", pdf(), "DIPLOMA");
+        int diplomaId = diploma.get("id").asInt();
+
+        mockMvc.perform(post("/api/v1/admin/media/maintenance/pause")
+                        .param("waitSeconds", "5")
+                        .with(TestDataUtil.mockUser(99, "ROLE_ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.writesPaused").value(true));
+
+        // Anonymous -> 401, non-owner (and non-owner on unknown id) -> 403 even while paused.
+        mockMvc.perform(delete("/api/v1/media/{id}", diplomaId))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(delete("/api/v1/media/{id}", diplomaId)
+                        .with(TestDataUtil.mockUser(8, "ROLE_STUDENT")))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(delete("/api/v1/media/{id}", 999_999)
+                        .with(TestDataUtil.mockUser(8, "ROLE_STUDENT")))
+                .andExpect(status().isForbidden());
+
+        // Owner and admin pass authorization and hit the pause gate (503 + Retry-After).
+        mockMvc.perform(delete("/api/v1/media/{id}", diplomaId)
+                        .with(TestDataUtil.mockUser(7, "ROLE_STUDENT")))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(header().string(HttpHeaders.RETRY_AFTER, "60"));
+        mockMvc.perform(delete("/api/v1/media/{id}", diplomaId)
+                        .with(TestDataUtil.mockUser(99, "ROLE_ADMIN")))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(header().string(HttpHeaders.RETRY_AFTER, "60"));
+        mockMvc.perform(delete("/api/v1/media/{id}", 2_147_483_647)
+                        .with(TestDataUtil.mockUser(99, "ROLE_ADMIN")))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(header().string(HttpHeaders.RETRY_AFTER, "60"));
+    }
+
+    @Test
     void pausedModeBlocksAllMediaAndReferenceMutationsWith503AndRetryAfterWhileKeepingReadsAndProfileEdits() throws Exception {
         Role studentRole = roleRepository.save(Role.builder().name("ROLE_STUDENT").build());
         UserEntity user = userRepository.save(UserEntity.builder()

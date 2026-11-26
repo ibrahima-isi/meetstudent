@@ -148,6 +148,7 @@ public class MediaController {
     public ResponseEntity<Void> delete(
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable Integer id) throws IOException {
+        mediaService.assertCanDelete(id, principal);
         try (var ignored = mediaWriteGate.enterWrite()) {
             mediaService.delete(id, principal);
             return ResponseEntity.noContent().build();

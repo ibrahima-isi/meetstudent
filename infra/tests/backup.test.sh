@@ -178,6 +178,20 @@ scripts_tests() {
     out=$(in_backup "$script" -e RCLONE_CONFIG_R2_ENDPOINT=https://account.r2.cloudflarestorage.com); rc=$?
     check "${script%% *} refuses an R2 endpoint outside the EU (exit $rc)" \
       bash -c '[ "$0" -eq 2 ] && grep -q "R2_ENDPOINT" <<<"$1"' "$rc" "$out"
+
+    local bad_r2
+    for bad_r2 in \
+      'ftp://account.eu.r2.cloudflarestorage.com' \
+      'https://user:secret@account.eu.r2.cloudflarestorage.com' \
+      'https://account.eu.r2.cloudflarestorage.com?foo=bar' \
+      'https://account.eu.r2.cloudflarestorage.com#frag' \
+      'https://' \
+      'https:///eu/path' \
+      'https://evil.test/foo.eu.bar'; do
+      out=$(in_backup "$script" -e RCLONE_CONFIG_R2_ENDPOINT="$bad_r2"); rc=$?
+      check "${script%% *} refuses malformed R2_ENDPOINT '$bad_r2' (exit $rc)" \
+        bash -c '[ "$0" -eq 2 ] && grep -q "R2_ENDPOINT" <<<"$1"' "$rc" "$out"
+    done
   done
 
   # A run killed hard (SIGKILL, container restart) skips its cleanup trap and
@@ -215,6 +229,24 @@ scripts_tests() {
   out=$(in_backup_s3 'backup.sh' -e BACKUP_S3_ENDPOINT=https://s3.us-east-1.amazonaws.com -e BACKUP_S3_REGION=us-east-1); rc=$?
   check "backup.sh refuses a non-EU BACKUP_S3_* destination (exit $rc)" \
     bash -c '[ "$0" -eq 2 ] && grep -qi "EU" <<<"$1"' "$rc" "$out"
+
+  # Reject non-EU European regions (eu-west-2 London/UK, eu-central-2 Zurich/CH) for ALL endpoints.
+  local non_eu_ep non_eu_reg
+  for pair in \
+    '|eu-west-2' \
+    '|eu-central-2' \
+    'https://s3.eu-west-2.custom.test|eu-west-2' \
+    'https://s3.eu-central-2.custom.test|eu-central-2' \
+    'https://s3.eu-west-2.custom.test|eu-west-1' \
+    'https://s3.eu.custom.test|eu-west-2' \
+    'https://s3.eu.custom.test|eu-central-2' \
+    'https://us-east.example.com/.eu./|custom'; do
+    non_eu_ep=${pair%%|*}
+    non_eu_reg=${pair#*|}
+    out=$(in_backup_s3 'backup.sh' -e BACKUP_S3_ENDPOINT="$non_eu_ep" -e BACKUP_S3_REGION="$non_eu_reg"); rc=$?
+    check "backup.sh refuses non-EU European endpoint='$non_eu_ep' region='$non_eu_reg' (exit $rc)" \
+      bash -c '[ "$0" -eq 2 ] && grep -qi "EU" <<<"$1"' "$rc" "$out"
+  done
 
   out=$(in_backup_s3 'backup.sh' -e BACKUP_S3_ENDPOINT=https://fsn1.your-objectstorage.com -e BACKUP_S3_REGION=fsn1); rc=$?
   check "backup.sh refuses Hetzner Object Storage as backup destination (same provider as VPS, exit $rc)" \
@@ -759,6 +791,45 @@ roundtrip_tests() {
     test "$(sha "$WORK/check-s3banner.png")" = "$sha_s3banner"
   check "$PROJECT_D: S3 temp file (.media-s3-temp.tmp) was ignored (404)" \
     test "$(api_status "$PROJECT_D" "http://api:8080/uploads/public/.media-s3-temp.tmp")" = 404
+
+  echo "S3 restore pre-validates storage keys BEFORE dropping existing DB ($PROJECT_D)"
+  stack "$PROJECT_D" exec -T db psql -v ON_ERROR_STOP=1 -U meetstudent -d meetstudent \
+    -c "CREATE TABLE IF NOT EXISTS restore_sentinel (val text); TRUNCATE restore_sentinel; INSERT INTO restore_sentinel VALUES ('must-survive');" >/dev/null
+  local bad_hist_stamp="20260102T000000Z"
+  stack "$PROJECT_D" exec -T \
+    -e BACKUP_S3_ENDPOINT="http://$BACKUP2_S3_HOST:9000" \
+    -e BACKUP_S3_REGION=eu-west-1 \
+    -e BACKUP_S3_BUCKET="$BACKUP2_BUCKET" \
+    -e BACKUP_S3_PATH_STYLE=true \
+    -e BACKUP_S3_ACCESS_KEY_ID="$BACKUP2_S3_USER" \
+    -e BACKUP_S3_SECRET_ACCESS_KEY="$BACKUP2_S3_SECRET" \
+    backup sh -c '
+      . /usr/local/bin/backup-env.sh
+      w=$(mktemp -d /tmp/badhist.XXXXXX)
+      trap "rm -rf $w" EXIT
+      psql -v ON_ERROR_STOP=1 -d postgres -c "DROP DATABASE IF EXISTS scratch_legacy WITH (FORCE);" -c "CREATE DATABASE scratch_legacy OWNER \"$PGUSER\";" >/dev/null
+      psql -v ON_ERROR_STOP=1 -d scratch_legacy -c "CREATE TABLE media (id integer PRIMARY KEY, storage_key varchar(512) NOT NULL, category varchar(32) NOT NULL, visibility varchar(16) NOT NULL); INSERT INTO media VALUES (1, '\''users/legacy-pre-s3.pdf'\'', '\''DIPLOMA'\'', '\''PRIVATE'\'');" >/dev/null
+      pg_dump --format=custom --no-owner --no-privileges -d scratch_legacy --file="$w/db.dump"
+      psql -v ON_ERROR_STOP=1 -d postgres -c "DROP DATABASE IF EXISTS scratch_legacy WITH (FORCE);" >/dev/null
+      mkdir -p "$w/u/users" "$w/p"
+      printf "legacy" > "$w/u/users/legacy-pre-s3.pdf"
+      tar -czf "$w/uploads.tar.gz" -C "$w/u" .
+      tar -czf "$w/private.tar.gz" -C "$w/p" .
+      (cd "$w" && sha256sum db.dump uploads.tar.gz private.tar.gz > SHA256SUMS)
+      rclone copy "$w" "backupcrypt:'"$bad_hist_stamp"'"
+    ' >/dev/null 2>&1
+  stack "$PROJECT_D" stop api >/dev/null 2>&1
+  out=$(MEDIA_STORAGE_BACKEND=s3 MEDIA_S3_BUCKET="$media_bucket_d" MEDIA_S3_REGION=us-east-1 \
+    MEDIA_S3_ENDPOINT="http://$MEDIA_S3_HOST:9000" MEDIA_S3_PATH_STYLE=true \
+    MEDIA_S3_ACCESS_KEY_ID="$MEDIA_S3_USER" MEDIA_S3_SECRET_ACCESS_KEY="$MEDIA_S3_SECRET" \
+    BACKUP_S3_ENDPOINT="http://$BACKUP2_S3_HOST:9000" BACKUP_S3_REGION=eu-west-1 \
+    BACKUP_S3_BUCKET="$BACKUP2_BUCKET" BACKUP_S3_PATH_STYLE=true \
+    BACKUP_S3_ACCESS_KEY_ID="$BACKUP2_S3_USER" BACKUP_S3_SECRET_ACCESS_KEY="$BACKUP2_S3_SECRET" \
+    stack "$PROJECT_D" run --rm -T --pull never backup restore.sh "$bad_hist_stamp" --yes 2>&1); rc=$?
+  local sentinel_after
+  sentinel_after=$(stack "$PROJECT_D" exec -T db psql -tAc "SELECT val FROM restore_sentinel;" -U meetstudent -d meetstudent 2>/dev/null || true)
+  check "incompatible historical archive fails before dropping existing DB in S3 mode (exit $rc, sentinel='$sentinel_after')" \
+    bash -c '[ "$0" -ne 0 ] && [ "$1" = "must-survive" ] && grep -qi "private/\|public/\|legacy" <<<"$2"' "$rc" "$sentinel_after" "$out"
 
   echo "failures are loud"
   stack "$PROJECT_B" run --rm -T --pull never -e BACKUP_CRYPT_PASSWORD=not-the-key \

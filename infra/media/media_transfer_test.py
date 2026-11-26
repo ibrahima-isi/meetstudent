@@ -1,20 +1,25 @@
 import hashlib
 import io
+import json
 import os
 import tempfile
 import unittest
 import urllib.parse
 from pathlib import Path
 from typing import Optional
+from unittest import mock
 
+import media_transfer
 from media_transfer import (
     ApiClient,
     DiskEndpoint,
     MediaRow,
     S3Endpoint,
+    _verify_api_against_storage,
     build_inventory,
     check_backup_independence,
     is_valid_key,
+    main as media_transfer_main,
     parse_list_objects_v2_xml,
     qualify_bucket,
     run_cutover,
@@ -650,6 +655,27 @@ class MediaTransferSlice3QualificationTest(unittest.TestCase):
         )
         self.assertFalse(bad_us_aws["ok"])
 
+        # Reject non-EU European regions (eu-west-2 London/UK, eu-central-2 Zurich/CH) across ALL endpoints
+        for non_eu_ep, non_eu_reg in [
+            ("", "eu-west-2"),
+            ("", "eu-central-2"),
+            ("https://s3.eu-west-2.custom.test", "eu-west-2"),
+            ("https://s3.eu-central-2.custom.test", "eu-central-2"),
+            ("https://s3.eu-west-2.custom.test", "eu-west-1"),
+            ("https://s3.eu.custom.test", "eu-west-2"),
+            ("https://s3.eu.custom.test", "eu-central-2"),
+            ("https://us-east.example.com/.eu./", "custom"),
+        ]:
+            bad_non_eu_europe = check_backup_independence(
+                media_endpoint="https://acct.eu.r2.cloudflarestorage.com",
+                backup_endpoint=non_eu_ep,
+                backup_region=non_eu_reg,
+            )
+            self.assertFalse(
+                bad_non_eu_europe["ok"],
+                f"Expected non-EU rejection for endpoint={non_eu_ep!r}, region={non_eu_reg!r}: {bad_non_eu_europe}",
+            )
+
         # Reject same provider as active media (R2 + R2, AWS + AWS, same custom endpoint)
         same_r2 = check_backup_independence(
             media_endpoint="https://media-acct.eu.r2.cloudflarestorage.com",
@@ -694,6 +720,74 @@ class MediaTransferSlice3QualificationTest(unittest.TestCase):
         self.assertFalse(rep_bad["ok"])
         rep_ok = qualify_bucket(ep, backup_config={"endpoint": "https://s3.fr-par.scw.cloud", "region": "fr-par"})
         self.assertTrue(rep_ok["ok"], rep_ok)
+
+    def test_qualify_bucket_cli_uses_aws_regional_backup_without_r2_fallback_during_overlap(self):
+        srv = _InMemoryS3Server("media-r2", path_style=True)
+
+        def _fake_connect(s3_self, host, port):
+            return _MemoryS3Connection(srv, host, port)
+
+        base_argv = [
+            "qualify-bucket",
+            "--s3-bucket", "media-r2",
+            "--s3-region", "auto",
+            "--s3-endpoint", "https://media-acct.eu.r2.cloudflarestorage.com",
+            "--s3-path-style",
+            "--s3-access-key", "ak",
+            "--s3-secret-key", "sk",
+            "--require-https",
+            "--check-backup-independence",
+        ]
+
+        # 1. AWS regional backup (empty BACKUP_S3_ENDPOINT + region=eu-west-1) while R2_ENDPOINT is kept for 30-day overlap.
+        stdout_buf = io.StringIO()
+        with (
+            mock.patch.object(S3Endpoint, "_connect", _fake_connect),
+            mock.patch.dict(os.environ, {}, clear=True),
+            mock.patch("sys.stdout", stdout_buf),
+        ):
+            rc = media_transfer_main([
+                *base_argv,
+                "--backup-s3-endpoint", "",
+                "--backup-s3-region", "eu-west-1",
+                "--r2-endpoint", "https://old-backup.eu.r2.cloudflarestorage.com",
+            ])
+        rep = json.loads(stdout_buf.getvalue())
+        self.assertEqual(rc, 0, rep)
+        self.assertTrue(rep["ok"], rep)
+        self.assertEqual(rep["backup_independence"]["backup_provider_identity"], "aws")
+
+        # 2. Same via environment variables (BACKUP_S3_BUCKET + BACKUP_S3_REGION=eu-west-1, empty BACKUP_S3_ENDPOINT, R2_ENDPOINT set).
+        stdout_buf2 = io.StringIO()
+        env = {
+            "BACKUP_S3_BUCKET": "bkp-aws",
+            "BACKUP_S3_ENDPOINT": "",
+            "BACKUP_S3_REGION": "eu-west-1",
+            "R2_ENDPOINT": "https://old-backup.eu.r2.cloudflarestorage.com",
+        }
+        with (
+            mock.patch.object(S3Endpoint, "_connect", _fake_connect),
+            mock.patch.dict(os.environ, env, clear=True),
+            mock.patch("sys.stdout", stdout_buf2),
+        ):
+            rc2 = media_transfer_main(base_argv)
+        rep2 = json.loads(stdout_buf2.getvalue())
+        self.assertEqual(rc2, 0, rep2)
+        self.assertTrue(rep2["ok"], rep2)
+        self.assertEqual(rep2["backup_independence"]["backup_provider_identity"], "aws")
+
+        # 3. When BACKUP_REMOTE explicitly selects r2crypt:, evaluate R2_ENDPOINT (and fail independence against R2 media).
+        stdout_buf3 = io.StringIO()
+        with (
+            mock.patch.object(S3Endpoint, "_connect", _fake_connect),
+            mock.patch.dict(os.environ, {**env, "BACKUP_REMOTE": "r2crypt:"}, clear=True),
+            mock.patch("sys.stdout", stdout_buf3),
+        ):
+            rc3 = media_transfer_main(base_argv)
+        rep3 = json.loads(stdout_buf3.getvalue())
+        self.assertEqual(rc3, 7, rep3)
+        self.assertFalse(rep3["ok"])
+        self.assertEqual(rep3["backup_independence"]["backup_provider_identity"], "cloudflare-r2")
 
 
 class MediaTransferSlice4PreReopenVerifyTest(unittest.TestCase):
@@ -846,8 +940,213 @@ class MediaTransferSlice4PreReopenVerifyTest(unittest.TestCase):
             )
             self.assertEqual(res["status"], "ABORTED")
             self.assertEqual(res["abort_reason"], "READ_VERIFICATION_FAILED")
+            self.assertEqual(res["activation_state"], "post_switch")
             self.assertEqual(aborted, ["rolled_back"])
             self.assertFalse(api.paused)
+
+    def test_verify_api_against_storage_handles_multi_owner_private_media(self):
+        import base64
+
+        def make_jwt(user_id: int, roles: list[str]) -> str:
+            hdr = base64.urlsafe_b64encode(b'{"alg":"HS256","typ":"JWT"}').decode().rstrip("=")
+            payload = base64.urlsafe_b64encode(
+                json.dumps({"sub": str(user_id), "roles": roles}).encode()
+            ).decode().rstrip("=")
+            return f"{hdr}.{payload}.sig"
+
+        u1_tok = make_jwt(101, ["ROLE_STUDENT"])
+        u2_tok = make_jwt(202, ["ROLE_STUDENT"])
+        u3_tok = make_jwt(303, ["ROLE_STUDENT"])
+        adm_tok = make_jwt(999, ["ROLE_ADMIN"])
+
+        pub_bytes = b"\x89PNG\r\n\x1a\nPUB"
+        u1_bytes = b"%PDF-U1-PRIVATE"
+        u2_bytes = b"%PDF-U2-PRIVATE"
+
+        class MultiOwnerStubDb:
+            def __init__(self, rows):
+                self._rows = rows
+
+            def fetch_media_rows(self):
+                return list(self._rows)
+
+        class MultiOwnerStubApi(ApiClient):
+            def __init__(self, tok_users: dict[str, tuple[int, bool]], leak_to_user101: bool = False):
+                super().__init__("http://api.test", admin_token=adm_tok)
+                self.tok_users = tok_users
+                self.leak_to_user101 = leak_to_user101
+                self.files = {
+                    10: (101, u1_bytes),
+                    20: (202, u2_bytes),
+                }
+
+            def _request(self, method, path, token="", json_body=None, extra_headers=None, timeout=None):
+                if path == "/uploads/public/logo.png":
+                    if extra_headers and extra_headers.get("Range") == "bytes=0-3":
+                        return 206, {"content-range": f"bytes 0-3/{len(pub_bytes)}"}, pub_bytes[:4]
+                    return 200, {}, pub_bytes
+                if path == "/api/v1/users/me":
+                    if token not in self.tok_users:
+                        return 401, {}, b""
+                    uid, is_adm = self.tok_users[token]
+                    return 200, {}, json.dumps({"id": uid, "roles": ["ROLE_ADMIN"] if is_adm else ["ROLE_STUDENT"]}).encode()
+                if path == "/api/v1/admin/media/maintenance":
+                    return 200, {}, b'{"writesPaused":true,"drained":true}'
+                if method == "DELETE" and path == "/api/v1/media/2147483647":
+                    return 503, {"retry-after": "60"}, b"{}"
+                if path.startswith("/api/v1/media/"):
+                    mid = int(path.rsplit("/", 1)[-1])
+                    if mid not in self.files:
+                        return 404, {}, b""
+                    if not token or token not in self.tok_users:
+                        return 401, {}, b""
+                    uid, is_adm = self.tok_users[token]
+                    owner_id, content = self.files[mid]
+                    if is_adm or uid == owner_id or (self.leak_to_user101 and uid == 101 and mid == 20):
+                        return 200, {}, content
+                    return 403, {}, b""
+                return 404, {}, b""
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            ep = DiskEndpoint(root / "u", root / "p")
+            ep.write_bytes("public/logo.png", pub_bytes, "image/png")
+            ep.write_bytes("private/u1.pdf", u1_bytes, "application/pdf")
+            ep.write_bytes("private/u2.pdf", u2_bytes, "application/pdf")
+
+            rows = [
+                MediaRow(1, "public/logo.png", "PUBLIC", "SCHOOL_LOGO", len(pub_bytes), "image/png"),
+                MediaRow(10, "private/u1.pdf", "PRIVATE", "DIPLOMA", len(u1_bytes), "application/pdf", owner_id=101),
+                MediaRow(20, "private/u2.pdf", "PRIVATE", "DIPLOMA", len(u2_bytes), "application/pdf", owner_id=202),
+            ]
+            db = MultiOwnerStubDb(rows)
+            tok_map = {
+                u1_tok: (101, False),
+                u2_tok: (202, False),
+                u3_tok: (303, False),
+                adm_tok: (999, True),
+                "opaque-owner": (101, False),
+                "opaque-other": (303, False),
+            }
+
+            # 1. JWT owner_token=u1 (owns 10, does NOT own 20), other_token=u3 (owns neither).
+            res_u3 = _verify_api_against_storage(
+                db, ep, MultiOwnerStubApi(tok_map), owner_token=u1_tok, other_token=u3_tok, expect_writes_paused=True
+            )
+            self.assertTrue(res_u3["ok"], res_u3)
+
+            # 2. JWT owner_token=u1, other_token=u2 (owns 20, does NOT own 10).
+            res_u2 = _verify_api_against_storage(
+                db, ep, MultiOwnerStubApi(tok_map), owner_token=u1_tok, other_token=u2_tok, expect_writes_paused=True
+            )
+            self.assertTrue(res_u2["ok"], res_u2)
+
+            # 3. Opaque tokens resolved via /api/v1/users/me.
+            res_opaque = _verify_api_against_storage(
+                db, ep, MultiOwnerStubApi(tok_map), owner_token="opaque-owner", other_token="opaque-other", expect_writes_paused=True
+            )
+            self.assertTrue(res_opaque["ok"], res_opaque)
+
+            # 4. Security leak: user 101 can read user 202's private media (200 instead of 403) -> MUST fail!
+            res_leak = _verify_api_against_storage(
+                db, ep, MultiOwnerStubApi(tok_map, leak_to_user101=True), owner_token=u1_tok, other_token=u3_tok, expect_writes_paused=True
+            )
+            self.assertFalse(res_leak["ok"])
+            self.assertTrue(any("403" in e and "/api/v1/media/20" in e for e in res_leak["errors"]), res_leak)
+
+    def test_api_client_pause_scales_http_timeout_beyond_wait_seconds(self):
+        captured_timeouts = []
+
+        class _FakeUrlopenResp:
+            status = 200
+            headers = {"Content-Type": "application/json"}
+
+            def read(self):
+                return b'{"writesPaused":true,"drained":true}'
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+        def _fake_urlopen(req, timeout=None):
+            captured_timeouts.append(timeout)
+            return _FakeUrlopenResp()
+
+        client = ApiClient("http://api.test", admin_token="adm", timeout=15)
+        with mock.patch("urllib.request.urlopen", side_effect=_fake_urlopen):
+            client.pause(wait_seconds=30)
+            client.pause(wait_seconds=2)
+
+        self.assertEqual(captured_timeouts, [40, 15])
+
+    def test_cutover_invokes_on_abort_and_reopens_writes_when_on_activate_raises(self):
+        class FakeDb:
+            def fetch_media_rows(self):
+                return [MediaRow(1, "public/logo.png", "PUBLIC", "SCHOOL_LOGO", 4, "image/png")]
+
+            def count_active_write_transactions(self):
+                return 0
+
+        class FakeApi:
+            def __init__(self):
+                self.paused = False
+                self.resume_calls = 0
+
+            def maintenance_status(self):
+                return {"writesPaused": self.paused, "drained": self.paused}
+
+            def pause(self, wait_seconds=0):
+                self.paused = True
+                return self.maintenance_status()
+
+            def resume(self):
+                self.paused = False
+                self.resume_calls += 1
+                return self.maintenance_status()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            src = DiskEndpoint(root / "su", root / "sp")
+            dst = DiskEndpoint(root / "du", root / "dp")
+            src.write_bytes("public/logo.png", b"logo", "image/png")
+
+            api = FakeApi()
+            aborted = []
+
+            def failing_activate():
+                raise RuntimeError("redeploy failed mid-switch")
+
+            res = run_cutover(
+                db=FakeDb(),
+                source=src,
+                target=dst,
+                api=api,
+                on_activate=failing_activate,
+                on_abort=lambda: aborted.append("rolled_back"),
+            )
+            self.assertEqual(res["status"], "ABORTED")
+            self.assertEqual(aborted, ["rolled_back"])
+            self.assertFalse(api.paused)
+            self.assertEqual(api.resume_calls, 1)
+            self.assertEqual(res["activation_state"], "mid_switch")
+
+            # Pre-switch abort must NOT invoke on_abort and reports pre_switch.
+            pre_aborted = []
+            res_pre = run_cutover(
+                db=FakeDb(),
+                source=src,
+                target=dst,
+                api=api,
+                initial_sync=False,
+                after_final_sync_hook=lambda: dst.write_bytes("public/logo.png", b"corrupt", "image/png"),
+                on_activate=lambda: None,
+                on_abort=lambda: pre_aborted.append("should_not_run"),
+            )
+            self.assertEqual(res_pre["status"], "ABORTED")
+            self.assertEqual(pre_aborted, [])
+            self.assertEqual(res_pre["activation_state"], "pre_switch")
 
 
 if __name__ == "__main__":
