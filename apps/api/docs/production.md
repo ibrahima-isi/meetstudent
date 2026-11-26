@@ -67,21 +67,26 @@ Give the API object read, write, and delete access plus bucket inspection/list p
 ## Backups (Coolify stack)
 
 The API does not read these: the `backup` service of `compose.coolify.yml` does, when the nightly Coolify
-Scheduled Task runs `backup.sh` in it (ADR 0004). rclone is configured by environment only: a remote `r2`
+Scheduled Task runs `backup.sh` in it (ADR 0004). The service also reads the API media settings above.
+By default rclone uses a remote `r2`
 (S3, provider Cloudflare) wrapped by a `crypt` remote `r2crypt`, so names and contents are encrypted before
 they leave the VPS. The database settings (`POSTGRES_*`) are shared with the stack. Setup, restore and the
 R2 bucket rules (EU jurisdiction, 30-day lifecycle): `docs/DEPLOY.md` section 9.4 and 9.5.
 
 | Variable | Required | Default | Purpose |
 |---|---|---|---|
-| `R2_ENDPOINT` | for backups | none | `https://<ACCOUNT_ID>.eu.r2.cloudflarestorage.com` (EU jurisdiction endpoint). The scripts refuse an endpoint without `.eu.` (exit `2`). |
-| `R2_BUCKET` | for backups | none | Bucket name; the token is scoped to it, so rclone never checks or creates it. |
-| `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | for backups | none | Keys of the bucket-scoped R2 API token (read + write). Secrets. |
+| `BACKUP_REMOTE` | no | `r2crypt:` | Encrypted backup destination. Select `awscrypt:` when the active provider is R2. |
+| `BACKUP_AWS_BUCKET` | for `awscrypt:` | none | Private AWS S3 backup bucket with a 30-day lifecycle rule in its EU region. |
+| `BACKUP_AWS_REGION` | for `awscrypt:` | none | AWS region in the EU where the backup bucket was created. |
+| `BACKUP_AWS_ACCESS_KEY_ID`, `BACKUP_AWS_SECRET_ACCESS_KEY` | for `awscrypt:` | none | Credentials scoped to the backup bucket. Store as secrets. |
+| `R2_ENDPOINT` | for `r2crypt:` | none | `https://<ACCOUNT_ID>.eu.r2.cloudflarestorage.com` (EU jurisdiction endpoint). Use the Cloudflare EU jurisdiction endpoint. |
+| `R2_BUCKET` | for `r2crypt:` | none | Bucket name; the token is scoped to it, so rclone never checks or creates it. |
+| `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | for `r2crypt:` | none | Keys of the bucket-scoped R2 API token (read + write). Secrets. |
 | `BACKUP_CRYPT_PASSWORD` | for backups | none | `crypt` password, the original in clear (Coolify secret + password manager); the scripts obscure it for rclone. Without it no backup can be read. |
 | `BACKUP_CRYPT_SALT` | for backups | none | `crypt` salt (rclone's `password2`), same handling as the password. |
 
-None of them is needed to render or start the stack. `backup.sh` and `restore.sh` refuse to run without all of
-them and exit `2`, naming the missing ones, so a forgotten variable shows up as a failed scheduled task. The
+The stack starts with these variables unset. The backup and restore commands validate the settings for the selected
+destination and exit `2` when a required setting is missing. The
 check lives in `infra/backup/backup-env.sh`, sourced by both scripts.
 
 ## Email
