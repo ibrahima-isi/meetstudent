@@ -6,7 +6,8 @@
 #   infra/tests/backup.test.sh            # both parts below
 #   infra/tests/backup.test.sh scripts    # the scripts alone, in the backup image: no stack,
 #                                         # a local folder as the storage (seconds)
-#   infra/tests/backup.test.sh roundtrip  # the round trip, observed as a client
+#   infra/tests/backup.test.sh roundtrip     # disk restore and historical format
+#   infra/tests/backup.test.sh roundtrip-s3  # S3 media with a separate backup bucket
 #
 # A real S3 server (MinIO) stands in for Cloudflare R2. It sits on the backup
 # service's outbound network only, as R2 sits on the internet: never on the
@@ -36,10 +37,12 @@ export JWT_SECRET_KEY=${JWT_SECRET_KEY:-dGVzdC1qd3Qtc2VjcmV0LWtleS10aGF0LWlzLWxv
 export CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-https://$DOMAIN,https://$BO_DOMAIN}
 export ADMIN_EMAIL=${ADMIN_EMAIL:-admin@meetstudent.test}
 export ADMIN_PASSWORD=${ADMIN_PASSWORD:-test-admin-password-123}
-export PROXY_NETWORK=${TEST_PROXY_NETWORK:-meetstudent-backup-test-proxy}
+export PROXY_NETWORK=${TEST_PROXY_NETWORK:-meetstudent-backup-test-proxy-$$}
 
 # The off-site storage: MinIO instead of R2, same S3 protocol.
-S3_NAME=meetstudent-backup-test-s3
+S3_NAME=meetstudent-backup-test-s3-$$
+MEDIA_NAME=meetstudent-backup-test-media-$$
+export API_EDGE_NETWORK=meetstudent-backup-test-api-edge-$$
 # Named like an EU endpoint (".eu."): the scripts refuse any other R2_ENDPOINT.
 S3_HOST=s3.eu.backup.test
 S3_USER=backup-test-access-key
@@ -52,8 +55,8 @@ export R2_SECRET_ACCESS_KEY=$S3_SECRET
 export BACKUP_CRYPT_PASSWORD=backup-test-crypt-password
 export BACKUP_CRYPT_SALT=backup-test-crypt-salt
 
-PROJECT_A=meetstudent-backup-test-a # the populated stack that is backed up
-PROJECT_B=meetstudent-backup-test-b # the empty stack it is restored into
+PROJECT_A=meetstudent-backup-test-a-$$ # the populated stack that is backed up
+PROJECT_B=meetstudent-backup-test-b-$$ # the empty stack it is restored into
 CURL_IMAGE=curlimages/curl:8.11.1
 WORK=
 
@@ -72,7 +75,8 @@ teardown() {
   echo "teardown"
   stack "$PROJECT_A" down -v --remove-orphans >/dev/null 2>&1 || true
   stack "$PROJECT_B" down -v --remove-orphans >/dev/null 2>&1 || true
-  docker rm -f "$S3_NAME" >/dev/null 2>&1 || true
+  docker rm -f "$S3_NAME" "$MEDIA_NAME" >/dev/null 2>&1 || true
+  docker network rm "$API_EDGE_NETWORK" >/dev/null 2>&1 || true
   docker network rm "$PROXY_NETWORK" >/dev/null 2>&1 || true
   [ -z "$WORK" ] || rm -rf "$WORK"
 }
@@ -128,6 +132,20 @@ scripts_tests() {
   check "restore says so when the storage holds no backup (exit $rc: $out)" \
     bash -c '[ "$0" -eq 1 ] && grep -q "no backup found" <<<"$1"' "$rc" "$out"
 
+  out=$(in_backup 'restore.sh ../other --yes'); rc=$?
+  check "restore rejects an invalid backup ID before touching its destination" \
+    bash -c '[ "$0" -eq 2 ] && grep -q "invalid backup ID" <<<"$1"' "$rc" "$out"
+
+  out=$(in_backup 'mkdir -p /run/lock; flock /run/lock/meetstudent-backup backup.sh'); rc=$?
+  check "a concurrent backup is refused before it can touch staging" \
+    bash -c '[ "$0" -eq 1 ] && grep -q "another backup is running" <<<"$1"' "$rc" "$out"
+
+  out=$(in_backup backup.sh -e MEDIA_STORAGE_BACKEND=s3 -e MEDIA_S3_BUCKET=active \
+    -e MEDIA_S3_REGION=auto -e MEDIA_S3_ENDPOINT=https://other.r2.cloudflarestorage.com \
+    -e MEDIA_S3_ACCESS_KEY_ID=k -e MEDIA_S3_SECRET_ACCESS_KEY=s); rc=$?
+  check "two buckets with the same provider are not independent backups" \
+    bash -c '[ "$0" -eq 2 ] && grep -q "independent providers" <<<"$1"' "$rc" "$out"
+
   # Two complete backups, then an interrupted one: its files went out, not its
   # SHA256SUMS (backup.sh sends it last). Restoring it would fail at the
   # checksums at best; it must not be offered.
@@ -164,6 +182,12 @@ STUDENT_PASSWORD=student-backup-password
 SCHOOL="Backup Test School $$"
 
 roundtrip_tests() {
+  local mode=${1:-disk}
+  export MEDIA_STORAGE_BACKEND=$mode BACKUP_REMOTE=r2crypt:
+  export MEDIA_S3_ENDPOINT=http://s3.media.backup.test:9000 MEDIA_S3_REGION=us-east-1
+  export MEDIA_S3_ACCESS_KEY_ID=media-test-access-key MEDIA_S3_SECRET_ACCESS_KEY=media-test-secret-key
+  export MEDIA_S3_BUCKET=source-media MEDIA_S3_PATH_STYLE=true
+
   docker image inspect "$REGISTRY/meetstudent-api:$IMAGE_TAG" >/dev/null 2>&1 || {
     echo "missing local image $REGISTRY/meetstudent-api:$IMAGE_TAG (this test never pulls it)" >&2
     exit 2
@@ -172,7 +196,14 @@ roundtrip_tests() {
   trap teardown EXIT
   teardown
   WORK=$(mktemp -d "${TMPDIR:-/tmp}/meetstudent-backup-test.XXXXXX")
-  docker network create "$PROXY_NETWORK" >/dev/null
+  docker network create "$PROXY_NETWORK" >/dev/null || return
+  docker network create "$API_EDGE_NETWORK" >/dev/null || return
+
+  if [[ "$mode" == s3 ]]; then
+    docker run -d --name "$MEDIA_NAME" --network "$API_EDGE_NETWORK" --network-alias s3.media.backup.test \
+      -e MINIO_ROOT_USER="$MEDIA_S3_ACCESS_KEY_ID" -e MINIO_ROOT_PASSWORD="$MEDIA_S3_SECRET_ACCESS_KEY" \
+      -e MINIO_DEFAULT_BUCKETS=source-media,restored-media bitnamilegacy/minio:2025.5.24 >/dev/null || return
+  fi
 
   echo "populated stack ($PROJECT_A): db, api, backup + S3 on the backup's outbound network"
   if ! stack "$PROJECT_A" up -d --pull never --wait --wait-timeout 300 db api backup >/dev/null 2>&1; then
@@ -181,6 +212,9 @@ roundtrip_tests() {
     return
   fi
   pass "the stack with its backup service starts"
+  if [[ "$mode" == s3 ]]; then
+    docker network connect --alias s3.media.backup.test "${PROJECT_A}_egress" "$MEDIA_NAME" || return
+  fi
   check "the S3 server answers" start_s3 "$PROJECT_A"
 
   # A student, a private document of hers, a school created by the admin.
@@ -196,6 +230,16 @@ roundtrip_tests() {
     -d "{\"name\":\"$SCHOOL\",\"code\":\"BKP$(( $$ % 100 ))\"}" http://api:8080/api/v1/schools
   check "the stack is populated (student, private document $media_id, school)" \
     bash -c '[ -n "$0" ] && [ -n "$1" ] && [ -n "$2" ]' "$student" "$media_id" "$admin"
+
+  # Seed a legacy public file with no database row.
+  printf 'legacy public bytes' >"$WORK/legacy.txt"
+  if [[ "$mode" == s3 ]]; then
+    docker exec -i "$MEDIA_NAME" sh -c 'mc alias set media http://127.0.0.1:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" >/dev/null && mc pipe media/source-media/public/legacy.txt' \
+      <"$WORK/legacy.txt" >/dev/null || return
+  else
+    stack "$PROJECT_A" exec -T api sh -c 'mkdir -p /data/uploads/public && cat >/data/uploads/public/legacy.txt' \
+      <"$WORK/legacy.txt" || return
+  fi
 
   echo "backup"
   check "the backup service cannot modify the uploaded files" \
@@ -228,21 +272,52 @@ roundtrip_tests() {
   check "no object is readable in clear ($readable readable)" test "$readable" -eq 0
 
   echo "an interrupted backup"
-  # The connection drops after 1 KiB (rclone's own cut-off, one file at a time):
-  # some files of the backup are sent, not all. backup.sh sends SHA256SUMS last,
-  # so this folder never looks complete, and the restore below must skip it.
+  # Apply rclone's cut-off only to the encrypted upload. Staging must finish
+  # so the test leaves an actual incomplete remote folder.
   sleep 1
-  stack "$PROJECT_A" exec -T -e RCLONE_MAX_TRANSFER=1K -e RCLONE_CUTOFF_MODE=hard -e RCLONE_TRANSFERS=1 \
-    backup backup.sh >/dev/null 2>&1; rc=$?
+  stack "$PROJECT_A" exec -T backup sh -s >/dev/null 2>&1 <<'SH'
+set -e
+real_rclone=$(command -v rclone)
+export real_rclone
+test_bin=$(mktemp -d /run/backup-test.XXXXXX)
+trap 'rm -rf "$test_bin"' EXIT
+cat >"$test_bin/rclone" <<'WRAPPER'
+#!/bin/sh
+case "$1:${3:-}" in
+  copy:r2crypt:*) export RCLONE_MAX_TRANSFER=8K RCLONE_CUTOFF_MODE=soft RCLONE_TRANSFERS=1 ;;
+esac
+exec "$real_rclone" "$@"
+WRAPPER
+chmod +x "$test_bin/rclone"
+PATH="$test_bin:$PATH" backup.sh
+SH
+  rc=$?
   check "a backup cut off mid-upload fails (exit $rc)" test "$rc" -ne 0
+  check "the interrupted upload left encrypted files without a completion marker" \
+    test "$(s3 "mc ls -r --json t/$R2_BUCKET" | jq -r '.key // empty' | cut -d/ -f1 | sort -u | grep -c .)" -eq 2
   local listed
   listed=$(stack "$PROJECT_A" exec -T backup restore.sh --list 2>/dev/null)
   check "restore.sh --list still offers the complete backup only ($(tr '\n' ' ' <<<"$listed"))" \
     test "$(grep -c . <<<"$listed")" -eq 1
 
+  echo "backup with a missing database reference"
+  stack "$PROJECT_A" exec -T backup psql -X -v ON_ERROR_STOP=1 -c \
+    "INSERT INTO media (storage_key, size_bytes, category, visibility) VALUES ('public/absent.png', 3, 'SCHOOL_LOGO', 'PUBLIC')" >/dev/null || return
+  out=$(stack "$PROJECT_A" exec -T backup backup.sh 2>&1); rc=$?
+  check "missing media retries three times and fails" bash -c \
+    '[ "$0" -ne 0 ] && grep -q "backup attempt 3 of 3" <<<"$1" && grep -q "media inventory is incomplete" <<<"$1"' "$rc" "$out"
+  check "failed attempts preserve the last complete backup" test \
+    "$(stack "$PROJECT_A" exec -T backup restore.sh --list 2>/dev/null)" = "$listed"
+  stack "$PROJECT_A" exec -T backup psql -X -v ON_ERROR_STOP=1 -c \
+    "DELETE FROM media WHERE storage_key = 'public/absent.png'" >/dev/null || return
+
   echo "restore into an empty stack ($PROJECT_B)"
+  if [[ "$mode" == s3 ]]; then export MEDIA_S3_BUCKET=restored-media; fi
   stack "$PROJECT_B" up -d --pull never --wait --wait-timeout 120 db backup >/dev/null 2>&1
-  docker network connect --alias "$S3_HOST" "${PROJECT_B}_egress" "$S3_NAME"
+  docker network connect --alias "$S3_HOST" "${PROJECT_B}_egress" "$S3_NAME" || return
+  if [[ "$mode" == s3 ]]; then
+    docker network connect --alias s3.media.backup.test "${PROJECT_B}_egress" "$MEDIA_NAME" || return
+  fi
   # The backup service mounts the volumes read-only: a restore is a one-off run
   # of the same service with the two volumes mounted writable under /restore.
   out=$(stack "$PROJECT_B" run --rm -T --pull never -v api-uploads:/restore/uploads -v api-private:/restore/private \
@@ -260,6 +335,35 @@ roundtrip_tests() {
   api "$PROJECT_B" -H "Authorization: Bearer $student" -o - "http://api:8080/api/v1/media/$media_id" >"$WORK/restored.pdf"
   check "the private document is identical byte for byte" test "$(sha "$WORK/restored.pdf")" = "$(sha "$WORK/diploma.pdf")"
 
+  check "anonymous cannot read the restored private document" test \
+    "$(api "$PROJECT_B" -o /dev/null -w '%{http_code}' "http://api:8080/api/v1/media/$media_id")" = 401
+  check "legacy public URL still serves the same bytes" test \
+    "$(api "$PROJECT_B" "http://api:8080/uploads/public/legacy.txt")" = "legacy public bytes"
+
+  if [[ "$mode" == disk ]]; then
+    # Write the genuine three-file layout from the verified archive and restore it.
+    stack "$PROJECT_B" exec -T backup sh -s -- "$listed" <<'SH' || return
+      set -e
+      REMOTE=r2crypt:
+      . /usr/local/bin/backup-env.sh
+      staging=$(mktemp -d)
+      trap 'rm -rf "$staging"' EXIT
+      rclone copy "r2crypt:$1" "$staging" --exclude /inventory.json --exclude /SHA256SUMS
+      (cd "$staging" && sha256sum db.dump uploads.tar.gz private.tar.gz >SHA256SUMS)
+      rclone copy "$staging" r2crypt:20200101T000000Z
+SH
+    stack "$PROJECT_B" stop api >/dev/null || return
+    out=$(stack "$PROJECT_B" run --rm -T --pull never -v api-uploads:/restore/uploads -v api-private:/restore/private \
+      backup restore.sh 20200101T000000Z --yes 2>&1); rc=$?
+    check "the historical three-file archive restores successfully" test "$rc" -eq 0
+    [ "$rc" -eq 0 ] || printf '%s\n' "$out"
+    stack "$PROJECT_B" up -d --pull never --wait --wait-timeout 300 api >/dev/null || return
+    student=$(sign_in "$PROJECT_B" "$STUDENT_EMAIL" "$STUDENT_PASSWORD")
+    api "$PROJECT_B" -H "Authorization: Bearer $student" "http://api:8080/api/v1/media/$media_id" >"$WORK/historical.pdf"
+    check "the historical archive restores the same private bytes through the API" \
+      test "$(sha "$WORK/historical.pdf")" = "$(sha "$WORK/diploma.pdf")"
+  fi
+
   echo "failures are loud"
   stack "$PROJECT_B" run --rm -T --pull never -e BACKUP_CRYPT_PASSWORD=not-the-key \
     -v api-uploads:/restore/uploads -v api-private:/restore/private backup restore.sh latest --yes >/dev/null 2>&1; rc=$?
@@ -275,9 +379,14 @@ roundtrip_tests() {
 
 case ${1:-all} in
   scripts) scripts_tests ;;
-  roundtrip) roundtrip_tests ;;
-  all) scripts_tests; roundtrip_tests ;;
-  *) echo "usage: $0 [scripts|roundtrip]" >&2; exit 2 ;;
+  roundtrip) roundtrip_tests disk || fail "disk roundtrip interrupted" ;;
+  roundtrip-s3) roundtrip_tests s3 || fail "S3 roundtrip interrupted" ;;
+  all)
+    scripts_tests
+    roundtrip_tests disk || fail "disk roundtrip interrupted"
+    roundtrip_tests s3 || fail "S3 roundtrip interrupted"
+    ;;
+  *) echo "usage: $0 [scripts|roundtrip|roundtrip-s3]" >&2; exit 2 ;;
 esac
 
 if [ "$failures" -gt 0 ]; then echo "$failures failure(s)"; exit 1; fi

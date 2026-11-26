@@ -614,36 +614,44 @@ resource -> Scheduled Tasks -> name `backup`, command `/usr/local/bin/backup.sh`
 container `backup`. Coolify notifies a failed task (Notifications, roadmap): `backup.sh` exits non-zero
 on any error, and with `2` when a variable below is missing.
 
-A backup is a folder named after its UTC time (`20261027T031500Z`) holding the custom-format database dump,
-an archive of each upload volume and their checksums. It goes to the R2 bucket through an rclone `crypt`
-remote: names and contents are encrypted on the VPS, and no local copy is kept.
+Each backup contains a custom PostgreSQL dump, its media inventory, two media archives, and `SHA256SUMS`.
+The dump and inventory use one PostgreSQL snapshot. The job includes every referenced file and the legacy
+public files under `public/`. It checks staged files against the source and retries up to three times with a
+fresh snapshot if files are missing or changing. Runs in the scheduled backup container are serialized.
+
+The destination is an rclone `crypt` remote. File names and contents are encrypted before upload. The job
+reads back the encrypted destination through rclone to verify its contents before sending `SHA256SUMS`.
 
 - R2 (roadmap): bucket with **Jurisdiction: EU**, lifecycle rule deleting objects after 30 days (the
   retention lives there, not in the script), API token scoped to that bucket, read and write.
   That token sits on the VPS and can delete objects: whoever takes the server can erase the backups too.
   Add a **bucket lock** rule (R2 -> bucket -> Settings -> Bucket lock) with a retention of at least 30 days,
   so no object can be deleted or overwritten before then, by the token or anyone else.
-  `R2_ENDPOINT` is `https://<ACCOUNT_ID>.eu.r2.cloudflarestorage.com` (the scripts refuse, with exit `2`, an
-  endpoint without `.eu.`), `R2_BUCKET` the bucket name, `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` the
+  `R2_ENDPOINT` is `https://<ACCOUNT_ID>.eu.r2.cloudflarestorage.com` (the scripts refuse, with exit `2`, a
+  non-EU Cloudflare endpoint), `R2_BUCKET` the bucket name, `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` the
   token's keys.
 - `BACKUP_CRYPT_PASSWORD` and `BACKUP_CRYPT_SALT`: two long random strings
   (`openssl rand -base64 32 | tr -d '/+=\n'`). Store them **in clear**, both in the Coolify secrets and in the
   password manager, before the first backup; the scripts obscure them for rclone. Without both, no backup
   can ever be read again; changing them makes the older backups unreadable with the new ones.
-- `backup` is the only service on the `egress` network (with outbound access): `backend`, where Postgres
-  lives, is internal and has no route to R2. It mounts the upload volumes read-only.
+- The `backup` service reaches the media and backup buckets over its `egress` network and mounts the media
+  volumes read-only. It uses the API’s `MEDIA_STORAGE_BACKEND` and `MEDIA_S3_*` configuration to read
+  media. It refuses a backup when the active media and backup providers are the same.
+- `BACKUP_REMOTE` defaults to `r2crypt:`. When active media use Cloudflare R2, select `awscrypt:` and
+  set `BACKUP_AWS_BUCKET`, `BACKUP_AWS_REGION`, `BACKUP_AWS_ACCESS_KEY_ID`, and
+  `BACKUP_AWS_SECRET_ACCESS_KEY`. Provision the independent AWS bucket in an EU region and set a
+  30-day lifecycle rule there. Verify the bucket location, expiration and restore access before activation.
+  Keep the old R2 bucket, configuration and keys accessible until its archives expire. Read it with
+  `BACKUP_REMOTE=r2crypt: restore.sh --list` or the same override on a named restore.
 
-Run the task once by hand after the first deploy (from the task's page, or `backup.sh` in the `backup`
-container's terminal) and check its log ends with `backup complete`. `restore.sh --list`, run in the same
-container, lists the complete backups: `SHA256SUMS` is sent last, so a folder without it (an upload cut off
-halfway) is never listed nor taken as `latest`. A run killed hard leaves its local copy in `/tmp`; the next
-run removes it.
+Check the task log ends with `backup complete`. In the same container, `restore.sh --list` lists folders
+with a completion marker. An interrupted transfer leaves the previous complete backup available.
 
 ### 9.5 Restore
 
-DESTRUCTIVE: the database and both upload volumes are replaced. Nothing is touched until the backup is
-downloaded and its checksums match. The `backup` service mounts the volumes read-only, so a restore is a
-one-off run of that service with the volumes mounted writable at `/restore`, the api stopped:
+Stop the API and restore into an isolated target first. The command replaces the target database and
+its disk media. It stages the archive and checks the checksums, dump and media before changing that
+destination. The disk restore runs in a one-off container with writable media volumes at `/restore`:
 
 ```bash
 ssh <vps>
@@ -658,8 +666,12 @@ docker compose -p <uuid> -f docker-compose.yaml start api
 ```
 
 The project, the directory and the volume names are Coolify's; check them on the instance (Coolify may prefix
-the volumes with the resource UUID). This is the same command as the comment of `infra/backup/restore.sh`,
-which a local test runs against MinIO. Then repeat the smoke test of section 5 and open an uploaded
+the volumes with the resource UUID). For an S3 restore, set `MEDIA_STORAGE_BACKEND=s3` and point
+`MEDIA_S3_*` at a pre-created private,
+empty destination bucket with write access. Omit the writable disk mounts. The script verifies the copied
+objects before replacing PostgreSQL. If an S3 restore fails after writing objects, use a fresh empty
+bucket or clear the isolated destination before retrying. Start the API with the restored bucket configuration.
+The historical three-file archives are still readable. Then repeat the smoke test of section 5 and open an uploaded
 document. Rehearse it in a throwaway stack before launch and every quarter: a backup never restored is not
 a backup.
 
