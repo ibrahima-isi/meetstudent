@@ -10,3 +10,4 @@
 - [ ] Ouvrir un PDF privé via le backoffice avec un compte administrateur. Consigner le résultat sans joindre le document.
 - [ ] Vérifier l’endpoint HTTPS, la région de signature et le mode d’adressage du bucket choisi. Les identifiants restent dans le mécanisme de secrets existant.
 - [ ] Le contrôle de qualification confirme la lecture, l’écriture, la suppression, une clé absente en 404, une plage en 206 et le refus des lectures et du listing anonymes. Les objets de test sont supprimés.
+- [ ] Réserver le bucket à MeetStudent et limiter les écritures dans `public/` et `private/` à cette migration jusqu’à la bascule. Après suppression des objets de test, lister intégralement les deux préfixes avec une requête authentifiée et paginée. Consigner le bucket, l’endpoint et le résultat du listing. Exiger deux préfixes vides avant la première copie.

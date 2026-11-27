@@ -35,11 +35,11 @@ Organiser une bascule opérateur dans Coolify avec les outils existants. Qualifi
 ## Décisions de mise en œuvre
 
 - Réutiliser les outils livrés et le runbook existant. Les clés PostgreSQL, les URL MeetStudent et les autorisations restent les mêmes.
-- L’exploitant renseigne le bucket, la région de signature, l’endpoint le cas échéant et le mode d’adressage. Les identifiants passent par le mécanisme de secrets existant.
-- La sauvegarde hors site reste chiffrée, dans l’UE, chez un fournisseur indépendant du VPS et des médias actifs, avec une rétention de 30 jours. Si les médias actifs passent sur R2, prévoir un autre fournisseur de sauvegarde et garder l’accès aux anciennes archives jusqu’à leur échéance.
+- L’exploitant qualifie un bucket privé réservé à MeetStudent, avec des préfixes `public/` et `private/` vides avant la première copie. En reprise, chaque objet présent doit provenir de cette migration. Les identifiants passent par le mécanisme de secrets existant.
+- La destination de sauvegarde effectivement utilisée, y compris en cas de remplacement, doit être chiffrée, située dans l’UE et indépendante du VPS et des médias actifs. Vérifier une règle de cycle de vie de 30 jours et un verrouillage des archives d’au moins 30 jours. Si les médias passent sur R2, garder l’accès aux anciennes archives jusqu’à leur échéance.
 - Consigner le point de restauration pré-bascule et sa restauration isolée. Vérifier l’inventaire des médias référencés dans PostgreSQL et des anciens fichiers publics servis. Résoudre les écarts avant la copie initiale et comparer le contenu par clé, taille et SHA-256.
-- L’exploitant fixe la fenêtre de maintenance, la durée maximale de pause et les critères d’abandon. Pendant la pause, drainer les écritures HTTP, les transactions PostgreSQL et les suppressions différées. Synchroniser le delta et exiger un inventaire sans écart.
-- Activer S3 dans Coolify avec les écritures encore en pause. Si la vérification échoue ou si la pause dépasse la durée convenue, remettre le disque en service avant de rouvrir les écritures. Après réouverture, tout retour au disque passe par une synchronisation inverse vérifiée.
+- L’exploitant fixe la fenêtre de maintenance, la durée maximale de pause et les critères d’abandon. Geler les déploiements concurrents et vérifier la pause persistante sur le déploiement disque avant le drainage final et la synchronisation du delta.
+- Activer S3 avec la pause persistante. Avant de rouvrir les écritures, vérifier que les conteneurs `api` et `backup` actifs utilisent S3 et le bucket qualifié, puis valider les lectures et les autorisations. En cas d’échec ou de dépassement du délai, vérifier le retour au disque avant de rouvrir. Après réouverture sur S3, tout retour au disque passe par une synchronisation inverse vérifiée.
 - Après reprise, vérifier les écritures et consigner une nouvelle sauvegarde complète. Conserver les volumes source pour un éventuel retour arrière. Si le bucket est inaccessible, restaurer la base et les médias depuis la dernière archive complète.
 
 ## Décisions de vérification
