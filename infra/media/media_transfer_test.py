@@ -2,6 +2,7 @@ import hashlib
 import io
 import json
 import os
+import subprocess
 import tempfile
 import unittest
 import urllib.parse
@@ -571,6 +572,49 @@ class MediaTransferSlice2S3EndpointTest(unittest.TestCase):
 
 
 class MediaTransferSlice3QualificationTest(unittest.TestCase):
+
+    def test_runbook_qualification_uses_environment_for_both_addressing_modes(self):
+        root = Path(__file__).resolve().parents[2]
+        runbook = (root / "docs/MEDIA_MIGRATION.md").read_text()
+        command = next(
+            block.partition("\n```")[0]
+            for block in runbook.split("```bash\n")[1:]
+            if "media_transfer.py qualify-bucket" in block.partition("\n```")[0]
+        )
+        # Capture the Bash-expanded arguments without making requests to S3.
+        script = "python3() { printf '%s\\0' \"$@\"; }\n" + command
+        for path_style, s3_endpoint in ((True, "https://media.example.com"), (False, "")):
+            with self.subTest(path_style=path_style):
+                env = {
+                    "MEDIA_S3_BUCKET": "media-bucket",
+                    "MEDIA_S3_REGION": "eu-west-3",
+                    "MEDIA_S3_ACCESS_KEY_ID": "test-access-key",
+                    "MEDIA_S3_SECRET_ACCESS_KEY": "test-secret-key",
+                    "MEDIA_S3_SESSION_TOKEN": "test-token",
+                    "MEDIA_S3_ENDPOINT": s3_endpoint,
+                    "MEDIA_S3_PATH_STYLE": str(path_style).lower(),
+                    "BACKUP_S3_REGION": "eu-west-1",
+                }
+                result = subprocess.run(
+                    ["bash", "-ec", script], env=env, check=True, capture_output=True, text=True,
+                )
+                script_path, *argv = result.stdout.rstrip("\0").split("\0")
+                self.assertEqual(script_path, "infra/media/media_transfer.py")
+                self.assertEqual(argv, ["qualify-bucket", "--require-https", "--check-backup-independence"])
+                with (
+                    mock.patch.dict(os.environ, env, clear=True),
+                    mock.patch.object(media_transfer, "S3Endpoint") as endpoint,
+                    mock.patch.object(media_transfer, "qualify_bucket", return_value={"ok": True}) as qualify,
+                    mock.patch("sys.stdout", io.StringIO()),
+                ):
+                    self.assertEqual(media_transfer_main(argv), 0)
+                endpoint.assert_called_once_with(
+                    bucket="media-bucket", region="eu-west-3", endpoint=s3_endpoint,
+                    path_style=path_style, access_key="test-access-key", secret_key="test-secret-key",
+                    session_token="test-token",
+                )
+                self.assertTrue(qualify.call_args.kwargs["require_https"])
+                self.assertEqual(qualify.call_args.kwargs["backup_config"]["region"], "eu-west-1")
 
     def test_qualify_bucket_passes_across_distinct_endpoints_and_addressing_modes_and_cleans_up(self):
         configs = [
